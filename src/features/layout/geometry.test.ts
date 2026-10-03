@@ -1,6 +1,7 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import { arrangementFor, blockSize, maxFitTileWidth, tileRects, tileShortSide } from './geometry'
+import { EPS_MM } from './tolerances'
 
 describe('arrangementFor', () => {
   it('puts portrait and square tiles in a row, landscape tiles in a column', () => {
@@ -47,8 +48,8 @@ describe('maxFitTileWidth', () => {
           const fit = maxFitTileWidth(aspect, tiles, gutter, { w, h })
           fc.pre(fit > 0)
           const b = blockSize(fit, aspect, tiles, gutter)
-          const unturned = b.w <= w + 1e-9 && b.h <= h + 1e-9
-          const turned = b.h <= w + 1e-9 && b.w <= h + 1e-9
+          const unturned = b.w <= w + EPS_MM && b.h <= h + EPS_MM
+          const turned = b.h <= w + EPS_MM && b.w <= h + EPS_MM
           expect(unturned || turned).toBe(true)
         },
       ),
