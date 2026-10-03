@@ -174,9 +174,9 @@ describe('overlay hygiene', () => {
         x
       </Dialog>,
     )
-    const overlay = document.querySelector('.ds-overlay')
-    expect(overlay).not.toBeNull()
-    await userEvent.click(overlay!)
+    const overlay = document.querySelector<HTMLElement>('.ds-overlay')
+    if (!overlay) throw new Error('overlay not rendered')
+    await userEvent.click(overlay)
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 })
