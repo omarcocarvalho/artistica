@@ -1,1 +1,51 @@
-{}
+{
+  "title": "Page",
+  "paper": {
+    "heading": "Paper",
+    "size": "Paper size",
+    "custom": "Custom…",
+    "dims": "{{w}} × {{h}} {{unit}}",
+    "times": "×",
+    "width": "Width",
+    "height": "Height",
+    "units": "Units",
+    "unitMm": "mm",
+    "unitIn": "inches"
+  },
+  "units": { "mm": "mm", "in": "in" },
+  "noRoom": "This page setup leaves no room for images. Reduce the safe area, gutter, bleed or crop marks, or choose bigger paper.",
+  "orientation": {
+    "label": "Orientation",
+    "auto": "Auto",
+    "portrait": "Portrait",
+    "landscape": "Landscape",
+    "autoPicked": "Auto picked {{orientation}}: fewer pages.",
+    "resolved": { "portrait": "portrait", "landscape": "landscape" }
+  },
+  "spacing": {
+    "heading": "Spacing",
+    "safeArea": "Safe area",
+    "safeAreaHint": "Blank border at the page edge. Min {{min}}.",
+    "gutter": "Gutter between images",
+    "gutterSize": "Gutter size",
+    "gutterHint": "Room to cut between images."
+  },
+  "cutting": {
+    "heading": "Cutting",
+    "cropMarks": "Crop marks",
+    "bleed": "Bleed",
+    "bleedAmount": "Bleed amount",
+    "bleedHint": "Extends edge pixels past the cut line, so a slightly-off cut leaves no white sliver."
+  },
+  "notes": {
+    "gutterEnabledForBleed": "Gutter turned on. Bleed needs a gutter of at least 2 × bleed.",
+    "gutterRaisedForBleed": "Gutter raised to {{gutter}}. Bleed needs a gutter of at least 2 × bleed.",
+    "safeAreaRaisedToMinimum": "Safe area raised to {{min}}, the minimum."
+  },
+  "suggestion": {
+    "tip": "tip!",
+    "text_one": "{{paper}} fits {{count}} reference per page comfortably.",
+    "text_other": "{{paper}} fits {{count}} references per page comfortably."
+  },
+  "remembered": "Settings are remembered on this device."
+}
