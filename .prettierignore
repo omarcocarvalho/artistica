@@ -5,3 +5,5 @@ test-results/
 pnpm-lock.yaml
 *.md
 design/
+# Machine-written by release-please on every release PR
+.release-please-manifest.json
