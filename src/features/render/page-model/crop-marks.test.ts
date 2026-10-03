@@ -1,7 +1,7 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import { CROP_MARK_LENGTH_MM, CROP_MARK_OFFSET_MM } from '../../../shared/model/page-setup'
-import { arbGridPage } from '../test-support/fixtures'
+import { arbGridPage, arbShrunkPage } from '../test-support/fixtures'
 import {
   CROP_MARK_CLEARANCE_MM,
   MIN_CROP_MARK_MM,
@@ -101,6 +101,32 @@ describe('cropMarksForTiles (properties)', () => {
           expect(pointInRect(s.x1, s.y1, page.safeArea)).toBe(true)
           expect(pointInRect(s.x2, s.y2, page.safeArea)).toBe(true)
         }
+      }),
+    )
+  })
+
+  it('stays inside a shrunk safe area, so clipping is exercised (D2)', () => {
+    let clipped = 0
+    fc.assert(
+      fc.property(arbShrunkPage, (page) => {
+        const segs = cropMarksForTiles(page.tiles, page.safeArea)
+        for (const s of segs) {
+          expect(pointInRect(s.x1, s.y1, page.safeArea)).toBe(true)
+          expect(pointInRect(s.x2, s.y2, page.safeArea)).toBe(true)
+        }
+        if (segs.length < 8 * page.tiles.length) clipped++
+      }),
+    )
+    expect(clipped).toBeGreaterThan(0)
+  })
+
+  it('never emits a mark shorter than MIN_CROP_MARK_MM', () => {
+    fc.assert(
+      fc.property(arbShrunkPage, (page) => {
+        for (const s of cropMarksForTiles(page.tiles, page.safeArea))
+          expect(Math.hypot(s.x2 - s.x1, s.y2 - s.y1)).toBeGreaterThanOrEqual(
+            MIN_CROP_MARK_MM - 1e-9,
+          )
       }),
     )
   })

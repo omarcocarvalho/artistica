@@ -150,3 +150,27 @@ export const arbGridPage: fc.Arbitrary<GridPage> = fc
     }
     return { safeArea, bleedMm, gutterMm, tiles }
   })
+
+/**
+ * A grid page whose safe area is then shrunk inwards by a random 0..reserve on each side, so marks
+ * genuinely need clipping or dropping (arbGridPage alone always leaves room for every mark).
+ */
+export const arbShrunkPage: fc.Arbitrary<GridPage> = fc
+  .tuple(
+    arbGridPage,
+    fc.array(fc.double({ min: 0, max: 1, noNaN: true }), { minLength: 4, maxLength: 4 }),
+  )
+  .map(([page, f]) => {
+    const reserve = page.bleedMm + CROP_MARK_OFFSET_MM + CROP_MARK_LENGTH_MM
+    const [l = 0, t = 0, r = 0, b = 0] = f.map((v) => v * reserve)
+    const s = page.safeArea
+    return {
+      ...page,
+      safeArea: {
+        x: s.x + l,
+        y: s.y + t,
+        w: Math.max(0, s.w - l - r),
+        h: Math.max(0, s.h - t - b),
+      },
+    }
+  })

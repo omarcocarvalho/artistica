@@ -24,7 +24,12 @@ export function combineRotation(rotation: Rotation, turned: boolean): Rotation {
 
 /** The page-edge margin as a rect (crop marks and bleed stay inside it, owner decision D2). */
 export function safeAreaRect(size: SizeMm, safeAreaMm: Mm): RectMm {
-  return { x: safeAreaMm, y: safeAreaMm, w: size.w - 2 * safeAreaMm, h: size.h - 2 * safeAreaMm }
+  return {
+    x: safeAreaMm,
+    y: safeAreaMm,
+    w: Math.max(0, size.w - 2 * safeAreaMm),
+    h: Math.max(0, size.h - 2 * safeAreaMm),
+  }
 }
 
 /**
