@@ -42,7 +42,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      - run: pnpm test
+      - run: pnpm test:coverage
 
   build:
     name: build
