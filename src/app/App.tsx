@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { APP_NAME } from '../shared/app-info'
+import { useApplyTheme } from '../shared/theme'
 
 export function App() {
+  useApplyTheme()
   const { t } = useTranslation('common')
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col justify-center gap-4 p-6">
