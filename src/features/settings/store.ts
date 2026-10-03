@@ -79,11 +79,12 @@ const browserStorage = safeStorage(() => window.localStorage)
  * (SSR, workers) or its getters may throw, in which case the answer is millimetres.
  */
 export function initialUnitFromNavigator(
-  nav: { readonly language?: unknown } | undefined = typeof navigator === 'undefined'
-    ? undefined
-    : navigator,
+  ...args: [nav?: { readonly language?: unknown } | undefined]
 ): Unit {
   try {
+    // An explicit `undefined` means "no navigator"; only a call with no argument reads the global.
+    const nav =
+      args.length === 0 ? (typeof navigator === 'undefined' ? undefined : navigator) : args[0]
     const language = nav?.language
     return typeof language === 'string' ? defaultUnitForLocale(language) : 'mm'
   } catch {
