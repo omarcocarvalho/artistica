@@ -7,3 +7,5 @@ pnpm-lock.yaml
 design/
 # Machine-written by release-please on every release PR
 .release-please-manifest.json
+# Verbatim copy of design/tokens.css (a test checks it); Prettier would change quote styles
+src/shared/theme/tokens.css

@@ -1,3 +1,11 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/atkinson-hyperlegible-next';
+@import '@fontsource-variable/caveat';
+@import './theme/tokens.css';
+@import './theme/base.css';
+@import './ui/css/basics.css';
+@import './ui/css/forms.css';
+@import './ui/css/overlays.css';
 @source not '../../design';
 @source not '../../docs';
