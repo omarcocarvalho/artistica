@@ -1,0 +1,255 @@
+/*
+ * Design tokens (source of truth: design/tokens.css; tokens.test.ts fails if they drift).
+ *
+ * - @theme static   -> tokens that become Tailwind utilities (bg-surface, text-ink, font-display,
+ *                      rounded-md, text-sm ...). "static" emits every variable even when unused, so
+ *                      the plain CSS in ui/css/*.css can use var(--color-...) freely.
+ * - :root           -> tokens with no utility (spacing scale, sizes, shadows, motion, textures).
+ *                      Tailwind's own spacing scale already equals --space-N (p-4 = 1rem).
+ * - dark blocks     -> same names re-pointed. "data-theme" on <html> wins; with no attribute the
+ *                      OS preference decides. The printed page (--color-paper) is white in both.
+ */
+
+@theme static {
+  --color-canvas: #f4ede1;
+  --color-surface: #fffcf6;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #ebe2d3;
+  --color-overlay: rgb(43 36 32 / 0.45);
+  --color-ink: #2b2420;
+  --color-ink-muted: #5e5146;
+  --color-ink-subtle: #6f6055;
+  --color-ink-inverse: #fffcf6;
+  --color-line: #ddd0bc;
+  --color-line-strong: #8a7a69;
+  --color-accent: #b0432a;
+  --color-accent-hover: #933720;
+  --color-on-accent: #ffffff;
+  --color-accent-soft: #f6dccf;
+  --color-on-accent-soft: #6e2615;
+  --color-secondary: #2f4c9e;
+  --color-secondary-hover: #243c80;
+  --color-on-secondary: #ffffff;
+  --color-secondary-soft: #dfe5f5;
+  --color-on-secondary-soft: #1d2f63;
+  --color-ochre: #e2b13c;
+  --color-sap: #7a9a6b;
+  --color-rose: #e59a8a;
+  --color-tape: rgb(226 177 60 / 0.55);
+  --color-tape-edge: rgb(180 130 30 / 0.25);
+  --color-success: #356128;
+  --color-success-soft: #e0ecd6;
+  --color-warning: #7d5100;
+  --color-warning-soft: #fcebc4;
+  --color-danger: #a3261b;
+  --color-danger-soft: #f9dad5;
+  --color-info: var(--color-secondary);
+  --color-info-soft: var(--color-secondary-soft);
+  --color-paper: #ffffff;
+  --color-paper-edge: rgb(0 0 0 / 0.08);
+  --color-guide-safe: #2a7ab8;
+  --color-guide-bleed: #d63a78;
+  --color-guide-cut: rgb(0 0 0 / 0.35);
+  --color-crop-mark: #000000;
+  --color-selection: #2f4c9e;
+  --color-line-overlay: #e0457b;
+  --font-ui: "Atkinson Hyperlegible Next Variable", "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Hiragino Sans", "PingFang SC", "Apple SD Gothic Neo", "Noto Sans CJK JP", sans-serif;
+  --font-display: "Fraunces Variable", "Fraunces", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Hiragino Mincho ProN", "Noto Serif CJK JP", serif;
+  --font-hand: "Caveat Variable", "Caveat", "Segoe Print", "Bradley Hand", "Chalkboard SE", "Comic Sans MS", cursive;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.375rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.25rem;
+  --text-3xl: 3rem;
+  --text-display: clamp(2.5rem, 1.6rem + 4vw, 4.5rem);
+  --text-hand: 1.375rem;
+  --leading-tight: 1.15;
+  --leading-snug: 1.3;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+  --tracking-tight: -0.01em;
+  --tracking-wide: 0.06em;
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+  --radius-sketch: 255px 18px 225px 18px / 18px 225px 18px 255px;
+  --radius-sketch-sm: 14px 5px 12px 6px / 6px 12px 5px 14px;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-wobble: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:root {
+  color-scheme: light;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --space-0: 0;
+  --space-px: 1px;
+  --space-0-5: 0.125rem;
+  --space-1: 0.25rem;
+  --space-1-5: 0.375rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-24: 6rem;
+  --size-target: 2.75rem;
+  --size-target-dense: 2rem;
+  --size-topbar: 3.5rem;
+  --size-panel-left: 18rem;
+  --size-panel-right: 22rem;
+  --border-width: 1px;
+  --border-width-strong: 2px;
+  --shadow-xs: 0 1px 1px rgb(74 52 32 / 0.08);
+  --shadow-sm: 0 1px 2px rgb(74 52 32 / 0.10), 0 1px 1px rgb(74 52 32 / 0.06);
+  --shadow-md: 0 4px 10px -2px rgb(74 52 32 / 0.14), 0 2px 4px rgb(74 52 32 / 0.06);
+  --shadow-lg: 0 18px 40px -12px rgb(74 52 32 / 0.30), 0 4px 10px rgb(74 52 32 / 0.08);
+  --shadow-paper: 0 0 0 1px var(--color-paper-edge), 0 1px 1px rgb(74 52 32 / 0.10), 0 10px 24px -8px rgb(74 52 32 / 0.28);
+  --shadow-sticker: 2px 3px 0 rgb(74 52 32 / 0.18);
+  --focus-ring-color: #2f4c9e;
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+  --focus-ring: 0 0 0 var(--focus-ring-offset) var(--color-surface), 0 0 0 calc(var(--focus-ring-offset) + var(--focus-ring-width)) var(--focus-ring-color);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --z-panel: 10;
+  --z-topbar: 20;
+  --z-popover: 40;
+  --z-toast: 60;
+  --z-dialog: 80;
+  --texture-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .35 0 0 0 0 .25 0 0 0 0 .15 0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  --texture-grain-opacity: 0.22;
+  --texture-desk: radial-gradient(circle at 1px 1px, rgb(94 81 70 / 0.16) 1px, transparent 1.5px);
+  --texture-desk-size: 22px 22px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --color-canvas: #1c1714;
+    --color-surface: #26201b;
+    --color-surface-raised: #2f2822;
+    --color-surface-sunken: #15110e;
+    --color-overlay: rgb(8 6 4 / 0.65);
+    --color-ink: #f2e9dc;
+    --color-ink-muted: #c4b5a3;
+    --color-ink-subtle: #a29382;
+    --color-ink-inverse: #1c1714;
+    --color-line: #3d342c;
+    --color-line-strong: #85766a;
+    --color-accent: #ee8a63;
+    --color-accent-hover: #f4a385;
+    --color-on-accent: #1c1714;
+    --color-accent-soft: #4a2a1e;
+    --color-on-accent-soft: #ffd3c0;
+    --color-secondary: #9db2ee;
+    --color-secondary-hover: #b9c8f3;
+    --color-on-secondary: #1c1714;
+    --color-secondary-soft: #263255;
+    --color-on-secondary-soft: #d6defa;
+    --color-tape: rgb(226 177 60 / 0.38);
+    --color-tape-edge: rgb(255 220 140 / 0.18);
+    --color-success: #9ccb86;
+    --color-success-soft: #23331c;
+    --color-warning: #f0c468;
+    --color-warning-soft: #3d2f12;
+    --color-danger: #ff9a8c;
+    --color-danger-soft: #4a1f1a;
+    --color-selection: #9db2ee;
+    --focus-ring-color: #9db2ee;
+    --shadow-xs: 0 1px 1px rgb(0 0 0 / 0.35);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.45);
+    --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.55);
+    --shadow-lg: 0 18px 40px -12px rgb(0 0 0 / 0.7);
+    --shadow-paper: 0 0 0 1px rgb(0 0 0 / 0.4), 0 12px 28px -8px rgb(0 0 0 / 0.75);
+    --shadow-sticker: 2px 3px 0 rgb(0 0 0 / 0.45);
+    --texture-grain-opacity: 0.12;
+    --texture-desk: radial-gradient(circle at 1px 1px, rgb(242 233 220 / 0.07) 1px, transparent 1.5px);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-canvas: #1c1714;
+  --color-surface: #26201b;
+  --color-surface-raised: #2f2822;
+  --color-surface-sunken: #15110e;
+  --color-overlay: rgb(8 6 4 / 0.65);
+  --color-ink: #f2e9dc;
+  --color-ink-muted: #c4b5a3;
+  --color-ink-subtle: #a29382;
+  --color-ink-inverse: #1c1714;
+  --color-line: #3d342c;
+  --color-line-strong: #85766a;
+  --color-accent: #ee8a63;
+  --color-accent-hover: #f4a385;
+  --color-on-accent: #1c1714;
+  --color-accent-soft: #4a2a1e;
+  --color-on-accent-soft: #ffd3c0;
+  --color-secondary: #9db2ee;
+  --color-secondary-hover: #b9c8f3;
+  --color-on-secondary: #1c1714;
+  --color-secondary-soft: #263255;
+  --color-on-secondary-soft: #d6defa;
+  --color-tape: rgb(226 177 60 / 0.38);
+  --color-tape-edge: rgb(255 220 140 / 0.18);
+  --color-success: #9ccb86;
+  --color-success-soft: #23331c;
+  --color-warning: #f0c468;
+  --color-warning-soft: #3d2f12;
+  --color-danger: #ff9a8c;
+  --color-danger-soft: #4a1f1a;
+  --color-selection: #9db2ee;
+  --focus-ring-color: #9db2ee;
+  --shadow-xs: 0 1px 1px rgb(0 0 0 / 0.35);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.45);
+  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.55);
+  --shadow-lg: 0 18px 40px -12px rgb(0 0 0 / 0.7);
+  --shadow-paper: 0 0 0 1px rgb(0 0 0 / 0.4), 0 12px 28px -8px rgb(0 0 0 / 0.75);
+  --shadow-sticker: 2px 3px 0 rgb(0 0 0 / 0.45);
+  --texture-grain-opacity: 0.12;
+  --texture-desk: radial-gradient(circle at 1px 1px, rgb(242 233 220 / 0.07) 1px, transparent 1.5px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}
+
+/* Shadows change with the theme, so they are plain variables; these utilities read them. */
+@utility elev-xs {
+  box-shadow: var(--shadow-xs);
+}
+@utility elev-sm {
+  box-shadow: var(--shadow-sm);
+}
+@utility elev-md {
+  box-shadow: var(--shadow-md);
+}
+@utility elev-lg {
+  box-shadow: var(--shadow-lg);
+}
+@utility elev-paper {
+  box-shadow: var(--shadow-paper);
+}
+@utility elev-sticker {
+  box-shadow: var(--shadow-sticker);
+}
