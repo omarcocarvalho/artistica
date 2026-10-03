@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm lint
+      - run: pnpm format:check
+
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm typecheck
+
+  unit:
+    name: unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm test
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+      - name: Verify both pages are built under /artistica/
+        run: |
+          test -f dist/index.html
+          test -f dist/app/index.html
+          grep -q '/artistica/assets/' dist/index.html
+          grep -q '/artistica/assets/' dist/app/index.html
+
+  e2e:
+    name: e2e (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - browser: chromium
+            projects: --project=chromium --project=mobile-chromium
+          - browser: firefox
+            projects: --project=firefox
+          - browser: webkit
+            projects: --project=webkit
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Read Playwright version
+        id: pw
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
+      - name: Install browser and OS deps (cache miss)
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
+      - name: Install OS deps only (cache hit)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps ${{ matrix.browser }}
+      - run: pnpm e2e ${{ matrix.projects }}
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: playwright-report/
+          retention-days: 7
