@@ -6,7 +6,7 @@ import {
   readJpegInfo,
   type ExifOrientation,
 } from './exif'
-import { skeletonJpeg } from './test-bytes'
+import { ascii, skeletonJpeg } from './test-bytes'
 
 const ORIENTATIONS: ExifOrientation[] = [1, 2, 3, 4, 5, 6, 7, 8]
 
@@ -105,4 +105,101 @@ describe('orientationTransform', () => {
       ),
     )
   })
+})
+
+describe('readJpegInfo on hostile input', () => {
+  const exifSeg = (tiff: number[], declaredLen?: number): Uint8Array => {
+    const body = [...ascii('Exif'), 0, 0, ...tiff]
+    const len = declaredLen ?? body.length + 2
+    return Uint8Array.from([0xff, 0xd8, 0xff, 0xe1, len >> 8, len & 255, ...body, 0xff, 0xd9])
+  }
+  const MM = [0x4d, 0x4d, 0, 0x2a]
+  const orientationOf = (b: Uint8Array): number | undefined => readJpegInfo(b)?.orientation
+
+  it('never throws on arbitrary bytes (property)', () => {
+    fc.assert(
+      fc.property(fc.uint8Array({ maxLength: 4096 }), (b) => {
+        readJpegInfo(b)
+        return true
+      }),
+    )
+  })
+  it('never throws on random bytes behind an APP1 Exif prefix (fuzz)', () => {
+    fc.assert(
+      fc.property(
+        fc.uint8Array({ maxLength: 256 }),
+        fc.integer({ min: 0, max: 65535 }),
+        (rest, len) => {
+          const b = Uint8Array.from([
+            0xff,
+            0xd8,
+            0xff,
+            0xe1,
+            len >> 8,
+            len & 255,
+            ...ascii('Exif'),
+            0,
+            0,
+            ...rest,
+          ])
+          const info = readJpegInfo(b)
+          return info === null || (info.orientation >= 1 && info.orientation <= 8)
+        },
+      ),
+    )
+  })
+  it('falls back to orientation 1 for malformed EXIF', () => {
+    // IFD offset far past the buffer
+    expect(orientationOf(exifSeg([...MM, 0x7f, 0xff, 0xff, 0xff]))).toBe(1)
+    // entry count overruns the segment
+    expect(orientationOf(exifSeg([...MM, 0, 0, 0, 8, 0xff, 0xff]))).toBe(1)
+    // zero-length APP1 (len = 2)
+    expect(orientationOf(exifSeg([], 2))).toBe(1)
+    // no Exif header
+    const noHeader = Uint8Array.from([
+      0xff,
+      0xd8,
+      0xff,
+      0xe1,
+      0,
+      10,
+      ...ascii('Nope'),
+      0,
+      0,
+      0xff,
+      0xd9,
+    ])
+    expect(orientationOf(noHeader)).toBe(1)
+    // invalid byte-order mark
+    expect(orientationOf(exifSeg([0x58, 0x58, 0, 0x2a, 0, 0, 0, 8, 0, 0]))).toBe(1)
+    // wrong TIFF magic
+    expect(orientationOf(exifSeg([0x4d, 0x4d, 0, 0x2b, 0, 0, 0, 8, 0, 0]))).toBe(1)
+  })
+})
+
+describe('orientationTransform pins the EXIF table exactly', () => {
+  const w = 30
+  const h = 20
+  // Where source (0,0) and source (w,0) land, per the EXIF orientation table.
+  const expected: Record<ExifOrientation, { origin: [number, number]; xEnd: [number, number] }> = {
+    1: { origin: [0, 0], xEnd: [w, 0] },
+    2: { origin: [w, 0], xEnd: [0, 0] },
+    3: { origin: [w, h], xEnd: [0, h] },
+    4: { origin: [0, h], xEnd: [w, h] },
+    5: { origin: [0, 0], xEnd: [0, w] },
+    6: { origin: [h, 0], xEnd: [h, w] },
+    7: { origin: [h, w], xEnd: [h, 0] },
+    8: { origin: [0, w], xEnd: [0, 0] },
+  }
+  const apply = (m: readonly number[], x: number, y: number): [number, number] => [
+    (m[0] ?? 0) * x + (m[2] ?? 0) * y + (m[4] ?? 0),
+    (m[1] ?? 0) * x + (m[3] ?? 0) * y + (m[5] ?? 0),
+  ]
+  for (const o of ORIENTATIONS) {
+    it(`orientation ${String(o)} lands the source corners where EXIF says`, () => {
+      const { matrix } = orientationTransform(o, w, h)
+      expect(apply(matrix, 0, 0)).toEqual(expected[o].origin)
+      expect(apply(matrix, w, 0)).toEqual(expected[o].xEnd)
+    })
+  }
 })
