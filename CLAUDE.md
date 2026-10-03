@@ -26,11 +26,10 @@ pnpm typecheck      # tsc -b
 pnpm test           # Vitest (unit + property tests) | pnpm test:watch
 pnpm e2e            # Playwright, all projects (chromium, firefox, webkit, mobile-chromium)
 pnpm e2e --project=chromium   # one browser
+# In parallel worktrees use a unique port, e.g. E2E_PORT=4201 pnpm e2e
 ```
 
 Before opening a PR, run: `pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm e2e --project=chromium`.
-
-From M1: unit-test coverage threshold of 80% on the core modules (layout, studies, lines, render), enforced in CI.
 
 ## Folder layout
 
@@ -77,9 +76,16 @@ Architecture rules:
   gh pr create --base master --title "feat: …" --body "…"
   gh pr merge --auto --squash
   ```
+- **Coverage (from M1):** unit-test coverage threshold of 80% on the core modules (layout, studies, lines, render), enforced in CI.
 - **Required checks:** `lint`, `typecheck`, `unit`, `build`, `e2e (chromium)`, `e2e (firefox)`, `e2e (webkit)`, `pr-title`. Never add `paths:` filters to these workflows (a PR whose required checks never run can never merge).
 - **Releases: one per milestone.** release-please keeps a release PR (`chore(master): release x.y.z`) open. It is **never auto-merged**. At the end of a milestone, after the owner signs off: close and reopen the release PR (PRs opened by `GITHUB_TOKEN` don't trigger CI; a reopen by a person does), wait for green checks, then `gh pr merge <n> --squash`. Merging creates the GitHub release and deploys to Pages in the same workflow run.
-  - Versions: M0 `v0.0.1`, M1 `v0.1.0`, M2 `v0.2.0`, M3 `v0.3.0`, M4 `v0.4.0`, M5 `v0.5.0`, M6 `v1.0.0` (use a `Release-As: 1.0.0` line in the PR body).
+  - Versions: M0 `v0.0.1`, M1 `v0.1.0`, M2 `v0.2.0`, M3 `v0.3.0`, M4 `v0.4.0`, M5 `v0.5.0`, M6 `v1.0.0` (put a `Release-As: 1.0.0` footer in the body of a normal PR that is squash-merged to master, so it becomes the commit footer; not in the release PR body, which release-please rewrites).
+- **Operational notes:**
+  - Agent worktrees live under `.worktrees/` (gitignored).
+  - Run `gh pr merge` from the main checkout, not from a worktree: from a worktree, gh's local master switch fails even though the remote merge succeeds.
+  - Before closing and reopening the release PR, refresh its merge ref with `gh pr view <n> --json mergeable` (wait until it is not UNKNOWN). The first reopen at the v0.0.1 release tested a stale merge ref against an old master.
+  - pnpm refuses package versions younger than its release-age window. Don't add `minimumReleaseAgeExclude` entries without a dated comment saying why and when to remove them.
+  - After auto-merges, check that the `master` CI run is green. Branch protection uses `strict: false`, so two individually green PRs can conflict semantically.
 - **Deploys:** only on release. Manual deploy for demos: `gh workflow run deploy-pages.yml --ref master`.
 
 ## Working agreement: parallel by default, the owner is the only gate

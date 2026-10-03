@@ -24,7 +24,7 @@ export default defineConfig({
   webServer: {
     command: `pnpm build && pnpm preview --port ${String(PORT)} --strictPort`,
     url: BASE_URL,
-    reuseExistingServer: !isCI,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 })

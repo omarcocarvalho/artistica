@@ -277,7 +277,7 @@ Key design decisions:
 - **Branches:**
   - `master` is protected: no direct pushes; every change goes through a PR.
   - **Squash merge only.** The PR title becomes the commit message and must follow Conventional Commits (checked by `amannn/action-semantic-pull-request`).
-  - Branch naming: `feat/…`, `fix/…`, `chore/…`.
+  - Branch naming: `feat/…`, `fix/…`, `chore/…`, `docs/…`, `ci/…`, `test/…`; the prefix matches the Conventional Commit type.
 - **Required CI checks** (GitHub Actions, on every PR):
   - lint
   - type-check
