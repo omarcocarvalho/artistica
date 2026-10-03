@@ -1,0 +1,19 @@
+{
+  "app": {
+    "comingSoon": "The workspace is coming soon."
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "ok": "OK"
+  },
+  "units": {
+    "mm": "mm",
+    "in": "in"
+  },
+  "theme": {
+    "auto": "Auto",
+    "light": "Light",
+    "dark": "Dark"
+  }
+}
