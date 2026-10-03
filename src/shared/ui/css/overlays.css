@@ -1,1 +1,189 @@
-/* Component styles for A11 (dialog, bottom sheet, tabs, tooltip). */
+/* Dialog, bottom sheet, tabs, tooltip. Adapted from design/mockup.css. */
+@layer components {
+  .ds-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-dialog);
+    background: var(--color-overlay);
+    backdrop-filter: blur(2px);
+  }
+
+  .ds-dialog,
+  .ds-sheet {
+    position: fixed;
+    z-index: calc(var(--z-dialog) + 1);
+    display: flex;
+    flex-direction: column;
+    color: var(--color-ink);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-lg);
+  }
+  .ds-dialog {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(960px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    border-radius: var(--radius-xl);
+    animation: ds-pop-in var(--duration-slow) var(--ease-wobble);
+  }
+  .ds-dialog--sm {
+    width: min(480px, calc(100vw - 32px));
+  }
+  .ds-dialog__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid var(--color-line);
+  }
+  .ds-dialog__head h2 {
+    font-size: var(--text-lg);
+  }
+  .ds-dialog__desc {
+    padding: var(--space-3) var(--space-5) 0;
+    color: var(--color-ink-muted);
+    font-size: var(--text-sm);
+  }
+  .ds-dialog__body {
+    padding: var(--space-5);
+    overflow: auto;
+  }
+  .ds-dialog__foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    padding: var(--space-3) var(--space-5);
+    border-top: 1px solid var(--color-line);
+    background: var(--color-surface-sunken);
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  }
+  @keyframes ds-pop-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% + 10px)) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  .ds-sheet {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 86dvh;
+    border-radius: 24px 24px 0 0;
+    animation: ds-sheet-up var(--duration-slow) var(--ease-out);
+  }
+  .ds-sheet__grab {
+    width: 40px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--color-line-strong);
+    margin: 8px auto 0;
+  }
+  .ds-sheet__body {
+    overflow: auto;
+    padding: var(--space-3) var(--space-4) var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  @keyframes ds-sheet-up {
+    from {
+      transform: translateY(40px);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+
+  .ds-tabs {
+    display: flex;
+    gap: var(--space-1);
+    border-bottom: 1px solid var(--color-line);
+    padding: 0 var(--space-3);
+  }
+  .ds-tab {
+    position: relative;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    padding: var(--space-3);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-bold);
+    color: var(--color-ink-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  }
+  .ds-tab:hover {
+    color: var(--color-ink);
+  }
+  .ds-tab[aria-selected='true'] {
+    color: var(--color-ink);
+  }
+  .ds-tab[aria-selected='true']::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    bottom: -2px;
+    height: 6px;
+    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 8' preserveAspectRatio='none'><path d='M2 5 C 25 1, 50 7, 75 3 S 95 4, 98 4' fill='none' stroke='%23b0432a' stroke-width='3.2' stroke-linecap='round'/></svg>")
+      center / 100% 100% no-repeat;
+  }
+  .ds-tab__badge {
+    font-size: var(--text-2xs);
+    background: var(--color-surface-sunken);
+    border-radius: var(--radius-pill);
+    padding: 0 var(--space-1-5);
+  }
+  .ds-tabpanel {
+    padding: var(--space-4);
+  }
+
+  .ds-tooltip {
+    z-index: var(--z-popover);
+    max-width: 18rem;
+    padding: var(--space-1-5) var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--color-ink);
+    color: var(--color-ink-inverse);
+    font-size: var(--text-xs);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Portals are direct children of body, so base.css "body > *" (position: relative; z-index: 1)
+     is in play. Components layer wins; these explicit rules keep overlays fixed and above the page. */
+  .ds-overlay,
+  .ds-dialog,
+  .ds-sheet {
+    position: fixed;
+  }
+
+  /* base.css gives every :focus-visible a small radius; keep the real shapes. */
+  .ds-dialog:focus-visible {
+    border-radius: var(--radius-xl);
+  }
+  .ds-sheet:focus-visible {
+    border-radius: 24px 24px 0 0;
+  }
+  .ds-dialog:focus-visible,
+  .ds-sheet:focus-visible {
+    outline: none; /* the container is only focused programmatically */
+  }
+  .ds-dialog__head .ds-btn {
+    border-radius: var(--radius-md);
+  }
+  .ds-tab:focus-visible {
+    border-radius: var(--radius-sm);
+  }
+}
