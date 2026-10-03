@@ -1,1 +1,262 @@
-/* Component styles for A10 (fields, switch, segmented control, slider). */
+/* Fields, inputs, select, switch, segmented control, slider. Adapted from design/mockup.css. */
+@layer components {
+  .ds-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+  .ds-field > label,
+  .ds-switch-label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-ink);
+  }
+  .ds-field-hint {
+    font-size: var(--text-xs);
+    color: var(--color-ink-muted);
+  }
+
+  .ds-input,
+  .ds-select {
+    min-height: var(--size-target-dense);
+    width: 100%;
+    padding: var(--space-1-5) 0.625rem;
+    border: var(--border-width) solid var(--color-line-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-raised);
+    color: var(--color-ink);
+    font-size: var(--text-sm);
+  }
+  .ds-input:focus-visible,
+  .ds-select:focus-visible {
+    outline-offset: 0;
+    border-radius: var(--radius-sm); /* base.css gives every :focus-visible a small radius */
+  }
+  .ds-select {
+    appearance: none;
+    padding-right: 2rem;
+    background-image:
+      linear-gradient(45deg, transparent 50%, currentColor 50%),
+      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position:
+      calc(100% - 15px) 55%,
+      calc(100% - 10px) 55%;
+    background-size: 5px 5px;
+    background-repeat: no-repeat;
+  }
+
+  .ds-unit-input {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+  }
+  .ds-unit-input .ds-input {
+    padding-right: 2.6rem;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .ds-unit-input__unit {
+    position: absolute;
+    right: var(--space-2);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: var(--text-xs);
+    color: var(--color-ink-muted);
+    pointer-events: none;
+  }
+
+  /* Segmented control (Radix RadioGroup renders buttons with role=radio) */
+  .ds-seg {
+    display: inline-flex;
+    flex-wrap: wrap;
+    padding: 3px;
+    gap: 2px;
+    background: var(--color-surface-sunken);
+    border: var(--border-width) solid var(--color-line);
+    border-radius: var(--radius-md);
+  }
+  .ds-seg--block {
+    display: flex;
+  }
+  .ds-seg--block .ds-seg__item {
+    flex: 1 1 0;
+  }
+  .ds-seg__item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    min-height: 28px;
+    padding: var(--space-1) var(--space-3);
+    border: 0;
+    background: transparent;
+    border-radius: calc(var(--radius-md) - 3px);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-ink-muted);
+    cursor: pointer;
+    text-align: center;
+    line-height: 1.15;
+  }
+  .ds-seg__item:hover {
+    color: var(--color-ink);
+  }
+  .ds-seg__item[data-state='checked'] {
+    background: var(--color-surface-raised);
+    color: var(--color-ink);
+    box-shadow:
+      var(--shadow-sm),
+      inset 0 -2px 0 var(--color-accent);
+  }
+  .ds-seg__item:focus-visible {
+    outline-offset: 1px;
+    border-radius: calc(var(--radius-md) - 3px);
+  }
+  .ds-seg__item:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Switch (Radix Switch renders a button with role=switch) */
+  .ds-switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: var(--size-target-dense);
+  }
+  .ds-switch-row__text {
+    display: flex;
+    flex-direction: column;
+  }
+  .ds-switch {
+    flex: none;
+    cursor: pointer;
+    width: 42px;
+    height: 24px;
+    padding: 0;
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-sunken);
+    border: var(--border-width-strong) solid var(--color-line-strong);
+    position: relative;
+    transition: background var(--duration-base) var(--ease-out);
+  }
+  .ds-switch__thumb {
+    display: block;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--color-line-strong);
+    transition:
+      transform var(--duration-base) var(--ease-wobble),
+      background var(--duration-base);
+  }
+  .ds-switch[data-state='checked'] {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+  }
+  .ds-switch[data-state='checked'] .ds-switch__thumb {
+    transform: translateX(18px);
+    background: var(--color-on-accent);
+  }
+  .ds-switch:focus-visible {
+    border-radius: var(--radius-pill);
+  }
+  .ds-switch:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Slider with live output */
+  .ds-slider {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+  }
+  .ds-slider > label {
+    grid-column: 1;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+  .ds-slider output {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+    background: var(--color-surface-sunken);
+    border-radius: var(--radius-sm);
+    padding: 0 var(--space-2);
+    min-width: 3.5em;
+    text-align: center;
+  }
+  .ds-slider input[type='range'] {
+    grid-column: 1 / -1;
+  }
+  .ds-slider__ends {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--text-xs);
+    color: var(--color-ink-muted);
+    margin-top: -2px;
+  }
+  .ds-slider input[type='range'] {
+    appearance: none;
+    width: 100%;
+    height: 24px;
+    background: transparent;
+    margin: 0;
+    cursor: pointer;
+  }
+  .ds-slider input[type='range']::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(
+      90deg,
+      var(--color-accent) 0 var(--fill, 50%),
+      var(--color-surface-sunken) var(--fill, 50%)
+    );
+    border: 1px solid var(--color-line-strong);
+  }
+  .ds-slider input[type='range']::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-surface-sunken);
+    border: 1px solid var(--color-line-strong);
+  }
+  .ds-slider input[type='range']::-moz-range-progress {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-accent);
+  }
+  .ds-slider input[type='range']::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    margin-top: -8px;
+    border-radius: 50%;
+    background: var(--color-surface-raised);
+    border: 2px solid var(--color-accent);
+    box-shadow: var(--shadow-sm);
+  }
+  .ds-slider input[type='range']::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--color-surface-raised);
+    border: 2px solid var(--color-accent);
+    box-shadow: var(--shadow-sm);
+  }
+  .ds-slider input[type='range']:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: 2px;
+    border-radius: 999px;
+  }
+}
