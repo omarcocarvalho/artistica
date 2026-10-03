@@ -1,9 +1,7 @@
 import type { CropRect, Rotation } from '../../shared/model/image'
 import type { Handle } from './crop'
 import { HANDLES } from './crop'
-
-// TODO(C2): replace with `import type { Matrix } from './exif'` once C2 merges.
-type Matrix = readonly [number, number, number, number, number, number]
+import type { Matrix } from './exif'
 
 export interface ViewTransform {
   readonly rotation: Rotation
