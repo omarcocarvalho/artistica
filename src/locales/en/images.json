@@ -1,1 +1,135 @@
-{}
+{
+  "dropzone": {
+    "groupLabel": "Add images",
+    "title": "Add some reference photos",
+    "hint": "Drop them here, paste, or add a link. We pack them onto pages for you.",
+    "formats": "JPG, PNG, WebP, GIF, HEIC · any number of photos",
+    "privacy": "Nothing is uploaded. Photos stay on this device.",
+    "dropMini": "or drop photos here",
+    "dropActive": "Drop photos to add them",
+    "upload": "Upload",
+    "uploadHero": "Upload photos",
+    "paste": "Paste",
+    "link": "Link",
+    "linkHero": "Add link",
+    "importing_one": "Adding {{count}} photo…",
+    "importing_other": "Adding {{count}} photos…",
+    "importingLabel": "Adding photos",
+    "dismiss": "Dismiss",
+    "noImage": {
+      "title": "No image on the clipboard",
+      "message": "Copy an image first, then paste again."
+    },
+    "pasteHint": {
+      "title": "Paste with the keyboard",
+      "message": "Your browser needs the keyboard here. Press Ctrl+V (or ⌘V on a Mac)."
+    },
+    "url": {
+      "title": "Add image from link",
+      "label": "Image link",
+      "placeholder": "https://example.com/photo.jpg",
+      "submit": "Add",
+      "cancel": "Cancel",
+      "tryAnother": "Try another link",
+      "uploadInstead": "Upload instead"
+    },
+    "gifNote": "Animated GIFs print their first frame."
+  },
+  "list": {
+    "ariaLabel": "Loaded images",
+    "empty": {
+      "title": "No images yet. Add photos to start your sheets.",
+      "formats": "JPG, PNG, WebP, GIF, HEIC"
+    },
+    "select": "Select {{name}}",
+    "edit": "Edit {{name}}",
+    "remove": "Remove {{name}}",
+    "pixels": "{{w}} × {{h}}",
+    "pixelsLabel": "{{w}} by {{h}} pixels",
+    "sizeAuto": "Auto",
+    "sizeFixed": "Fixed {{value}} {{unit}}",
+    "copies": "×{{count}}",
+    "copiesLabel": "{{count}} copies",
+    "dpi": "{{dpi}} DPI",
+    "lowDpiLabel": "Low resolution: {{dpi}} DPI",
+    "separator": "·",
+    "count_one": "{{count}} image",
+    "count_other": "{{count}} images",
+    "removeAll": {
+      "button": "Remove all images",
+      "confirmTitle": "Remove all images?",
+      "confirmBody_other": "This removes all {{count}} images from this session. Photos are not saved anywhere, so they can't be brought back.",
+      "confirm": "Remove all",
+      "cancel": "Cancel",
+      "close": "Close"
+    }
+  },
+  "editSheet": {
+    "title": "Edit image",
+    "subtitle": "{{name}} · {{w}} × {{h}} px",
+    "crop": {
+      "stageLabel": "Image preview",
+      "areaLabel": "Crop area",
+      "help": "Arrow keys move the crop area. Shift plus arrow keys resize it.",
+      "status": "Crop {{w}} × {{h}} px at {{x}}, {{y}}",
+      "annotation": "drag corners",
+      "shape": "Crop shape",
+      "reset": "Reset crop"
+    },
+    "aspect": {
+      "free": "Free",
+      "original": "Original",
+      "ratio11": "1:1",
+      "ratio43": "4:3",
+      "ratio32": "3:2",
+      "ratio169": "16:9",
+      "ratio34": "3:4",
+      "ratio23": "2:3",
+      "ratio916": "9:16"
+    },
+    "transform": {
+      "group": "Rotate and flip",
+      "rotateLeft": "Rotate left 90°",
+      "rotateRight": "Rotate right 90°",
+      "flipH": "Flip horizontal",
+      "flipV": "Flip vertical"
+    },
+    "copies": {
+      "label": "Copies",
+      "less": "Fewer copies",
+      "more": "More copies",
+      "lessGlyph": "−",
+      "moreGlyph": "+",
+      "hint": "Print this image more than once."
+    },
+    "size": {
+      "label": "Print size",
+      "auto": "Auto",
+      "fixed": "Fixed",
+      "autoHint": "Auto picks a size between {{mm}} mm and the 300 DPI limit.",
+      "axisLabel": "Set",
+      "width": "Width",
+      "height": "Height",
+      "valueLabel": "Size",
+      "followsHeight": "Height follows: {{value}} (keeps aspect ratio)",
+      "followsWidth": "Width follows: {{value}} (keeps aspect ratio)"
+    },
+    "dpi": {
+      "label": "Print resolution",
+      "value": "{{dpi}} DPI",
+      "scale0": "0",
+      "scale300": "300",
+      "scale400": "400",
+      "autoOk": "Auto never prints above 300 DPI.",
+      "lowTitle": "Low resolution",
+      "lowFixed": "Below 300 DPI it may print soft. Sharp up to {{w}} × {{h}} {{unit}}.",
+      "lowAuto": "At its smallest comfortable size ({{mm}} mm) this prints at {{dpi}} DPI. It may look soft."
+    },
+    "actions": {
+      "close": "Close",
+      "remove": "Remove image",
+      "cancel": "Cancel",
+      "done": "Done"
+    }
+  }
+}
