@@ -37,7 +37,7 @@ export function BottomSheet({
               <button
                 type="button"
                 aria-label={closeLabel}
-                className="ds-btn ds-btn--ghost ds-btn--icon"
+                className="ds-btn ds-btn--ghost ds-btn--icon ds-dialog__close"
               >
                 <Icon name="close" />
               </button>

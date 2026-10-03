@@ -112,6 +112,7 @@
   }
   .ds-tab {
     position: relative;
+    min-height: var(--size-target);
     border: 0;
     background: transparent;
     cursor: pointer;
@@ -151,7 +152,7 @@
   }
 
   .ds-tooltip {
-    z-index: var(--z-popover);
+    z-index: calc(var(--z-dialog) + 2); /* above dialogs: tooltips can live inside them */
     max-width: 18rem;
     padding: var(--space-1-5) var(--space-2);
     border-radius: var(--radius-sm);
@@ -182,6 +183,11 @@
   }
   .ds-dialog__head .ds-btn {
     border-radius: var(--radius-md);
+  }
+  .ds-dialog__close {
+    width: var(--size-target);
+    min-width: var(--size-target);
+    min-height: var(--size-target);
   }
   .ds-tab:focus-visible {
     border-radius: var(--radius-sm);

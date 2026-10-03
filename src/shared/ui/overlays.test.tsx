@@ -128,3 +128,55 @@ describe('Tooltip', () => {
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Rotate 90 degrees')
   })
 })
+
+describe('overlay hygiene', () => {
+  it('logs no console errors or warnings without a description', () => {
+    const err = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    render(
+      <>
+        <Dialog open onOpenChange={() => undefined} title="No desc" closeLabel="Close">
+          x
+        </Dialog>
+        <BottomSheet open onOpenChange={() => undefined} title="Sheet no desc" closeLabel="Close">
+          y
+        </BottomSheet>
+      </>,
+    )
+    expect(err).not.toHaveBeenCalled()
+    expect(warn).not.toHaveBeenCalled()
+    err.mockRestore()
+    warn.mockRestore()
+  })
+
+  it('BottomSheet renders description and footer', () => {
+    render(
+      <BottomSheet
+        open
+        onOpenChange={() => undefined}
+        title="Sheet"
+        description="Sheet help"
+        closeLabel="Close"
+        footer={<button type="button">Apply</button>}
+      >
+        body
+      </BottomSheet>,
+    )
+    const sheet = screen.getByRole('dialog', { name: 'Sheet' })
+    expect(sheet).toHaveAccessibleDescription('Sheet help')
+    expect(within(sheet).getByRole('button', { name: 'Apply' })).toBeInTheDocument()
+  })
+
+  it('closes when the backdrop is clicked', async () => {
+    const onOpenChange = vi.fn()
+    render(
+      <Dialog open onOpenChange={onOpenChange} title="T" closeLabel="Close">
+        x
+      </Dialog>,
+    )
+    const overlay = document.querySelector('.ds-overlay')
+    expect(overlay).not.toBeNull()
+    await userEvent.click(overlay!)
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+})
