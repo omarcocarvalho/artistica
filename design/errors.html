@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Error states · Artistica mockup</title>
+<meta name="description" content="CORS link failure, unsupported file, non-image paste, no face, low resolution, oversized fixed size, model download failure.">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="mockup.css">
+<script src="mockup.js"></script>
+</head>
+<body>
+<div class="mock-banner" role="note">
+  <a href="index.html">&larr; All screens</a>
+  <span>Mockup: <strong>Error states</strong> · each card shows one failure in context</span>
+  <span class="spacer"></span>
+  <span>Not real image processing</span>
+</div>
+
+<header class="topbar"><a class="brand" href="landing.html" aria-label="Artistica home"><svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect x="5" y="4" width="20" height="25" rx="2" transform="rotate(-6 15 16)" fill="#fff" stroke="currentColor" stroke-width="1.8"/><rect x="9" y="8" width="7" height="9" transform="rotate(-6 15 16)" fill="#b0432a"/><rect x="17" y="8" width="5" height="9" transform="rotate(-6 15 16)" fill="#2f4c9e"/><path d="M9 22c3-2 6 1 9-1s4 0 5-1" fill="none" stroke="#e2b13c" stroke-width="2.2" stroke-linecap="round"/></svg><span class="brand__name">Artistica</span></a><span class="topbar__spacer"></span><button type="button" class="btn btn--ghost theme-toggle" data-theme-toggle aria-label="Change theme"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg><svg class="i-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span data-theme-label>Auto</span></button></header>
+<main id="main">
+<div class="container" style="padding-top:var(--space-8)"><h1 style="font-size:var(--text-2xl)">When things go <span class="scribble">wrong</span></h1>
+<p class="muted" style="margin-top:var(--space-2)">Short, kind, and always with a next step. Errors never block the rest of the sheet.</p></div>
+<div class="state-grid">
+
+<section class="state-card" aria-labelledby="e1"><header><h2 id="e1">Link blocked (CORS)</h2><p>Shown in the “Add link” popover after the fetch fails.</p></header>
+<div class="stage"><div class="popover" role="dialog" aria-labelledby="e1-t">
+  <h3 id="e1-t" style="font-size:var(--text-md)">Add image from link</h3>
+  <div class="field"><label for="e1-url">Image link</label><input id="e1-url" class="input" value="example-gallery.com/photos/heron.jpg" aria-invalid="true" aria-describedby="e1-err" style="border-color:var(--color-danger)"></div>
+  <div class="note note--danger" id="e1-err" role="alert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg><div><strong>Can't read this image</strong>This site doesn't allow other apps to read its images. Download it and upload it instead.</div></div>
+  <div class="row" style="justify-content:flex-end"><button type="button" class="btn">Try another link</button><button type="button" class="btn btn--primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 15V4M7 9l5-5 5 5"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>Upload instead</button></div>
+</div></div></section>
+
+<section class="state-card" aria-labelledby="e2"><header><h2 id="e2">Unsupported file &amp; non-image paste</h2><p>Toasts, bottom-right. Other files in the same drop still load.</p></header>
+<div class="stage"><div class="stack" style="width:100%;align-items:flex-end">
+  <div class="toast" role="alert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg><div class="grow"><strong>notes.pdf can't be added</strong><p class="muted">Use JPG, PNG, WebP, GIF or HEIC. 4 other photos were added.</p></div><button type="button" class="btn btn--ghost btn--icon" aria-label="Dismiss"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="toast toast--warning" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9z"/><path d="M9 11h6M9 15h4"/></svg><div class="grow"><strong>No image on the clipboard</strong><p class="muted">Copy an image first, then paste again.</p></div><button type="button" class="btn btn--ghost btn--icon" aria-label="Dismiss"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="toast toast--warning" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg><div class="grow"><strong>animated.gif: first frame only</strong><p class="muted">Animated GIFs print their first frame.</p></div><button type="button" class="btn btn--ghost btn--icon" aria-label="Dismiss"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+</div></div></section>
+
+<section class="state-card" aria-labelledby="e3"><header><h2 id="e3">No face detected</h2><p>Inline in the Lines panel; the switch turns itself back off.</p></header>
+<div class="stage" style="grid-template-columns:auto 1fr;gap:var(--space-6);align-items:center">
+  <div class="sheet show-safe show-marks" style="--sheet-w:170px" role="img" aria-label="Landscape image, no face guides"><div class="tile ph-landscape " data-id="x" data-n="" style="--x:11;--y:11;--w:188;--h:125;"><div class="tile__img"></div><span class="tile__tag">Selected</span></div></div>
+  <div class="stack" style="max-width:280px">
+    <div class="switch-row"><label for="e3-face">Face construction</label><input type="checkbox" role="switch" class="switch" id="e3-face"></div>
+    <div class="note note--warning" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M5 10h14M7 14h10"/></svg><div><strong>No face found in this image.</strong>Face guides work best with a clear front or ¾ view.</div></div>
+  </div>
+</div></section>
+
+<section class="state-card" aria-labelledby="e4"><header><h2 id="e4">Low resolution</h2><p>Badge in the image list, chip on the page tile, detail in the edit sheet.</p></header>
+<div class="stage" style="display:flex;flex-wrap:wrap;gap:var(--space-6);align-items:center;justify-content:center">
+  <div class="sheet show-safe show-marks" style="--sheet-w:170px" role="img" aria-label="Low resolution tile with warning"><div class="tile ph-portrait " data-id="y" data-n="" style="--x:11;--y:11;--w:60;--h:80;--p1:#2a1d12;--p2:#5e4630;--p3:#8f7152;--p4:#b89c7a;--p5:#e6d6bb;"><div class="tile__img"></div><span class="tile__warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3.5l9.5 17h-19z"/><path d="M12 10v5M12 18v.3"/></svg>203 DPI</span><span class="tile__tag">Selected</span></div></div>
+  <div class="stack" style="width:290px">
+    <ul class="image-list" style="padding:0">
+<li class="image-item" data-tile="t6" data-name="old-photo.gif">
+  <div class="image-item__thumb"><div class="ph ph-portrait ar-p" style="--p1:#2a1d12;--p2:#5e4630;--p3:#8f7152;--p4:#b89c7a;--p5:#e6d6bb;"></div></div>
+  <div style="min-width:0"><button type="button" class="image-item__name" aria-label="Select old-photo.gif">old-photo.gif</button>
+    <div class="image-item__meta"><span class="num">480 × 640</span><span>·</span><span>Auto</span><span class="badge badge--warning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3.5l9.5 17h-19z"/><path d="M12 10v5M12 18v.3"/></svg>203 DPI</span></div></div>
+  <div class="image-item__actions">
+    <button type="button" class="btn btn--ghost btn--icon" aria-label="Edit old-photo.gif"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></button>
+    <button type="button" class="btn btn--ghost btn--icon btn--danger" aria-label="Remove old-photo.gif"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg></button>
+  </div>
+</li></ul>
+    <div class="note note--warning" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3.5l9.5 17h-19z"/><path d="M12 10v5M12 18v.3"/></svg><div><strong>Low resolution</strong>At its smallest comfortable size (60 mm) this prints at 203 DPI. It may look soft.</div></div>
+  </div>
+</div></section>
+
+<section class="state-card" aria-labelledby="e5"><header><h2 id="e5">Fixed size doesn't fit</h2><p>A fixed size larger than the safe area is scaled down to fit.</p></header>
+<div class="stage"><div class="note note--warning" role="status" style="max-width:360px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3.5l9.5 17h-19z"/><path d="M12 10v5M12 18v.3"/></svg><div><strong>Scaled down to fit</strong><span class="num">250 × 333 mm</span> doesn't fit inside A4. Printing at <span class="num">188 × 251 mm</span>.<div class="note-actions"><button type="button" class="btn">Use Auto size</button><button type="button" class="btn btn--ghost">Change paper</button></div></div></div></div></section>
+
+<section class="state-card" aria-labelledby="e6"><header><h2 id="e6">Model download failed</h2><p>Offline or interrupted while getting an AI model.</p></header>
+<div class="stage"><div class="ai-box" style="max-width:320px;background:var(--color-surface)">
+  <div class="note note--danger" role="alert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 8.5a15 15 0 0 1 20 0M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0"/><path d="M12 19v.3"/><path d="M3 3l18 18"/></svg><div><strong>Couldn't download the face model</strong>Check your connection and try again. Other lines still work.</div></div>
+  <div class="row"><button type="button" class="btn btn--secondary">Try again</button><button type="button" class="btn btn--ghost">Turn off face guides</button></div>
+</div></div></section>
+
+<section class="state-card" aria-labelledby="e7"><header><h2 id="e7">Export needs images</h2><p>Export stays disabled with a reason (never a dead click).</p></header>
+<div class="stage"><div class="stack" style="align-items:center">
+  <button type="button" class="btn btn--primary btn--lg" disabled aria-describedby="e7-why"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>Export PDF</button>
+  <p id="e7-why" class="small muted">Add at least one image to export.</p>
+</div></div></section>
+
+</div>
+</main>
+</body>
+</html>

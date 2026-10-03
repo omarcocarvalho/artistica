@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lines panel · Artistica mockup</title>
+<meta name="description" content="Grid, thirds, armature, golden ratio/spiral, centre, edge outline, face and pose guides.">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="mockup.css">
+<script src="mockup.js"></script>
+</head>
+<body class="">
+<div class="mock-banner" role="note">
+  <a href="index.html">&larr; All screens</a>
+  <span>Mockup: <strong>Lines panel</strong> · toggle lines; download the face model</span>
+  <span class="spacer"></span>
+  <span>Not real image processing</span>
+</div>
+
+<header class="topbar">
+  <a class="skip-link" href="#main">Skip to preview</a>
+  <a class="brand" href="landing.html" aria-label="Artistica home"><svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect x="5" y="4" width="20" height="25" rx="2" transform="rotate(-6 15 16)" fill="#fff" stroke="currentColor" stroke-width="1.8"/><rect x="9" y="8" width="7" height="9" transform="rotate(-6 15 16)" fill="#b0432a"/><rect x="17" y="8" width="5" height="9" transform="rotate(-6 15 16)" fill="#2f4c9e"/><path d="M9 22c3-2 6 1 9-1s4 0 5-1" fill="none" stroke="#e2b13c" stroke-width="2.2" stroke-linecap="round"/></svg><span class="brand__name">Artistica</span></a>
+  <span class="privacy-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Photos stay on this device</span>
+  <span class="topbar__spacer"></span>
+  <label class="visually-hidden" for="lang">Language</label>
+  <select class="select" id="lang"><option>English</option></select>
+  <button type="button" class="btn btn--ghost theme-toggle" data-theme-toggle aria-label="Change theme"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg><svg class="i-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span data-theme-label>Auto</span></button>
+  <button type="button" class="btn btn--ghost btn--icon" aria-label="Help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14M12 17v.3"/></svg></button>
+  <button type="button" class="btn btn--primary" data-open="export-dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>Export PDF</button>
+</header>
+<div class="workspace">
+<aside class="panel panel--left" aria-labelledby="images-title">
+  <div class="panel__head"><h2 class="panel__title" id="images-title">Images <span class="badge">6</span></h2>
+    <button type="button" class="btn btn--ghost btn--icon" aria-label="Remove all images"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg></button></div>
+  <div class="add-row" role="group" aria-label="Add images">
+    <button type="button" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 15V4M7 9l5-5 5 5"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>Upload</button>
+    <button type="button" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9z"/><path d="M9 11h6M9 15h4"/></svg>Paste</button>
+    <button type="button" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Link</button>
+  </div>
+  <div class="dropzone dropzone--mini small">or drop photos here</div>
+  <div class="panel__body"><ul class="image-list" data-image-list aria-label="Loaded images"><li class="image-item" data-tile="t1" data-name="portrait-anna.jpg" aria-current="true">
+  <div class="image-item__thumb"><div class="ph ph-portrait ar-p" style=""></div></div>
+  <div style="min-width:0"><button type="button" class="image-item__name" aria-label="Select portrait-anna.jpg">portrait-anna.jpg</button>
+    <div class="image-item__meta"><span class="num">3000 × 4000</span><span>·</span><span>Auto</span></div></div>
+  <div class="image-item__actions">
+    <button type="button" class="btn btn--ghost btn--icon" data-open="edit-dialog" aria-label="Edit portrait-anna.jpg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></button>
+    <button type="button" class="btn btn--ghost btn--icon btn--danger" aria-label="Remove portrait-anna.jpg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg></button>
+  </div>
+</li>
+<li class="image-item" data-tile="t2" data-name="pears-still-life.heic">
+  <div class="image-item__thumb"><div class="ph ph-still ar-p" style=""></div></div>
+  <div style="min-width:0"><button type="button" class="image-item__name" aria-label="Select pears-still-life.heic">pears-still-life.heic</button>
+    <div class="image-item__meta"><span class="num">4000 × 5000</span><span>·</span><span>Auto</span></div></div>
+  <div class="image-item__actions">
+    <button type="button" class="btn btn--ghost btn--icon" data-open="edit-dialog" aria-label="Edit pears-still-life.heic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></button>
+    <button type="button" class="btn btn--ghost btn--icon btn--danger" aria-label="Remove pears-still-life.heic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg></button>
+  </div>
+</li>
+<li class="image-item" data-tile="t3" data-name="hills-at-dusk.jpg">
+  <div class="image-item__thumb"><div class="ph ph-landscape ar-l" style=""></div></div>
+  <div style="min-width:0"><button type="button" class="image-item__name" aria-label="Select hills-at-dusk.jpg">hills-at-dusk.jpg</button>
+    <div class="image-item__meta"><span class="num">6000 × 4000</span><span>·</span><span>Auto</span></div></div>
+  <div class="image-item__actions">
+    <button type="button" class="btn btn--ghost btn--icon" data-open="edit-dialog" aria-label="Edit hills-at-dusk.jpg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></button>
+    <button type="button" class="btn btn--ghost btn--icon btn--danger" aria-label="Remove hills-at-dusk.jpg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg></button>
+  </div>
+</li>
+<li class="image-item" data-tile="t4" data-name="gesture-pose.png">
+  <div class="image-item__thumb"><div class="ph ph-figure ar-p" style=""></div></div>
+  <div style="min-width:0"><button type="button" class="image-item__name" aria-label="Select gesture-pose.png">gesture-pose.png</button>
+    <div class="image-item__meta"><span class="num">2000 × 3000</span><span>·</span><span>Auto</span><span class="badge badge--accent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>×2</span></div></div>
+  <div class="image-item__actions">
+    <button type="button" class="btn btn--ghost btn--icon" data-open="edit-dialog" aria-label="Edit gesture-pose.png"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></button>
+    <button type="button" class="btn btn--ghost btn--icon btn--danger" aria-label="Remove gesture-pose.png"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg></button>
+  </div>
+</li>
+<li class="image-item" data-tile="t5" data-name="seaside.webp">
+  <div class="image-item__thumb"><div class="ph ph-sea ar-l" style=""></div></div>
+  <div style="min-width:0"><button type="button" class="image-item__name" aria-label="Select seaside.webp">seaside.webp</button>
+    <div class="image-item__meta"><span class="num">1920 × 1080</span><span>·</span><span>Fixed 112 mm</span></div></div>
+  <div class="image-item__actions">
+    <button type="button" class="btn btn--ghost btn--icon" data-open="edit-dialog" aria-label="Edit seaside.webp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></button>
+    <button type="button" class="btn btn--ghost btn--icon btn--danger" aria-label="Remove seaside.webp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg></button>
+  </div>
+</li>
+<li class="image-item" data-tile="t6" data-name="old-photo.gif">
+  <div class="image-item__thumb"><div class="ph ph-portrait ar-p" style="--p1:#2a1d12;--p2:#5e4630;--p3:#8f7152;--p4:#b89c7a;--p5:#e6d6bb;"></div></div>
+  <div style="min-width:0"><button type="button" class="image-item__name" aria-label="Select old-photo.gif">old-photo.gif</button>
+    <div class="image-item__meta"><span class="num">480 × 640</span><span>·</span><span>Auto</span><span class="badge badge--warning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3.5l9.5 17h-19z"/><path d="M12 10v5M12 18v.3"/></svg>203 DPI</span></div></div>
+  <div class="image-item__actions">
+    <button type="button" class="btn btn--ghost btn--icon" data-open="edit-dialog" aria-label="Edit old-photo.gif"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></button>
+    <button type="button" class="btn btn--ghost btn--icon btn--danger" aria-label="Remove old-photo.gif"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg></button>
+  </div>
+</li></ul></div>
+  <div class="panel__foot row row--nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="width:16px;height:16px;flex:none;color:var(--color-success)"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg><span>Photos stay on this device. Refreshing clears them.</span></div>
+</aside>
+<main class="desk" id="main" aria-label="Page preview">
+  <div class="desk__toolbar">
+    <span class="suggestion"><span class="hand" aria-hidden="true">tip!</span><span>A4 fits <strong>4</strong> per page</span></span>
+    <span class="muted">2 pages · 7 tiles</span>
+    <span class="grow"></span>
+    
+    <span class="switch-row" style="min-height:0"><label for="guides" class="small">Guides</label><input type="checkbox" role="switch" class="switch" id="guides" checked data-toggle-class="show-safe" data-target=".desk .sheet"></span>
+    <div class="row" role="group" aria-label="Zoom"><button type="button" class="btn btn--ghost btn--icon" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3M8.5 11h5"/></svg></button><span class="num small">100%</span><button type="button" class="btn btn--ghost btn--icon" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3M8.5 11h5M11 8.5v5"/></svg></button></div>
+  </div>
+  <div class="desk__pages"><figure class="page-figure"><div class="sheet show-safe show-marks" style="--sheet-w:420px;" role="img" aria-label="Page 1 of 2 · A4 portrait"><div class="tile ph-portrait  is-selected" data-id="t1" data-n="" style="--x:11;--y:11;--w:188;--h:251;"><div class="tile__img"></div><svg class="tile__lines" viewBox="0 0 300 400" preserveAspectRatio="none" aria-hidden="true"><g data-line="grid"><line x1="75.0" y1="0" x2="75.0" y2="400"/><line x1="150.0" y1="0" x2="150.0" y2="400"/><line x1="225.0" y1="0" x2="225.0" y2="400"/><line x1="0" y1="80.0" x2="300" y2="80.0"/><line x1="0" y1="160.0" x2="300" y2="160.0"/><line x1="0" y1="240.0" x2="300" y2="240.0"/><line x1="0" y1="320.0" x2="300" y2="320.0"/></g><g data-line="thirds"><line x1="100.0" y1="0" x2="100.0" y2="400"/><line x1="0" y1="133.3" x2="300" y2="133.3"/><line x1="200.0" y1="0" x2="200.0" y2="400"/><line x1="0" y1="266.7" x2="300" y2="266.7"/></g><g data-line="diag"><line x1="0" y1="0" x2="300" y2="400"/><line x1="300" y1="0" x2="0" y2="400"/><line x1="0" y1="0" x2="300" y2="200.0"/><line x1="0" y1="0" x2="150.0" y2="400"/><line x1="300" y1="0" x2="0" y2="200.0"/><line x1="300" y1="0" x2="150.0" y2="400"/><line x1="0" y1="400" x2="300" y2="200.0"/><line x1="300" y1="400" x2="0" y2="200.0"/><polygon points="150.0,0 300,200.0 150.0,400 0,200.0"/></g><g data-line="golden"><line x1="114.6" y1="0" x2="114.6" y2="400"/><line x1="185.4" y1="0" x2="185.4" y2="400"/><line x1="0" y1="152.8" x2="300" y2="152.8"/><line x1="0" y1="247.2" x2="300" y2="247.2"/></g><g data-line="spiral"><polyline points="300.0,0.0 260.8,2.1 222.4,8.4 185.2,18.8 150.0,33.1 117.4,51.1 87.9,72.4 62.0,96.7 40.2,123.6 22.8,152.6 10.2,183.2 2.6,214.9 0.0,247.2 0.0,247.2 1.6,267.2 6.3,286.8 14.1,305.7 24.8,323.6 38.3,340.2 54.3,355.2 72.5,368.4 92.7,379.5 114.5,388.4 137.4,394.8 161.2,398.7 185.4,400.0 185.4,400.0 200.4,399.2 215.1,396.8 229.3,392.8 242.7,387.3 255.2,380.5 266.4,372.3 276.3,363.1 284.6,352.8 291.3,341.7 296.1,330.0 299.0,317.9 300.0,305.6 300.0,305.6 299.4,298.0 297.6,290.5 294.6,283.2 290.5,276.4 285.4,270.0 279.3,264.3 272.3,259.3 264.6,255.0 256.3,251.7 247.5,249.2 238.4,247.7 229.2,247.2 229.2,247.2 223.5,247.5 217.9,248.4 212.4,250.0 207.3,252.0 202.5,254.7 198.2,257.8 194.5,261.3 191.3,265.2 188.7,269.5 186.9,273.9 185.8,278.6 185.4,283.3 185.4,283.3 185.6,286.2 186.3,289.1 187.5,291.8 189.0,294.4 191.0,296.9 193.3,299.0 196.0,301.0 198.9,302.6 202.1,303.9 205.5,304.8 208.9,305.4 212.5,305.6 212.5,305.6 214.6,305.5 216.8,305.1 218.9,304.5 220.8,303.7 222.6,302.7 224.3,301.5 225.7,300.2 226.9,298.7 227.9,297.1 228.6,295.4 229.0,293.6 229.2,291.8 229.2,291.8 229.1,290.7 228.8,289.6 228.4,288.5 227.8,287.5 227.0,286.6 226.2,285.8 225.1,285.0 224.0,284.4 222.8,283.9 221.5,283.6 220.2,283.4 218.8,283.3 218.8,283.3 218.0,283.3 217.2,283.5 216.4,283.7 215.7,284.0 215.0,284.4 214.3,284.8 213.8,285.3 213.3,285.9 212.9,286.5 212.7,287.2 212.5,287.9 212.5,288.5"/></g><g data-line="centre"><line x1="150.0" y1="0" x2="150.0" y2="400" stroke-dasharray="6 4"/><line x1="0" y1="200.0" x2="300" y2="200.0" stroke-dasharray="6 4"/></g><g data-line="edge"><ellipse cx="150" cy="132" rx="80" ry="130"/><path d="M86 150 C 90 230, 120 272, 150 274 C 180 272, 210 230, 214 150"/><path d="M128 262 L 126 300 M172 262 L 174 300"/><path d="M6 400 C 20 330, 80 302, 126 300 M294 400 C 280 330, 220 302, 174 300"/><path d="M120 172 q 10 -6 20 0 M160 172 q 10 -6 20 0 M144 214 q 6 6 12 0 M134 240 q 16 8 32 0"/></g><g data-line="face"><circle cx="150" cy="138" r="70"/><line x1="150" y1="50" x2="150" y2="286"/><line x1="78" y1="148" x2="222" y2="148"/><line x1="86" y1="174" x2="214" y2="174"/><line x1="94" y1="216" x2="206" y2="216"/><line x1="112" y1="272" x2="188" y2="272"/><path d="M84 160 C 92 236, 124 272, 150 274 C 176 272, 208 236, 216 160"/></g></svg><span class="tile__tag">portrait-anna.jpg</span></div></div><figcaption>Page 1 of 2 · A4 portrait</figcaption></figure><figure class="page-figure"><div class="sheet show-safe show-marks" style="--sheet-w:300px;" role="img" aria-label="Page 2 of 2 · A4 portrait"><div class="tile ph-figure " data-id="t4" data-n="" style="--x:11;--y:11;--w:120;--h:180;"><div class="tile__img"></div><svg class="tile__lines" viewBox="0 0 200 300" preserveAspectRatio="none" aria-hidden="true"><g data-line="pose"><circle cx="100" cy="50" r="19"/><line x1="100" y1="51" x2="100" y2="72"/><line x1="100" y1="72" x2="100" y2="148"/><line x1="78" y1="86" x2="122" y2="86"/><line x1="78" y1="86" x2="66" y2="120"/><line x1="66" y1="120" x2="54" y2="150"/><line x1="122" y1="86" x2="134" y2="112"/><line x1="134" y1="112" x2="150" y2="80"/><line x1="88" y1="150" x2="112" y2="150"/><line x1="88" y1="150" x2="84" y2="210"/><line x1="84" y1="210" x2="80" y2="272"/><line x1="112" y1="150" x2="116" y2="210"/><line x1="116" y1="210" x2="122" y2="272"/><line x1="100" y1="148" x2="88" y2="150"/><line x1="100" y1="148" x2="112" y2="150"/><circle class="joint" cx="100" cy="72" r="2.6"/><circle class="joint" cx="100" cy="148" r="2.6"/><circle class="joint" cx="78" cy="86" r="2.6"/><circle class="joint" cx="122" cy="86" r="2.6"/><circle class="joint" cx="66" cy="120" r="2.6"/><circle class="joint" cx="54" cy="150" r="2.6"/><circle class="joint" cx="134" cy="112" r="2.6"/><circle class="joint" cx="150" cy="80" r="2.6"/><circle class="joint" cx="88" cy="150" r="2.6"/><circle class="joint" cx="112" cy="150" r="2.6"/><circle class="joint" cx="84" cy="210" r="2.6"/><circle class="joint" cx="80" cy="272" r="2.6"/><circle class="joint" cx="116" cy="210" r="2.6"/><circle class="joint" cx="122" cy="272" r="2.6"/></g><g data-line="thirds"><line x1="66.7" y1="0" x2="66.7" y2="300"/><line x1="133.3" y1="0" x2="133.3" y2="300"/><line x1="0" y1="100" x2="200" y2="100"/><line x1="0" y1="200" x2="200" y2="200"/></g><g data-line="centre"><line x1="100" y1="0" x2="100" y2="300" stroke-dasharray="6 4"/><line x1="0" y1="150" x2="200" y2="150" stroke-dasharray="6 4"/></g></svg><span class="tile__tag">Selected</span></div></div><figcaption>Page 2 of 2 · A4 portrait</figcaption></figure></div>
+  
+</main>
+<aside class="panel panel--right" aria-label="Settings">
+  <div class="tabs" role="tablist" aria-label="Settings"><button type="button" role="tab" class="tab" id="tab-page" aria-controls="panel-page" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/></svg>Page</button><button type="button" role="tab" class="tab" id="tab-studies" aria-controls="panel-studies" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>Studies</button><button type="button" role="tab" class="tab" id="tab-lines" aria-controls="panel-lines" aria-selected="true" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="1.5"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>Lines</button></div>
+  <div class="panel__body"><div role="tabpanel" id="panel-page" aria-labelledby="tab-page" hidden tabindex="0"><div class="stack" data-page-form=".desk .sheet" style="--stack-gap:0">
+  <section class="panel-section" aria-labelledby="ps-paper">
+    <h3 id="ps-paper"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="width:16px;height:16px"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/></svg>Paper</h3>
+    <div class="field">
+      <label for="paper">Paper size</label>
+      <div class="row row--nowrap"><select id="paper" class="select" data-paper-select="paper-icon" data-reveal-value="custom" data-reveal-target="custom-size"><option value="a3" data-wh="297x420">A3</option><option value="a4" data-wh="210x297" selected>A4</option><option value="a5" data-wh="148x210">A5</option><option value="a6" data-wh="105x148">A6</option><option value="letter" data-wh="216x279">Letter</option><option value="legal" data-wh="216x356">Legal</option><option value="tabloid" data-wh="279x432">Tabloid</option><option value="custom" data-wh="200x250">Custom…</option></select>
+      <span class="paper-icon" id="paper-icon" aria-hidden="true"></span></div>
+      <span class="field-hint num" data-paper-dims></span>
+    </div>
+    <div class="input-pair" id="custom-size">
+      <div class="field"><label for="cw">Width</label><div class="unit-input"><input id="cw" class="input" inputmode="decimal" data-mm="200" data-min-mm="50"><span class="unit">mm</span></div></div>
+      <span class="times" aria-hidden="true">×</span>
+      <div class="field"><label for="ch">Height</label><div class="unit-input"><input id="ch" class="input" inputmode="decimal" data-mm="250" data-min-mm="50"><span class="unit">mm</span></div></div>
+    </div>
+    <fieldset class="field"><legend class="field-label">Units</legend>
+      <div class="seg"><input type="radio" name="units" id="u-mm" value="mm" checked><label for="u-mm">mm</label><input type="radio" name="units" id="u-in" value="in"><label for="u-in">inches</label></div>
+    </fieldset>
+    <fieldset class="field"><legend class="field-label">Orientation</legend>
+      <div class="seg seg--block"><input type="radio" name="orientation" id="o-auto" value="auto" checked><label for="o-auto">Auto</label><input type="radio" name="orientation" id="o-p" value="portrait"><label for="o-p">Portrait</label><input type="radio" name="orientation" id="o-l" value="landscape"><label for="o-l">Landscape</label></div>
+      <span class="field-hint">Auto picked <strong>portrait</strong>: fewer pages.</span>
+    </fieldset>
+  </section>
+  <section class="panel-section" aria-labelledby="ps-space">
+    <h3 id="ps-space">Spacing</h3>
+    <div class="field">
+      <label for="safe">Safe area</label>
+      <div class="unit-input" style="max-width:9rem"><input id="safe" class="input" inputmode="decimal" data-mm="5" data-min-mm="3" aria-describedby="safe-hint"><span class="unit">mm</span></div>
+      <span class="field-hint" id="safe-hint">Blank border at the page edge. Min 3 mm.</span>
+    </div>
+    <div class="switch-row"><label for="gutter-on">Gutter between images</label><input type="checkbox" role="switch" class="switch" id="gutter-on" checked data-reveal="gutter-field"></div>
+    <div class="field" id="gutter-field">
+      <label for="gutter" class="visually-hidden">Gutter size</label>
+      <div class="unit-input" style="max-width:9rem"><input id="gutter" class="input" inputmode="decimal" data-mm="6" data-min-mm="0" aria-describedby="gutter-hint"><span class="unit">mm</span></div>
+      <span class="field-hint" id="gutter-hint">Room to cut between images.</span>
+    </div>
+  </section>
+  <section class="panel-section" aria-labelledby="ps-cut">
+    <h3 id="ps-cut"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="width:16px;height:16px"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><path d="M8 16L19 3M16 16L5 3"/></svg>Cutting</h3>
+    <div class="switch-row"><label for="marks-on">Crop marks</label><input type="checkbox" role="switch" class="switch" id="marks-on" checked data-toggle-class="show-marks" data-target=".desk .sheet"></div>
+    <div class="switch-row"><label for="bleed-on">Bleed</label><input type="checkbox" role="switch" class="switch" id="bleed-on" data-toggle-class="show-bleed" data-target=".desk .sheet" data-reveal="bleed-field" aria-describedby="bleed-hint"></div>
+    <div class="field" id="bleed-field">
+      <label for="bleed" class="visually-hidden">Bleed amount</label>
+      <div class="unit-input" style="max-width:9rem"><input id="bleed" class="input" inputmode="decimal" data-mm="3" data-min-mm="0.5"><span class="unit">mm</span></div>
+    </div>
+    <span class="field-hint" id="bleed-hint">Extends edge pixels past the cut line, so a slightly-off cut leaves no white sliver.</span>
+    <div class="note" id="bleed-note" role="status" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg><span>Gutter raised to <strong style="display:inline" data-gutter-value>6 mm</strong>. Bleed needs a gutter of at least 2 × bleed.</span></div>
+  </section>
+  <section class="panel-section">
+    <p class="suggestion" style="align-self:flex-start"><span class="hand" aria-hidden="true">tip!</span><span>A4 fits <strong>4</strong> references per page comfortably.</span></p>
+    <p class="field-hint">Settings are remembered on this device.</p>
+  </section>
+</div></div><div role="tabpanel" id="panel-studies" aria-labelledby="tab-studies" hidden tabindex="0"><div class="stack" style="--stack-gap:0">
+  <section class="panel-section">
+    <p class="small muted">Studies for <strong data-selected-name>portrait-anna.jpg</strong></p>
+    <fieldset class="field"><legend class="field-label">Print these versions</legend>
+      <div class="chips">
+        <span class="chip"><input type="checkbox" id="v-orig" checked><label for="v-orig">Original</label></span>
+        <span class="chip"><input type="checkbox" id="v-blur" checked><label for="v-blur">Blurred</label></span>
+        <span class="chip"><input type="checkbox" id="v-val" checked><label for="v-val">Values</label></span>
+        <span class="chip"><input type="checkbox" id="v-bv"><label for="v-bv">Blur + Values</label></span>
+      </div>
+      <span class="field-hint">Each version is a tile. They print together, side by side.</span>
+    </fieldset>
+  </section>
+  <section class="panel-section" aria-labelledby="st-blur">
+    <h3 id="st-blur">Blur <span class="hand">squint!</span></h3>
+    <div class="slider">
+      <label for="blur">Amount</label><output id="blur-out" for="blur">40%</output>
+      <input type="range" id="blur" min="1" max="100" value="40" data-out="blur-out" data-unit="%" data-css-var="--blur" data-target=".desk">
+      <div class="range-ends" aria-hidden="true"><span>1%</span><span>100%</span></div>
+    </div>
+    <span class="field-hint">Scales with image size, so 40% looks alike on every photo.</span>
+  </section>
+  <section class="panel-section" aria-labelledby="st-val">
+    <h3 id="st-val">Values</h3>
+    <div class="stack" data-hue-scope data-hue="55" data-ramp-target=".desk">
+  <div class="slider">
+    <label for="st-values">Number of values</label><output id="st-values-out" for="st-values">5</output>
+    <input type="range" id="st-values" min="2" max="20" value="5" data-out="st-values-out" data-values-count>
+    <div class="range-ends" aria-hidden="true"><span>2 · notan</span><span>20</span></div>
+  </div>
+  <fieldset class="field"><legend class="field-label">Hue</legend>
+    <div class="swatches"><button type="button" class="swatch" style="--h:55" data-hue="55" aria-pressed="true" aria-label="Sepia" title="Sepia"></button><button type="button" class="swatch" style="--h:35" data-hue="35" aria-pressed="false" aria-label="Terracotta" title="Terracotta"></button><button type="button" class="swatch" style="--h:85" data-hue="85" aria-pressed="false" aria-label="Ochre" title="Ochre"></button><button type="button" class="swatch" style="--h:135" data-hue="135" aria-pressed="false" aria-label="Sap green" title="Sap green"></button><button type="button" class="swatch" style="--h:195" data-hue="195" aria-pressed="false" aria-label="Teal" title="Teal"></button><button type="button" class="swatch" style="--h:265" data-hue="265" aria-pressed="false" aria-label="Ultramarine" title="Ultramarine"></button><button type="button" class="swatch" style="--h:305" data-hue="305" aria-pressed="false" aria-label="Violet" title="Violet"></button><button type="button" class="swatch swatch--neutral" data-hue="0" data-neutral aria-pressed="false" aria-label="Neutral grey" title="Neutral grey"></button></div>
+  </fieldset>
+  <div class="slider">
+    <label for="st-hue">Custom hue</label><output id="st-hue-out" for="st-hue">55°</output>
+    <input type="range" id="st-hue" min="0" max="360" value="55" data-out="st-hue-out" data-unit="°" data-hue-slider>
+  </div>
+  <div class="field"><span class="field-label" id="st-ramp-l">Value ramp</span>
+    <div class="ramp" data-ramp role="img" aria-labelledby="st-ramp-l"></div>
+    <div class="ramp-labels" aria-hidden="true"><span>Darkest</span><span>Lightest tint</span></div>
+  </div>
+</div>
+    <span class="field-hint">Blur + Values blurs first, then splits into values.</span>
+  </section>
+  <section class="panel-section">
+    <button type="button" class="btn btn--block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>Apply to all images</button>
+    <span class="field-hint">Copies these study settings to all 6 images.</span>
+  </section>
+</div></div><div role="tabpanel" id="panel-lines" aria-labelledby="tab-lines" tabindex="0"><div class="stack" style="--stack-gap:0">
+  <section class="panel-section">
+    <p class="small muted">Lines for <strong data-selected-name>portrait-anna.jpg</strong></p>
+    <p class="field-hint">Drawn on top of every printed version of this image.</p>
+  </section>
+  <section class="panel-section" aria-labelledby="ln-comp">
+    <h3 id="ln-comp">Composition</h3>
+    <div class="switch-row"><label for="ln-grid">Grid</label><input type="checkbox" role="switch" class="switch" id="ln-grid" data-toggle-class="lines-grid" data-target=".desk" data-reveal="ln-grid-f"></div>
+    <div class="input-pair" id="ln-grid-f">
+      <div class="field"><label for="ln-gc">Columns</label><input id="ln-gc" class="input num" type="number" min="1" max="20" value="4"></div>
+      <span class="times" aria-hidden="true">×</span>
+      <div class="field"><label for="ln-gr">Rows</label><input id="ln-gr" class="input num" type="number" min="1" max="20" value="5"></div>
+    </div>
+    <div class="switch-row"><label for="ln-thirds">Rule of thirds</label><input type="checkbox" role="switch" class="switch" id="ln-thirds" checked data-toggle-class="lines-thirds" data-target=".desk"></div>
+    <div class="switch-row"><label for="ln-diag">Diagonals &amp; armature</label><input type="checkbox" role="switch" class="switch" id="ln-diag" data-toggle-class="lines-diag" data-target=".desk"></div>
+    <div class="switch-row"><label for="ln-golden">Golden ratio</label><input type="checkbox" role="switch" class="switch" id="ln-golden" data-toggle-class="lines-golden" data-target=".desk"></div>
+    <div class="switch-row"><label for="ln-spiral">Golden spiral</label><input type="checkbox" role="switch" class="switch" id="ln-spiral" data-toggle-class="lines-spiral" data-target=".desk" data-reveal="ln-spiral-f"></div>
+    <fieldset class="field" id="ln-spiral-f"><legend class="field-label">Spiral starts at</legend>
+      <div class="seg seg--block">
+        <input type="radio" name="ln-corner" id="ln-c1" checked><label for="ln-c1" aria-label="Top left">&#8598;</label>
+        <input type="radio" name="ln-corner" id="ln-c2"><label for="ln-c2" aria-label="Top right">&#8599;</label>
+        <input type="radio" name="ln-corner" id="ln-c3"><label for="ln-c3" aria-label="Bottom left">&#8601;</label>
+        <input type="radio" name="ln-corner" id="ln-c4"><label for="ln-c4" aria-label="Bottom right">&#8600;</label>
+      </div>
+    </fieldset>
+    <div class="switch-row"><label for="ln-centre">Centre lines</label><input type="checkbox" role="switch" class="switch" id="ln-centre" checked data-toggle-class="lines-centre" data-target=".desk"></div>
+  </section>
+  <section class="panel-section" aria-labelledby="ln-ai">
+    <h3 id="ln-ai">Guides from the photo <span class="badge badge--success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>On device</span></h3>
+    <div class="switch-row"><label for="ln-edge">Edge outline</label><input type="checkbox" role="switch" class="switch" id="ln-edge" data-toggle-class="lines-edge" data-target=".desk" data-reveal="ln-edge-f"></div>
+    <div class="slider" id="ln-edge-f">
+      <label for="ln-detail">Detail</label><output id="ln-detail-out" for="ln-detail">50%</output>
+      <input type="range" id="ln-detail" min="1" max="100" value="50" data-out="ln-detail-out" data-unit="%">
+    </div>
+    <div class="switch-row"><label for="ln-face">Face construction</label><input type="checkbox" role="switch" class="switch" id="ln-face" checked data-reveal="ln-face-dl"></div>
+    <div class="ai-box" id="ln-face-dl" data-mb="4" data-on-done=".desk" data-on-done-class="lines-face">
+      <div data-dl-prompt class="stack" style="--stack-gap:var(--space-2)">
+        <p class="small"><strong>One-time download: 4 MB</strong></p>
+        <p class="field-hint">Face guides use a small AI model. It's saved on this device and runs offline. Your photos are never uploaded.</p>
+        <div class="row"><button type="button" class="btn btn--secondary" data-fake-download="ln-face-dl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>Download &amp; turn on</button></div>
+      </div>
+      <div data-dl-running hidden class="stack" style="--stack-gap:var(--space-2)">
+        <p class="small">Downloading face model…</p>
+        <div class="progress" role="progressbar" aria-label="Face model download" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress__fill"></div></div>
+        <p class="field-hint num" data-dl-label aria-live="polite">0 of 4 MB</p>
+      </div>
+      <div data-dl-done hidden class="note note--success" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>Face guides on. Brow, eye, nose and chin lines added.</span></div>
+    </div>
+    <div class="switch-row"><label for="ln-pose">Body pose</label><input type="checkbox" role="switch" class="switch" id="ln-pose" data-toggle-class="lines-pose" data-target=".desk" aria-describedby="ln-pose-h"></div><span class="field-hint" id="ln-pose-h" style="margin-top:-6px">Downloads a 9 MB model the first time.</span>
+  </section>
+  <section class="panel-section" aria-labelledby="ln-style">
+    <h3 id="ln-style">Line style</h3>
+    <div class="row row--between"><label for="ln-color" class="field-label">Colour</label><input type="color" id="ln-color" class="color-input" value="#e0457b" data-css-var="--line-color" data-target=".desk"></div>
+    <div class="slider">
+      <label for="ln-thick">Thickness</label><output id="ln-thick-out" for="ln-thick">0.35 mm</output>
+      <input type="range" id="ln-thick" min="0.1" max="2" step="0.05" value="0.35" data-out="ln-thick-out" data-unit=" mm" data-css-var="--line-mm" data-target=".desk">
+    </div>
+    <div class="slider">
+      <label for="ln-op">Opacity</label><output id="ln-op-out" for="ln-op">90%</output>
+      <input type="range" id="ln-op" min="10" max="100" value="90" data-out="ln-op-out" data-unit="%" data-css-var="--line-op-pct" data-target=".desk">
+    </div>
+  </section>
+  <section class="panel-section">
+    <button type="button" class="btn btn--block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>Apply to all images</button>
+  </section>
+</div></div></div>
+</aside>
+</div>
+<dialog class="dialog" id="edit-dialog" aria-labelledby="edit-title">
+  <div class="dialog__head">
+    <div><h2 id="edit-title">Edit image</h2><p class="small muted"><span>old-photo.gif</span> · <span class="num">480 × 640 px</span></p></div>
+    <button type="button" class="btn btn--ghost btn--icon" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="dialog__body" style="display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,1fr);gap:var(--space-6)">
+    <div class="stack">
+      <div class="crop-stage"><div class="crop-photo" id="crop-photo"><div class="ph ph-portrait" style="--p1:#2a1d12;--p2:#5e4630;--p3:#8f7152;--p4:#b89c7a;--p5:#e6d6bb;"></div>
+        <div class="crop-box" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div>
+        <span class="annot" style="right:18px;top:16px">drag corners</span></div>
+      <div class="row row--between">
+        <div class="row" role="group" aria-label="Rotate and flip">
+          <button type="button" class="btn btn--icon" data-transform="rotate-left" data-target="#crop-photo" aria-label="Rotate left 90°"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 4v6h6"/><path d="M4.6 10A8 8 0 1 1 6 17"/></svg></button>
+          <button type="button" class="btn btn--icon" data-transform="rotate-right" data-target="#crop-photo" aria-label="Rotate right 90°"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 4v6h-6"/><path d="M19.4 10A8 8 0 1 0 18 17"/></svg></button>
+          <button type="button" class="btn btn--icon" data-transform="flip-x" data-target="#crop-photo" aria-label="Flip horizontal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v18" stroke-dasharray="2 2"/><path d="M9 7L3 17h6zM15 7l6 10h-6z"/></svg></button>
+          <button type="button" class="btn btn--icon" data-transform="flip-y" data-target="#crop-photo" aria-label="Flip vertical"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 12h18" stroke-dasharray="2 2"/><path d="M7 9L17 3v6zM7 15l10 6v-6z"/></svg></button>
+        </div>
+        <button type="button" class="btn btn--ghost">Reset crop</button>
+      </div>
+      <fieldset class="field"><legend class="field-label">Crop shape</legend><div class="chips"><span class="chip chip--plain"><input type="radio" name="aspect" id="ar-free" checked><label for="ar-free">Free</label></span><span class="chip chip--plain"><input type="radio" name="aspect" id="ar-orig"><label for="ar-orig">Original</label></span><span class="chip chip--plain"><input type="radio" name="aspect" id="ar-1-1"><label for="ar-1-1">1:1</label></span><span class="chip chip--plain"><input type="radio" name="aspect" id="ar-4-3"><label for="ar-4-3">4:3</label></span><span class="chip chip--plain"><input type="radio" name="aspect" id="ar-3-2"><label for="ar-3-2">3:2</label></span><span class="chip chip--plain"><input type="radio" name="aspect" id="ar-16-9"><label for="ar-16-9">16:9</label></span></div></fieldset>
+    </div>
+    <div class="stack" style="--stack-gap:var(--space-5)">
+      <div class="field"><label for="copies">Copies</label>
+        <div class="stepper"><button type="button" data-dec="copies" aria-label="Fewer copies">−</button><input id="copies" type="number" min="1" max="50" value="1"><button type="button" data-inc="copies" aria-label="More copies">+</button></div>
+        <span class="field-hint">Print this image more than once.</span></div>
+      <fieldset class="field"><legend class="field-label">Print size</legend>
+        <div class="seg seg--block"><input type="radio" name="size" id="sz-auto" value="auto"><label for="sz-auto">Auto</label><input type="radio" name="size" id="sz-fixed" value="fixed" checked data-reveal="fixed-fields"><label for="sz-fixed">Fixed</label></div>
+        <span class="field-hint">Auto picks a size between 60 mm and the 300 DPI limit.</span>
+      </fieldset>
+      <div class="stack" id="fixed-fields" style="--stack-gap:var(--space-2)">
+        <div class="row row--nowrap" style="align-items:flex-end">
+          <fieldset class="field"><legend class="field-label">Set</legend>
+            <div class="seg"><input type="radio" name="dim" id="dim-w" checked><label for="dim-w">Width</label><input type="radio" name="dim" id="dim-h"><label for="dim-h">Height</label></div></fieldset>
+          <div class="field grow"><label for="fixed-val" class="visually-hidden">Width</label><div class="unit-input"><input id="fixed-val" class="input" value="90" inputmode="decimal"><span class="unit">mm</span></div></div>
+        </div>
+        <p class="field-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="width:12px;height:12px;display:inline;vertical-align:-1px"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Height follows: <strong class="num">120 mm</strong> (keeps aspect ratio)</p>
+      </div>
+      <div class="dpi-meter" aria-describedby="dpi-warn">
+        <div class="row row--between small"><span class="field-label">Print resolution</span><strong class="num" style="color:var(--color-warning)">135 DPI</strong></div>
+        <div class="dpi-meter__bar"><span style="width:34%"></span></div>
+        <div class="dpi-meter__labels" aria-hidden="true"><span>0</span><span style="margin-left:auto;margin-right:20%">300</span><span>400</span></div>
+      </div>
+      <div class="note note--warning" id="dpi-warn" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3.5l9.5 17h-19z"/><path d="M12 10v5M12 18v.3"/></svg><div><strong>Low resolution</strong>Below 300 DPI it may print soft. Sharp up to <span class="num">40 × 54 mm</span>.</div></div>
+    </div>
+  </div>
+  <div class="dialog__foot">
+    <button type="button" class="btn btn--ghost btn--danger" style="margin-right:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg>Remove image</button>
+    <button type="button" class="btn" data-close>Cancel</button>
+    <button type="button" class="btn btn--primary" data-close>Done</button>
+  </div>
+</dialog>
+<dialog class="dialog dialog--sm" id="export-dialog" aria-labelledby="export-title">
+  <div class="dialog__head"><h2 id="export-title">Export PDF</h2><button type="button" class="btn btn--ghost btn--icon" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="dialog__body"><div id="exp" class="stack" style="--stack-gap:var(--space-4)">
+  <div data-export-ready class="stack" style="--stack-gap:var(--space-4)">
+    <dl class="kv">
+      <dt>Pages</dt><dd>2 · A4 portrait</dd>
+      <dt>Tiles</dt><dd>7 from 6 images</dd>
+      <dt>Crop marks</dt><dd>On</dd>
+      <dt>Bleed</dt><dd>Off</dd>
+      <dt>Quality</dt><dd>300 DPI, never upscaled</dd>
+    </dl>
+    <div class="field"><label for="exp-name">File name</label><input id="exp-name" class="input" value="artistica-a4-2026-10-03.pdf"></div>
+    <button type="button" class="btn btn--primary btn--lg btn--block" data-fake-export="exp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>Create PDF</button>
+  </div>
+  <div data-export-running hidden class="stack" style="--stack-gap:var(--space-3)">
+    <p class="small"><strong data-progress-label aria-live="polite">Page 1 of 2…</strong></p>
+    <div class="progress" role="progressbar" aria-label="PDF progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress__fill"></div></div>
+    <ol class="page-steps"><li data-state="todo"><span class="dot" aria-hidden="true"></span>Page 1</li><li data-state="todo"><span class="dot" aria-hidden="true"></span>Page 2</li></ol>
+    <p class="field-hint">One page at a time to save memory. Keep this tab open.</p>
+    <button type="button" class="btn" data-cancel-export="exp">Cancel</button>
+  </div>
+  <div data-export-done hidden class="stack" style="--stack-gap:var(--space-3)">
+    <h3 style="font-family:var(--font-display);font-size:var(--text-lg)">Your PDF is ready <span class="hand" style="color:var(--color-accent)">yay!</span></h3>
+    <a class="btn btn--primary btn--lg btn--block" href="#" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>Download PDF</a>
+    <div class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg><span><strong>Print at 100%</strong>Choose “Actual size”, not “Fit to page”, so sizes stay exact.</span></div>
+    <button type="button" class="btn btn--ghost" data-cancel-export="exp">Make another</button>
+  </div>
+</div></div>
+</dialog>
+
+</body>
+</html>
