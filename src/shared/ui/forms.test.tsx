@@ -260,4 +260,27 @@ describe('NumberField', () => {
     await userEvent.type(field, '0.2{Enter}')
     expect(onChange).not.toHaveBeenCalled()
   })
+
+  it('announces the value with its unit', () => {
+    const { unmount } = render(<Harness initial={5} />)
+    expect(screen.getByRole('spinbutton')).toHaveAttribute('aria-valuetext', '5 mm')
+    unmount()
+    render(<Harness unit="in" initial={25.4} />)
+    expect(screen.getByRole('spinbutton')).toHaveAttribute('aria-valuetext', '1 in')
+  })
+
+  it('does not submit an enclosing form on Enter', async () => {
+    const onSubmit = vi.fn((e: { preventDefault: () => void }) => {
+      e.preventDefault()
+    })
+    render(
+      <form onSubmit={onSubmit}>
+        <Harness />
+      </form>,
+    )
+    const field = screen.getByRole('spinbutton')
+    await userEvent.clear(field)
+    await userEvent.type(field, '7{Enter}')
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
 })

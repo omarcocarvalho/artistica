@@ -57,6 +57,7 @@ export function NumberField({
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
+      e.preventDefault() // do not submit an enclosing form
       commitDraft()
     } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault()
@@ -86,6 +87,7 @@ export function NumberField({
           aria-valuemax={
             Number.isFinite(maxMm) ? roundForUnit(mmToUnit(maxMm, unit), unit) : undefined
           }
+          aria-valuetext={`${show(valueMm, unit)} ${unitLabel}`}
           aria-describedby={hint ? hintId : undefined}
           disabled={disabled}
           value={draft ?? show(valueMm, unit)}
