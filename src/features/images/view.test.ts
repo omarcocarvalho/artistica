@@ -8,6 +8,7 @@ import {
   mapHandleToSource,
   mapPointToDisplay,
   mapRectToDisplay,
+  mapPointToSource,
   mapRectToSource,
   rotateBy,
   viewMatrix,
@@ -95,7 +96,7 @@ describe('round trips (property)', () => {
 })
 
 describe('mapHandleToSource', () => {
-  it('a displayed east handle on a 90-degree view is the source south handle', () => {
+  it('a displayed east handle on a 90-degree view is the source north handle', () => {
     // display X = H - y, so dragging right in the display moves up in the source: east -> north.
     const v: ViewTransform = { rotation: 90, flipH: false, flipV: false }
     expect(mapHandleToSource('e', v)).toBe('n')
@@ -113,5 +114,80 @@ describe('viewMatrix', () => {
         expect(b * W + d * H + f).toBeCloseTo(p.y, 6)
       }),
     )
+  })
+})
+
+describe('exact mappings on a non-square image (hand-derived)', () => {
+  // W=400, H=300, source point (10, 20). Expected values come from rotating the
+  // point clockwise (90: (H-y, x), 180: (W-x, H-y), 270: (y, W-x)), then flipping
+  // in the displayed frame (display size is 300x400 for 90/270, else 400x300).
+  const W = 400
+  const H = 300
+  type Row = [Rotation, boolean, boolean, { x: number; y: number }]
+  const table: Row[] = [
+    [0, false, false, { x: 10, y: 20 }],
+    [0, true, false, { x: 390, y: 20 }],
+    [0, false, true, { x: 10, y: 280 }],
+    [0, true, true, { x: 390, y: 280 }],
+    [90, false, false, { x: 280, y: 10 }],
+    [90, true, false, { x: 20, y: 10 }],
+    [90, false, true, { x: 280, y: 390 }],
+    [90, true, true, { x: 20, y: 390 }],
+    [180, false, false, { x: 390, y: 280 }],
+    [180, true, false, { x: 10, y: 280 }],
+    [180, false, true, { x: 390, y: 20 }],
+    [180, true, true, { x: 10, y: 20 }],
+    [270, false, false, { x: 20, y: 390 }],
+    [270, true, false, { x: 280, y: 390 }],
+    [270, false, true, { x: 20, y: 10 }],
+    [270, true, true, { x: 280, y: 10 }],
+  ]
+
+  it.each(table)(
+    'rotation %i flipH %s flipV %s: point to display and back',
+    (rotation, flipH, flipV, display) => {
+      const v: ViewTransform = { rotation, flipH, flipV }
+      expect(mapPointToDisplay({ x: 10, y: 20 }, v, W, H)).toEqual(display)
+      expect(mapPointToSource(display, v, W, H)).toEqual({ x: 10, y: 20 })
+    },
+  )
+
+  // Source rect (10,20,100,50): corners (10,20) and (110,70).
+  const rects: [Rotation, boolean, boolean, { x: number; y: number; w: number; h: number }][] = [
+    [180, false, false, { x: 290, y: 230, w: 100, h: 50 }],
+    [180, true, false, { x: 10, y: 230, w: 100, h: 50 }],
+    [270, false, false, { x: 20, y: 290, w: 50, h: 100 }],
+    [270, false, true, { x: 20, y: 10, w: 50, h: 100 }],
+  ]
+  it.each(rects)(
+    'rotation %i flipH %s flipV %s: rect to display',
+    (rotation, flipH, flipV, expected) => {
+      const v: ViewTransform = { rotation, flipH, flipV }
+      expect(mapRectToDisplay({ x: 10, y: 20, w: 100, h: 50 }, v, W, H)).toEqual(expected)
+    },
+  )
+
+  // Displayed delta (3, 5): undo flips (negate), then undo the clockwise turn.
+  const deltas: [Rotation, boolean, boolean, { x: number; y: number }][] = [
+    [180, false, false, { x: -3, y: -5 }],
+    [180, true, false, { x: 3, y: -5 }],
+    [180, false, true, { x: -3, y: 5 }],
+    [180, true, true, { x: 3, y: 5 }],
+    [270, false, false, { x: -5, y: 3 }],
+    [270, true, false, { x: -5, y: -3 }],
+    [270, false, true, { x: 5, y: 3 }],
+    [270, true, true, { x: 5, y: -3 }],
+  ]
+  it.each(deltas)(
+    'rotation %i flipH %s flipV %s: delta to source',
+    (rotation, flipH, flipV, expected) => {
+      expect(mapDeltaToSource({ x: 3, y: 5 }, { rotation, flipH, flipV })).toEqual(expected)
+    },
+  )
+
+  it('viewMatrix for 90 clockwise on 400x300 is [0, 1, -1, 0, 300, 0]', () => {
+    expect(viewMatrix({ rotation: 90, flipH: false, flipV: false }, W, H)).toEqual([
+      0, 1, -1, 0, 300, 0,
+    ])
   })
 })

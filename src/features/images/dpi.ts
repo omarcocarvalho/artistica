@@ -11,6 +11,9 @@ export interface PrintedPx {
   readonly pxH: number
 }
 
+/** Tolerance (DPI) so values within float noise of the target are not flagged as low. */
+const DPI_TOLERANCE = 0.5
+
 const round1 = (n: number): number => Math.round(n * 10) / 10
 
 export function fixedSizeMm(printed: PrintedPx, size: FixedSize): { w: Mm; h: Mm } {
@@ -47,5 +50,5 @@ export function dpiInfo(printed: PrintedPx, size: SizeMode): DpiInfo {
           TARGET_DPI,
           effectiveDpi(Math.min(printed.pxW, printed.pxH), MIN_COMFORT_SHORT_SIDE_MM),
         )
-  return { dpi, low: dpi < TARGET_DPI - 0.5, sharpUpToMm }
+  return { dpi, low: dpi < TARGET_DPI - DPI_TOLERANCE, sharpUpToMm }
 }
