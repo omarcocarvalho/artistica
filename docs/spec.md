@@ -1,5 +1,7 @@
 # Review round 1: designs + M0 plan
 
+> **Closed 2026-10-03.** Designs and the M0 plan are approved. M0 runs subagent-driven.
+
 > **To review:**
 > - Design mockups: open `design/index.html` (repo root) in your browser. Add `?theme=dark` or `?theme=light` to any URL to force a theme.
 > - M0 plan: `docs/superpowers/plans/2026-10-03-m0-setup.md`.
@@ -10,67 +12,67 @@
 ## Gates
 
 G1. **Designs approved?** If not, list the changes.
-   **A:**
+   **A:** yes
 G2. **M0 plan approved?**
-   **A:**
+   **A:** yes
 G3. **How to run M0.** Subagent-driven: a fresh agent implements each task and a fresh reviewer checks it, with independent tasks run in parallel. The alternative is native: I do all tasks in this session, with one review at the end.
    _Recommendation:_ subagent-driven. A mistake in CI or branch protection would block every later PR.
-   **A:**
+   **A:** subagent-driven. A mistake in CI or branch protection would block every later PR.
 
 ## M0 plan questions
 
 P1. **Release PR checks.** PRs opened by release-please don't trigger CI by themselves. Options: (a) I close and reopen the release PR with `gh` at the end of each milestone, which triggers CI; (b) you create a fine-grained personal access token and store it as a repo secret, so checks run automatically.
    _Recommendation:_ (a). No secrets to manage.
-   **A:**
+   **A:** a
 P2. **Branch protection applies to admins (you) too?**
    _Recommendation:_ yes. It can be switched off for an emergency fix.
-   **A:**
+   **A:** yes
 P3. **Test coverage threshold.**
    _Recommendation:_ start in M1, 80% on the core modules (layout, studies, lines, render).
-   **A:**
+   **A:** start in M1, 80% on the core modules (layout, studies, lines, render).
 P4. **Branch prefixes.** Besides `feat/`, `fix/` and `chore/`, also allow `docs/`, `ci/` and `test/`?
    _Recommendation:_ yes.
-   **A:**
+   **A:** yes 
 P5. ~~Moving `design/`~~: **resolved.** All planning docs and mockups were moved into the repo on 2026-10-03, at your request.
 P6. **Placeholder live early.** Use a manual deploy to put the placeholder page live before v0.0.1 is tagged?
    _Recommendation:_ yes.
-   **A:**
+   **A:** yes
 
 ## Design questions
 
 D1. **Lines on phones.** Keep composition lines inside the Studies step (as mocked, 5 steps), or give them their own 6th step?
    _Recommendation:_ inside Studies.
-   **A:**
+   **A:** inside Studies _(answer was on the D2 line; moved here)_
 D2. **Crop marks and bleed inside the safe area?** As mocked. Needed because printers can't print the outer edge.
    _Recommendation:_ yes.
-   **A:**
+   **A:** _(blank; recommendation applied: yes)_
 D3. **Defaults.** Crop marks on, bleed off?
    _Recommendation:_ yes.
-   **A:**
+   **A:** yes
 D4. **Language picker before M6.** Only English exists until M6.
    _Recommendation:_ hide the picker until M6.
-   **A:**
+   **A:** hide the picker until M6.
 D5. **Fonts (self-hosted, all free open-source licences).** Fraunces for headings, Atkinson Hyperlegible for UI text, Caveat for hand-written accents?
    _Recommendation:_ yes.
-   **A:**
+   **A:** yes
 D6. **Click to select.** Clicking an image on the page preview selects it in the side panels?
    _Recommendation:_ yes.
-   **A:**
+   **A:** yes
 D7. **"Apply to all" scope.** Studies and Lines each have their own "apply to all" (they don't copy each other's settings)?
    _Recommendation:_ yes.
-   **A:**
+   **A:** yes
 D8. **Hue picker.** Preset swatches plus a hue slider. Is that enough, or do you also want a full colour picker?
    _Recommendation:_ swatches + slider.
-   **A:**
+   **A:** yes
 D9. **Value ramp range.** From near-black of the hue to its lightest tint (perceptual lightness about 20% → 95%)?
    _Recommendation:_ yes. We tune it on real prints in M2.
-   **A:**
+   **A:** yes
 D10. **PDF file name.** e.g. `artistica-A4-2026-10-03.pdf`?
    _Recommendation:_ yes.
-   **A:**
+   **A:** yes
 D11. **Logo.** Keep the placeholder logo for now and do a proper logo pass in M5?
    _Recommendation:_ yes.
-   **A:**
+   **A:** yes
 
 _No decision needed:_ the AI model sizes shown in the mockups (4 MB / 9 MB) are placeholders. Real sizes will be measured in M4.
 
@@ -78,8 +80,8 @@ _No decision needed:_ the AI model sizes shown in the mockups (4 MB / 9 MB) are 
 
 # Artistica — Product Spec & Roadmap
 
-> Status: **draft for review** · Last updated: 2026-10-03
-> Repo (to be created): `omarcocarvalho/artistica` · public · MIT · default branch `master`
+> Status: **approved** (review round 1, 2026-10-03) · Last updated: 2026-10-03
+> Repo: `omarcocarvalho/artistica` · public · MIT · default branch `master`
 > Live URL (planned): `https://omarcocarvalho.github.io/artistica/`
 > Decisions come from the Q&A rounds in the appendix at the end of this file (R# = round 2, Q# = round 1).
 
@@ -112,6 +114,12 @@ Artistica is a free, static web app for artists. You load reference photos, and 
 
 ### 2.2 Per-image edits (M1)
 - Crop (free or fixed aspect ratio), rotate 90°, flip horizontal/vertical.
+  - **Crop interaction:**
+    - Drag inside the crop box to move it; drag the corner or edge handles to resize it.
+    - It is locked to the chosen shape (Free, Original, 1:1, 4:3, 3:2, 16:9) and can't go outside the image.
+    - Works with mouse, touch and keyboard: arrow keys move it, Shift + arrows resize it.
+    - "Reset crop" restores the full image.
+    - (In the mockup the crop box is static; this is the intended behaviour.)
 - **Copies:** print the same image N times.
 - **Size:** `Auto` (default) or a fixed print size. Setting a fixed size keeps the aspect ratio: you set the width or the height.
 - **Resolution warning:** shown when the effective print resolution drops below 300 DPI (Q13).
