@@ -1,2 +1,3 @@
+# eslint 10.12.0 was published 2026-10-02T20:08Z (inside pnpm's release-age window when pinned). Remove this entry after 2026-10-04.
 minimumReleaseAgeExclude:
   - eslint@10.12.0
