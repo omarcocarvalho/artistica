@@ -67,13 +67,15 @@ test('the network guard is strict by default and honours the typed-URL allow-lis
     ] as const)
 
   guard.allowExternal('https://typed.example/photo.jpg?x=1')
-  await host('https://typed.example/photo.jpg')
+  await host('https://typed.example/photo.jpg?x=1')
   expect(guard.violations()).toEqual([])
+  await host('https://typed.example/photo.jpg')
 
   await host('https://typed.example/photo.jpg', { method: 'POST', body: 'secret' })
   await host('https://other.example/track')
   await host('/artistica/app/', { method: 'POST', body: 'a' })
   expect(guard.violations()).toEqual([
+    'GET https://typed.example/photo.jpg',
     'POST https://typed.example/photo.jpg (with body)',
     'GET https://other.example/track',
     'POST http://localhost:' + new URL(page.url()).port + '/artistica/app/ (with body)',
@@ -85,4 +87,16 @@ test('syntheticJpegs encodes real JPEGs in the page', async ({ page }) => {
   const files = await syntheticJpegs(page, 2, 64, 48)
   expect(files.map((f) => f.name)).toEqual(['synthetic-01.jpg', 'synthetic-02.jpg'])
   for (const f of files) expect([...f.buffer.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff])
+})
+
+test('the network guard treats any WebSocket as a violation', async ({ page }) => {
+  const guard = guardNetwork(page)
+  await new AppPage(page).goto()
+  await page.evaluate(() => {
+    const ws = new (
+      globalThis as unknown as { WebSocket: new (u: string) => { onerror: unknown } }
+    ).WebSocket('wss://unroutable.invalid/socket')
+    ws.onerror = () => undefined
+  })
+  await expect.poll(() => guard.violations()).toContain('WEBSOCKET wss://unroutable.invalid/socket')
 })
