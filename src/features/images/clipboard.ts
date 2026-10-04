@@ -14,7 +14,7 @@ export interface DataTransferLike {
 export function extractImageUrls(text: string): string[] {
   const seen = new Set<string>()
   for (const token of text.split(/\s+/)) {
-    const t = token.replace(/^[<"']+|[>"']+$/g, '')
+    const t = token.replace(/^[<("']+|[>"'.,;:!?)\]]+$/g, '')
     if (!/^https?:\/\//i.test(t)) continue
     try {
       new URL(t)

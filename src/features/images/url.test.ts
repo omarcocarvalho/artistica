@@ -143,6 +143,29 @@ describe('fetchImageBlob', () => {
   })
 })
 
+describe('streaming size limit', () => {
+  it('aborts and cancels a body without Content-Length once it exceeds the limit', async () => {
+    const cancel = vi.fn()
+    const stream = new ReadableStream<Uint8Array>({
+      pull(c) {
+        c.enqueue(new Uint8Array(40))
+      },
+      cancel,
+    })
+    const f = vi.fn<typeof fetch>().mockResolvedValue(new Response(stream))
+    expect(
+      await code(fetchImageBlob('https://x.com/a.jpg', deps({ fetch: f, maxBytes: 100 }))),
+    ).toBe('too-large')
+    expect(cancel).toHaveBeenCalled()
+  })
+  it('accepts a streamed body within the limit', async () => {
+    const f = vi.fn<typeof fetch>().mockResolvedValue(jpegResponse())
+    expect(
+      await code(fetchImageBlob('https://x.com/a.jpg', deps({ fetch: f, maxBytes: 100_000 }))),
+    ).toBe('resolved')
+  })
+})
+
 describe('nameFromUrl', () => {
   it('uses the last path segment, falls back to the host and adds a missing extension', () => {
     expect(nameFromUrl(new URL('https://a.com/x/heron.png'), 'png')).toBe('heron.png')

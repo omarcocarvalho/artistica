@@ -5,6 +5,8 @@ import { sniffImage, type SniffedKind } from './sniff'
 export interface FetchDeps {
   readonly fetch: typeof fetch
   isOnline(): boolean
+  /** Download limit; defaults to MAX_FILE_BYTES. Injectable for tests. */
+  readonly maxBytes?: number
 }
 
 /** Accepts `https://...`, `http://...` and bare hosts like `example.com/a.jpg` (which get https). */
@@ -97,16 +99,34 @@ export async function fetchImageBlob(
 
   if (res.type === 'opaque' || res.type === 'opaqueredirect') throw new ImportFailure('cors')
   if (!res.ok) throw new ImportFailure('network')
-  if (Number(res.headers.get('content-length') ?? 0) > MAX_FILE_BYTES)
-    throw new ImportFailure('too-large')
+  const max = deps.maxBytes ?? MAX_FILE_BYTES
+  if (Number(res.headers.get('content-length') ?? 0) > max) throw new ImportFailure('too-large')
 
   let blob: Blob
   try {
-    blob = await res.blob()
+    if (res.body === null) {
+      blob = await res.blob()
+      if (blob.size > max) throw new ImportFailure('too-large')
+    } else {
+      const reader = res.body.getReader()
+      const chunks: Uint8Array<ArrayBuffer>[] = []
+      let total = 0
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        total += value.byteLength
+        if (total > max) {
+          await reader.cancel().catch(() => undefined)
+          throw new ImportFailure('too-large')
+        }
+        chunks.push(value)
+      }
+      blob = new Blob(chunks, { type: res.headers.get('content-type') ?? '' })
+    }
   } catch (cause) {
+    if (cause instanceof ImportFailure) throw cause
     throw new ImportFailure('network', { cause })
   }
-  if (blob.size > MAX_FILE_BYTES) throw new ImportFailure('too-large')
   const sniffed = sniffImage(new Uint8Array(await blob.slice(0, 64).arrayBuffer()))
   if (sniffed === null) throw new ImportFailure('not-an-image')
   return { blob, name: nameFromUrl(url, sniffed.kind) }

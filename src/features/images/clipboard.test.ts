@@ -31,6 +31,12 @@ describe('extractImageUrls', () => {
     const many = Array.from({ length: 50 }, (_, i) => `https://a.com/${String(i)}.jpg`).join('\n')
     expect(extractImageUrls(many)).toHaveLength(20)
   })
+  it('strips trailing punctuation from prose', () => {
+    expect(extractImageUrls('look (https://a.com/x.jpg), then https://b.com/y.png.')).toEqual([
+      'https://a.com/x.jpg',
+      'https://b.com/y.png',
+    ])
+  })
   it('returns nothing for plain text', () => {
     expect(extractImageUrls('just some words')).toEqual([])
   })
