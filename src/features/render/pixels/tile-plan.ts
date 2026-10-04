@@ -113,11 +113,21 @@ export function planTilePixels(tile: DrawTile, options: PlanOptions = {}): TileP
   const wantH = tile.trim.h * pxPerMm
   const fullW = (tile.trim.w + 2 * tile.bleedMm) * pxPerMm
   const fullH = (tile.trim.h + 2 * tile.bleedMm) * pxPerMm
-  const k = Math.min(1, rotW / wantW, rotH / wantH, Math.sqrt(maxArea / (fullW * fullH)))
-  const outW = Math.max(1, Math.round(wantW * k))
-  const outH = Math.max(1, Math.round(wantH * k))
-  const bleedPx =
-    tile.bleedMm > 0 ? Math.max(1, Math.round((tile.bleedMm * outW) / tile.trim.w)) : 0
+  if (!(tile.trim.w > 0 && tile.trim.h > 0)) throw new RangeError('trim must be positive')
+  let k = Math.min(1, rotW / wantW, rotH / wantH, Math.sqrt(maxArea / (fullW * fullH)))
+  let outW = 1
+  let outH = 1
+  let bleedPx = 0
+  // Rounding and the 1 px bleed floor can push the canvas past the cap: re-plan from the rounded
+  // result, shrinking k a little each pass (keeps the aspect), until the real canvas fits.
+  for (let pass = 0; pass < 64; pass++) {
+    outW = Math.max(1, Math.round(wantW * k))
+    outH = Math.max(1, Math.round(wantH * k))
+    bleedPx = tile.bleedMm > 0 ? Math.max(1, Math.round((tile.bleedMm * outW) / tile.trim.w)) : 0
+    const area = (outW + 2 * bleedPx) * (outH + 2 * bleedPx)
+    if (area <= maxArea || (outW === 1 && outH === 1)) break
+    k *= Math.min(0.999, Math.sqrt(maxArea / area))
+  }
   const scaledW = quarter ? outH : outW
   const scaledH = quarter ? outW : outH
   return {
@@ -143,9 +153,27 @@ export function planTilePixels(tile: DrawTile, options: PlanOptions = {}): TileP
   }
 }
 
-/** The same plan for a source that was already cropped to `src` (what the export worker receives). */
+/**
+ * The integer-aligned box of the source bitmap that contains a (fractional) rect. The export
+ * worker crops exactly this with createImageBitmap(src, box.x, box.y, box.w, box.h).
+ */
+export function integerCropBox(src: PxRect): PxRect {
+  const x = Math.floor(src.x)
+  const y = Math.floor(src.y)
+  return { x, y, w: Math.ceil(src.x + src.w) - x, h: Math.ceil(src.y + src.h) - y }
+}
+
+/**
+ * The same plan for a source already cropped to integerCropBox(plan.src): the fractional src rect
+ * moves inside that box, so the preview and the PDF sample identical pixels.
+ * Never compute tileRenderKey from the result: always use the ORIGINAL plan.
+ */
 export function forCroppedSource(plan: TilePixelPlan): TilePixelPlan {
-  return { ...plan, src: { x: 0, y: 0, w: plan.src.w, h: plan.src.h } }
+  const box = integerCropBox(plan.src)
+  return {
+    ...plan,
+    src: { x: plan.src.x - box.x, y: plan.src.y - box.y, w: plan.src.w, h: plan.src.h },
+  }
 }
 
 /**

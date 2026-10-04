@@ -7,6 +7,7 @@ import {
   applyMatrix,
   downscaleSteps,
   forCroppedSource,
+  integerCropBox,
   orientMatrix,
   planTilePixels,
   sourceRect,
@@ -31,6 +32,9 @@ describe('orientMatrix', () => {
     [0, true, false, { x: 200, y: 0 }],
     [0, false, true, { x: 0, y: 100 }],
     [90, true, false, { x: 0, y: 0 }],
+    [270, false, true, { x: 0, y: 0 }],
+    [270, true, true, { x: 100, y: 0 }],
+    [180, true, true, { x: 0, y: 0 }],
   ])('rotation %i flipH=%s flipV=%s sends (0,0) to %o', (r, fh, fv, expected) => {
     const quarter = r === 90 || r === 270
     const outW = quarter ? 100 : 200
@@ -154,19 +158,45 @@ describe('planTilePixels', () => {
           expect(plan.outW).toBeLessThanOrEqual(Math.max(1, quarter ? ph : pw) + 1)
           expect(plan.outH).toBeLessThanOrEqual(Math.max(1, quarter ? pw : ph) + 1)
           expect(plan.dpi).toBeLessThanOrEqual(300 + 300 / plan.outW + 1e-6)
-          expect(plan.canvasW * plan.canvasH).toBeLessThanOrEqual(MAX_CANVAS_AREA_PX * 1.01)
+          expect(plan.canvasW * plan.canvasH).toBeLessThanOrEqual(MAX_CANVAS_AREA_PX)
         },
       ),
     )
   })
 })
 
+describe('planTilePixels guards', () => {
+  it('rejects non-positive trims', () => {
+    expect(() => planTilePixels(drawTile({ trim: { x: 0, y: 0, w: 0, h: 10 } }))).toThrow(
+      RangeError,
+    )
+  })
+  it('keeps a non-square tile with bleed under the cap after rounding', () => {
+    const plan = planTilePixels(
+      drawTile({
+        trim: { x: 0, y: 0, w: 300, h: 500 },
+        crop: { x: 0, y: 0, w: 9000, h: 9000 },
+        bleedMm: 3,
+      }),
+    )
+    expect(plan.canvasW * plan.canvasH).toBeLessThanOrEqual(MAX_CANVAS_AREA_PX)
+    expect(plan.outH / plan.outW).toBeCloseTo(500 / 300, 2)
+  })
+})
+
 describe('forCroppedSource', () => {
-  it('moves the source rect to the origin and keeps everything else', () => {
+  it('moves an integer source rect to the origin and keeps everything else', () => {
     const plan = planTilePixels(drawTile({ crop: { x: 100, y: 50, w: 2000, h: 1000 } }))
     const cropped = forCroppedSource(plan)
     expect(cropped.src).toEqual({ x: 0, y: 0, w: 2000, h: 1000 })
     expect(cropped.matrix).toEqual(plan.matrix)
+  })
+
+  it('keeps the fractional offset inside the integer crop box', () => {
+    const plan = planTilePixels(drawTile({ crop: { x: 100.25, y: 50.75, w: 2000.5, h: 1000 } }))
+    expect(integerCropBox(plan.src)).toEqual({ x: 100, y: 50, w: 2001, h: 1001 })
+    expect(forCroppedSource(plan).src).toEqual({ x: 0.25, y: 0.75, w: 2000.5, h: 1000 })
+    expect(tileRenderKey(drawTile({ crop: plan.src }), plan)).toContain('100.25')
   })
 })
 

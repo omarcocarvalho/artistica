@@ -1,5 +1,5 @@
 import { extendEdges, type PixelCtx } from './bleed'
-import { downscaleSteps, type TilePixelPlan } from './tile-plan'
+import { MAX_CANVAS_AREA_PX, downscaleSteps, type TilePixelPlan } from './tile-plan'
 
 /** The subset of CanvasRenderingContext2D / OffscreenCanvasRenderingContext2D a tile render needs. */
 export interface TileCtx extends PixelCtx {
@@ -60,35 +60,43 @@ export function renderTile<C extends TileCanvas & CanvasImageSource>(
   plan: TilePixelPlan,
   createCanvas: CanvasFactory<C>,
 ): C {
-  // 1. Step-down resample in source orientation.
-  let from: CanvasImageSource = source
-  let rect = plan.src
   const temps: C[] = []
-  for (const step of downscaleSteps(plan.src.w, plan.src.h, plan.scaledW, plan.scaledH)) {
-    const tmp = createCanvas(step.w, step.h)
-    const tctx = context(tmp)
-    tctx.imageSmoothingEnabled = true
-    tctx.imageSmoothingQuality = 'high'
-    tctx.drawImage(from, rect.x, rect.y, rect.w, rect.h, 0, 0, step.w, step.h)
-    temps.push(tmp)
-    from = tmp
-    rect = { x: 0, y: 0, w: step.w, h: step.h }
+  let out: C | undefined
+  try {
+    // 1. Step-down resample in source orientation.
+    let from: CanvasImageSource = source
+    let rect = plan.src
+    for (const step of downscaleSteps(plan.src.w, plan.src.h, plan.scaledW, plan.scaledH)) {
+      if (step.w * step.h > MAX_CANVAS_AREA_PX) throw new CanvasUnavailableError()
+      const tmp = createCanvas(step.w, step.h)
+      temps.push(tmp)
+      const tctx = context(tmp)
+      tctx.imageSmoothingEnabled = true
+      tctx.imageSmoothingQuality = 'high'
+      tctx.drawImage(from, rect.x, rect.y, rect.w, rect.h, 0, 0, step.w, step.h)
+      from = tmp
+      rect = { x: 0, y: 0, w: step.w, h: step.h }
+    }
+
+    // 2. Final draw: white background (JPEG has no alpha), then the oriented image inside the bleed ring.
+    out = createCanvas(plan.canvasW, plan.canvasH)
+    const ctx = context(out)
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, plan.canvasW, plan.canvasH)
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+    const [a, b, c, d, e, f] = plan.matrix
+    ctx.setTransform(a, b, c, d, e, f)
+    ctx.drawImage(from, rect.x, rect.y, rect.w, rect.h, 0, 0, plan.scaledW, plan.scaledH)
+    ctx.resetTransform()
+
+    // 3. Bleed.
+    extendEdges(ctx, plan.bleedPx, plan.outW, plan.outH)
+    return out
+  } catch (error) {
+    if (out) releaseCanvas(out)
+    throw error
+  } finally {
+    temps.forEach(releaseCanvas)
   }
-
-  // 2. Final draw: white background (JPEG has no alpha), then the oriented image inside the bleed ring.
-  const out = createCanvas(plan.canvasW, plan.canvasH)
-  const ctx = context(out)
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(0, 0, plan.canvasW, plan.canvasH)
-  ctx.imageSmoothingEnabled = true
-  ctx.imageSmoothingQuality = 'high'
-  const [a, b, c, d, e, f] = plan.matrix
-  ctx.setTransform(a, b, c, d, e, f)
-  ctx.drawImage(from, rect.x, rect.y, rect.w, rect.h, 0, 0, plan.scaledW, plan.scaledH)
-  ctx.resetTransform()
-  temps.forEach(releaseCanvas)
-
-  // 3. Bleed.
-  extendEdges(ctx, plan.bleedPx, plan.outW, plan.outH)
-  return out
 }

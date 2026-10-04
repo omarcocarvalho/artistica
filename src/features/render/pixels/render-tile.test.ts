@@ -97,12 +97,46 @@ describe('renderTile', () => {
     expect(made[0]?.draws[0]?.args.slice(0, 4)).toEqual([0, 0, 3000, 1500])
   })
 
-  it('fills the bleed ring', () => {
-    const plan = planTilePixels(drawTile({ bleedMm: 3 }), { dpi: 25.4 }) // 1 px/mm → 100×50 + 3 px bleed
-    const out = renderTile(source, plan, fakeFactory())
+  it('fills the bleed ring by copying the edge pixels outward', () => {
+    // 100 × 50 image at 1 px/mm, bleed 3 px; image pixel (x, y) has colour [x, y, 7, 255].
+    const plan = planTilePixels(drawTile({ bleedMm: 3, crop: { x: 0, y: 0, w: 100, h: 50 } }), {
+      dpi: 25.4,
+    })
+    const src = { paint: (x: number, y: number) => [x, y, 7, 255] } as unknown as CanvasImageSource
+    const out = renderTile(src, plan, fakeFactory())
     expect([out.width, out.height]).toEqual([106, 56])
-    // The fake ignores drawImage pixels, so the ring copies the white background: assert it was written.
-    expect(out.pixel(0, 0)).toEqual([255, 255, 255, 255])
+    expect(out.pixel(3, 3)).toEqual([0, 0, 7, 255]) // image top-left
+    expect(out.pixel(5, 0)).toEqual([2, 0, 7, 255]) // top strip = row 0
+    expect(out.pixel(5, 2)).toEqual([2, 0, 7, 255])
+    expect(out.pixel(0, 10)).toEqual([0, 7, 7, 255]) // left strip = column 0
+    expect(out.pixel(105, 10)).toEqual([99, 7, 7, 255]) // right strip = column 99
+    expect(out.pixel(20, 55)).toEqual([17, 49, 7, 255]) // bottom strip = row 49
+    expect(out.pixel(0, 0)).toEqual([0, 0, 7, 255]) // corners
+    expect(out.pixel(105, 0)).toEqual([99, 0, 7, 255])
+    expect(out.pixel(0, 55)).toEqual([0, 49, 7, 255])
+    expect(out.pixel(105, 55)).toEqual([99, 49, 7, 255])
+  })
+
+  it('refuses step-down temporaries above the canvas cap and releases what it made', () => {
+    const made: FakeCanvas[] = []
+    const plan = {
+      ...planTilePixels(drawTile({ crop: { x: 0, y: 0, w: 3000, h: 1500 } }), { dpi: 5 }),
+      src: { x: 0, y: 0, w: 40000, h: 20000 },
+    }
+    expect(() => renderTile(source, plan, fakeFactory(made))).toThrow(CanvasUnavailableError)
+  })
+
+  it('releases the output canvas when drawing fails', () => {
+    const made: FakeCanvas[] = []
+    const factory = (w: number, h: number) => {
+      const c = fakeFactory(made)(w, h)
+      if (made.length === 1) c.getContext = () => null
+      return c
+    }
+    expect(() => renderTile(source, planTilePixels(drawTile()), factory)).toThrow(
+      CanvasUnavailableError,
+    )
+    expect([made[0]?.width, made[0]?.height]).toEqual([0, 0])
   })
 
   it('throws CanvasUnavailableError when 2D contexts are missing', () => {

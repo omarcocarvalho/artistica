@@ -44,6 +44,29 @@ export class FakeCanvas implements TileCanvas {
       },
       drawImage: (source: CanvasImageSource, ...args: number[]) => {
         this.draws.push({ source, args, transform, smoothing: ctx.imageSmoothingEnabled })
+        // Optional pixel source: paint each destination pixel (through the transform) from source.paint.
+        const px = (source as { paint?: (x: number, y: number) => number[] }).paint
+        if (px) {
+          const [sx, sy, , , dx, dy, dw, dh] = args as [
+            number,
+            number,
+            number,
+            number,
+            number,
+            number,
+            number,
+            number,
+          ]
+          const [a, b, c, d, e, f] = transform as [number, number, number, number, number, number]
+          for (let y = 0; y < dh; y++)
+            for (let x = 0; x < dw; x++) {
+              const u = dx + x + 0.5
+              const v = dy + y + 0.5
+              const cx = Math.floor(a * u + c * v + e)
+              const cy = Math.floor(b * u + d * v + f)
+              this.setPixel(cx, cy, px(sx + x, sy + y))
+            }
+        }
       },
       getImageData: (sx, sy, sw, sh) => {
         const out = new Uint8ClampedArray(sw * sh * 4)
