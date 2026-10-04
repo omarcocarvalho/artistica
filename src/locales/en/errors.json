@@ -29,7 +29,12 @@
       "message": "Animated GIFs print their first frame."
     }
   },
-  "export": {},
+  "export": {
+    "unsupported": "This browser can't make PDFs here. Update it, or use the latest Chrome, Edge, Firefox or Safari.",
+    "missingImage": "An image was removed while the PDF was being made. Try again.",
+    "empty": "Add at least one image to export.",
+    "failed": "Something went wrong while making the PDF. Try again. If it keeps failing, try fewer or smaller images."
+  },
   "generic": {
     "unexpected": "Something went wrong. Please try again."
   }

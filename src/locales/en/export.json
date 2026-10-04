@@ -1,1 +1,45 @@
-{}
+{
+  "title": "Export PDF",
+  "close": "Close",
+  "summary": {
+    "pages": "Pages",
+    "pagesValue": "{{pages}} · {{paper}} {{orientation}}",
+    "orientation": {
+      "portrait": "portrait",
+      "landscape": "landscape"
+    },
+    "tiles": "Tiles",
+    "tilesValue_one": "{{tiles}} from {{count}} image",
+    "tilesValue_other": "{{tiles}} from {{count}} images",
+    "cropMarks": "Crop marks",
+    "bleed": "Bleed",
+    "on": "On",
+    "off": "Off",
+    "length": "{{value}} {{unit}}",
+    "quality": "Quality",
+    "qualityValue": "300 DPI, never upscaled"
+  },
+  "fileName": "File name",
+  "create": "Create PDF",
+  "retry": "Try again",
+  "cancel": "Cancel",
+  "progress": {
+    "label": "Page {{page}} of {{total}}…",
+    "aria": "PDF progress",
+    "page": "Page {{n}}",
+    "state": {
+      "todo": "waiting",
+      "active": "in progress",
+      "done": "done"
+    },
+    "hint": "One page at a time to save memory. Keep this tab open."
+  },
+  "done": {
+    "title": "Your PDF is ready",
+    "yay": "yay!",
+    "download": "Download PDF",
+    "printTitle": "Print at 100%",
+    "printBody": "Choose “Actual size”, not “Fit to page”, so sizes stay exact.",
+    "again": "Make another"
+  }
+}
