@@ -43,3 +43,10 @@ for (const { name, path, h1 } of PAGES) {
     }
   })
 }
+
+test('app page does not overflow horizontally at 320px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 })
+  await page.goto('app/')
+  await expect(page.getByRole('heading', { level: 1, name: 'Artistica' })).toBeAttached()
+  await expect(page.locator('html')).toHaveJSProperty('scrollWidth', 320)
+})
