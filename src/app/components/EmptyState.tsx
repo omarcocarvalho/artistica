@@ -11,7 +11,7 @@ export function EmptyState({ actions }: EmptyStateProps) {
   const { t } = useTranslation('app')
   return (
     <div className="grid flex-1 place-items-center px-6 py-12">
-      <div className="border-line bg-surface relative w-full max-w-lg rounded-lg border-2 border-dashed p-8 text-center">
+      <div className="border-line bg-surface rounded-sketch relative w-full max-w-lg border-2 border-dashed p-8 text-center">
         <h2 className="font-display text-xl">
           {t('empty.titleBefore')}
           <span className="decoration-accent underline decoration-wavy underline-offset-4">

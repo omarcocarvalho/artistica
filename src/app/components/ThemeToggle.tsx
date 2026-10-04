@@ -20,7 +20,7 @@ export function ThemeToggle() {
         useSettings.getState().setTheme(nextTheme(theme))
       }}
     >
-      <span>{current}</span>
+      <span className="hidden sm:inline">{current}</span>
     </Button>
   )
 }

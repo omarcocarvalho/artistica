@@ -15,22 +15,22 @@ export function TopBar({ onExport, exportDisabledReason }: TopBarProps) {
   const reasonId = useId()
   const disabled = exportDisabledReason !== null
   return (
-    <header className="border-line bg-surface flex items-center gap-3 border-b px-4 py-2">
+    <header className="border-line bg-surface flex min-w-0 items-center gap-2 border-b px-4 py-2">
       <a
         href="#main"
         className="focus:bg-surface sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:px-3 focus:py-2"
       >
         {t('skipToPreview')}
       </a>
-      <a href="./" aria-label={t('topBar.home')}>
+      <a href="./" aria-label={t('topBar.home')} className="shrink-0">
         <Logo />
       </a>
-      <h1 className="font-display text-lg">{t('title')}</h1>
+      <h1 className="font-display min-w-0 truncate text-lg">{t('title')}</h1>
       <span className="bg-canvas text-ink-muted hidden items-center gap-1 rounded-full px-3 py-1 text-sm sm:inline-flex">
         <Icon name="lock" />
         {t('topBar.privacy')}
       </span>
-      <span className="flex-1" />
+      <span className="min-w-0 flex-1" />
       <ThemeToggle />
       <Button
         variant="primary"
