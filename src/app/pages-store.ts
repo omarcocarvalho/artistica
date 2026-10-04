@@ -5,6 +5,8 @@ import type { PipelineSink } from './pipeline'
 
 export interface PagesState {
   layout: LayoutResult | null
+  /** The layout was computed for zero images (so it says nothing about room for the next ones). */
+  empty: boolean
   pages: PageModel[]
   status: 'idle' | 'computing' | 'error'
   sink: PipelineSink
@@ -12,6 +14,7 @@ export interface PagesState {
 
 export const usePages = create<PagesState>()((set) => ({
   layout: null,
+  empty: false,
   pages: [],
   status: 'idle',
   sink: {
@@ -19,15 +22,15 @@ export const usePages = create<PagesState>()((set) => ({
       set({ status: 'computing' })
     },
     cleared: (layout) => {
-      set({ layout, pages: [], status: 'idle' })
+      set({ layout, empty: true, pages: [], status: 'idle' })
     },
     done: (layout, pages) => {
-      set({ layout, pages, status: 'idle' })
+      set({ layout, empty: false, pages, status: 'idle' })
     },
     failed: (error) => {
       console.error('layout failed', error)
       // Never keep a stale preview that Export could use.
-      set({ layout: null, pages: [], status: 'error' })
+      set({ layout: null, empty: false, pages: [], status: 'error' })
     },
   },
 }))

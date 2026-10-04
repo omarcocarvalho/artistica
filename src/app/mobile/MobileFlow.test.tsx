@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { LayoutResult } from '../../features/layout'
 import { initI18n } from '../../shared/i18n'
+import { usePages } from '../pages-store'
 import { useAppUi } from '../state/useAppUi'
 
 const imageCount = vi.hoisted(() => ({ value: 0 }))
@@ -9,12 +11,15 @@ vi.mock('../state/hasImages', () => ({ useImageCount: () => imageCount.value }))
 
 import { MobileFlow } from './MobileFlow'
 
+const layout = {} as LayoutResult
+
 beforeAll(async () => {
   await initI18n()
 })
 beforeEach(() => {
   imageCount.value = 0
   useAppUi.setState(useAppUi.getInitialState())
+  usePages.setState({ status: 'idle', layout, pages: [{ index: 0 }] as never })
 })
 
 describe('MobileFlow', () => {
@@ -56,5 +61,25 @@ describe('MobileFlow', () => {
     expect(screen.getByText('2 images are ready to print.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Create PDF' }))
     expect(useAppUi.getState().exportOpen).toBe(true)
+  })
+  it('export step: Create PDF is described by the error reason when the layout failed', () => {
+    imageCount.value = 2
+    usePages.setState({ status: 'error', layout: null, pages: [] })
+    useAppUi.getState().setStep('export')
+    render(<MobileFlow />)
+    const create = screen.getByRole('button', { name: 'Create PDF' })
+    expect(create).toHaveAttribute('aria-disabled', 'true')
+    expect(create).toHaveAccessibleDescription(
+      'The layout could not be computed. Change a setting or reload the page.',
+    )
+  })
+  it('export step: Create PDF is described by the no-room reason with a layout but no pages', () => {
+    imageCount.value = 2
+    usePages.setState({ status: 'idle', pages: [] })
+    useAppUi.getState().setStep('export')
+    render(<MobileFlow />)
+    expect(screen.getByRole('button', { name: 'Create PDF' })).toHaveAccessibleDescription(
+      'Export is unavailable: the page setup leaves no room for images.',
+    )
   })
 })
