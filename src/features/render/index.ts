@@ -7,4 +7,8 @@ export { PagePreview, type PagePreviewProps } from './components/PagePreview'
 export { GuidesToggle } from './components/GuidesToggle'
 export { GuidesLegend } from './components/GuidesLegend'
 // --- Export (Task 4) ---
+export { exportPdf } from './export/export-pdf'
+export type { ExportOptions, ExportProgress, GetBitmap } from './export/run-export'
+export { ExportError, type ExportErrorCode } from './export/errors'
+export { pdfFileName } from './export/file-name'
 // --- Export dialog (Task 6) ---
