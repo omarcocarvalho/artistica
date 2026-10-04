@@ -20,7 +20,7 @@ import {
 } from '../view'
 
 export const CROP_STAGE_FALLBACK_PX = 400
-const MAX_STAGE_HEIGHT_PX = 400
+const MAX_STAGE_HEIGHT_PX = 420
 
 export interface CropEditorProps {
   bitmap: ImageBitmap
@@ -33,8 +33,8 @@ export interface CropEditorProps {
 }
 
 type Drag =
-  | { kind: 'move'; start: CropRect; x0: number; y0: number }
-  | { kind: 'resize'; start: CropRect; x0: number; y0: number; handle: Handle }
+  | { kind: 'move'; id: number; start: CropRect; x0: number; y0: number }
+  | { kind: 'resize'; id: number; start: CropRect; x0: number; y0: number; handle: Handle }
 
 const HANDLE_STYLE: Record<Handle, string> = {
   nw: 'left-0 top-0 -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize',
@@ -100,27 +100,29 @@ export function CropEditor({ bitmap, pxW, pxH, crop, ratio, view, onChange }: Cr
   const shown = draft ?? crop
   const box = mapRectToDisplay(shown, view, pxW, pxH)
 
-  // Text readout of the rectangle (CR-E6): always present, announced politely when it changes.
+  // Text readout of the committed rectangle (CR-E6): the live region ignores drafts so a drag does not flood screen readers.
   const readout = t('editSheet.crop.status', {
-    w: Math.round(shown.w),
-    h: Math.round(shown.h),
-    x: Math.round(shown.x),
-    y: Math.round(shown.y),
+    w: Math.round(crop.w),
+    h: Math.round(crop.h),
+    x: Math.round(crop.x),
+    y: Math.round(crop.y),
   })
 
   const begin = (e: PointerEvent<HTMLElement>, kind: 'move' | 'resize', handle?: Handle): void => {
     if (e.button !== 0 && e.pointerType === 'mouse') return
     e.stopPropagation()
+    if (drag.current) return
     if (kind === 'resize' && handle) {
       drag.current = {
         kind,
+        id: e.pointerId,
         start: crop,
         x0: e.clientX,
         y0: e.clientY,
         handle: mapHandleToSource(handle, view),
       }
     } else {
-      drag.current = { kind: 'move', start: crop, x0: e.clientX, y0: e.clientY }
+      drag.current = { kind: 'move', id: e.pointerId, start: crop, x0: e.clientX, y0: e.clientY }
     }
     if ('setPointerCapture' in e.currentTarget) {
       try {
@@ -133,7 +135,7 @@ export function CropEditor({ bitmap, pxW, pxH, crop, ratio, view, onChange }: Cr
 
   const compute = (e: PointerEvent<HTMLElement>): CropRect | null => {
     const d = drag.current
-    if (!d) return null
+    if (d?.id !== e.pointerId) return null
     const delta = mapDeltaToSource({ x: (e.clientX - d.x0) * k, y: (e.clientY - d.y0) * k }, view)
     return d.kind === 'move'
       ? moveCrop(d.start, delta.x, delta.y, pxW, pxH)
@@ -146,11 +148,13 @@ export function CropEditor({ bitmap, pxW, pxH, crop, ratio, view, onChange }: Cr
   }
   const onUp = (e: PointerEvent<HTMLElement>): void => {
     const next = compute(e)
+    if (!next) return
     drag.current = null
     setDraft(null)
-    if (next) onChange(next)
+    onChange(next)
   }
-  const onCancel = (): void => {
+  const onCancel = (e: PointerEvent<HTMLElement>): void => {
+    if (drag.current?.id !== e.pointerId) return
     drag.current = null
     setDraft(null)
   }
@@ -158,7 +162,7 @@ export function CropEditor({ bitmap, pxW, pxH, crop, ratio, view, onChange }: Cr
   const onKeyDown = (e: KeyboardEvent<HTMLElement>): void => {
     const step = keyboardStep(pxW, pxH)
     const d = arrowDelta(e.key, step)
-    if (!d) return
+    if (!d || e.altKey || e.ctrlKey || e.metaKey) return
     e.preventDefault()
     const delta = mapDeltaToSource({ x: d.dx, y: d.dy }, view)
     const next = e.shiftKey
@@ -192,6 +196,7 @@ export function CropEditor({ bitmap, pxW, pxH, crop, ratio, view, onChange }: Cr
           onPointerMove={onMove}
           onPointerUp={onUp}
           onPointerCancel={onCancel}
+          onLostPointerCapture={onCancel}
           onKeyDown={onKeyDown}
           className="focus-visible:outline-secondary absolute cursor-move border-2 border-white shadow-[0_0_0_999px_rgb(20_14_10/0.55)] outline-offset-2 focus-visible:outline-3"
           style={{ left: box.x / k, top: box.y / k, width: box.w / k, height: box.h / k }}
@@ -207,6 +212,7 @@ export function CropEditor({ bitmap, pxW, pxH, crop, ratio, view, onChange }: Cr
               onPointerMove={onMove}
               onPointerUp={onUp}
               onPointerCancel={onCancel}
+              onLostPointerCapture={onCancel}
               className={`absolute size-11 ${HANDLE_STYLE[h]} after:absolute after:top-1/2 after:left-1/2 after:size-3 after:-translate-x-1/2 after:-translate-y-1/2 after:rounded-sm after:border-2 after:border-white after:bg-black/40`}
             />
           ))}

@@ -93,9 +93,14 @@ describe('CropEditor', () => {
     const props = base({ view: { rotation: 90, flipH: false, flipV: false } })
     renderWithProviders(<CropEditor {...props} />)
     drag(area(), [100, 100], [130, 100])
-    expect(props.onChange).toHaveBeenCalledWith({ x: 100, y: 70, w: 100, h: 100 })
+    // 300 x 400 displayed image fits the 400 px tall stage (max 420) with k = 300 / 315 image px per css px.
+    const k = 300 / 315
+    const [crop] = (props.onChange as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      { x: number; y: number },
+    ]
+    expect(crop.x).toBeCloseTo(100, 9)
+    expect(crop.y).toBeCloseTo(100 - 30 * k, 9)
   })
-
   it('cancelling the gesture commits nothing', () => {
     const props = base()
     renderWithProviders(<CropEditor {...props} />)
@@ -158,5 +163,62 @@ describe('CropEditor', () => {
     const handles = container.querySelectorAll('[data-handle]')
     expect(handles).toHaveLength(8)
     handles.forEach((h) => expect(h).toHaveAttribute('aria-hidden', 'true'))
+  })
+
+  it('maps css movement to source with a stage scale other than 1', () => {
+    const w = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(200)
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe = vi.fn()
+        disconnect = vi.fn()
+        unobserve = vi.fn()
+      },
+    )
+    try {
+      const props = base() // 400 x 300 in a 200 px stage: 1 css px = 2 source px
+      renderWithProviders(<CropEditor {...props} />)
+      drag(area(), [50, 50], [70, 60])
+      expect(props.onChange).toHaveBeenCalledWith({ x: 140, y: 120, w: 100, h: 100 })
+    } finally {
+      w.mockRestore()
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('ignores a second pointer while a drag is active', () => {
+    const props = base()
+    renderWithProviders(<CropEditor {...props} />)
+    const box = area()
+    fireEvent.pointerDown(box, { clientX: 150, clientY: 150, pointerId: 1, button: 0 })
+    fireEvent.pointerDown(box, { clientX: 300, clientY: 300, pointerId: 2, button: 0 })
+    fireEvent.pointerMove(box, { clientX: 500, clientY: 500, pointerId: 2 })
+    fireEvent.pointerUp(box, { clientX: 500, clientY: 500, pointerId: 2 })
+    expect(props.onChange).not.toHaveBeenCalled()
+    fireEvent.pointerMove(box, { clientX: 160, clientY: 150, pointerId: 1 })
+    fireEvent.pointerUp(box, { clientX: 160, clientY: 150, pointerId: 1 })
+    expect(props.onChange).toHaveBeenCalledTimes(1)
+    expect(props.onChange).toHaveBeenCalledWith({ x: 110, y: 100, w: 100, h: 100 })
+  })
+
+  it('treats lost pointer capture as a cancel', () => {
+    const props = base()
+    renderWithProviders(<CropEditor {...props} />)
+    fireEvent.pointerDown(area(), { clientX: 150, clientY: 150, pointerId: 1, button: 0 })
+    fireEvent.lostPointerCapture(area(), { pointerId: 1 })
+    fireEvent.pointerUp(area(), { clientX: 200, clientY: 200, pointerId: 1 })
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+
+  it('does not announce drafts and leaves modified arrows alone', () => {
+    const props = base()
+    renderWithProviders(<CropEditor {...props} />)
+    fireEvent.pointerDown(area(), { clientX: 150, clientY: 150, pointerId: 1, button: 0 })
+    fireEvent.pointerMove(area(), { clientX: 180, clientY: 170, pointerId: 1 })
+    expect(screen.getByRole('status')).toHaveTextContent('Crop 100 × 100 px at 100, 100')
+    expect(fireEvent.keyDown(area(), { key: 'ArrowRight', ctrlKey: true })).toBe(true)
+    expect(fireEvent.keyDown(area(), { key: 'ArrowRight', altKey: true })).toBe(true)
+    expect(fireEvent.keyDown(area(), { key: 'ArrowRight', metaKey: true })).toBe(true)
+    expect(props.onChange).not.toHaveBeenCalled()
   })
 })
