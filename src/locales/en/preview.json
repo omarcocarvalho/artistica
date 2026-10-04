@@ -1,1 +1,19 @@
-{}
+{
+  "tile": {
+    "fallbackName": "Image {{n}}",
+    "lowDpi": "{{dpi}} DPI",
+    "lowDpiLabel": "Low resolution: {{dpi}} DPI",
+    "scaledToFit": "Scaled to fit",
+    "scaledToFitLabel": "Scaled down to fit the page"
+  },
+  "guides": {
+    "label": "Guides",
+    "legend": {
+      "label": "Legend",
+      "safe": "Safe area",
+      "bleed": "Bleed",
+      "cut": "Cut line",
+      "mark": "Crop mark"
+    }
+  }
+}
