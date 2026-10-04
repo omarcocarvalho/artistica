@@ -99,6 +99,9 @@ function pushPiece(out: RectMm[], r: RectMm): void {
  */
 export function occupy(free: readonly RectMm[], used: RectMm): RectMm[] {
   const kept: RectMm[] = []
+  // Kept rects within EPS_MM of `used`. Every cut piece shares an edge with `used`, so only these
+  // can contain one: pruning against them alone is equivalent and avoids an O(free²) scan.
+  const near: RectMm[] = []
   const cut: RectMm[] = []
   const ux2 = used.x + used.w
   const uy2 = used.y + used.h
@@ -107,6 +110,13 @@ export function occupy(free: readonly RectMm[], used: RectMm): RectMm[] {
     const fy2 = f.y + f.h
     if (used.x >= fx2 || ux2 <= f.x || used.y >= fy2 || uy2 <= f.y) {
       kept.push(f)
+      if (
+        f.x <= ux2 + EPS_MM &&
+        fx2 >= used.x - EPS_MM &&
+        f.y <= uy2 + EPS_MM &&
+        fy2 >= used.y - EPS_MM
+      )
+        near.push(f)
       continue
     }
     if (used.x > f.x) pushPiece(cut, { x: f.x, y: f.y, w: used.x - f.x, h: f.h })
@@ -117,7 +127,7 @@ export function occupy(free: readonly RectMm[], used: RectMm): RectMm[] {
   const survivors: RectMm[] = []
   for (let i = 0; i < cut.length; i++) {
     const piece = nth(cut, i)
-    let redundant = kept.some((k) => contains(k, piece))
+    let redundant = near.some((k) => contains(k, piece))
     for (let j = 0; j < cut.length && !redundant; j++) {
       if (j === i) continue
       const other = nth(cut, j)
