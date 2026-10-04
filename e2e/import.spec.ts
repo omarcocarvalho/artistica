@@ -145,7 +145,9 @@ test.describe('import (all browsers)', () => {
     await app.upload(FIXTURES.heic)
     await app.expectImages(1, 60_000)
     await expect(app.imageRows.first()).toContainText(/64\s*[×x]\s*48/)
-    if (browserName === 'webkit') expect(heicRequests).toEqual([])
+    // WebKit decodes HEIC natively only on macOS; Playwright's WebKit on Linux (CI) has no
+    // native decoder, so the chunk is fetched there like on the other browsers.
+    if (browserName === 'webkit' && process.platform === 'darwin') expect(heicRequests).toEqual([])
     else expect(heicRequests.length).toBeGreaterThanOrEqual(1)
   })
 
