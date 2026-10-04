@@ -69,7 +69,7 @@ export class FakeCanvas implements TileCanvas {
     this.ctx = ctx
   }
 
-  getContext(_contextId: '2d'): TileCtx | null {
+  getContext(): TileCtx | null {
     return this.ctx
   }
 
