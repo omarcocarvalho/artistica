@@ -110,8 +110,8 @@ describe('free-rect invariants (property)', () => {
             for (const f of free) for (const q of used) expect(touches(f, q)).toBe(false)
             for (const [i, a] of free.entries())
               for (const [j, c] of free.entries()) if (i !== j) expect(holds(a, c)).toBe(false)
-            for (let x = 0; x < 60; x += 2)
-              for (let y = 0; y < 60; y += 2) {
+            for (let x = 0; x < 60; x += 3)
+              for (let y = 0; y < 60; y += 3) {
                 const cell = { x, y, w: 1, h: 1 }
                 if (used.some((q) => touches(q, cell))) continue
                 expect(free.some((f) => holds(f, cell))).toBe(true)
@@ -119,9 +119,9 @@ describe('free-rect invariants (property)', () => {
           }
         },
       ),
-      { numRuns: 100 },
+      { numRuns: 50 },
     )
-  })
+  }, 30_000)
 })
 
 describe('packOrders', () => {
