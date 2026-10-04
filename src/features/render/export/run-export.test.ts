@@ -224,7 +224,7 @@ describe('runExport progress with a trailing empty page', () => {
     const { deps } = realWorkerDeps()
     const seen: number[] = []
     await runExport(
-      [pages[0]!, pageModel([], { index: 1 })],
+      [pageModel([a]), pageModel([], { index: 1 })],
       (i) => bitmaps.get(i),
       { onProgress: (p) => seen.push(p.fraction) },
       deps,
