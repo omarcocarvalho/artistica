@@ -181,4 +181,130 @@ describe('ExportDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Make another' }))
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:test')
   })
+
+  it('ignores late events from a cancelled run after a restart', async () => {
+    const runs: { options: ExportOptions; reject: (e: unknown) => void }[] = []
+    mockedExport.mockImplementation((_p, _g, opts = {}) => {
+      return new Promise<Blob>((_res, rej) => {
+        runs.push({ options: opts, reject: rej })
+      })
+    })
+    const { user } = setup()
+    await user.click(screen.getByRole('button', { name: 'Create PDF' }))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    await user.click(screen.getByRole('button', { name: 'Create PDF' }))
+    await act(async () => {
+      runs[0]?.reject(new Error('boom'))
+      runs[0]?.options.onProgress?.({ pageIndex: 1, pageCount: 2, fraction: 0.9 })
+      await Promise.resolve()
+    })
+    expect(screen.getByText('Page 1 of 2…')).toBeInTheDocument()
+    expect(screen.queryByText(/Something went wrong/)).not.toBeInTheDocument()
+  })
+
+  it('moves focus to the download link and announces completion', async () => {
+    const run = deferredExport()
+    const { user } = setup()
+    await user.click(screen.getByRole('button', { name: 'Create PDF' }))
+    await act(async () => {
+      run.resolve(new Blob(['%PDF']))
+      await Promise.resolve()
+    })
+    expect(screen.getByRole('link', { name: 'Download PDF' })).toHaveFocus()
+    expect(screen.getByRole('status')).toHaveTextContent('Your PDF is ready')
+  })
+
+  it('announces errors with an alert', async () => {
+    const run = deferredExport()
+    const { user } = setup()
+    await user.click(screen.getByRole('button', { name: 'Create PDF' }))
+    await act(async () => {
+      run.reject(new ExportError('failed'))
+      await Promise.resolve()
+    })
+    expect(screen.getByRole('alert')).toHaveTextContent(/Something went wrong/)
+  })
+
+  it('treats an AbortError as a quiet return to the summary', async () => {
+    const run = deferredExport()
+    const { user } = setup()
+    await user.click(screen.getByRole('button', { name: 'Create PDF' }))
+    await act(async () => {
+      run.reject(new DOMException('aborted', 'AbortError'))
+      await Promise.resolve()
+    })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('retries after an error', async () => {
+    const run = deferredExport()
+    const { user } = setup()
+    await user.click(screen.getByRole('button', { name: 'Create PDF' }))
+    await act(async () => {
+      run.reject(new ExportError('failed'))
+      await Promise.resolve()
+    })
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(mockedExport).toHaveBeenCalledTimes(2)
+    expect(screen.getByText('Page 1 of 2…')).toBeInTheDocument()
+  })
+
+  it('revokes the object URL on close and on unmount', async () => {
+    const run = deferredExport()
+    const { user } = setup()
+    await user.click(screen.getByRole('button', { name: 'Create PDF' }))
+    await act(async () => {
+      run.resolve(new Blob(['%PDF']))
+      await Promise.resolve()
+    })
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:test')
+
+    revokeObjectURL.mockClear()
+    const run2 = deferredExport()
+    const second = render(
+      <ExportDialog
+        open
+        onOpenChange={vi.fn()}
+        pages={pages}
+        paperLabel="A4"
+        getBitmap={() => undefined}
+      />,
+    )
+    const button = screen.getAllByRole('button', { name: 'Create PDF' }).at(-1)
+    if (!button) throw new Error('no Create PDF button')
+    await user.click(button)
+    await act(async () => {
+      run2.resolve(new Blob(['%PDF']))
+      await Promise.resolve()
+    })
+    second.unmount()
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:test')
+  })
+
+  it('cancels and resets when the parent closes it', async () => {
+    const run = deferredExport()
+    const onOpenChange = vi.fn()
+    const props = { onOpenChange, pages, paperLabel: 'A4', getBitmap: () => undefined }
+    const view = render(<ExportDialog open {...props} />)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Create PDF' }))
+    view.rerender(<ExportDialog open={false} {...props} />)
+    expect(run.options().signal?.aborted).toBe(true)
+    view.rerender(<ExportDialog open {...props} />)
+    expect(screen.getByRole('button', { name: 'Create PDF' })).toBeInTheDocument()
+  })
+
+  it('explains why Create PDF is disabled with no pages', () => {
+    render(
+      <ExportDialog
+        open
+        onOpenChange={vi.fn()}
+        pages={[]}
+        paperLabel="A4"
+        getBitmap={() => undefined}
+      />,
+    )
+    expect(screen.getByText('Add at least one image to export.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create PDF' })).toBeDisabled()
+  })
 })

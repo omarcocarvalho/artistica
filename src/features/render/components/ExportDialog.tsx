@@ -2,7 +2,7 @@ import { useEffect, useId, useReducer, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ImageId } from '../../../shared/model/image'
 import { mmToUnit, roundForUnit } from '../../../shared/model/units'
-import { Button, Callout, Dialog, ProgressBar, buttonClasses } from '../../../shared/ui'
+import { Button, Callout, Dialog, Icon, ProgressBar, buttonClasses } from '../../../shared/ui'
 import { useSettings } from '../../settings'
 import { EXPORT_ERROR_KEYS, isAbortError, toExportError } from '../export/errors'
 import { exportPdf } from '../export/export-pdf'
@@ -39,6 +39,7 @@ export function ExportDialog({
   const defaultName = pdfFileName(paperLabel, new Date())
   const [fileName, setFileName] = useState(defaultName)
   const controller = useRef<AbortController | null>(null)
+  const linkRef = useRef<HTMLAnchorElement | null>(null)
   const url = state.status === 'done' ? state.url : null
 
   // Fresh default name each time the dialog opens.
@@ -47,6 +48,8 @@ export function ExportDialog({
   if (nameKey.open !== open || nameKey.paperLabel !== paperLabel) {
     setNameKey({ open, paperLabel })
     if (open) setFileName(pdfFileName(paperLabel, new Date()))
+    // A parent-driven close resets like the dialog's own close paths (the abort is in an effect).
+    if (!open) dispatch({ type: 'cancel' })
   }
 
   // Revoke the object URL when it is replaced or the dialog unmounts.
@@ -56,6 +59,19 @@ export function ExportDialog({
     },
     [url],
   )
+
+  // Abort a running export when the parent closes the dialog.
+  useEffect(() => {
+    if (!open) {
+      controller.current?.abort()
+      controller.current = null
+    }
+  }, [open])
+
+  // Move focus to the download link when the PDF is ready.
+  useEffect(() => {
+    if (url) linkRef.current?.focus()
+  }, [url])
 
   // Abort a running export on unmount.
   useEffect(
@@ -72,15 +88,16 @@ export function ExportDialog({
     void exportPdf(pages, getBitmap, {
       signal: ctrl.signal,
       onProgress: (progress) => {
+        if (controller.current !== ctrl) return // stale run (cancelled or replaced)
         dispatch({ type: 'progress', progress })
       },
     }).then(
       (blob) => {
-        if (ctrl.signal.aborted) return // cancelled while finishing: never create the URL
+        if (controller.current !== ctrl || ctrl.signal.aborted) return // never create the URL
         dispatch({ type: 'done', url: URL.createObjectURL(blob) })
       },
       (e: unknown) => {
-        if (isAbortError(e)) return
+        if (controller.current !== ctrl || isAbortError(e)) return
         dispatch({ type: 'error', code: toExportError(e).code })
       },
     )
@@ -136,13 +153,11 @@ export function ExportDialog({
             <dt className="text-ink-muted">{t('summary.quality')}</dt>
             <dd className="m-0 font-semibold">{t('summary.qualityValue')}</dd>
           </dl>
-          <div className="flex flex-col gap-1">
-            <label htmlFor={nameId} className="text-sm font-semibold">
-              {t('fileName')}
-            </label>
+          <div className="ds-field">
+            <label htmlFor={nameId}>{t('fileName')}</label>
             <input
               id={nameId}
-              className="border-line-strong bg-surface text-ink focus-visible:outline-focus rounded-md border px-3 py-2 text-base"
+              className="ds-input"
               value={fileName}
               onChange={(e) => {
                 setFileName(e.target.value)
@@ -150,8 +165,11 @@ export function ExportDialog({
             />
           </div>
           {state.status === 'error' && (
-            <Callout tone="danger">{t(EXPORT_ERROR_KEYS[state.code])}</Callout>
+            <Callout tone="danger" live>
+              {t(EXPORT_ERROR_KEYS[state.code])}
+            </Callout>
           )}
+          {pages.length === 0 && <Callout tone="quiet">{t('errors:export.empty')}</Callout>}
           <Button
             variant="primary"
             size="lg"
@@ -211,9 +229,11 @@ export function ExportDialog({
           {/* A link (not a button) so the browser's own download handling and long-press menus work. */}
           <a
             className={buttonClasses('primary', 'lg', { block: true })}
+            ref={linkRef}
             href={state.url}
             download={sanitizePdfFileName(fileName, defaultName)}
           >
+            <Icon name="download" />
             {t('done.download')}
           </a>
           <Callout tone="info" title={t('done.printTitle')}>
@@ -229,6 +249,10 @@ export function ExportDialog({
           </Button>
         </div>
       )}
+      {/* Persistent live region: announces the result when the PDF is ready. */}
+      <p role="status" className="sr-only">
+        {state.status === 'done' ? t('done.title') : ''}
+      </p>
     </Dialog>
   )
 }
