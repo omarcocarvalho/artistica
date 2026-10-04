@@ -40,13 +40,24 @@
     "stepLabel": "Step {{current}} of {{total}}: {{name}}",
     "back": "Back",
     "next": "Next",
-    "names": { "images": "Images", "page": "Page", "preview": "Preview", "export": "Export" },
-    "images": { "tapToEdit": "Tap a photo to crop, rotate or set copies." },
+    "names": {
+      "images": "Images",
+      "page": "Page",
+      "preview": "Preview",
+      "export": "Export"
+    },
+    "images": {
+      "tapToEdit": "Tap a photo to crop, rotate or set copies."
+    },
     "export": {
       "summary_one": "{{count}} image is ready to print.",
       "summary_other": "{{count}} images are ready to print.",
       "create": "Create PDF",
       "tip": "One page at a time to save memory. Keep this tab open."
     }
+  },
+  "import": {
+    "more": "+{{more}} more",
+    "unnamed": "This image"
   }
 }
