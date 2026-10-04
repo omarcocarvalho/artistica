@@ -30,4 +30,17 @@ describe('createLimiter', () => {
     await expect(bad).rejects.toThrow('x')
     await expect(good).resolves.toBe(1)
   })
+  it('releases the slot when a task throws synchronously', async () => {
+    const limit = createLimiter(1)
+    const bad = limit((): Promise<number> => {
+      throw new Error('sync')
+    })
+    const good = limit(() => Promise.resolve(2))
+    await expect(bad).rejects.toThrow('sync')
+    await expect(good).resolves.toBe(2)
+  })
+  it('treats max < 1 as 1', async () => {
+    const limit = createLimiter(0)
+    await expect(limit(() => Promise.resolve(3))).resolves.toBe(3)
+  })
 })

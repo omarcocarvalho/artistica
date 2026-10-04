@@ -6,7 +6,7 @@ import { MAX_CANVAS_AREA, MAX_FILE_BYTES } from './limits'
 import { ImportFailure } from './errors'
 import type { Matrix } from './exif'
 import { decodeImage, planDownscale, type CanvasLike, type DecodeDeps } from './decode'
-import { ANIMATED_GIF, heicHeader, pngHeader, skeletonJpeg } from './test-bytes'
+import { ANIMATED_GIF, heicHeader, pngHeader, skeletonJpeg, webpHeader } from './test-bytes'
 
 function bitmap(width: number, height: number) {
   return { width, height, close: vi.fn() } as unknown as ImageBitmap & {
@@ -149,9 +149,9 @@ describe('decodeImage', () => {
 
   it('maps a decoder rejection to decode-failed and closes nothing it did not open', async () => {
     const { deps } = makeDeps({ createImageBitmap: () => Promise.reject(new Error('bad')) })
-    await expect(decodeImage(blobOf(skeletonJpeg(4, 4)), 'x.jpg', deps)).rejects.toBeInstanceOf(
-      ImportFailure,
-    )
+    const result = decodeImage(blobOf(skeletonJpeg(4, 4)), 'x.jpg', deps)
+    await expect(result).rejects.toBeInstanceOf(ImportFailure)
+    await expect(result).rejects.toMatchObject({ code: 'decode-failed' })
   })
 
   it('closes the bitmap when the thumbnail fails', async () => {
@@ -250,5 +250,57 @@ describe('decodeImage: HEIC', () => {
       { ...deps, loadHeicConverter: load },
     )
     expect(load).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('decodeImage: memory and size-limit paths', () => {
+  it.each([
+    ['WebP', () => blobOf(webpHeader(), 'image/webp'), 'a.webp'],
+    ['HEIC', () => blobOf(heicHeader('heic'), 'image/heic'), 'a.heic'],
+  ])('rejects an oversized %s after decoding and closes the bitmap', async (_n, make, name) => {
+    const huge = bitmap(15000, 15000)
+    const { deps, canvases } = makeDeps({ createImageBitmap: () => Promise.resolve(huge) })
+    await expect(decodeImage(make(), name, deps)).rejects.toMatchObject({ code: 'too-large' })
+    expect(huge.close).toHaveBeenCalled()
+    expect(canvases).toHaveLength(0)
+  })
+
+  it('closes the decoded bitmap after repainting a PNG', async () => {
+    const decoded = bitmap(64, 48)
+    const { deps } = makeDeps({ createImageBitmap: () => Promise.resolve(decoded) })
+    await decodeImage(blobOf(pngHeader(64, 48), 'image/png'), 'a.png', deps)
+    expect(decoded.close).toHaveBeenCalled()
+  })
+
+  it('closes the decoded bitmap after repainting an orientation-6 JPEG', async () => {
+    const decoded = bitmap(64, 48)
+    const { deps } = makeDeps({ createImageBitmap: () => Promise.resolve(decoded) })
+    await decodeImage(blobOf(skeletonJpeg(64, 48, 6), 'image/jpeg'), 'a.jpg', deps)
+    expect(decoded.close).toHaveBeenCalled()
+  })
+
+  it('closes both bitmaps when the thumbnail fails after a repaint', async () => {
+    const decoded = bitmap(64, 48)
+    const repainted = bitmap(64, 48)
+    let n = 0
+    const { deps } = makeDeps({
+      createImageBitmap: () => Promise.resolve(decoded),
+      createCanvas: (w, h) => {
+        const isThumb = n++ > 0
+        return {
+          width: w,
+          height: h,
+          paint: () => true,
+          toBlob: () => Promise.resolve(isThumb ? null : new Blob(['t'])),
+          toBitmap: () => Promise.resolve(repainted),
+          release: () => undefined,
+        }
+      },
+    })
+    await expect(
+      decodeImage(blobOf(pngHeader(64, 48), 'image/png'), 'a.png', deps),
+    ).rejects.toMatchObject({ code: 'decode-failed' })
+    expect(decoded.close).toHaveBeenCalled()
+    expect(repainted.close).toHaveBeenCalled()
   })
 })
