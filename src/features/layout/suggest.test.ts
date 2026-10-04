@@ -21,4 +21,9 @@ describe('suggestedPerPage', () => {
   it('is 0 when nothing fits', () => {
     expect(suggestedPerPage({ w: -5, h: 30 }, 6)).toBe(0)
   })
+  it('is 0 when the content box is under 1 mm on a side (CR-B2)', () => {
+    expect(suggestedPerPage({ w: 0.5, h: 50.5 }, 6)).toBe(0)
+    expect(suggestedPerPage({ w: 50.5, h: 0.999 }, 0)).toBe(0)
+    expect(suggestedPerPage({ w: 1, h: 50.5 }, 0)).toBeGreaterThan(0)
+  })
 })

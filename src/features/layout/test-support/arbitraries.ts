@@ -46,7 +46,11 @@ const sizeModeArb: fc.Arbitrary<SizeMode> = fc.oneof(
   },
 )
 
-/** Layout items with unique keys; tiles up to 3 so M2 groups are exercised too. */
+/**
+ * Layout items with unique keys; tiles up to 3 so M2 groups are exercised too.
+ * Some images come with extra copies (identical items, keys `img<i>#<copy>`), so ties between
+ * equal boxes are exercised. At most `maxItems` items in total.
+ */
 export function itemsArb(maxItems: number, maxTiles = 3): fc.Arbitrary<LayoutItemInput[]> {
   return fc
     .array(
@@ -55,14 +59,22 @@ export function itemsArb(maxItems: number, maxTiles = 3): fc.Arbitrary<LayoutIte
         maxPrintWidthMm: mm(10, 450),
         size: sizeModeArb,
         tiles: fc.integer({ min: 1, max: maxTiles }),
+        copies: fc.oneof(
+          { weight: 4, arbitrary: fc.constant(1) },
+          { weight: 1, arbitrary: fc.integer({ min: 2, max: 4 }) },
+        ),
       }),
       { maxLength: maxItems },
     )
     .map((rows) =>
-      rows.map((r, i) => ({
-        ...r,
-        key: `img${String(i)}#0`,
-        imageId: `img${String(i)}` as ImageId,
-      })),
+      rows
+        .flatMap(({ copies, ...r }, i) =>
+          Array.from({ length: copies }, (_, c) => ({
+            ...r,
+            key: `img${String(i)}#${String(c)}`,
+            imageId: `img${String(i)}` as ImageId,
+          })),
+        )
+        .slice(0, maxItems),
     )
 }

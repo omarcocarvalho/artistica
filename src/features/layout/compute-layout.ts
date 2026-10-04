@@ -240,8 +240,7 @@ export function computeLayout(setup: PageSetup, items: readonly LayoutItemInput[
     const box = contentBoxMm(s, pageSize)
     const content: SizeMm = { w: box.w, h: box.h }
     const degenerate = box.w < MIN_CONTENT_SIDE_MM || box.h < MIN_CONTENT_SIDE_MM
-    // CR-B2: a box too small to hold anything suggests 0, consistent with pages: [].
-    const suggested = degenerate ? 0 : suggestedPerPage(content, gutter)
+    const suggested = suggestedPerPage(content, gutter) // 0 for a degenerate box (CR-B2)
     const prepared = degenerate
       ? []
       : sorted.map((item) => ({ item, range: sizeRange(item, gutter, content) }))

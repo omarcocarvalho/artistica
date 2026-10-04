@@ -1,8 +1,18 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import { computeLayout } from './compute-layout'
+import { DEFAULT_PAGE_SETUP } from '../../shared/model/page-setup'
 import { itemsArb, pageSetupArb } from './test-support/arbitraries'
-import { expectLayoutInvariants } from './test-support/invariants'
+import { realisticItems } from './test-support/fixtures'
+import { expectLayoutInvariants, TOL } from './test-support/invariants'
+import type { LayoutResult } from './types'
+
+const smallestImage = (r: LayoutResult): number =>
+  Math.min(
+    ...r.pages.flatMap((p) =>
+      p.placements.flatMap((pl) => pl.tiles.map((t) => Math.min(t.w, t.h))),
+    ),
+  )
 
 const RUNS = { numRuns: 200 }
 
@@ -32,6 +42,36 @@ describe('computeLayout properties', () => {
         expect(computeLayout(setup, shuffled)).toEqual(a)
       }),
       { numRuns: 100 },
+    )
+  })
+
+  it('auto orientation is no worse than either forced one (realistic photos)', () => {
+    // Random arbitraries almost never make the orientations differ; realistic mixes do.
+    fc.assert(
+      fc.property(
+        fc.constantFrom(
+          'A3' as const,
+          'A4' as const,
+          'A5' as const,
+          'A6' as const,
+          'Letter' as const,
+        ),
+        fc.integer({ min: 1, max: 15 }),
+        fc.integer({ min: 1, max: 1000 }),
+        (paper, n, seed) => {
+          const items = realisticItems(n, seed)
+          const setup = { ...DEFAULT_PAGE_SETUP, paper }
+          const auto = computeLayout(setup, items)
+          for (const orientation of ['portrait', 'landscape'] as const) {
+            const forced = computeLayout({ ...setup, orientation }, items)
+            expect(auto.pages.length).toBeLessThanOrEqual(forced.pages.length)
+            if (auto.pages.length === forced.pages.length) {
+              expect(smallestImage(auto)).toBeGreaterThanOrEqual(smallestImage(forced) - TOL)
+            }
+          }
+        },
+      ),
+      { numRuns: 60 },
     )
   })
 

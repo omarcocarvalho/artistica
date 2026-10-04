@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_PAGE_SETUP, type PageSetup } from '../../shared/model/page-setup'
 import { computeLayout } from './compute-layout'
 import { expectLayoutInvariants, TOL } from './test-support/invariants'
-import { item } from './test-support/fixtures'
+import { nth } from './nth'
+import { item, realisticItems } from './test-support/fixtures'
 import type { LayoutResult, RectMm } from './types'
 
 const A4: PageSetup = DEFAULT_PAGE_SETUP // content box {x:10, y:10, w:190, h:277}, gutter 6
@@ -129,6 +130,28 @@ describe('computeLayout: known optimal packings', () => {
     )
     expect(r.pages).toHaveLength(2)
     expect(minShort(r)).toBeGreaterThan(70)
+  })
+})
+
+describe('computeLayout: orientation and input order', () => {
+  it('picks the orientation that needs fewer pages (A5: landscape 5 pages, portrait 6)', () => {
+    const A5: PageSetup = { ...A4, paper: 'A5' }
+    const items = realisticItems(15, 9)
+    expect(run({ ...A5, orientation: 'portrait' }, items).pages).toHaveLength(6)
+    expect(run({ ...A5, orientation: 'landscape' }, items).pages).toHaveLength(5)
+    const auto = run(A5, items)
+    expect(auto.orientation).toBe('landscape')
+    expect(auto.pageSize).toEqual({ w: 210, h: 148 })
+    expect(auto.pages).toHaveLength(5)
+  })
+
+  it('gives a deep-equal result for identical items in any input order', () => {
+    // Seven identical 3:2 boxes: every packing tie must be broken by key, not by input position.
+    const items = Array.from({ length: 7 }, (_, i) => item(`p${String(i)}`, 1.5))
+    const r = run(A4, items)
+    expect(computeLayout(A4, [...items].reverse())).toEqual(r)
+    const shuffled = [3, 6, 0, 5, 1, 4, 2].map((i) => nth(items, i))
+    expect(computeLayout(A4, shuffled)).toEqual(r)
   })
 })
 
