@@ -2,10 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="The Artistica workspace." />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="Artistica workspace: add reference photos, pick your paper and export a print-ready PDF. Everything stays in your browser."
+    />
+    <meta name="theme-color" content="#f4ede1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1c1714" media="(prefers-color-scheme: dark)" />
+    <link rel="canonical" href="https://omarcocarvalho.github.io/artistica/app/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>App · Artistica</title>
+    <title>Artistica app · Printable reference sheets</title>
+    <script>
+      // Apply the saved theme before first paint (no flash). Mirrors src/shared/theme/apply-theme.ts (A8).
+      try {
+        const t = JSON.parse(localStorage.getItem('artistica:settings') ?? '{}').state?.theme
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
+      } catch {
+        /* ignore: auto */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
