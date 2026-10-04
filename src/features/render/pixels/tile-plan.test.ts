@@ -112,6 +112,18 @@ describe('planTilePixels', () => {
     expect(planTilePixels(drawTile({ bleedMm: 3 }), { dpi: 5 }).bleedPx).toBe(1)
   })
 
+  it('stays under the cap when rounding and the 1 px bleed floor would overshoot', () => {
+    // Without re-planning from the rounded result this gives ~16,779,535 px.
+    const plan = planTilePixels(
+      drawTile({
+        trim: { x: 0, y: 0, w: 1037, h: 468 },
+        crop: { x: 0, y: 0, w: 9000, h: 9000 },
+        bleedMm: 0.304,
+      }),
+    )
+    expect(plan.canvasW * plan.canvasH).toBeLessThanOrEqual(MAX_CANVAS_AREA_PX)
+  })
+
   it('caps the canvas area for iOS Safari', () => {
     const plan = planTilePixels(
       drawTile({
@@ -139,12 +151,12 @@ describe('planTilePixels', () => {
   it('stays within limits for any tile (property)', () => {
     fc.assert(
       fc.property(
-        fc.double({ min: 5, max: 400, noNaN: true }),
-        fc.double({ min: 5, max: 400, noNaN: true }),
-        fc.integer({ min: 1, max: 6000 }),
-        fc.integer({ min: 1, max: 6000 }),
+        fc.double({ min: 5, max: 1500, noNaN: true }),
+        fc.double({ min: 5, max: 1500, noNaN: true }),
+        fc.integer({ min: 1, max: 20000 }),
+        fc.integer({ min: 1, max: 20000 }),
         fc.constantFrom<Rotation>(0, 90, 180, 270),
-        fc.double({ min: 0, max: 6, noNaN: true }),
+        fc.double({ min: 0.1, max: 6, noNaN: true }),
         (w, h, pw, ph, rotation, bleedMm) => {
           const plan = planTilePixels(
             drawTile({

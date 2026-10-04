@@ -155,7 +155,8 @@ export function planTilePixels(tile: DrawTile, options: PlanOptions = {}): TileP
 
 /**
  * The integer-aligned box of the source bitmap that contains a (fractional) rect. The export
- * worker crops exactly this with createImageBitmap(src, box.x, box.y, box.w, box.h).
+ * worker MUST crop exactly this with createImageBitmap(src, box.x, box.y, box.w, box.h),
+ * then render with forCroppedSource(plan).
  */
 export function integerCropBox(src: PxRect): PxRect {
   const x = Math.floor(src.x)
