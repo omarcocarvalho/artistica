@@ -43,3 +43,26 @@ for (const { name, path, h1 } of PAGES) {
     }
   })
 }
+
+test('app page does not overflow horizontally at 320px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 })
+  await page.goto('app/')
+  await expect(page.getByRole('heading', { level: 1, name: 'Artistica' })).toBeAttached()
+  await expect(page.locator('html')).toHaveJSProperty('scrollWidth', 320)
+})
+
+test('phone step flow walks to Export, keeps 44px icon targets and does not overflow', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 640 })
+  await page.goto('app/')
+  await expect(page.getByRole('region', { name: 'Step 1 of 4: Images' })).toBeVisible()
+  for (const step of ['Page', 'Preview', 'Export']) {
+    await page.getByRole('button', { name: 'Next' }).click()
+    await expect(page.getByRole('heading', { name: step, level: 2 })).toBeVisible()
+    await expect(page.locator('html')).toHaveJSProperty('scrollWidth', 320)
+  }
+  const box = await page.getByRole('button', { name: /theme/i }).first().boundingBox()
+  expect(box?.width).toBeGreaterThanOrEqual(44)
+  expect(box?.height).toBeGreaterThanOrEqual(44)
+})
