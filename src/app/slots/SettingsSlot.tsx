@@ -1,3 +1,5 @@
+import { PageSetupPanel } from '../../features/page-setup'
+
 export function SettingsSlot() {
-  return <div data-slot="settings" />
+  return <PageSetupPanel suggestedPerPage={null} resolvedOrientation={null} />
 }
