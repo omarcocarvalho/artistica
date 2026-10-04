@@ -8,3 +8,8 @@ export const TINY_JPEG = fromBase64(
 export const TINY_PNG = fromBase64(
   'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFElEQVR4nGP4z8DAAMIM/////w8AH+4F+7C4l8kAAAAASUVORK5CYII=',
 )
+
+/** A 2×2 RGBA PNG with real alpha: pdf-lib embeds it as an image plus an SMask image. */
+export const TINY_PNG_ALPHA = fromBase64(
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEklEQVR4nGP4z8DQwPAfDCEMADxfBvtDmEI+AAAAAElFTkSuQmCC',
+)

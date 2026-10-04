@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { PT_PER_MM } from '../../../shared/model/units'
 import { tileRenderKey } from '../pixels/tile-plan'
 import { drawTile, pageModel } from '../test-support/fixtures'
-import { TINY_JPEG, TINY_PNG } from '../test-support/image-bytes'
+import { TINY_JPEG, TINY_PNG, TINY_PNG_ALPHA } from '../test-support/image-bytes'
 import type { EncodedTileImage, PageModel } from '../types'
 import {
   EmptyPdfError,
@@ -86,6 +87,25 @@ describe('composePdf', () => {
     expect(content).toContain('0.25 w')
   })
 
+  it('flips crop-mark coordinates (asymmetric mark, non-square page) and draws them after images', async () => {
+    const pages = [
+      pageModel([drawTile()], {
+        size: { w: 210, h: 297 },
+        cropMarks: [{ x1: 19, y1: 30, x2: 15, y2: 30 }],
+      }),
+    ]
+    const report = await inspectPdf(await composePdf(pages, encodedFor(pages)))
+    const content = report.pages[0]?.content ?? ''
+    const f = (mm: number): string => String(mm * PT_PER_MM)
+    const y = f(297 - 30)
+    expect(content).toContain(`${f(19)} ${y} m`)
+    expect(content).toContain(`${f(15)} ${y} l`)
+    const lastDo = content.lastIndexOf(' Do')
+    const firstStroke = content.search(/\sS\s/)
+    expect(lastDo).toBeGreaterThan(-1)
+    expect(firstStroke).toBeGreaterThan(lastDo)
+  })
+
   it('places the image at trim + bleed', async () => {
     const tile = drawTile({ trim: { x: 20, y: 20, w: 100, h: 50 }, bleedMm: 3 })
     const pages = [pageModel([tile])]
@@ -95,6 +115,21 @@ describe('composePdf', () => {
     const content = report.pages[0]?.content ?? ''
     expect(content).toContain(`1 0 0 1 ${String(r.x)} ${String(r.y)} cm`)
     expect(content).toContain(`${String(r.width)} 0 0 ${String(r.height)} 0 0 cm`)
+  })
+
+  it('counts an alpha PNG as one image, not image plus soft mask', async () => {
+    const pages = [pageModel([drawTile()])]
+    const enc = encodedFor(pages, { ...png, bytes: TINY_PNG_ALPHA })
+    const report = await inspectPdf(await composePdf(pages, enc))
+    expect(report.imageCount).toBe(1)
+  })
+
+  it('writes no dates or author into the file', async () => {
+    const pages = [pageModel([drawTile()])]
+    const raw = new TextDecoder('latin1').decode(await composePdf(pages, encodedFor(pages)))
+    expect(raw).not.toContain('CreationDate')
+    expect(raw).not.toContain('ModDate')
+    expect(raw).not.toContain('/Author')
   })
 
   it('sets the title and producer and no author', async () => {

@@ -102,7 +102,8 @@ export async function composePdf(
     for (const tile of page.tiles) {
       const key = tileRenderKey(tile)
       const image = encoded.get(key)
-      if (image) await composer.embed(key, image)
+      if (!image) throw new MissingTileImageError(key)
+      await composer.embed(key, image)
     }
     composer.addPage(page)
   }

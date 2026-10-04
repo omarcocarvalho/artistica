@@ -38,11 +38,20 @@ function contentText(doc: PDFDocument, ref: PDFObject | undefined): string {
 
 export async function inspectPdf(bytes: Uint8Array): Promise<PdfReport> {
   const doc = await PDFDocument.load(bytes, { updateMetadata: false })
-  let imageCount = 0
+  const images: PDFRawStream[] = []
+  const softMasks = new Set<PDFObject>()
   for (const [, obj] of doc.context.enumerateIndirectObjects()) {
-    if (obj instanceof PDFRawStream && obj.dict.get(PDFName.of('Subtype')) === PDFName.of('Image'))
-      imageCount++
+    if (
+      obj instanceof PDFRawStream &&
+      obj.dict.get(PDFName.of('Subtype')) === PDFName.of('Image')
+    ) {
+      images.push(obj)
+      const mask = obj.dict.get(PDFName.of('SMask'))
+      if (mask) softMasks.add(doc.context.lookup(mask))
+    }
   }
+  // An alpha channel is a second Image stream referenced only as /SMask: not a drawn image.
+  const imageCount = images.filter((img) => !softMasks.has(img)).length
   return {
     pageCount: doc.getPageCount(),
     pages: doc.getPages().map((p) => {
