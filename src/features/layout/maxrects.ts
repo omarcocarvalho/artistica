@@ -147,6 +147,7 @@ export interface PackedBox {
  * Gutter: every box is inflated by `gutter` on its right and bottom and the bin grows by `gutter`
  * on both axes. Non-overlapping inflated boxes ⇔ trim boxes at least `gutter` apart and inside the content box.
  * Each box goes on the first page with room (best spot by `heuristic` on that page); else a new page.
+ * `gutter` must be normalised and non-negative (computeLayout does this, CR-B4).
  * Returns null if a box does not fit even an empty page.
  */
 export function packPages(
