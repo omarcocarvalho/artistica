@@ -129,6 +129,73 @@ describe('ImportDropzone', () => {
     await waitFor(() => {
       expect(addFromClipboard).toHaveBeenCalledTimes(1)
     })
+    const dt = addFromClipboard.mock.calls[0]?.[0] as DataTransfer
+    expect(dt.files).toHaveLength(1)
+    expect(dt.files[0]?.type).toBe('image/png')
+  })
+
+  it('the Paste button passes a text/plain URL item along', async () => {
+    const { addFromClipboard } = mockStore()
+    const text = new Blob(['https://x.com/a.jpg'], { type: 'text/plain' })
+    vi.spyOn(navigator, 'clipboard', 'get').mockReturnValue({
+      read: () =>
+        Promise.resolve([{ types: ['text/plain'], getType: () => Promise.resolve(text) }]),
+    } as unknown as Clipboard)
+    renderWithProviders(<ImportDropzone variant="card" />)
+    await userEvent.click(screen.getByRole('button', { name: /Paste/ }))
+    await waitFor(() => {
+      expect(addFromClipboard).toHaveBeenCalledTimes(1)
+    })
+    const dt = addFromClipboard.mock.calls[0]?.[0] as DataTransfer
+    expect(dt.getData('text/plain')).toBe('https://x.com/a.jpg')
+  })
+
+  it('the Paste button shows the hint when navigator.clipboard is missing', async () => {
+    const { addFromClipboard } = mockStore()
+    vi.spyOn(navigator, 'clipboard', 'get').mockReturnValue(undefined as unknown as Clipboard)
+    renderWithProviders(<ImportDropzone variant="card" />)
+    await userEvent.click(screen.getByRole('button', { name: /Paste/ }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Press Ctrl+V')
+    expect(addFromClipboard).not.toHaveBeenCalled()
+  })
+
+  it('a store failure after a successful clipboard read does not show the paste hint', async () => {
+    const { addFromClipboard } = mockStore()
+    addFromClipboard.mockRejectedValue(new Error('boom'))
+    const png = new Blob(['x'], { type: 'image/png' })
+    vi.spyOn(navigator, 'clipboard', 'get').mockReturnValue({
+      read: () => Promise.resolve([{ types: ['image/png'], getType: () => Promise.resolve(png) }]),
+    } as unknown as Clipboard)
+    renderWithProviders(<ImportDropzone variant="card" />)
+    await userEvent.click(screen.getByRole('button', { name: /Paste/ }))
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(screen.getByRole('status')).not.toHaveTextContent('Press Ctrl+V')
+  })
+
+  it('the status region is mounted before anything is announced', () => {
+    mockStore()
+    renderWithProviders(<ImportDropzone variant="card" />)
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+  })
+
+  it('the window guard also covers dragover, ignores non-file drags and cleans up', () => {
+    mockStore()
+    const { unmount } = renderWithProviders(<ImportDropzone />)
+    const over = fireEvent.dragOver(document.body, { dataTransfer: { types: ['Files'] } })
+    expect(over).toBe(false)
+    const text = fireEvent.drop(document.body, { dataTransfer: { types: ['text/plain'] } })
+    expect(text).toBe(true)
+    unmount()
+    const after = fireEvent.drop(document.body, { dataTransfer: { types: ['Files'] } })
+    expect(after).toBe(true)
+  })
+
+  it('two mounted instances both guard, and one unmounting leaves the other guarding', () => {
+    mockStore()
+    const a = renderWithProviders(<ImportDropzone />)
+    renderWithProviders(<ImportDropzone />)
+    a.unmount()
+    expect(fireEvent.drop(document.body, { dataTransfer: { types: ['Files'] } })).toBe(false)
   })
 
   it('the Paste button explains the keyboard shortcut when the clipboard cannot be read', async () => {

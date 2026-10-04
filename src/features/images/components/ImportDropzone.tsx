@@ -55,7 +55,7 @@ function IssueCallout({ issue, onDismiss }: { issue: Issue; onDismiss: () => voi
     tone = 'info'
   }
   return (
-    <div role={tone === 'danger' ? 'alert' : 'status'} className="flex items-start gap-2">
+    <div role={tone === 'danger' ? 'alert' : undefined} className="flex items-start gap-2">
       <div className="grow">
         <Callout tone={tone} title={title}>
           {message}
@@ -99,6 +99,9 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
     const id = nextIssue.current++
     setIssues((list) => [...list, { ...issue, id }])
   }
+  const dismiss = (id: number): void => {
+    setIssues((l) => l.filter((i) => i.id !== id))
+  }
   const report = (outcomes: ImportOutcome[]): void => {
     onOutcomes?.(outcomes)
     for (const o of outcomes)
@@ -113,30 +116,48 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
   const onPick = async (e: ChangeEvent<HTMLInputElement>): Promise<void> => {
     const files = Array.from(e.target.files ?? [])
     e.target.value = ''
-    if (files.length > 0) report(await useImages.getState().addFiles(files))
+    if (files.length === 0) return
+    try {
+      report(await useImages.getState().addFiles(files))
+    } catch {
+      addIssue({ kind: 'error', error: 'decode-failed', source: files[0]?.name ?? '' })
+    }
+  }
+
+  const readClipboard = async (): Promise<DataTransfer> => {
+    const items = await navigator.clipboard.read()
+    const dt = new DataTransfer()
+    for (const item of items) {
+      const imageType = item.types.find((type) => type.startsWith('image/'))
+      if (imageType)
+        dt.items.add(new File([await item.getType(imageType)], 'image', { type: imageType }))
+      else if (item.types.includes('text/plain'))
+        dt.setData('text/plain', await (await item.getType('text/plain')).text())
+    }
+    return dt
   }
 
   const onPasteClick = async (): Promise<void> => {
+    let dt: DataTransfer
     try {
-      const items = await navigator.clipboard.read()
-      const dt = new DataTransfer()
-      for (const item of items) {
-        const imageType = item.types.find((type) => type.startsWith('image/'))
-        if (imageType)
-          dt.items.add(new File([await item.getType(imageType)], 'image', { type: imageType }))
-        else if (item.types.includes('text/plain'))
-          dt.setData('text/plain', await (await item.getType('text/plain')).text())
-      }
-      await fromTransfer(dt)
+      dt = await readClipboard()
     } catch {
       addIssue({ kind: 'paste-hint' })
+      return
+    }
+    try {
+      await fromTransfer(dt)
+    } catch {
+      addIssue({ kind: 'error', error: 'decode-failed', source: '' })
     }
   }
 
   const onZoneDrop = (e: DragEvent<HTMLElement>): void => {
     e.preventDefault()
     setDragging(false)
-    void fromTransfer(e.dataTransfer)
+    fromTransfer(e.dataTransfer).catch(() => {
+      addIssue({ kind: 'error', error: 'decode-failed', source: '' })
+    })
   }
 
   const submitUrl = async (e: SyntheticEvent): Promise<void> => {
@@ -144,14 +165,19 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
     if (url.trim() === '' || urlBusy) return
     setUrlBusy(true)
     setUrlError(null)
-    const outcome = await useImages.getState().addFromUrl(url)
-    setUrlBusy(false)
-    onOutcomes?.([outcome])
-    if (outcome.ok) {
-      setUrl('')
-      setLinkOpen(false)
-    } else {
-      setUrlError({ error: outcome.error, source: outcome.source })
+    try {
+      const outcome = await useImages.getState().addFromUrl(url)
+      onOutcomes?.([outcome])
+      if (outcome.ok) {
+        setUrl('')
+        setLinkOpen(false)
+      } else {
+        setUrlError({ error: outcome.error, source: outcome.source })
+      }
+    } catch {
+      setUrlError({ error: 'network', source: url })
+    } finally {
+      setUrlBusy(false)
     }
   }
 
@@ -335,12 +361,26 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
       )}
       {card && dragging && <p className="text-accent mt-4">{t('dropzone.dropActive')}</p>}
 
-      {importing > 0 && (
-        <div className="mt-3 text-left" role="status" aria-live="polite">
-          <ProgressBar value={null} label={t('dropzone.importingLabel')} />
-          <span className="text-sm">{t('dropzone.importing', { count: importing })}</span>
-        </div>
-      )}
+      {/* Always mounted so screen readers announce what is added to it. */}
+      <div role="status" className="mt-3 flex flex-col gap-2 text-left">
+        {importing > 0 && (
+          <div>
+            <ProgressBar value={null} label={t('dropzone.importingLabel')} />
+            <span className="text-sm">{t('dropzone.importing', { count: importing })}</span>
+          </div>
+        )}
+        {issues
+          .filter((issue) => issue.kind !== 'error')
+          .map((issue) => (
+            <IssueCallout
+              key={issue.id}
+              issue={issue}
+              onDismiss={() => {
+                dismiss(issue.id)
+              }}
+            />
+          ))}
+      </div>
 
       {card && (
         <>
@@ -349,17 +389,19 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
         </>
       )}
 
-      {issues.length > 0 && (
+      {issues.some((issue) => issue.kind === 'error') && (
         <div className="mt-3 flex flex-col gap-2 text-left">
-          {issues.map((issue) => (
-            <IssueCallout
-              key={issue.id}
-              issue={issue}
-              onDismiss={() => {
-                setIssues((l) => l.filter((i) => i.id !== issue.id))
-              }}
-            />
-          ))}
+          {issues
+            .filter((issue) => issue.kind === 'error')
+            .map((issue) => (
+              <IssueCallout
+                key={issue.id}
+                issue={issue}
+                onDismiss={() => {
+                  dismiss(issue.id)
+                }}
+              />
+            ))}
         </div>
       )}
     </section>
