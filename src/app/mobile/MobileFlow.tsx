@@ -7,12 +7,14 @@ import { PreviewSlot } from '../slots/PreviewSlot'
 import { SettingsSlot } from '../slots/SettingsSlot'
 import { useImageCount } from '../state/hasImages'
 import { useAppUi, type StepId } from '../state/useAppUi'
+import { useExportGate } from '../useExportGate'
 import { nextStep, prevStep, STEPS, stepIndex } from './steps'
 
 export function MobileFlow() {
   const { t } = useTranslation('app')
   const step = useAppUi((s) => s.step)
   const imageCount = useImageCount()
+  const { block, reason } = useExportGate()
   const setStep = (next: StepId) => {
     useAppUi.getState().setStep(next)
   }
@@ -72,10 +74,10 @@ export function MobileFlow() {
               <Button
                 variant="primary"
                 size="lg"
-                aria-disabled={noImages || undefined}
-                aria-describedby={noImages ? reasonId : undefined}
+                aria-disabled={block !== null || undefined}
+                aria-describedby={block !== null ? reasonId : undefined}
                 onClick={
-                  noImages
+                  block !== null
                     ? undefined
                     : () => {
                         useAppUi.getState().openExport()
@@ -84,9 +86,9 @@ export function MobileFlow() {
               >
                 {t('mobile.export.create')}
               </Button>
-              {noImages && (
+              {reason !== null && (
                 <p id={reasonId} className="text-ink-muted text-sm">
-                  {t('topBar.exportNoImages')}
+                  {reason}
                 </p>
               )}
               <p className="text-ink-muted text-sm">{t('mobile.export.tip')}</p>

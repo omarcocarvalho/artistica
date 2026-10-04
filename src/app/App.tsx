@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next'
 import { useApplyTheme } from '../shared/theme'
 import { DesktopWorkspace } from './components/DesktopWorkspace'
 import { NoticeRegion } from './components/NoticeRegion'
@@ -9,17 +8,17 @@ import { MobileFlow } from './mobile/MobileFlow'
 import { EditSlot } from './slots/EditSlot'
 import { ExportSlot } from './slots/ExportSlot'
 import { EmptyActionsSlot, ImagesSlot } from './slots/ImagesSlot'
-import { PreviewSlot } from './slots/PreviewSlot'
+import { PreviewSlot, PreviewToolbar } from './slots/PreviewSlot'
 import { SettingsSlot } from './slots/SettingsSlot'
 import { useImageCount } from './state/hasImages'
 import { useAppUi } from './state/useAppUi'
+import { useExportGate } from './useExportGate'
 
 export function App() {
-  const { t } = useTranslation('app')
   useApplyTheme()
   const isDesktop = useIsDesktop()
   const imageCount = useImageCount()
-  const exportDisabledReason = imageCount === 0 ? t('topBar.exportNoImages') : null
+  const { reason: exportDisabledReason } = useExportGate()
   return (
     <div className="bg-canvas text-ink flex h-dvh flex-col">
       <AppEffects />
@@ -35,7 +34,7 @@ export function App() {
           images={<ImagesSlot />}
           emptyActions={<EmptyActionsSlot />}
           preview={<PreviewSlot />}
-          previewToolbar={null}
+          previewToolbar={<PreviewToolbar />}
           settings={<SettingsSlot />}
         />
       ) : (
