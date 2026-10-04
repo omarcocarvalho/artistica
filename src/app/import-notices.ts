@@ -1,11 +1,17 @@
 import type { TFunction } from 'i18next'
-import { importErrorKeys, type ImportErrorCode, type ImportOutcome } from '../features/images'
+import {
+  importErrorKeys,
+  MAX_DECODED_PIXELS,
+  MAX_FILE_BYTES,
+  type ImportErrorCode,
+  type ImportOutcome,
+} from '../features/images'
 import type { ImageId } from '../shared/model/image'
 import { useNotices } from './state/useNotices'
 
 const MAX_SOURCES = 3
-/** Interpolation values for C's `errors:images.tooLarge.message` (owner Q5 default: 100 MB, 200 MP). Keep equal to C's `limits.ts`. */
-const TOO_LARGE = { maxMb: 100, maxMp: 200 } as const
+/** Interpolation values for C's `errors:images.tooLarge.message`. */
+const TOO_LARGE = { maxMb: MAX_FILE_BYTES / (1024 * 1024), maxMp: MAX_DECODED_PIXELS / 1_000_000 }
 
 /**
  * Notices for the outcomes of E's own document paste listener (CR-E3, CR-X2). Imports started inside
@@ -28,7 +34,7 @@ export function reportPasteOutcomes(
     if (!o.ok) {
       byCode.set(o.error, [...(byCode.get(o.error) ?? []), o.source])
     } else if (o.warnings?.includes('animated-gif')) {
-      const name = getName(o.id) ?? ''
+      const name = getName(o.id) ?? t('app:import.unnamed')
       notify(
         'info',
         `${t('errors:images.animatedGif.title', { name })} ${t('errors:images.animatedGif.message')}`,

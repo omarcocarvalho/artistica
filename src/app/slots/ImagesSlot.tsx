@@ -5,7 +5,7 @@ import { useAppUi } from '../state/useAppUi'
 export function ImagesSlot() {
   // The dropzone shows its own inline errors (CR-X2), so no onOutcomes handler here.
   return (
-    <div className="flex flex-col gap-3 px-4 pb-4">
+    <div data-images-panel tabIndex={-1} className="flex flex-col gap-3 px-4 pb-4 outline-none">
       <ImportDropzone variant="compact" />
       <ImageList
         onEdit={(id: ImageId) => {

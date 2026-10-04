@@ -14,7 +14,13 @@ export function EditSlot() {
 
   // The image can disappear while its sheet is open (Remove all, or removal from the sheet).
   useEffect(() => {
-    if (editingId !== null && !image) closeEdit()
+    if (editingId !== null && !image) {
+      closeEdit()
+      // The element that opened the sheet is gone; hand focus to the images panel instead of <body>.
+      setTimeout(() => {
+        document.querySelector<HTMLElement>('[data-images-panel]')?.focus()
+      }, 0)
+    }
   }, [editingId, image, closeEdit])
 
   if (editingId === null || !image) return null

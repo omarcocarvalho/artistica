@@ -57,6 +57,7 @@
     }
   },
   "import": {
-    "more": "+{{more}} more"
+    "more": "+{{more}} more",
+    "unnamed": "This image"
   }
 }
