@@ -5,6 +5,18 @@ import { initI18n } from '../../../shared/i18n'
 import { drawTile, id, pageModel } from '../test-support/fixtures'
 import { PagePreview } from './PagePreview'
 
+const drawSpy = vi.hoisted(() => vi.fn())
+vi.mock('../preview/draw-page', async (orig) => {
+  const actual = await orig<typeof import('../preview/draw-page')>()
+  return {
+    ...actual,
+    drawPage: (...a: Parameters<typeof actual.drawPage>) => {
+      drawSpy(...a)
+      actual.drawPage(...a)
+    },
+  }
+})
+
 beforeAll(async () => {
   await initI18n()
 })
@@ -120,3 +132,37 @@ describe('PagePreview', () => {
     expect(container.querySelector('canvas')).toHaveAttribute('aria-hidden', 'true')
   })
 })
+
+describe('PagePreview redraws', () => {
+  it('does not redraw when only the getBitmap identity changes', () => {
+    const draw = drawSpy
+    draw.mockClear()
+    const ctx = fakeCtx()
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+      ctx as unknown as RenderingContext,
+    )
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(400)
+    const props = { model, selectedId: null, onSelect: vi.fn(), guides: true, label: 'p' }
+    const { rerender } = render(<PagePreview {...props} getBitmap={() => undefined} />)
+    const before = draw.mock.calls.length
+    expect(before).toBeGreaterThan(0)
+    rerender(<PagePreview {...props} getBitmap={() => undefined} />)
+    expect(draw.mock.calls.length).toBe(before)
+    rerender(<PagePreview {...props} guides={false} getBitmap={() => undefined} />)
+    expect(draw.mock.calls.length).toBe(before + 1)
+    vi.restoreAllMocks()
+  })
+})
+
+function fakeCtx() {
+  return new Proxy<Record<string, unknown>>(
+    {},
+    {
+      get: (t, k: string) => t[k] ?? (() => undefined),
+      set: (t, k: string, v) => {
+        t[k] = v
+        return true
+      },
+    },
+  )
+}

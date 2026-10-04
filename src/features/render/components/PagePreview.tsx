@@ -1,15 +1,21 @@
-import { useEffect, useId, useMemo, useRef, useState, type RefObject } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ImageId } from '../../../shared/model/image'
 import { Badge } from '../../../shared/ui'
 import { releaseCanvas, renderTile } from '../pixels/render-tile'
 import { planTilePixels, tileRenderKey } from '../pixels/tile-plan'
-import { DEFAULT_PAGE_DRAW_COLORS, drawPage, type PageDrawColors } from '../preview/draw-page'
+import { readDrawColors } from '../preview/draw-colors'
+import { drawPage } from '../preview/draw-page'
 import { previewDpi, previewScale, tileHitAreas } from '../preview/preview-geometry'
+import { releaseAllTileCanvases, syncTileCanvasCache } from '../preview/tile-cache'
+import { useDevicePixelRatio, useElementWidth } from '../preview/use-element-width'
 import type { PageModel } from '../types'
 
 export interface PagePreviewProps {
   readonly model: PageModel
+  /**
+   * Must return the bitmap for every image in `model`; identity changes do not trigger redraws.
+   */
   readonly getBitmap: (id: ImageId) => ImageBitmap | undefined
   readonly selectedId: ImageId | null
   readonly onSelect: (id: ImageId) => void
@@ -25,41 +31,6 @@ const createDomCanvas = (w: number, h: number): HTMLCanvasElement => {
   c.width = w
   c.height = h
   return c
-}
-
-/** Guide colours from the design tokens (they are print colours, identical in both themes). */
-function readDrawColors(el: Element): PageDrawColors {
-  const css = getComputedStyle(el)
-  const pick = (name: string, fallback: string): string =>
-    css.getPropertyValue(name).trim() || fallback
-  const d = DEFAULT_PAGE_DRAW_COLORS
-  return {
-    paper: pick('--color-paper', d.paper),
-    safe: pick('--color-guide-safe', d.safe),
-    bleed: pick('--color-guide-bleed', d.bleed),
-    cut: pick('--color-guide-cut', d.cut),
-    mark: pick('--color-crop-mark', d.mark),
-    missing: d.missing,
-  }
-}
-
-/** CSS width of an element, tracked with ResizeObserver (0 until measured). */
-function useElementWidth(ref: RefObject<HTMLElement | null>): number {
-  const [width, setWidth] = useState(0)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    setWidth(el.clientWidth)
-    if (typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver(([entry]) => {
-      if (entry) setWidth(entry.contentRect.width)
-    })
-    ro.observe(el)
-    return () => {
-      ro.disconnect()
-    }
-  }, [ref])
-  return width
 }
 
 /**
@@ -82,7 +53,11 @@ export function PagePreview({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [cache] = useState(() => new Map<string, HTMLCanvasElement>())
   const width = useElementWidth(sheetRef)
-  const dpr = window.devicePixelRatio
+  const dpr = useDevicePixelRatio()
+  const getBitmapRef = useRef(getBitmap)
+  useEffect(() => {
+    getBitmapRef.current = getBitmap
+  })
   const scale = useMemo(() => previewScale(model.size, width, dpr), [model.size, width, dpr])
   const areas = useMemo(() => tileHitAreas(model), [model])
 
@@ -90,40 +65,35 @@ export function PagePreview({
     const canvas = canvasRef.current
     const ctx = width > 0 ? canvas?.getContext('2d') : null
     if (!canvas || !ctx) return // not measured yet, or no 2D canvas (tests): the overlay still works
-    canvas.width = scale.deviceW
-    canvas.height = scale.deviceH
+    if (canvas.width !== scale.deviceW) canvas.width = scale.deviceW
+    if (canvas.height !== scale.deviceH) canvas.height = scale.deviceH
     const dpi = previewDpi(scale)
-    const used = new Set<string>()
-    const rendered = model.tiles.map((tile) => {
-      const bitmap = getBitmap(tile.imageId)
+    const jobs = model.tiles.map((tile) => {
+      const bitmap = getBitmapRef.current(tile.imageId)
       if (!bitmap) return null
       const plan = planTilePixels(tile, { dpi })
-      const key = tileRenderKey(tile, plan)
-      used.add(key)
-      let tileCanvas = cache.get(key)
-      if (!tileCanvas) {
-        tileCanvas = renderTile(bitmap, plan, createDomCanvas)
-        cache.set(key, tileCanvas)
-      }
-      return tileCanvas
+      return { bitmap, plan, key: tileRenderKey(tile, plan) }
     })
-    for (const [key, c] of cache) {
-      if (!used.has(key)) {
-        releaseCanvas(c)
-        cache.delete(key)
-      }
-    }
+    const rendered = syncTileCanvasCache(
+      cache,
+      jobs.map((j) => j?.key ?? null),
+      (i) => {
+        const job = jobs[i]
+        if (!job) throw new Error('unreachable: no job for a keyed tile')
+        return renderTile(job.bitmap, job.plan, createDomCanvas)
+      },
+      releaseCanvas,
+    )
     drawPage(ctx, model, scale, {
       showGuides: guides,
       colors: readDrawColors(canvas),
       tileImage: (i) => rendered[i] ?? null,
     })
-  }, [model, scale, width, guides, getBitmap, cache])
+  }, [model, scale, width, guides, cache])
 
   useEffect(
     () => () => {
-      for (const c of cache.values()) releaseCanvas(c)
-      cache.clear()
+      releaseAllTileCanvases(cache, releaseCanvas)
     },
     [cache],
   )
