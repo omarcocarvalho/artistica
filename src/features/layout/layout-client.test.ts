@@ -97,6 +97,40 @@ describe('createLayoutClient', () => {
     await expect(b).resolves.toEqual(result(2))
   })
 
+  it('keeps a superseded call an AbortError when the engine then fails, and still runs the newer call', async () => {
+    const { engine, calls } = fakeEngine()
+    const layout = createLayoutClient(() => engine)
+    const a = layout(DEFAULT_PAGE_SETUP, items('a'))
+    const b = layout(DEFAULT_PAGE_SETUP, items('b'))
+    await expect(a).rejects.toSatisfy(isAbortError)
+    calls[0]?.reject(new Error('worker died'))
+    await flush()
+    await expect(a).rejects.toSatisfy(isAbortError)
+    expect(calls).toHaveLength(2)
+    calls[1]?.resolve(result(2))
+    await expect(b).resolves.toEqual(result(2))
+  })
+
+  it('recreates a dead engine on the next call', async () => {
+    let dead = false
+    const first = fakeEngine()
+    const second = fakeEngine()
+    const create = vi
+      .fn<() => LayoutEngine>()
+      .mockReturnValueOnce({ ...first.engine, isDead: () => dead })
+      .mockReturnValueOnce(second.engine)
+    const layout = createLayoutClient(create)
+    const a = layout(DEFAULT_PAGE_SETUP, items('a'))
+    dead = true
+    first.calls[0]?.reject(new Error('worker died'))
+    await expect(a).rejects.toThrow('worker died')
+    const b = layout(DEFAULT_PAGE_SETUP, items('b'))
+    await flush()
+    expect(create).toHaveBeenCalledTimes(2)
+    second.calls[0]?.resolve(result(2))
+    await expect(b).resolves.toEqual(result(2))
+  })
+
   it('rejects when the engine cannot be created', async () => {
     const layout = createLayoutClient(() => {
       throw new Error('no workers')

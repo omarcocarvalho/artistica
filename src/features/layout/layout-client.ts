@@ -6,6 +6,8 @@ import type { LayoutItemInput, LayoutResult } from './types'
 /** Anything that computes a layout asynchronously: the Comlink-wrapped worker, or a fake in tests. */
 export interface LayoutEngine {
   computeLayout(setup: PageSetup, items: readonly LayoutItemInput[]): Promise<LayoutResult>
+  /** True once the engine (e.g. its worker) has died; the client then creates a fresh one. */
+  isDead?(): boolean
 }
 
 export type LayoutFn = (
@@ -17,7 +19,13 @@ export function abortError(): DOMException {
   return new DOMException('Layout superseded by a newer call', 'AbortError')
 }
 
-/** True for the rejection of a superseded layoutAsync call (the UI ignores these). */
+/**
+ * True for the rejection of a superseded layoutAsync call (the UI ignores these).
+ *
+ * Note: errors thrown inside the worker (e.g. the RangeError for invalid items) cross Comlink as a plain
+ * `Error` that keeps `name` and `message` but loses its class, so `err instanceof RangeError` is false.
+ * Consumers must check `err.name === 'RangeError'`.
+ */
 export function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'AbortError'
 }
@@ -53,6 +61,7 @@ export function createLayoutClient(createEngine: () => LayoutEngine): LayoutFn {
     running = job
     // Inside the executor, a throw from createEngine() becomes a rejection.
     new Promise<LayoutResult>((resolve) => {
+      if (engine?.isDead?.() === true) engine = null
       engine ??= createEngine()
       resolve(engine.computeLayout(job.setup, job.items))
     })
@@ -95,7 +104,24 @@ export function createLayoutClient(createEngine: () => LayoutEngine): LayoutFn {
 function spawnWorkerEngine(): LayoutEngine {
   const worker = new Worker(new URL('./layout.worker.ts', import.meta.url), { type: 'module' })
   const remote = wrap<LayoutWorkerApi>(worker)
-  return { computeLayout: (setup, items) => remote.computeLayout(setup, items) }
+  let dead = false
+  let fail: (e: unknown) => void = () => undefined
+  // Rejects the in-flight call when the worker fails to load, crashes, or sends an unreadable message.
+  const failure = new Promise<never>((_, reject) => {
+    fail = reject
+  })
+  failure.catch(() => undefined) // avoid an unhandled rejection when nothing is in flight
+  const die = (message: string) => (): void => {
+    dead = true
+    worker.terminate()
+    fail(new Error(message))
+  }
+  worker.addEventListener('error', die('Layout worker failed'))
+  worker.addEventListener('messageerror', die('Layout worker sent an unreadable message'))
+  return {
+    computeLayout: (setup, items) => Promise.race([remote.computeLayout(setup, items), failure]),
+    isDead: () => dead,
+  }
 }
 /* v8 ignore stop */
 
