@@ -1,0 +1,135 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildPageModels > crop marks never cross another tile’s trim+bleed box (snapshot of a tight 2-up) 1`] = `
+{
+  "cropMarks": [
+    {
+      "x1": 10,
+      "x2": 6,
+      "y1": 14,
+      "y2": 14,
+    },
+    {
+      "x1": 14,
+      "x2": 14,
+      "y1": 10,
+      "y2": 6,
+    },
+    {
+      "x1": 102,
+      "x2": 102,
+      "y1": 10,
+      "y2": 6,
+    },
+    {
+      "x1": 102,
+      "x2": 102,
+      "y1": 78,
+      "y2": 82,
+    },
+    {
+      "x1": 10,
+      "x2": 6,
+      "y1": 74,
+      "y2": 74,
+    },
+    {
+      "x1": 14,
+      "x2": 14,
+      "y1": 78,
+      "y2": 82,
+    },
+    {
+      "x1": 108,
+      "x2": 108,
+      "y1": 10,
+      "y2": 6,
+    },
+    {
+      "x1": 200,
+      "x2": 204,
+      "y1": 14,
+      "y2": 14,
+    },
+    {
+      "x1": 196,
+      "x2": 196,
+      "y1": 10,
+      "y2": 6,
+    },
+    {
+      "x1": 200,
+      "x2": 204,
+      "y1": 74,
+      "y2": 74,
+    },
+    {
+      "x1": 196,
+      "x2": 196,
+      "y1": 78,
+      "y2": 82,
+    },
+    {
+      "x1": 108,
+      "x2": 108,
+      "y1": 78,
+      "y2": 82,
+    },
+  ],
+  "index": 0,
+  "safeArea": {
+    "h": 287,
+    "w": 200,
+    "x": 5,
+    "y": 5,
+  },
+  "size": {
+    "h": 297,
+    "w": 210,
+  },
+  "tiles": [
+    {
+      "bleedMm": 3,
+      "crop": {
+        "h": 2000,
+        "w": 3000,
+        "x": 0,
+        "y": 0,
+      },
+      "flipH": false,
+      "flipV": false,
+      "imageId": "a",
+      "lowDpi": false,
+      "rotation": 0,
+      "scaledToFit": false,
+      "trim": {
+        "h": 60,
+        "w": 88,
+        "x": 14,
+        "y": 14,
+      },
+    },
+    {
+      "bleedMm": 3,
+      "crop": {
+        "h": 2000,
+        "w": 3000,
+        "x": 0,
+        "y": 0,
+      },
+      "flipH": false,
+      "flipV": false,
+      "imageId": "b",
+      "lowDpi": false,
+      "rotation": 0,
+      "scaledToFit": false,
+      "trim": {
+        "h": 60,
+        "w": 88,
+        "x": 108,
+        "y": 14,
+      },
+    },
+  ],
+}
+`;

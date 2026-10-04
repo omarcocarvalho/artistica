@@ -3,16 +3,351 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Printable reference sheets for artists. Coming soon." />
+    <title>Artistica: printable reference sheets for artists</title>
+    <meta
+      name="description"
+      content="Turn reference photos into print-ready sheets. Pack photos onto A4 or Letter pages, add crop marks and bleed, and export a PDF. Free, private, in your browser."
+    />
+    <link rel="canonical" href="https://omarcocarvalho.github.io/artistica/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>Artistica</title>
+    <meta name="theme-color" content="#f4ede1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1c1714" media="(prefers-color-scheme: dark)" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Artistica" />
+    <meta property="og:title" content="Artistica: printable reference sheets for artists" />
+    <meta
+      property="og:description"
+      content="Drop in your photos and get print-ready sheets with crop marks and bleed. Free, private, in your browser."
+    />
+    <meta property="og:url" content="https://omarcocarvalho.github.io/artistica/" />
+    <meta property="og:image" content="https://omarcocarvalho.github.io/artistica/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Artistica: reference photos packed onto printable sheets"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Artistica: printable reference sheets for artists" />
+    <meta
+      name="twitter:description"
+      content="Drop in your photos and get print-ready sheets with crop marks and bleed. Free, private, in your browser."
+    />
+    <meta name="twitter:image" content="https://omarcocarvalho.github.io/artistica/og-image.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Artistica",
+        "url": "https://omarcocarvalho.github.io/artistica/",
+        "description": "Turn reference photos into print-ready sheets with crop marks and bleed. Runs entirely in your browser.",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Any (web browser)",
+        "browserRequirements": "Requires JavaScript. Latest Chrome, Edge, Firefox or Safari.",
+        "inLanguage": "en",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is it free?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Free and open source (MIT)." }
+          },
+          {
+            "@type": "Question",
+            "name": "Will my prints be the right size?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, if you print at 100% (“Actual size”). Pages are made at the exact paper size you pick."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why won't an image link work?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Some sites block other apps from reading their images. Download the image and upload it instead."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What do “bleed” and “crop marks” mean?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Crop marks show where to cut. Bleed prints a little extra past the cut, so a slightly-off cut leaves no white edge."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Are my photos uploaded anywhere?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Everything runs in your browser. Photos are never uploaded or saved, and refreshing the page clears them."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does it work on my phone?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes: latest Chrome, Edge, Firefox and Safari on desktop, iPhone and Android."
+            }
+          }
+        ]
+      }
+    </script>
+    <script>
+      // Apply the saved theme before first paint (no flash). Mirrors landing/theme.ts.
+      try {
+        const t = JSON.parse(localStorage.getItem('artistica:settings') ?? '{}').state?.theme
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
+      } catch {
+        /* ignore: auto */
+      }
+    </script>
     <script type="module" src="/landing/main.ts"></script>
   </head>
-  <body class="min-h-dvh bg-stone-50 text-stone-900 dark:bg-stone-900 dark:text-stone-100">
-    <main class="mx-auto flex min-h-dvh max-w-2xl flex-col justify-center gap-4 p-6">
-      <h1 class="text-4xl font-bold">Artistica</h1>
-      <p class="text-lg">Printable reference sheets for artists. Coming soon.</p>
-      <p><a class="underline underline-offset-4" href="./app/">Open the app preview</a></p>
+  <body class="bg-canvas text-ink">
+    <header class="border-line bg-surface flex items-center gap-4 border-b px-4 py-3 sm:px-8">
+      <a
+        href="#main"
+        class="focus:bg-surface sr-only focus:not-sr-only focus:rounded-md focus:px-3 focus:py-2"
+        >Skip to content</a
+      >
+      <a href="./" class="font-display flex items-center gap-2 text-lg" aria-label="Artistica home">
+        <svg class="size-7" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+          <rect
+            x="5"
+            y="4"
+            width="20"
+            height="25"
+            rx="2"
+            transform="rotate(-6 15 16)"
+            fill="#fff"
+            stroke="currentColor"
+            stroke-width="1.8"
+          />
+          <rect x="9" y="8" width="7" height="9" transform="rotate(-6 15 16)" fill="#b0432a" />
+          <rect x="17" y="8" width="5" height="9" transform="rotate(-6 15 16)" fill="#2f4c9e" />
+          <path
+            d="M9 22c3-2 6 1 9-1s4 0 5-1"
+            fill="none"
+            stroke="#e2b13c"
+            stroke-width="2.2"
+            stroke-linecap="round"
+          />
+        </svg>
+        Artistica
+      </a>
+      <nav aria-label="Main" class="ml-4 hidden gap-4 text-sm sm:flex">
+        <a class="underline-offset-4 hover:underline" href="#how">How it works</a>
+        <a class="underline-offset-4 hover:underline" href="#features">Features</a>
+        <a class="underline-offset-4 hover:underline" href="#privacy">Privacy</a>
+        <a class="underline-offset-4 hover:underline" href="#faq">FAQ</a>
+      </nav>
+      <span class="flex-1"></span>
+      <button
+        type="button"
+        data-theme-toggle
+        class="hover:bg-canvas min-h-11 rounded-md px-3 text-sm"
+        aria-label="Change theme: Auto"
+      >
+        <span data-theme-label>Auto</span>
+      </button>
+      <a
+        class="bg-accent text-on-accent min-h-11 rounded-md px-4 py-2 text-sm font-semibold"
+        href="./app/"
+        >Open the app</a
+      >
+    </header>
+
+    <main id="main">
+      <section
+        class="mx-auto grid max-w-5xl gap-8 px-4 py-14 sm:px-8 md:grid-cols-2 md:items-center"
+      >
+        <div>
+          <p class="font-hand text-accent text-2xl">for drawing &amp; painting</p>
+          <h1 class="font-display text-4xl leading-tight sm:text-5xl">
+            Turn reference photos into print-ready sheets.
+          </h1>
+          <p class="text-ink-muted mt-4 text-lg">
+            Drop in your photos. Artistica packs them onto pages at a good drawing size and adds
+            crop marks and bleed. Then print, cut and draw.
+          </p>
+          <p class="mt-6 flex flex-wrap items-center gap-3">
+            <a
+              class="bg-accent text-on-accent min-h-11 rounded-md px-6 py-3 font-semibold"
+              href="./app/"
+              >Start a sheet</a
+            >
+            <a class="min-h-11 rounded-md px-4 py-3 underline underline-offset-4" href="#how"
+              >See how it works</a
+            >
+          </p>
+          <p class="text-ink-muted mt-4 text-sm">
+            Photos never leave your device · Free · No sign-up
+          </p>
+        </div>
+        <div aria-hidden="true" class="border-line bg-surface relative h-72 rounded-lg border">
+          <div class="absolute top-8 left-[8%] h-56 w-40 -rotate-[5deg] bg-white p-2 shadow-lg">
+            <div class="h-24 bg-[#c9a77f]"></div>
+            <div class="mt-2 flex gap-2">
+              <div class="h-24 flex-1 bg-[#9db3a0]"></div>
+              <div class="h-24 flex-1 bg-[#8da0c2]"></div>
+            </div>
+          </div>
+          <div class="absolute top-14 right-[8%] h-56 w-40 rotate-[4deg] bg-white p-2 shadow-lg">
+            <div class="flex gap-2">
+              <div class="h-24 flex-1 bg-[#d99a7f]"></div>
+              <div class="h-24 flex-1 bg-[#c9a77f]"></div>
+            </div>
+            <div class="mt-2 h-24 bg-[#9db3a0]"></div>
+          </div>
+          <span class="font-hand text-ink-muted absolute right-4 bottom-3 -rotate-6 text-2xl"
+            >tip! 4 per page</span
+          >
+        </div>
+      </section>
+
+      <section id="how" class="border-line bg-surface border-y">
+        <div class="mx-auto max-w-5xl px-4 py-12 sm:px-8">
+          <h2 class="font-display text-3xl">How it works</h2>
+          <p class="text-ink-muted mt-1">Three steps, under a minute.</p>
+          <ol class="mt-6 grid gap-4 md:grid-cols-3">
+            <li class="border-line rounded-lg border p-4">
+              <h3 class="font-display text-xl">Add photos</h3>
+              <p class="text-ink-muted mt-1 text-sm">
+                Upload, drag in, paste, or use a link. JPG, PNG, WebP, GIF and iPhone HEIC.
+              </p>
+            </li>
+            <li class="border-line rounded-lg border p-4">
+              <h3 class="font-display text-xl">Pick your paper</h3>
+              <p class="text-ink-muted mt-1 text-sm">
+                A4, Letter and more. Artistica finds a layout with the fewest pages and the biggest
+                images.
+              </p>
+            </li>
+            <li class="border-line rounded-lg border p-4">
+              <h3 class="font-display text-xl">Print &amp; cut</h3>
+              <p class="text-ink-muted mt-1 text-sm">
+                Download a PDF with crop marks and optional bleed. Print at 100% and cut along the
+                marks.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section id="features" class="mx-auto max-w-5xl px-4 py-12 sm:px-8">
+        <h2 class="font-display text-3xl">Made to help you see</h2>
+        <ul class="mt-6 grid gap-4 sm:grid-cols-2">
+          <li>
+            <h3 class="font-display text-xl">Smart packing</h3>
+            <p class="text-ink-muted text-sm">
+              Sizes each photo for drawing, never past what its pixels allow at 300 DPI.
+            </p>
+          </li>
+          <li>
+            <h3 class="font-display text-xl">Crop marks and bleed</h3>
+            <p class="text-ink-muted text-sm">
+              Printer-style marks, optional bleed, and a safe area, so cutting is easy.
+            </p>
+          </li>
+          <li>
+            <h3 class="font-display text-xl">Edit each photo</h3>
+            <p class="text-ink-muted text-sm">
+              Crop, rotate, flip, print copies, or fix an exact size.
+            </p>
+          </li>
+          <li>
+            <h3 class="font-display text-xl">Works on your phone</h3>
+            <p class="text-ink-muted text-sm">
+              A step-by-step flow on small screens, side panels on desktop, light and dark.
+            </p>
+          </li>
+        </ul>
+        <p class="text-ink-muted mt-6 text-sm">
+          <span class="font-hand text-accent text-xl">Coming next:</span> blur and value studies,
+          composition lines.
+        </p>
+      </section>
+
+      <section id="privacy" class="mx-auto max-w-3xl px-4 pb-12 sm:px-8">
+        <div class="border-line bg-surface rounded-lg border-2 border-dashed p-6">
+          <h2 class="font-display text-2xl">Your photos stay with you</h2>
+          <ul class="text-ink-muted mt-3 list-disc pl-5">
+            <li>Everything runs in your browser. Nothing is uploaded.</li>
+            <li>Photos are never saved. Refreshing the page clears them.</li>
+            <li>Only your settings are remembered, on this device.</li>
+            <li>No accounts and no tracking.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="faq" class="mx-auto max-w-3xl px-4 pb-16 sm:px-8">
+        <h2 class="font-display text-3xl">Questions</h2>
+        <details class="border-line border-b py-3">
+          <summary class="min-h-11 cursor-pointer font-semibold">Is it free?</summary>
+          <p class="text-ink-muted mt-1">Yes. Free and open source (MIT).</p>
+        </details>
+        <details class="border-line border-b py-3">
+          <summary class="min-h-11 cursor-pointer font-semibold">
+            Will my prints be the right size?
+          </summary>
+          <p class="text-ink-muted mt-1">
+            Yes, if you print at 100% (“Actual size”). Pages are made at the exact paper size you
+            pick.
+          </p>
+        </details>
+        <details class="border-line border-b py-3">
+          <summary class="min-h-11 cursor-pointer font-semibold">
+            Why won't an image link work?
+          </summary>
+          <p class="text-ink-muted mt-1">
+            Some sites block other apps from reading their images. Download the image and upload it
+            instead.
+          </p>
+        </details>
+        <details class="border-line border-b py-3">
+          <summary class="min-h-11 cursor-pointer font-semibold">
+            What do “bleed” and “crop marks” mean?
+          </summary>
+          <p class="text-ink-muted mt-1">
+            Crop marks show where to cut. Bleed prints a little extra past the cut, so a
+            slightly-off cut leaves no white edge.
+          </p>
+        </details>
+        <details class="border-line border-b py-3">
+          <summary class="min-h-11 cursor-pointer font-semibold">
+            Are my photos uploaded anywhere?
+          </summary>
+          <p class="text-ink-muted mt-1">
+            No. Everything runs in your browser. Photos are never uploaded or saved, and refreshing
+            the page clears them.
+          </p>
+        </details>
+        <details class="border-line border-b py-3">
+          <summary class="min-h-11 cursor-pointer font-semibold">Does it work on my phone?</summary>
+          <p class="text-ink-muted mt-1">
+            Yes: latest Chrome, Edge, Firefox and Safari on desktop, iPhone and Android.
+          </p>
+        </details>
+      </section>
     </main>
+
+    <footer class="border-line bg-surface text-ink-muted border-t px-4 py-6 text-sm sm:px-8">
+      Artistica · MIT licence ·
+      <a class="underline underline-offset-4" href="https://github.com/omarcocarvalho/artistica"
+        >Source on GitHub</a
+      >
+    </footer>
   </body>
 </html>

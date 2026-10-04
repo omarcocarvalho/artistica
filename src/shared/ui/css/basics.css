@@ -81,6 +81,17 @@
   .ds-btn--icon.ds-btn--lg {
     width: var(--size-target);
   }
+  /* 44 px touch targets: buttons (icon-only ones included) grow on coarse pointers and in the phone layout (< 960 px).
+     Desktop (fine pointer, >= 960 px) keeps the 32 px density. */
+  @media (pointer: coarse), (max-width: 959.98px) {
+    .ds-btn {
+      min-height: var(--size-target);
+      min-width: var(--size-target);
+    }
+    .ds-btn--icon {
+      width: var(--size-target);
+    }
+  }
   .ds-btn[disabled],
   .ds-btn[aria-disabled='true'] {
     cursor: not-allowed;

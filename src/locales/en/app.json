@@ -1,1 +1,52 @@
-{}
+{
+  "title": "Artistica",
+  "skipToPreview": "Skip to preview",
+  "topBar": {
+    "home": "Artistica home",
+    "privacy": "Photos stay on this device",
+    "export": "Export PDF",
+    "exportNoImages": "Add at least one image to export.",
+    "exportUpdating": "The layout is updating. Export is available in a moment.",
+    "exportNoRoom": "Export is unavailable: the page setup leaves no room for images.",
+    "exportError": "The layout could not be computed. Change a setting or reload the page."
+  },
+  "theme": {
+    "change": "Change theme",
+    "auto": "Auto",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "panels": {
+    "images": "Images",
+    "settings": "Settings",
+    "preview": "Page preview"
+  },
+  "empty": {
+    "titleBefore": "Add some ",
+    "titleHighlight": "reference photos",
+    "body": "Drop them here, paste, or add a link. We pack them onto pages for you.",
+    "formats": "JPG, PNG, WebP, GIF, HEIC · any number of photos",
+    "privacy": "Nothing is uploaded. Photos stay on this device.",
+    "panelHint": "No images yet. Add photos to start your sheets.",
+    "noPages": "No pages yet"
+  },
+  "notices": {
+    "dismiss": "Dismiss",
+    "region": "Notifications"
+  },
+  "mobile": {
+    "steps": "Steps",
+    "done": "Done",
+    "stepLabel": "Step {{current}} of {{total}}: {{name}}",
+    "back": "Back",
+    "next": "Next",
+    "names": { "images": "Images", "page": "Page", "preview": "Preview", "export": "Export" },
+    "images": { "tapToEdit": "Tap a photo to crop, rotate or set copies." },
+    "export": {
+      "summary_one": "{{count}} image is ready to print.",
+      "summary_other": "{{count}} images are ready to print.",
+      "create": "Create PDF",
+      "tip": "One page at a time to save memory. Keep this tab open."
+    }
+  }
+}
