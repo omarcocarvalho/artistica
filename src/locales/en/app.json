@@ -32,7 +32,8 @@
   },
   "notices": {
     "dismiss": "Dismiss",
-    "region": "Notifications"
+    "region": "Notifications",
+    "layoutFailed": "The layout could not be computed. Change a setting and try again."
   },
   "mobile": {
     "steps": "Steps",
@@ -59,5 +60,18 @@
   "import": {
     "more": "+{{more}} more",
     "unnamed": "This image"
+  },
+  "preview": {
+    "editSelected": "Edit selected image",
+    "updating": "Updating layout…",
+    "pageCaption": "Page {{current}} of {{total}} · {{paper}} · {{orientation}}",
+    "pageItems": "Page {{current}} contents",
+    "item": "{{name}}, {{w}} × {{h}} mm",
+    "customPaper": "Custom",
+    "unnamedImage": "Image",
+    "orientation": {
+      "portrait": "portrait",
+      "landscape": "landscape"
+    }
   }
 }
