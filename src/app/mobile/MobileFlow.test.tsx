@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { LayoutResult } from '../../features/layout'
 import { initI18n } from '../../shared/i18n'
 import { usePages } from '../pages-store'
 import { useAppUi } from '../state/useAppUi'
@@ -10,16 +11,16 @@ vi.mock('../state/hasImages', () => ({ useImageCount: () => imageCount.value }))
 
 import { MobileFlow } from './MobileFlow'
 
+const layout = {} as LayoutResult
+
 beforeAll(async () => {
   await initI18n()
 })
 beforeEach(() => {
   imageCount.value = 0
   useAppUi.setState(useAppUi.getInitialState())
-  usePages.setState({ status: 'idle', layout: layout as never, pages: [{ index: 0 }] as never })
+  usePages.setState({ status: 'idle', layout, pages: [{ index: 0 }] as never })
 })
-
-const layout = {}
 
 describe('MobileFlow', () => {
   it('starts on Images with Back disabled and a labelled step region', () => {

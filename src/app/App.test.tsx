@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSettings } from '../features/settings'
 import { initI18n } from '../shared/i18n'
+
 const imageCount = vi.hoisted(() => ({ value: 0 }))
 vi.mock('./state/hasImages', () => ({ useImageCount: () => imageCount.value }))
 vi.mock('./effects/AppEffects', () => ({ AppEffects: () => null }))
@@ -12,8 +13,8 @@ vi.mock('./slots/ExportSlot', () => ({ ExportSlot: () => null }))
 
 import { App } from './App'
 import { usePages } from './pages-store'
-import { stubDesktop } from './test-utils'
 import { useAppUi } from './state/useAppUi'
+import { stubDesktop } from './test-utils'
 
 beforeAll(async () => {
   await initI18n()
@@ -79,5 +80,15 @@ describe('App export gate (Review Focus 5)', () => {
     expect(button()).not.toHaveAttribute('aria-disabled', 'true')
     await userEvent.click(button())
     expect(useAppUi.getState().exportOpen).toBe(true)
+  })
+
+  it('says "updating", not "no room", right after the first image is added to an empty workspace', () => {
+    stubDesktop(true)
+    usePages.getState().sink.cleared({ pages: [], suggestedPerPage: 8 } as never)
+    imageCount.value = 1
+    render(<App />)
+    expect(screen.getByRole('button', { name: 'Export PDF' })).toHaveAccessibleDescription(
+      'The layout is updating. Export is available in a moment.',
+    )
   })
 })

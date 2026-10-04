@@ -15,7 +15,7 @@ export function useExportGate(): { block: ExportBlock; reason: string | null } {
   const { t } = useTranslation('app')
   const imageCount = useImageCount()
   const status = usePages((s) => s.status)
-  const hasLayout = usePages((s) => s.layout !== null)
+  const hasLayout = usePages((s) => s.layout !== null && !s.empty)
   const pageCount = usePages((s) => s.pages.length)
   const block = exportBlock(imageCount, status, hasLayout, pageCount)
   return { block, reason: block === null ? null : t(REASON_KEYS[block]) }
