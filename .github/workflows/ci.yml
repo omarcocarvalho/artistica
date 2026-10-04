@@ -59,6 +59,8 @@ jobs:
           test -f dist/app/index.html
           grep -q '/artistica/assets/' dist/index.html
           grep -q '/artistica/assets/' dist/app/index.html
+      - name: Check initial app JS budget (< 250 KB gzipped)
+        run: node scripts/check-bundle-budget.ts dist/app/index.html dist
 
   e2e:
     name: e2e (${{ matrix.browser }})
