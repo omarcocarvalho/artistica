@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { inspectPdf } from '../pdf/inspect'
-import { tileRenderKey, type PxRect } from '../pixels/tile-plan'
+import { integerCropBox, planTilePixels, tileRenderKey, type PxRect } from '../pixels/tile-plan'
 import { fakeFactory } from '../test-support/fake-canvas'
 import { drawTile, id, pageModel } from '../test-support/fixtures'
 import { TINY_JPEG } from '../test-support/image-bytes'
@@ -138,6 +138,99 @@ describe('runExport', () => {
     await expect(runExport(pages, (i) => bitmaps.get(i), {}, deps)).rejects.toMatchObject({
       code: 'failed',
     })
+  })
+})
+
+describe('runExport fractional crop (ruling D-1)', () => {
+  const crop = { x: 10.4, y: 20.7, w: 1000.3, h: 500.2 }
+  const tile = drawTile({ imageId: id('a'), crop })
+  const fracPages = [pageModel([tile])]
+
+  it('crops the integer box, keys by the original plan and renders the cropped plan', async () => {
+    const { deps } = realWorkerDeps()
+    const cropSpy = vi.spyOn(deps, 'cropBitmap')
+    const encodeSpy = vi.spyOn(deps.api, 'encodeTile')
+    const bytes = await runExport(fracPages, (i) => bitmaps.get(i), {}, deps)
+    expect((await inspectPdf(bytes)).imageCount).toBe(1)
+    expect(cropSpy.mock.calls[0]?.[1]).toEqual(integerCropBox(crop))
+    const [key, plan] = encodeSpy.mock.calls[0] ?? []
+    expect(key).toBe(tileRenderKey(tile))
+    expect(key).toBe(tileRenderKey(tile, planTilePixels(tile)))
+    expect(plan?.src.x).toBeCloseTo(crop.x - Math.floor(crop.x), 9)
+    expect(plan?.src.y).toBeCloseTo(crop.y - Math.floor(crop.y), 9)
+    expect(plan?.src.w).toBe(planTilePixels(tile).src.w)
+    expect(plan?.src.h).toBe(planTilePixels(tile).src.h)
+  })
+
+  it('maps an InvalidStateError from createImageBitmap to missing-image', async () => {
+    const { deps } = realWorkerDeps({
+      cropBitmap: () => Promise.reject(new DOMException('closed', 'InvalidStateError')),
+    })
+    await expect(runExport(fracPages, (i) => bitmaps.get(i), {}, deps)).rejects.toMatchObject({
+      code: 'missing-image',
+    })
+  })
+
+  it('rethrows other crop failures and closes the clone when posting fails', async () => {
+    const { deps: d1 } = realWorkerDeps({ cropBitmap: () => Promise.reject(new Error('x')) })
+    await expect(runExport(fracPages, (i) => bitmaps.get(i), {}, d1)).rejects.toThrow('x')
+    const { deps, clones } = realWorkerDeps({
+      transfer: () => {
+        throw new DOMException('nope', 'DataCloneError')
+      },
+    })
+    await expect(runExport(fracPages, (i) => bitmaps.get(i), {}, deps)).rejects.toThrow('nope')
+    expect(clones.every((c) => c.closed)).toBe(true)
+  })
+})
+
+describe('runExport abort reasons (CCR-D5)', () => {
+  it('normalises a string reason before start', async () => {
+    const { deps } = realWorkerDeps()
+    const ctrl = new AbortController()
+    ctrl.abort('user')
+    const err = await runExport(pages, (i) => bitmaps.get(i), { signal: ctrl.signal }, deps).catch(
+      (e: unknown) => e,
+    )
+    expect(isAbortError(err)).toBe(true)
+  })
+  it('normalises a string reason between tiles and keeps a native AbortError reason', async () => {
+    const ctrl = new AbortController()
+    const { deps } = realWorkerDeps()
+    const out = runExport(
+      pages,
+      (i) => bitmaps.get(i),
+      {
+        signal: ctrl.signal,
+        onProgress: () => {
+          ctrl.abort('user')
+        },
+      },
+      deps,
+    ).catch((e: unknown) => e)
+    expect(isAbortError(await out)).toBe(true)
+    const native = new DOMException('mine', 'AbortError')
+    const c2 = new AbortController()
+    c2.abort(native)
+    const { deps: d2 } = realWorkerDeps()
+    await expect(runExport(pages, (i) => bitmaps.get(i), { signal: c2.signal }, d2)).rejects.toBe(
+      native,
+    )
+  })
+})
+
+describe('runExport progress with a trailing empty page', () => {
+  it('still reaches 1, only after finish', async () => {
+    const { deps } = realWorkerDeps()
+    const seen: number[] = []
+    await runExport(
+      [pages[0]!, pageModel([], { index: 1 })],
+      (i) => bitmaps.get(i),
+      { onProgress: (p) => seen.push(p.fraction) },
+      deps,
+    )
+    expect(seen.at(-1)).toBe(1)
+    expect(seen.slice(0, -1).every((f) => f < 1)).toBe(true)
   })
 })
 

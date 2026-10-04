@@ -45,19 +45,42 @@ export interface ExportDeps {
   readonly crashed?: Promise<never>
 }
 
+const ABORTED = (): DOMException => new DOMException('Aborted', 'AbortError')
+
+/** A real AbortError for an aborted signal; an arbitrary abort reason is never leaked (CCR-D5). */
+function abortError(signal: AbortSignal): DOMException {
+  const reason: unknown = signal.reason
+  return reason instanceof DOMException && reason.name === 'AbortError' ? reason : ABORTED()
+}
+
+function checkAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) throw abortError(signal)
+}
+
 function abortRejection(signal: AbortSignal | undefined): Promise<never> | undefined {
   if (!signal) return undefined
   return new Promise<never>((_, reject) => {
     const fail = (): void => {
-      reject(
-        signal.reason instanceof DOMException
-          ? signal.reason
-          : new DOMException('Aborted', 'AbortError'),
-      )
+      reject(abortError(signal))
     }
     if (signal.aborted) fail()
     else signal.addEventListener('abort', fail, { once: true })
   })
+}
+
+/** Share of the progress bar kept for saving the PDF after the last page. */
+const SAVE_SHARE = 0.05
+
+/** A closed or removed image makes createImageBitmap reject with InvalidStateError (Q7). */
+async function cropOrMissing(deps: ExportDeps, bitmap: ImageBitmap, box: PxRect) {
+  try {
+    return await deps.cropBitmap(bitmap, box)
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'InvalidStateError') {
+      throw new ExportError('missing-image', { cause: e })
+    }
+    throw e
+  }
 }
 
 /**
@@ -79,15 +102,15 @@ export async function runExport(
     Promise.race([p, ...(aborted ? [aborted] : []), ...(deps.crashed ? [deps.crashed] : [])])
 
   if (pages.length === 0) throw new ExportError('empty')
-  signal?.throwIfAborted()
+  checkAborted(signal)
   await race(deps.api.init())
 
   const encoded = new Set<string>()
   const pageCount = pages.length
   for (const [pageIndex, page] of pages.entries()) {
-    onProgress?.({ pageIndex, pageCount, fraction: pageIndex / pageCount })
+    onProgress?.({ pageIndex, pageCount, fraction: (pageIndex / pageCount) * (1 - SAVE_SHARE) })
     for (const [t, tile] of page.tiles.entries()) {
-      signal?.throwIfAborted()
+      checkAborted(signal)
       const plan = planTilePixels(tile)
       // Ruling D-1: the key always comes from the ORIGINAL plan.
       const key = tileRenderKey(tile, plan)
@@ -95,21 +118,30 @@ export async function runExport(
         const bitmap = getBitmap(tile.imageId)
         if (!bitmap) throw new ExportError('missing-image')
         // Not raced: createImageBitmap always settles, and we must own the clone to close it.
-        const clone = await deps.cropBitmap(bitmap, integerCropBox(plan.src))
+        const clone = await cropOrMissing(deps, bitmap, integerCropBox(plan.src))
         if (signal?.aborted) {
           clone.close()
-          signal.throwIfAborted()
+          checkAborted(signal)
         }
-        await race(deps.api.encodeTile(key, forCroppedSource(plan), deps.transfer(clone, [clone])))
+        try {
+          await race(
+            deps.api.encodeTile(key, forCroppedSource(plan), deps.transfer(clone, [clone])),
+          )
+        } catch (e) {
+          clone.close() // no-op once transferred; frees the clone if posting failed
+          throw e
+        }
         encoded.add(key)
       }
       onProgress?.({
         pageIndex,
         pageCount,
-        fraction: (pageIndex + (t + 1) / page.tiles.length) / pageCount,
+        fraction: ((pageIndex + (t + 1) / page.tiles.length) / pageCount) * (1 - SAVE_SHARE),
       })
     }
     await race(deps.api.addPage(page))
   }
-  return race(deps.api.finish())
+  const bytes = await race(deps.api.finish())
+  onProgress?.({ pageIndex: pageCount - 1, pageCount, fraction: 1 })
+  return bytes
 }

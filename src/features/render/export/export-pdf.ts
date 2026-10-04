@@ -16,10 +16,15 @@ export async function exportPdf(
 ): Promise<Blob> {
   const worker = new Worker(new URL('./pdf.worker.ts', import.meta.url), { type: 'module' })
   const api = wrap<ExportWorkerApi>(worker)
+  let crash: (e: ExportError) => void = () => undefined
   const crashed = new Promise<never>((_, reject) => {
+    crash = reject
     worker.addEventListener('error', (e) => {
       reject(new ExportError('failed', { cause: e }))
     })
+  })
+  worker.addEventListener('messageerror', (e) => {
+    crash(new ExportError('failed', { cause: e }))
   })
   void crashed.catch(() => undefined)
   try {

@@ -98,6 +98,9 @@ describe('pdfFileName (D10)', () => {
     expect(pdfFileName('Letter', new Date(2026, 0, 9))).toBe('artistica-Letter-2026-01-09.pdf')
     expect(pdfFileName('Custom', new Date(2026, 11, 31))).toBe('artistica-Custom-2026-12-31.pdf')
     expect(pdfFileName(' A/4 ', new Date(2026, 9, 3))).toBe('artistica-A-4-2026-10-03.pdf')
+    expect(pdfFileName('Letter (US)', new Date(2026, 9, 3))).toBe(
+      'artistica-Letter-US-2026-10-03.pdf',
+    )
     expect(pdfFileName('', new Date(2026, 9, 3))).toBe('artistica-Custom-2026-10-03.pdf')
   })
 })
