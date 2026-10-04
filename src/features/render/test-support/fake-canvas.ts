@@ -69,8 +69,8 @@ export class FakeCanvas implements TileCanvas {
     this.ctx = ctx
   }
 
-  getContext(): TileCtx | null {
-    return this.ctx
+  getContext(contextId: string): TileCtx | null {
+    return contextId === '2d' ? this.ctx : null
   }
 
   pixel(x: number, y: number): number[] {
