@@ -47,7 +47,8 @@ export async function inspectPdf(bytes: Uint8Array): Promise<PdfReport> {
     ) {
       images.push(obj)
       const mask = obj.dict.get(PDFName.of('SMask'))
-      if (mask) softMasks.add(doc.context.lookup(mask))
+      const maskObj = mask ? doc.context.lookup(mask) : undefined
+      if (maskObj) softMasks.add(maskObj)
     }
   }
   // An alpha channel is a second Image stream referenced only as /SMask: not a drawn image.
