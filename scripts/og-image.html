@@ -1,0 +1,91 @@
+<!doctype html>
+<meta charset="utf-8" />
+<style>
+  @font-face {
+    font-family: Fraunces;
+    src: url('{{FRAUNCES}}');
+    font-weight: 100 900;
+  }
+  @font-face {
+    font-family: Atkinson;
+    src: url('{{ATKINSON}}');
+    font-weight: 200 800;
+  }
+  @font-face {
+    font-family: Caveat;
+    src: url('{{CAVEAT}}');
+    font-weight: 400 700;
+  }
+  html,
+  body {
+    margin: 0;
+    width: 1200px;
+    height: 630px;
+    background: #f4ede1;
+    color: #2b2420;
+  }
+  body {
+    display: grid;
+    grid-template-columns: 640px 1fr;
+    align-items: center;
+    padding: 0 72px;
+    box-sizing: border-box;
+    gap: 48px;
+    font-family: Atkinson, sans-serif;
+  }
+  .hand {
+    font-family: Caveat, cursive;
+    color: #b0432a;
+    font-size: 44px;
+    transform: rotate(-2deg);
+    display: inline-block;
+  }
+  h1 {
+    font-family: Fraunces, serif;
+    font-size: 68px;
+    line-height: 1.05;
+    margin: 8px 0 20px;
+    font-weight: 650;
+  }
+  p {
+    font-size: 28px;
+    margin: 0;
+    color: #5b4f46;
+  }
+  .sheets {
+    position: relative;
+    height: 480px;
+  }
+  .sheet {
+    position: absolute;
+    background: #fff;
+    box-shadow: 0 8px 28px rgba(60, 40, 20, 0.28);
+  }
+  .sheet i {
+    position: absolute;
+    background: #c9a77f;
+  }
+</style>
+<div>
+  <span class="hand">for drawing &amp; painting</span>
+  <h1>Print-ready reference sheets</h1>
+  <p>Pack photos onto A4 or Letter. Crop marks and bleed. Free and private.</p>
+</div>
+<div class="sheets">
+  <div
+    class="sheet"
+    style="left: 10px; top: 40px; width: 250px; height: 354px; transform: rotate(-5deg)"
+  >
+    <i style="left: 20px; top: 20px; width: 210px; height: 140px"></i>
+    <i style="left: 20px; top: 176px; width: 100px; height: 140px; background: #9db3a0"></i>
+    <i style="left: 130px; top: 176px; width: 100px; height: 140px; background: #8da0c2"></i>
+  </div>
+  <div
+    class="sheet"
+    style="left: 210px; top: 90px; width: 250px; height: 354px; transform: rotate(4deg)"
+  >
+    <i style="left: 20px; top: 20px; width: 100px; height: 140px; background: #d99a7f"></i>
+    <i style="left: 130px; top: 20px; width: 100px; height: 140px"></i>
+    <i style="left: 20px; top: 176px; width: 210px; height: 140px; background: #9db3a0"></i>
+  </div>
+</div>

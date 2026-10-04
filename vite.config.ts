@@ -23,7 +23,7 @@ export default defineConfig({
       // Vitest 5 reports every file matching `include` (0% if untested) and exits 0 when nothing
       // matches, so the gate is harmless until sub-plans B and D add code.
       include: ['src/features/layout/**', 'src/features/render/**'],
-      exclude: ['**/*.test.*', '**/*.worker.ts', '**/components/**'],
+      exclude: ['**/*.test.*', '**/*.worker.ts', '**/components/**', '**/test-support/**'],
       reporter: ['text', 'html'],
       thresholds: { lines: 80, branches: 80, functions: 80, statements: 80 },
     },
