@@ -92,7 +92,6 @@ describe('addFiles', () => {
     await vi.waitFor(() => {
       expect(store.getState().images).toHaveLength(1)
     })
-    store.getState().select(null)
     store.getState().select('id-2' as ImageId)
     gates[0]?.resolve(decoded())
     await p

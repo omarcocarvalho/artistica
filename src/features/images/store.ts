@@ -38,6 +38,7 @@ type Job = { kind: 'blob'; blob: Blob; name: string } | { kind: 'url'; url: stri
 export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<ImagesState>> {
   const limit = createLimiter(DECODE_CONCURRENCY)
   const order = new Map<ImageId, number>()
+  let autoSelectedId: ImageId | null = null
   let generation = 0
   let nextSeq = 0
   let nextPaste = 1
@@ -53,7 +54,7 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
       order.delete(img.id)
     }
 
-    async function loadOne(job: Job, seq: number, gen: number): Promise<ImportOutcome | null> {
+    async function loadOne(job: Job, seq: number, id: ImageId, gen: number): Promise<ImportOutcome | null> {
       const label = job.kind === 'url' ? job.url : job.name
       try {
         const { blob, name } =
@@ -71,7 +72,6 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
           discard(d)
           return null
         }
-        const id = deps.newId()
         const image: LoadedImage = {
           id,
           contentHash,
@@ -91,7 +91,12 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
             at === -1
               ? [...s.images, image]
               : [...s.images.slice(0, at), image, ...s.images.slice(at)]
-          return { images, selectedId: s.selectedId ?? id }
+          const takeSelection =
+            s.selectedId === null ||
+            (s.selectedId === autoSelectedId && (order.get(s.selectedId) ?? 0) > seq)
+          if (!takeSelection) return { images }
+          autoSelectedId = id
+          return { images, selectedId: id }
         })
         const warnings: ImportWarning[] = d.animatedGif ? ['animated-gif'] : []
         return { ok: true, id, ...(warnings.length > 0 ? { warnings } : {}) }
@@ -105,7 +110,7 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
     async function run(jobs: Job[]): Promise<ImportOutcome[]> {
       const gen = generation
       set((s) => ({ importing: s.importing + jobs.length }))
-      const results = await Promise.all(jobs.map((job) => loadOne(job, nextSeq++, gen)))
+      const results = await Promise.all(jobs.map((job) => loadOne(job, nextSeq++, deps.newId(), gen)))
       return results.filter((r): r is ImportOutcome => r !== null)
     }
 
@@ -156,7 +161,10 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
       },
 
       select: (id) => {
-        if (id === null || get().images.some((i) => i.id === id)) set({ selectedId: id })
+        if (id === null || get().images.some((i) => i.id === id)) {
+          autoSelectedId = null
+          set({ selectedId: id })
+        }
       },
 
       updateEdits: (id, patch) => {
