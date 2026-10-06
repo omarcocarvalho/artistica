@@ -31,4 +31,19 @@ describe('NoticeRegion', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(screen.queryByText('Nope')).not.toBeInTheDocument()
   })
+  it('keeps the status live region mounted and only changes its content', () => {
+    render(<NoticeRegion />)
+    const status = screen.getByRole('status')
+    expect(status).toBeEmptyDOMElement()
+    act(() => {
+      useNotices.getState().notify('info', 'Gutter raised')
+    })
+    expect(screen.getByRole('status')).toBe(status)
+    expect(status).toHaveTextContent('Gutter raised')
+    act(() => {
+      useNotices.getState().clear()
+    })
+    expect(screen.getByRole('status')).toBe(status)
+    expect(status).toBeEmptyDOMElement()
+  })
 })

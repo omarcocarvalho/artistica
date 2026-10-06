@@ -16,6 +16,10 @@ describe('TopBar', () => {
     expect(screen.getByText('Photos stay on this device')).toBeInTheDocument()
     expect(screen.queryByLabelText(/language/i)).not.toBeInTheDocument()
   })
+  it('links the logo to the landing page one level up from the app', () => {
+    render(<TopBar onExport={vi.fn()} exportDisabledReason={null} />)
+    expect(screen.getByRole('link', { name: 'Artistica home' })).toHaveAttribute('href', '../')
+  })
   it('calls onExport when enabled', async () => {
     const onExport = vi.fn()
     render(<TopBar onExport={onExport} exportDisabledReason={null} />)

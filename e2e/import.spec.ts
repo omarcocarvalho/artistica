@@ -357,7 +357,7 @@ test.describe('import (chromium only)', () => {
         new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }),
       )
     })
-    await expect(app.notices.getByRole('status')).toHaveCount(0)
+    await expect(app.notices.getByRole('status')).toBeEmpty()
     await expect(app.notices.getByRole('alert')).toHaveCount(0)
   })
 
