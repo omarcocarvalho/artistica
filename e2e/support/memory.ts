@@ -2,13 +2,13 @@ import { execFileSync } from 'node:child_process'
 import type { Browser } from '@playwright/test'
 
 /** Every process of a Chromium browser (browser, renderers, GPU, utilities), from Chromium itself. */
-async function chromiumPids(browser: Browser): Promise<number[]> {
+async function chromiumProcesses(browser: Browser): Promise<{ id: number; type: string }[]> {
   const cdp = await browser.newBrowserCDPSession()
   try {
     const { processInfo } = (await cdp.send('SystemInfo.getProcessInfo')) as {
-      processInfo: { id: number }[]
+      processInfo: { id: number; type: string }[]
     }
-    return processInfo.map((p) => p.id).filter((id) => id > 0)
+    return processInfo.filter((p) => p.id > 0)
   } finally {
     await cdp.detach()
   }
@@ -33,6 +33,8 @@ export interface MemorySampler {
   peaks(): Record<string, number>
   /** One sample now: total RSS (MB). */
   sample(): Promise<number>
+  /** RSS (MB) per process type right now, e.g. { browser, renderer, gpu }. */
+  breakdown(): Promise<Record<string, number>>
   /** Stops sampling; rethrows the first sampling failure. */
   stop(): Promise<void>
 }
@@ -48,7 +50,7 @@ export function sampleBrowserMemory(browser: Browser, intervalMs = 250): MemoryS
   let chain: Promise<unknown> = Promise.resolve()
   const sample = (): Promise<number> => {
     const next = chain.then(async () => {
-      const pids = await chromiumPids(browser)
+      const pids = (await chromiumProcesses(browser)).map((p) => p.id)
       const rss = rssMbByPid(pids)
       if (rss.size === 0) throw new Error(`no RSS found for browser pids ${pids.join(',')}`)
       const total = Math.round([...rss.values()].reduce((a, b) => a + b, 0))
@@ -69,6 +71,13 @@ export function sampleBrowserMemory(browser: Browser, intervalMs = 250): MemoryS
     },
     peaks: () => ({ ...peaks }),
     sample,
+    async breakdown() {
+      const processes = await chromiumProcesses(browser)
+      const rss = rssMbByPid(processes.map((p) => p.id))
+      const out: Record<string, number> = {}
+      for (const p of processes) out[p.type] = Math.round((out[p.type] ?? 0) + (rss.get(p.id) ?? 0))
+      return out
+    },
     async stop() {
       clearInterval(timer)
       await chain

@@ -14,3 +14,5 @@ export const PROBE_TIMEOUT_MS = 8_000
 export const MAX_PASTED_URLS = 20
 /** Bytes read from the start of a file for sniffing and EXIF. */
 export const HEAD_BYTES = 262_144
+/** Long side of the bitmap kept per image for the preview and crop editor. Export decodes the source again. */
+export const PREVIEW_LONG_SIDE_PX = 2048

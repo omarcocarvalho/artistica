@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { ImageId } from '../../../shared/model/image'
 import { Badge } from '../../../shared/ui'
 import { releaseCanvas, renderTile } from '../pixels/render-tile'
-import { planTilePixels, tileRenderKey } from '../pixels/tile-plan'
+import { forScaledSource, planTilePixels, tileRenderKey } from '../pixels/tile-plan'
 import { readDrawColors } from '../preview/draw-colors'
 import { drawPage } from '../preview/draw-page'
 import { previewDpi, previewScale, tileHitAreas } from '../preview/preview-geometry'
@@ -11,12 +11,19 @@ import { releaseAllTileCanvases, syncTileCanvasCache } from '../preview/tile-cac
 import { useDevicePixelRatio, useElementWidth } from '../preview/use-element-width'
 import type { PageModel } from '../types'
 
+/** A bitmap of the whole image, at any size; page models are planned against pxW x pxH. */
+export interface PreviewSource {
+  readonly bitmap: ImageBitmap
+  readonly pxW: number
+  readonly pxH: number
+}
+
 export interface PagePreviewProps {
   readonly model: PageModel
   /**
-   * Must return the bitmap for every image in `model`; identity changes do not trigger redraws.
+   * Must return the source for every image in `model`; identity changes do not trigger redraws.
    */
-  readonly getBitmap: (id: ImageId) => ImageBitmap | undefined
+  readonly getSource: (id: ImageId) => PreviewSource | undefined
   readonly selectedId: ImageId | null
   readonly onSelect: (id: ImageId) => void
   readonly guides: boolean
@@ -40,7 +47,7 @@ const createDomCanvas = (w: number, h: number): HTMLCanvasElement => {
  */
 export function PagePreview({
   model,
-  getBitmap,
+  getSource,
   selectedId,
   onSelect,
   guides,
@@ -54,9 +61,9 @@ export function PagePreview({
   const [cache] = useState(() => new Map<string, HTMLCanvasElement>())
   const width = useElementWidth(sheetRef)
   const dpr = useDevicePixelRatio()
-  const getBitmapRef = useRef(getBitmap)
+  const getSourceRef = useRef(getSource)
   useEffect(() => {
-    getBitmapRef.current = getBitmap
+    getSourceRef.current = getSource
   })
   const scale = useMemo(() => previewScale(model.size, width, dpr), [model.size, width, dpr])
   const areas = useMemo(() => tileHitAreas(model), [model])
@@ -69,10 +76,15 @@ export function PagePreview({
     if (canvas.height !== scale.deviceH) canvas.height = scale.deviceH
     const dpi = previewDpi(scale)
     const jobs = model.tiles.map((tile) => {
-      const bitmap = getBitmapRef.current(tile.imageId)
-      if (!bitmap) return null
+      const source = getSourceRef.current(tile.imageId)
+      if (!source) return null
       const plan = planTilePixels(tile, { dpi })
-      return { bitmap, plan, key: tileRenderKey(tile, plan) }
+      const { bitmap, pxW, pxH } = source
+      return {
+        bitmap,
+        plan: forScaledSource(plan, bitmap.width / pxW, bitmap.height / pxH),
+        key: tileRenderKey(tile, plan),
+      }
     })
     const rendered = syncTileCanvasCache(
       cache,

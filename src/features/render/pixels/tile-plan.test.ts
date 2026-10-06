@@ -7,6 +7,7 @@ import {
   applyMatrix,
   downscaleSteps,
   forCroppedSource,
+  forScaledSource,
   integerCropBox,
   orientMatrix,
   planTilePixels,
@@ -210,6 +211,52 @@ describe('forCroppedSource', () => {
     expect(integerCropBox(plan.src)).toEqual({ x: 100, y: 50, w: 2001, h: 1001 })
     expect(forCroppedSource(plan).src).toEqual({ x: 0.25, y: 0.75, w: 2000.5, h: 1000 })
     expect(tileRenderKey(drawTile({ crop: plan.src }), plan)).toContain('100.25')
+  })
+})
+
+describe('forScaledSource', () => {
+  it('maps a fractional crop of a rotated, flipped tile into a smaller bitmap', () => {
+    const plan = planTilePixels(
+      drawTile({ crop: { x: 100.5, y: 40.25, w: 2000.5, h: 1000 }, rotation: 90, flipH: true }),
+    )
+    const scaled = forScaledSource(plan, 0.5, 0.25)
+    expect(scaled.src).toEqual({ x: 50.25, y: 10.0625, w: 1000.25, h: 250 })
+    expect({ ...scaled, src: plan.src }).toEqual(plan)
+  })
+
+  it('is the identity at scale 1', () => {
+    const plan = planTilePixels(drawTile({ crop: { x: 3.5, y: 2, w: 900, h: 450 } }))
+    expect(forScaledSource(plan, 1, 1)).toEqual(plan)
+  })
+
+  it('keeps the crop at the same place relative to the whole image (property)', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 64, max: 6000 }),
+        fc.integer({ min: 64, max: 6000 }),
+        fc.double({ min: 0, max: 0.5, noNaN: true }),
+        fc.double({ min: 0, max: 0.5, noNaN: true }),
+        fc.double({ min: 0.01, max: 0.5, noNaN: true }),
+        fc.double({ min: 0.01, max: 0.5, noNaN: true }),
+        fc.integer({ min: 1, max: 2048 }),
+        fc.constantFrom<Rotation>(0, 90, 180, 270),
+        (pxW, pxH, fx, fy, fw, fh, previewLong, rotation) => {
+          const s = Math.min(1, previewLong / Math.max(pxW, pxH))
+          const bw = Math.max(1, Math.round(pxW * s))
+          const bh = Math.max(1, Math.round(pxH * s))
+          const crop = { x: fx * pxW, y: fy * pxH, w: fw * pxW, h: fh * pxH }
+          const plan = planTilePixels(drawTile({ crop, rotation }), { dpi: 96 })
+          const out = forScaledSource(plan, bw / pxW, bh / pxH)
+          expect(out.src.x / bw).toBeCloseTo(plan.src.x / pxW, 9)
+          expect(out.src.y / bh).toBeCloseTo(plan.src.y / pxH, 9)
+          expect(out.src.w / bw).toBeCloseTo(plan.src.w / pxW, 9)
+          expect(out.src.h / bh).toBeCloseTo(plan.src.h / pxH, 9)
+          expect(out.src.x + out.src.w).toBeLessThanOrEqual(bw + 1e-6)
+          expect(out.src.y + out.src.h).toBeLessThanOrEqual(bh + 1e-6)
+          expect(out.matrix).toEqual(plan.matrix)
+        },
+      ),
+    )
   })
 })
 

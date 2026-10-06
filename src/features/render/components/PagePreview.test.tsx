@@ -36,7 +36,7 @@ function setup(props: Partial<Parameters<typeof PagePreview>[0]> = {}) {
   render(
     <PagePreview
       model={model}
-      getBitmap={() => undefined}
+      getSource={() => undefined}
       selectedId={null}
       onSelect={onSelect}
       guides
@@ -122,7 +122,7 @@ describe('PagePreview', () => {
     const { container } = render(
       <PagePreview
         model={model}
-        getBitmap={() => undefined}
+        getSource={() => undefined}
         selectedId={null}
         onSelect={vi.fn()}
         guides={false}
@@ -134,7 +134,7 @@ describe('PagePreview', () => {
 })
 
 describe('PagePreview redraws', () => {
-  it('does not redraw when only the getBitmap identity changes', () => {
+  it('does not redraw when only the getSource identity changes', () => {
     const draw = drawSpy
     draw.mockClear()
     const ctx = fakeCtx()
@@ -143,13 +143,46 @@ describe('PagePreview redraws', () => {
     )
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(400)
     const props = { model, selectedId: null, onSelect: vi.fn(), guides: true, label: 'p' }
-    const { rerender } = render(<PagePreview {...props} getBitmap={() => undefined} />)
+    const { rerender } = render(<PagePreview {...props} getSource={() => undefined} />)
     const before = draw.mock.calls.length
     expect(before).toBeGreaterThan(0)
-    rerender(<PagePreview {...props} getBitmap={() => undefined} />)
+    rerender(<PagePreview {...props} getSource={() => undefined} />)
     expect(draw.mock.calls.length).toBe(before)
-    rerender(<PagePreview {...props} guides={false} getBitmap={() => undefined} />)
+    rerender(<PagePreview {...props} guides={false} getSource={() => undefined} />)
     expect(draw.mock.calls.length).toBe(before + 1)
+    vi.restoreAllMocks()
+  })
+})
+
+describe('PagePreview with a preview bitmap smaller than the image', () => {
+  it('draws the same region of the image from the smaller bitmap', () => {
+    const drawImage = vi.fn()
+    const ctx = fakeCtx()
+    ctx.drawImage = drawImage
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+      ctx as unknown as RenderingContext,
+    )
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(400)
+    const bitmap = { width: 750, height: 500, close: vi.fn() } as unknown as ImageBitmap
+    const tile = drawTile({
+      imageId: id('a'),
+      trim: { x: 20, y: 20, w: 100, h: 50 },
+      crop: { x: 400, y: 200, w: 2000, h: 1000 },
+      rotation: 180,
+    })
+    render(
+      <PagePreview
+        model={pageModel([tile])}
+        getSource={() => ({ bitmap, pxW: 3000, pxH: 2000 })}
+        selectedId={null}
+        onSelect={vi.fn()}
+        guides={false}
+        label="p"
+      />,
+    )
+    const fromBitmap = drawImage.mock.calls.filter((c) => c[0] === bitmap)
+    expect(fromBitmap).toHaveLength(1)
+    expect(fromBitmap[0]?.slice(1, 5)).toEqual([100, 50, 500, 250])
     vi.restoreAllMocks()
   })
 })

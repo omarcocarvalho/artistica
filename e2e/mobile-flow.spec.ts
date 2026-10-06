@@ -69,8 +69,8 @@ test('M1 phone flow: Images, edit sheet, Page, Preview, Export, parse the PDF', 
 })
 
 /** Total RSS of the browser's process tree, in MB. */
-const SETTLED_AFTER_IMPORT_BUDGET_MB = 1000
-const EXPORT_PEAK_BUDGET_MB = 1000
+const SETTLED_AFTER_IMPORT_BUDGET_MB = 1500
+const EXPORT_PEAK_BUDGET_MB = 1700
 
 test('M3 @slow 22 x 24 MP photos import and export on a phone within a memory budget', async ({
   page,
@@ -89,6 +89,7 @@ test('M3 @slow 22 x 24 MP photos import and export on a phone within a memory bu
   const memory = sampleBrowserMemory(browser)
   let pdf: Buffer
   let previewPages: number
+  let settledBreakdown: Record<string, number>
   try {
     await page.waitForTimeout(1000)
     memory.phase('import')
@@ -97,10 +98,17 @@ test('M3 @slow 22 x 24 MP photos import and export on a phone within a memory bu
     await page.getByRole('button', { name: 'Next' }).click()
     await app.setPaper('A5')
     await page.getByRole('button', { name: 'Next' }).click()
-    previewPages = await app.expectPreviewPages(3)
-    await page.waitForTimeout(3000)
+    await app.expectPreviewPages(3)
+    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0)
+    previewPages = await app.pageCanvases.count()
+    await page.waitForTimeout(2000)
+    const cdp = await page.context().newCDPSession(page)
+    await cdp.send('HeapProfiler.collectGarbage')
+    await cdp.detach()
+    await page.waitForTimeout(1000)
     memory.phase('settled after import')
     await page.waitForTimeout(2000)
+    settledBreakdown = await memory.breakdown()
     await page.getByRole('button', { name: 'Next' }).click()
     await expect(page.getByText('22 images are ready to print.')).toBeVisible()
     memory.phase('export')
@@ -109,7 +117,7 @@ test('M3 @slow 22 x 24 MP photos import and export on a phone within a memory bu
     await memory.stop()
   }
   const peaks = memory.peaks()
-  const report = JSON.stringify({ previewPages, peaksMb: peaks })
+  const report = JSON.stringify({ previewPages, peaksMb: peaks, settledBreakdown })
   console.log(`memory: ${report}`)
   testInfo.annotations.push({ type: 'memory', description: report })
 

@@ -3,7 +3,7 @@ import { drawTile } from '../test-support/fixtures'
 import { FakeCanvas, fakeFactory } from '../test-support/fake-canvas'
 import { extendEdges, fillPixel, repeatColumn, repeatRow } from './bleed'
 import { CanvasUnavailableError, releaseCanvas, renderTile } from './render-tile'
-import { planTilePixels } from './tile-plan'
+import { forScaledSource, planTilePixels } from './tile-plan'
 
 const RED = [255, 0, 0, 255]
 const GREEN = [0, 255, 0, 255]
@@ -85,6 +85,17 @@ describe('renderTile', () => {
       },
     ])
     expect(out.pixel(0, 0)).toEqual([255, 255, 255, 255])
+  })
+
+  it('draws the same region of a smaller bitmap onto the same output', () => {
+    const tile = drawTile({ crop: { x: 400, y: 200, w: 1600, h: 800 }, rotation: 180, flipV: true })
+    const plan = planTilePixels(tile)
+    const full = renderTile(source, plan, fakeFactory())
+    const small = renderTile(source, forScaledSource(plan, 0.25, 0.25), fakeFactory())
+    expect(full.draws[0]?.args).toEqual([400, 200, 1600, 800, 0, 0, plan.scaledW, plan.scaledH])
+    expect(small.draws[0]?.args).toEqual([100, 50, 400, 200, 0, 0, plan.scaledW, plan.scaledH])
+    expect(small.draws[0]?.transform).toEqual(full.draws[0]?.transform)
+    expect([small.width, small.height]).toEqual([full.width, full.height])
   })
 
   it('steps down large reductions and releases the temporaries', () => {

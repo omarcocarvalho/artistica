@@ -10,6 +10,7 @@ describe('public API', () => {
         'ImportDropzone',
         'MAX_DECODED_PIXELS',
         'MAX_FILE_BYTES',
+        'decodeFull',
         'importErrorKeys',
         'removalFocusTarget',
         'selectImageDescriptors',
@@ -24,6 +25,7 @@ describe('public API', () => {
     expect(api.ImageEditSheet).toBeTypeOf('function')
     expect(api.useImages.getState().images).toEqual([])
     expect(api.selectImageDescriptors({ images: [] })).toEqual([])
+    expect(api.decodeFull).toBeTypeOf('function')
     expect(api.importErrorKeys('cors').title).toBe('errors:images.cors.title')
     expect(api.MAX_FILE_BYTES).toBe(100 * 1024 * 1024)
     expect(api.MAX_DECODED_PIXELS).toBe(200_000_000)

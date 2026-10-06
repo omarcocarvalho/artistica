@@ -1,6 +1,7 @@
 import type { ImageId } from '../../../shared/model/image'
 import {
   forCroppedSource,
+  forScaledSource,
   integerCropBox,
   planTilePixels,
   tileRenderKey,
@@ -23,7 +24,16 @@ export interface ExportOptions {
   readonly signal?: AbortSignal
 }
 
-export type GetBitmap = (id: ImageId) => ImageBitmap | undefined
+export interface ExportSource {
+  /** The size page models are planned against. */
+  readonly pxW: number
+  readonly pxH: number
+  /** The whole image at full resolution. The caller owns and closes the bitmap. */
+  decode(): Promise<ImageBitmap>
+}
+
+/** Undefined when the image is gone (removed during the export). */
+export type GetSource = (id: ImageId) => ExportSource | undefined
 
 /** What the export worker exposes (via Comlink). All methods are async across the boundary. */
 export interface ExportWorkerApi {
@@ -37,7 +47,7 @@ export interface ExportWorkerApi {
 
 export interface ExportDeps {
   readonly api: ExportWorkerApi
-  /** Copy just the integer crop box out of the main-thread bitmap: `createImageBitmap(bitmap, x, y, w, h)`. */
+  /** Copy just the integer crop box out of the decoded image: `createImageBitmap(bitmap, x, y, w, h)`. */
   readonly cropBitmap: (bitmap: ImageBitmap, box: PxRect) => Promise<ImageBitmap>
   /** Mark a value for transfer (Comlink.transfer in the app; identity in tests). */
   readonly transfer: <T>(value: T, transferables: Transferable[]) => T
@@ -71,26 +81,40 @@ function abortRejection(signal: AbortSignal | undefined): Promise<never> | undef
 /** Share of the progress bar kept for saving the PDF after the last page. */
 const SAVE_SHARE = 0.05
 
-/** A closed or removed image makes createImageBitmap reject with InvalidStateError (Q7). */
-async function cropOrMissing(deps: ExportDeps, bitmap: ImageBitmap, box: PxRect) {
-  try {
-    return await deps.cropBitmap(bitmap, box)
-  } catch (e) {
-    if (e instanceof DOMException && e.name === 'InvalidStateError') {
-      throw new ExportError('missing-image', { cause: e })
+interface TileJob {
+  readonly key: string
+  readonly plan: TilePixelPlan
+}
+
+/** Every distinct tile image to encode, grouped by source image (first appearance order). */
+function jobsByImage(pages: readonly PageModel[]): Map<ImageId, TileJob[]> {
+  const byImage = new Map<ImageId, TileJob[]>()
+  const seen = new Set<string>()
+  for (const page of pages) {
+    for (const tile of page.tiles) {
+      const plan = planTilePixels(tile)
+      // Ruling D-1: the key always comes from the ORIGINAL plan.
+      const key = tileRenderKey(tile, plan)
+      if (seen.has(key)) continue
+      seen.add(key)
+      const jobs = byImage.get(tile.imageId) ?? []
+      jobs.push({ key, plan })
+      byImage.set(tile.imageId, jobs)
     }
-    throw e
   }
+  return byImage
 }
 
 /**
- * Drives the export one page and one tile at a time. Main-thread memory peak is one cropped clone;
- * worker peak is one tile canvas. Identical tiles (same tileRenderKey) are encoded once.
- * On abort it rejects with an AbortError right away, even if a worker call is in flight.
+ * Drives the export page by page. The first tile of an image decodes that image at full resolution
+ * and encodes all of its tiles, on every page, before the bitmap is closed: each image is decoded
+ * once and at most one full-resolution image is alive. Main-thread peak is that image plus one
+ * cropped clone; worker peak is one tile canvas. Identical tiles (same tileRenderKey) are encoded once.
+ * On abort it rejects with an AbortError right away, even if a decode or worker call is in flight.
  */
 export async function runExport(
   pages: readonly PageModel[],
-  getBitmap: GetBitmap,
+  getSource: GetSource,
   options: ExportOptions,
   deps: ExportDeps,
 ): Promise<Uint8Array> {
@@ -105,27 +129,43 @@ export async function runExport(
   checkAborted(signal)
   await race(deps.api.init())
 
+  const jobs = jobsByImage(pages)
   const encoded = new Set<string>()
-  const pageCount = pages.length
-  for (const [pageIndex, page] of pages.entries()) {
-    onProgress?.({ pageIndex, pageCount, fraction: (pageIndex / pageCount) * (1 - SAVE_SHARE) })
-    for (const [t, tile] of page.tiles.entries()) {
-      checkAborted(signal)
-      const plan = planTilePixels(tile)
-      // Ruling D-1: the key always comes from the ORIGINAL plan.
-      const key = tileRenderKey(tile, plan)
-      if (!encoded.has(key)) {
-        const bitmap = getBitmap(tile.imageId)
-        if (!bitmap) throw new ExportError('missing-image')
+
+  const decodeRaced = async (source: ExportSource): Promise<ImageBitmap> => {
+    const decoding = source.decode()
+    try {
+      return await race(decoding)
+    } catch (e) {
+      void decoding.then(
+        (late) => {
+          late.close()
+        },
+        () => undefined,
+      )
+      throw e
+    }
+  }
+
+  const encodeImage = async (imageId: ImageId): Promise<void> => {
+    const source = getSource(imageId)
+    if (!source) throw new ExportError('missing-image')
+    const full = await decodeRaced(source)
+    try {
+      const sx = full.width / source.pxW
+      const sy = full.height / source.pxH
+      for (const { key, plan } of jobs.get(imageId) ?? []) {
+        checkAborted(signal)
+        const scaled = forScaledSource(plan, sx, sy)
         // Not raced: createImageBitmap always settles, and we must own the clone to close it.
-        const clone = await cropOrMissing(deps, bitmap, integerCropBox(plan.src))
+        const clone = await deps.cropBitmap(full, integerCropBox(scaled.src))
         if (signal?.aborted) {
           clone.close()
           checkAborted(signal)
         }
         try {
           await race(
-            deps.api.encodeTile(key, forCroppedSource(plan), deps.transfer(clone, [clone])),
+            deps.api.encodeTile(key, forCroppedSource(scaled), deps.transfer(clone, [clone])),
           )
         } catch (e) {
           clone.close() // no-op once transferred; frees the clone if posting failed
@@ -133,6 +173,17 @@ export async function runExport(
         }
         encoded.add(key)
       }
+    } finally {
+      full.close()
+    }
+  }
+
+  const pageCount = pages.length
+  for (const [pageIndex, page] of pages.entries()) {
+    onProgress?.({ pageIndex, pageCount, fraction: (pageIndex / pageCount) * (1 - SAVE_SHARE) })
+    for (const [t, tile] of page.tiles.entries()) {
+      checkAborted(signal)
+      if (!encoded.has(tileRenderKey(tile))) await encodeImage(tile.imageId)
       onProgress?.({
         pageIndex,
         pageCount,

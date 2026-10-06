@@ -28,7 +28,7 @@ export function renderWithProviders(ui: ReactElement): RenderResult {
 
 let counter = 0
 
-/** A LoadedImage with a fake bitmap. happy-dom has no ImageBitmap; the structural shape is enough. */
+/** A LoadedImage with a fake preview bitmap. happy-dom has no ImageBitmap; the structural shape is enough. */
 export function makeLoadedImage(
   over: Partial<Omit<LoadedImage, 'edits'>> & { edits?: Partial<ImageEdits> } = {},
 ): LoadedImage {
@@ -45,7 +45,8 @@ export function makeLoadedImage(
     originalPxW: pxW,
     originalPxH: pxH,
     thumbUrl: `blob:thumb-${String(counter)}`,
-    bitmap: { width: pxW, height: pxH, close: () => undefined },
+    preview: { width: pxW, height: pxH, close: () => undefined },
+    source: new Blob(),
     ...rest,
     edits: { ...DEFAULT_EDITS, ...edits },
   }

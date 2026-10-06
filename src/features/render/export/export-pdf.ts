@@ -1,7 +1,7 @@
 import { releaseProxy, transfer, wrap } from 'comlink'
 import type { PageModel } from '../types'
 import { ExportError, isAbortError, toExportError } from './errors'
-import { runExport, type ExportOptions, type ExportWorkerApi, type GetBitmap } from './run-export'
+import { runExport, type ExportOptions, type ExportWorkerApi, type GetSource } from './run-export'
 
 /**
  * Export pages to a PDF Blob in a dedicated module worker (one worker per export, terminated at the
@@ -11,7 +11,7 @@ import { runExport, type ExportOptions, type ExportWorkerApi, type GetBitmap } f
 /* v8 ignore start -- browser-only Worker wiring; the logic it drives (runExport, createExportWorkerApi) is unit-tested and E's E2E exports a real PDF. Keep this wrapper minimal. */
 export async function exportPdf(
   pages: readonly PageModel[],
-  getBitmap: GetBitmap,
+  getSource: GetSource,
   options: ExportOptions = {},
 ): Promise<Blob> {
   const worker = new Worker(new URL('./pdf.worker.ts', import.meta.url), { type: 'module' })
@@ -28,9 +28,8 @@ export async function exportPdf(
   })
   void crashed.catch(() => undefined)
   try {
-    const bytes = await runExport(pages, getBitmap, options, {
+    const bytes = await runExport(pages, getSource, options, {
       api,
-      // Copies only the integer crop box; the store's bitmap stays usable on the main thread.
       cropBitmap: (bitmap, r) => createImageBitmap(bitmap, r.x, r.y, r.w, r.h),
       transfer,
       crashed,
