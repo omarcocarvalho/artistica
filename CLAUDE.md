@@ -1,5 +1,7 @@
 # Artistica — notes for Claude
 
+> **Picking up this project? Read [HANDOVER.md](HANDOVER.md) first.** It has the current state, the branch map and the prioritised next steps. Per-task progress, rulings and deferred issues for M1 are in `docs/superpowers/ledgers/`.
+
 Artistica is a free, static web app for artists: load reference photos, pack them onto printable pages, export a print-ready PDF (crop marks, bleed), plus study versions (blur, values) and composition/construction lines (some AI, in-browser).
 
 - Live: https://omarcocarvalho.github.io/artistica/ (landing `/`, tool `/app/`)
