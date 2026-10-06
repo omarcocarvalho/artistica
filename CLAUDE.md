@@ -26,7 +26,7 @@ pnpm lint           # ESLint, zero warnings allowed
 pnpm format         # Prettier write   | pnpm format:check — CI uses this
 pnpm typecheck      # tsc -b
 pnpm test           # Vitest (unit + property tests) | pnpm test:watch
-pnpm e2e            # Playwright, all projects (chromium, firefox, webkit, mobile-chromium)
+pnpm e2e            # Playwright, all projects (chromium, firefox, webkit, mobile-chromium, mobile-webkit)
 pnpm e2e --project=chromium   # one browser
 # In parallel worktrees use a unique port, e.g. E2E_PORT=4201 pnpm e2e
 ```

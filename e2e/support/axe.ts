@@ -9,7 +9,28 @@ export interface AxeOptions {
   disableRules?: string[]
 }
 
+interface AnimationLike {
+  readonly finished: Promise<unknown>
+  readonly effect: { getComputedTiming(): { endTime?: number | string } } | null
+}
+declare const document: { getAnimations(): AnimationLike[] }
+
+/**
+ * Waits for every finite CSS animation and transition (dialog pop-in, sheet slide, theme
+ * colour change): a half-faded element has a lower contrast than the one the user reads.
+ * Infinite ones (the progress stripes) never finish and are left running.
+ */
+export async function settleAnimations(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const finite = document
+      .getAnimations()
+      .filter((a) => Number.isFinite(Number(a.effect?.getComputedTiming().endTime)))
+    await Promise.all(finite.map((a) => a.finished.catch(() => undefined)))
+  })
+}
+
 export async function expectNoAxeViolations(page: Page, options: AxeOptions = {}): Promise<void> {
+  await settleAnimations(page)
   const builder = new AxeBuilder({ page }).withTags(WCAG_22_AA)
   if (options.include) builder.include(options.include)
   if (options.exclude) builder.exclude(options.exclude)

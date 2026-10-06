@@ -1,0 +1,160 @@
+import { expect, test, type Page } from '@playwright/test'
+import { AppPage } from './support/app.ts'
+import { expectNoAxeViolations } from './support/axe.ts'
+import { FIXTURES } from './support/fixtures.ts'
+import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
+import { runOnly } from './support/projects.ts'
+
+// The e2e tsconfig has no DOM lib; these are the few browser globals used inside page.evaluate.
+interface DataTransferLike {
+  setData(type: string, value: string): void
+}
+interface ClipboardEventLike {
+  readonly clipboardData: DataTransferLike | null
+}
+declare const DataTransfer: new () => DataTransferLike
+declare const ClipboardEvent: new (
+  type: string,
+  init: { clipboardData?: DataTransferLike; bubbles?: boolean; cancelable?: boolean },
+) => ClipboardEventLike
+declare const document: { body: { dispatchEvent(e: ClipboardEventLike): boolean } }
+
+const THEMES = ['light', 'dark'] as const
+const FILES = [FIXTURES.quadrantsJpg, FIXTURES.quadrantsExif6]
+
+let guard: NetworkGuard | undefined
+
+/** Page object with the strict network guard installed before navigation (checked after each test). */
+function startApp(page: Page): AppPage {
+  guard = guardNetwork(page)
+  return new AppPage(page)
+}
+
+test.afterEach(() => {
+  expect(guard?.violations() ?? []).toEqual([])
+  guard = undefined
+})
+
+async function loaded(page: Page): Promise<AppPage> {
+  const app = startApp(page)
+  await app.goto()
+  await app.upload(FILES)
+  await app.expectImages(2)
+  await app.expectPreviewPages(1)
+  return app
+}
+
+// The loaded desktop workspace is the screen most likely to differ per engine.
+test.describe('desktop, images loaded', () => {
+  runOnly('chromium', 'firefox', 'webkit')
+  test.use({ viewport: { width: 1280, height: 900 } })
+
+  for (const scheme of THEMES) {
+    test(`workspace with a selected image is axe-clean (${scheme})`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme })
+      const app = await loaded(page)
+      await app.selectButton('quadrants.jpg').click()
+      await expect(app.tile('quadrants.jpg')).toHaveAttribute('aria-pressed', 'true')
+      await expectNoAxeViolations(page)
+    })
+  }
+
+  test('forcing dark with the toggle while the OS is light is axe-clean', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'light' })
+    await loaded(page)
+    const toggle = page.getByRole('button', { name: /change theme/i })
+    await toggle.click() // light
+    await toggle.click() // dark
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await expectNoAxeViolations(page)
+  })
+})
+
+// Dialogs, notices and the custom-paper fields are plain DOM: one engine is enough.
+test.describe('dialogs and notices (chromium)', () => {
+  runOnly('chromium')
+  test.use({ viewport: { width: 1280, height: 900 } })
+
+  for (const scheme of THEMES) {
+    test(`edit dialog (${scheme})`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme })
+      const app = await loaded(page)
+      await app.editButton('quadrants.jpg').click()
+      await expect(page.getByRole('dialog')).toBeVisible()
+      await expect(app.cropArea).toBeVisible()
+      await expectNoAxeViolations(page)
+    })
+
+    test(`export dialog: summary and done (${scheme})`, async ({ page }) => {
+      test.setTimeout(120_000)
+      await page.emulateMedia({ colorScheme: scheme })
+      const app = await loaded(page)
+      await app.exportButton.click()
+      const dialog = page.getByRole('dialog')
+      await expect(dialog).toBeVisible()
+      await expectNoAxeViolations(page)
+      await dialog.getByRole('button', { name: /create pdf/i }).click()
+      await expect(dialog.getByRole('link', { name: /download pdf/i })).toBeVisible({
+        timeout: 60_000,
+      })
+      await expectNoAxeViolations(page)
+    })
+
+    test(`import error callout, paste notice and page-setup note (${scheme})`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme })
+      const app = startApp(page)
+      await app.goto()
+      await app.upload(FIXTURES.notesPdf)
+      await expect(page.getByRole('alert')).toContainText('notes.pdf')
+      await page.evaluate(() => {
+        const dt = new DataTransfer()
+        dt.setData('text/plain', 'hello')
+        document.body.dispatchEvent(
+          new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }),
+        )
+      })
+      await expect(app.notices.getByRole('status')).toContainText('No image on the clipboard')
+      await app.setSwitch('Gutter between images', false)
+      await app.setSwitch('Bleed', true)
+      await expect(page.getByRole('status').filter({ hasText: 'Gutter turned on' })).toBeVisible()
+      await expectNoAxeViolations(page)
+    })
+
+    test(`custom paper fields (${scheme})`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme })
+      const app = startApp(page)
+      await app.goto()
+      await app.setPaper('Custom…')
+      await expect(page.getByLabel('Width', { exact: true })).toBeVisible()
+      await expectNoAxeViolations(page)
+    })
+  }
+})
+
+test.describe('phone steps (mobile-chromium)', () => {
+  runOnly('mobile-chromium')
+
+  for (const scheme of THEMES) {
+    test(`all steps and the edit sheet (${scheme})`, async ({ page }) => {
+      test.setTimeout(60_000)
+      await page.emulateMedia({ colorScheme: scheme })
+      const app = startApp(page)
+      await app.goto()
+      await app.upload(FILES)
+      await app.expectImages(2)
+      await expectNoAxeViolations(page)
+      await app.editButton('quadrants.jpg').click()
+      const sheet = page.getByRole('dialog')
+      await expect(sheet).toBeVisible()
+      await expectNoAxeViolations(page)
+      await sheet.getByRole('button', { name: 'Done' }).click()
+      await expect(sheet).toHaveCount(0)
+      for (const step of ['Page', 'Preview', 'Export'] as const) {
+        await app.goToStep(step)
+        await expect(page.getByRole('heading', { level: 2, name: step, exact: true })).toBeVisible()
+        if (step === 'Preview') await app.expectPreviewPages(1)
+        await expectNoAxeViolations(page)
+      }
+    })
+  }
+})
