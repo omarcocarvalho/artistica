@@ -8,6 +8,7 @@ import type { PageModel } from '../features/render'
 
 const img = (id: string): ImageDescriptor => ({
   id: id as ImageId,
+  contentHash: `hash-${id}`,
   pxW: 800,
   pxH: 600,
   edits: DEFAULT_EDITS,

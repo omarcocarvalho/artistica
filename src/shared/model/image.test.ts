@@ -17,6 +17,7 @@ const make = (
   pxH = 3000,
 ): ImageDescriptor => ({
   id,
+  contentHash: 'hash-1',
   pxW,
   pxH,
   edits: { ...DEFAULT_EDITS, ...over },

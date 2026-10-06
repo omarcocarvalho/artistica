@@ -300,12 +300,6 @@ test.describe('preview screenshot (Linux CI only)', () => {
   test.skip(process.platform !== 'linux', 'baselines are generated on Linux only')
 
   test('X12 page 1 of A4 with three images', async ({ page }) => {
-    // Layout breaks ties between same-size images by image id, and ids are random UUIDs.
-    // Ascending ids pin the two equal quadrant images to upload order.
-    await page.addInitScript(() => {
-      let n = 0
-      crypto.randomUUID = () => `00000000-0000-4000-8000-${String(++n).padStart(12, '0')}` as const
-    })
     const app = await loaded(page)
     await expect(app.pageCanvases.first()).toHaveScreenshot('a4-three-images.png', {
       maxDiffPixelRatio: 0.01,

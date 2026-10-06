@@ -38,6 +38,7 @@ export function makeLoadedImage(
   const { edits, ...rest } = over
   return {
     id: over.id ?? (`img-${String(counter)}` as ImageId),
+    contentHash: `hash-${String(counter)}`,
     name: `photo-${String(counter)}.jpg`,
     pxW,
     pxH,

@@ -4,7 +4,7 @@ import type { Mm } from '../../shared/model/units'
 
 /** One layout unit: a single copy of an image (M2 will set tiles > 1 for study groups). */
 export interface LayoutItemInput {
-  readonly key: string // `${imageId}#${copyIndex}` — unique, stable
+  readonly key: string // `${contentHash}~${occurrence}#${copyIndex}` — unique, stable across sessions
   readonly imageId: ImageId
   readonly aspect: number // printed width / height of ONE tile (after crop & rotation)
   readonly maxPrintWidthMm: Mm // 300-DPI cap for ONE tile's width
