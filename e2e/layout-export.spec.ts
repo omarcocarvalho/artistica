@@ -211,11 +211,11 @@ test.describe('page setup and export (chromium)', () => {
     const info = await summarizePdf((await app.exportPdf()).bytes)
     expect(info.pages[0]?.widthPt).toBeCloseTo(mmToPt(210), 0)
     expect(sum(info.pages.map((p) => p.imagePlacements))).toBe(1)
-    // The 400 mm request is scaled down to at most the content box (page minus the 5 mm safe area).
+    // The 400 mm request is scaled down to exactly the content box width: 210 mm minus, per side,
+    // the 5 mm safe area and the 5 mm crop-mark reserve (1 mm offset + 4 mm mark) = 190 mm.
     const widths = info.pages.flatMap((p) => p.imageWidthsPt)
     expect(widths).toHaveLength(1)
-    expect(widths[0]).toBeLessThanOrEqual(mmToPt(150))
-    expect(widths[0]).toBeGreaterThan(mmToPt(50)) // and it was not collapsed
+    expect(widths[0]).toBeCloseTo(mmToPt(190), 0)
   })
 
   test('X11 export can be cancelled and run again', async ({ page }) => {
@@ -300,6 +300,12 @@ test.describe('preview screenshot (Linux CI only)', () => {
   test.skip(process.platform !== 'linux', 'baselines are generated on Linux only')
 
   test('X12 page 1 of A4 with three images', async ({ page }) => {
+    // Layout breaks ties between same-size images by image id, and ids are random UUIDs.
+    // Ascending ids pin the two equal quadrant images to upload order.
+    await page.addInitScript(() => {
+      let n = 0
+      crypto.randomUUID = () => `00000000-0000-4000-8000-${String(++n).padStart(12, '0')}` as const
+    })
     const app = await loaded(page)
     await expect(app.pageCanvases.first()).toHaveScreenshot('a4-three-images.png', {
       maxDiffPixelRatio: 0.01,
