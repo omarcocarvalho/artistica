@@ -372,10 +372,7 @@ test.describe('import (chromium only)', () => {
     await expect(app.imageRows).toHaveCount(0)
   })
 
-  // BUG (app, ImportDropzone.onZoneDrop -> useImages.addFromClipboard -> sourcesFromDataTransfer(dt, true)):
-  // a dropped file is treated as pasted and renamed "pasted-image-N.ext", so the alert says
-  // "pasted-image-2.png can't be added" instead of naming notes.pdf (and dropped.jpg is renamed too).
-  test.fixme('I12 dropping files imports the photo, reports the PDF once, and the page does not navigate', async ({
+  test('I12 dropping files imports the photo, reports the PDF once, and the page does not navigate', async ({
     page,
   }) => {
     const app = startApp(page)
@@ -394,6 +391,7 @@ test.describe('import (chromium only)', () => {
     )
     await app.dropzone.dispatchEvent('drop', { dataTransfer: dt })
     await app.expectImages(1)
+    await expect(app.imageRows.first()).toContainText('dropped.jpg')
     await expect(page.getByRole('alert')).toHaveCount(1)
     await expect(page.getByRole('alert')).toContainText('notes.pdf')
     expect(page.url()).toBe(url)

@@ -107,8 +107,11 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
     for (const o of outcomes)
       if (!o.ok) addIssue({ kind: 'error', error: o.error, source: o.source })
   }
-  const fromTransfer = async (dt: DataTransfer): Promise<void> => {
-    const outcomes = await useImages.getState().addFromClipboard(dt) // the store reads dt synchronously
+  const fromTransfer = async (dt: DataTransfer, origin: 'paste' | 'drop'): Promise<void> => {
+    const images = useImages.getState()
+    const outcomes = await (origin === 'drop'
+      ? images.addFromDrop(dt)
+      : images.addFromClipboard(dt))
     if (outcomes.length === 0) addIssue({ kind: 'no-image' })
     else report(outcomes)
   }
@@ -146,7 +149,7 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
       return
     }
     try {
-      await fromTransfer(dt)
+      await fromTransfer(dt, 'paste')
     } catch {
       addIssue({ kind: 'error', error: 'decode-failed', source: '' })
     }
@@ -155,7 +158,7 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
   const onZoneDrop = (e: DragEvent<HTMLElement>): void => {
     e.preventDefault()
     setDragging(false)
-    fromTransfer(e.dataTransfer).catch(() => {
+    fromTransfer(e.dataTransfer, 'drop').catch(() => {
       addIssue({ kind: 'error', error: 'decode-failed', source: '' })
     })
   }

@@ -165,6 +165,61 @@ describe('addFromClipboard', () => {
   })
 })
 
+describe('addFromDrop', () => {
+  it('reads the DataTransfer synchronously and keeps the dropped file names', async () => {
+    const { store, deps } = setup({
+      decode: vi.fn((_b: Blob, name: string) =>
+        name.endsWith('.pdf')
+          ? Promise.reject(new ImportFailure('unsupported-format'))
+          : Promise.resolve(decoded({ thumbUrl: `blob:${name}` })),
+      ),
+    })
+    const files = [file('photo.jpg'), new File(['%PDF'], 'notes.pdf', { type: 'application/pdf' })]
+    const dt = { files, items: [], getData: () => '' }
+    const p = store.getState().addFromDrop(dt as unknown as DataTransfer)
+    files.length = 0
+    const out = await p
+    expect(out).toEqual([
+      { ok: true, id: 'id-1' },
+      { ok: false, source: 'notes.pdf', error: 'unsupported-format' },
+    ])
+    expect(store.getState().images.map((i) => i.name)).toEqual(['photo.jpg'])
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(vi.mocked(deps.decode).mock.calls.map(([, name]) => name)).toEqual([
+      'photo.jpg',
+      'notes.pdf',
+    ])
+  })
+
+  it('does not use up a pasted-image number', async () => {
+    const { store } = setup()
+    await store.getState().addFromDrop({
+      files: [file('photo.jpg')],
+      items: [],
+      getData: () => '',
+    } as unknown as DataTransfer)
+    await store.getState().addFromClipboard({
+      files: [new File(['x'], 'image.png', { type: 'image/png' })],
+      items: [],
+      getData: () => '',
+    } as unknown as DataTransfer)
+    expect(store.getState().images.map((i) => i.name)).toEqual(['photo.jpg', 'pasted-image-1.png'])
+  })
+
+  it('imports dropped links through the fetcher', async () => {
+    const { store, deps } = setup()
+    const dt = {
+      files: [],
+      items: [],
+      getData: (f: string) => (f === 'text/uri-list' ? 'https://a.com/x.jpg' : ''),
+    }
+    const out = await store.getState().addFromDrop(dt as unknown as DataTransfer)
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(deps.fetchImage).toHaveBeenCalledWith('https://a.com/x.jpg')
+    expect(out[0]?.ok).toBe(true)
+  })
+})
+
 describe('addFromUrl', () => {
   it('returns the classified failure', async () => {
     const { store } = setup({ fetchImage: () => Promise.reject(new ImportFailure('cors')) })
