@@ -102,7 +102,8 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
   const dismiss = (id: number): void => {
     setIssues((l) => l.filter((i) => i.id !== id))
   }
-  const report = (outcomes: ImportOutcome[]): void => {
+  const report = (outcomes: ImportOutcome[] | null): void => {
+    if (outcomes === null) return
     onOutcomes?.(outcomes)
     for (const o of outcomes)
       if (!o.ok) addIssue({ kind: 'error', error: o.error, source: o.source })
@@ -112,7 +113,7 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
     const outcomes = await (origin === 'drop'
       ? images.addFromDrop(dt)
       : images.addFromClipboard(dt))
-    if (outcomes.length === 0) addIssue({ kind: 'no-image' })
+    if (outcomes?.length === 0) addIssue({ kind: 'no-image' })
     else report(outcomes)
   }
 
@@ -170,6 +171,7 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
     setUrlError(null)
     try {
       const outcome = await useImages.getState().addFromUrl(url)
+      if (outcome === null) return
       onOutcomes?.([outcome])
       if (outcome.ok) {
         setUrl('')

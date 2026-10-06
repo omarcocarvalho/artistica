@@ -7,6 +7,52 @@ export interface FetchDeps {
   isOnline(): boolean
   /** Download limit; defaults to MAX_FILE_BYTES. Injectable for tests. */
   readonly maxBytes?: number
+  /** Aborting it stops the download, which then fails as `network`. */
+  readonly signal?: AbortSignal
+}
+
+/** Rejects with the signal's reason as soon as it aborts, even if `p` never settles. */
+function untilAborted<T>(p: Promise<T>, signal: AbortSignal): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = (): void => {
+      reject(signal.reason as Error)
+    }
+    if (signal.aborted) {
+      onAbort()
+      return
+    }
+    signal.addEventListener('abort', onAbort, { once: true })
+    p.then(resolve, reject).finally(() => {
+      signal.removeEventListener('abort', onAbort)
+    })
+  })
+}
+
+/** An abort signal that fires when `outer` aborts or when `kick()` is not called for `ms`. */
+function stallGuard(ms: number, outer: AbortSignal | undefined) {
+  const ctl = new AbortController()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const stop = (): void => {
+    clearTimeout(timer)
+    outer?.removeEventListener('abort', onOuterAbort)
+  }
+  function onOuterAbort(): void {
+    stop()
+    ctl.abort(outer?.reason)
+  }
+  const kick = (): void => {
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      stop()
+      ctl.abort(new DOMException('No progress', 'TimeoutError'))
+    }, ms)
+  }
+  if (outer?.aborted) ctl.abort(outer.reason)
+  else {
+    outer?.addEventListener('abort', onOuterAbort, { once: true })
+    kick()
+  }
+  return { signal: ctl.signal, kick, stop }
 }
 
 /** Accepts `https://...`, `http://...` and bare hosts like `example.com/a.jpg` (which get https). */
@@ -79,55 +125,69 @@ export async function fetchImageBlob(
   const url = parseUserUrl(raw)
   if (url === null) throw new ImportFailure('not-an-image')
 
-  let res: Response
+  const guard = stallGuard(FETCH_TIMEOUT_MS, deps.signal)
   try {
-    res = await deps.fetch(url.href, {
-      mode: 'cors',
-      credentials: 'omit',
-      redirect: 'follow',
-      referrerPolicy: 'no-referrer',
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    })
-  } catch (cause) {
-    const timedOut =
-      cause instanceof DOMException &&
-      (cause.name === 'TimeoutError' || cause.name === 'AbortError')
-    const online = deps.isOnline()
-    const probe = timedOut || !online ? 'skipped' : await probeReachable(url.href, deps.fetch)
-    throw new ImportFailure(classifyFetchFailure({ online, probe }), { cause })
-  }
-
-  if (res.type === 'opaque' || res.type === 'opaqueredirect') throw new ImportFailure('cors')
-  if (!res.ok) throw new ImportFailure('network')
-  const max = deps.maxBytes ?? MAX_FILE_BYTES
-  if (Number(res.headers.get('content-length') ?? 0) > max) throw new ImportFailure('too-large')
-
-  let blob: Blob
-  try {
-    if (res.body === null) {
-      blob = await res.blob()
-      if (blob.size > max) throw new ImportFailure('too-large')
-    } else {
-      const reader = res.body.getReader()
-      const chunks: Uint8Array<ArrayBuffer>[] = []
-      let total = 0
-      for (;;) {
-        const { done, value } = await reader.read()
-        if (done) break
-        total += value.byteLength
-        if (total > max) {
-          await reader.cancel().catch(() => undefined)
-          throw new ImportFailure('too-large')
-        }
-        chunks.push(value)
-      }
-      blob = new Blob(chunks, { type: res.headers.get('content-type') ?? '' })
+    const { signal } = guard
+    let res: Response
+    try {
+      if (signal.aborted) throw signal.reason
+      res = await untilAborted(
+        deps.fetch(url.href, {
+          mode: 'cors',
+          credentials: 'omit',
+          redirect: 'follow',
+          referrerPolicy: 'no-referrer',
+          signal,
+        }),
+        signal,
+      )
+    } catch (cause) {
+      const timedOut =
+        cause instanceof DOMException &&
+        (cause.name === 'TimeoutError' || cause.name === 'AbortError')
+      const online = deps.isOnline()
+      const probe = timedOut || !online ? 'skipped' : await probeReachable(url.href, deps.fetch)
+      throw new ImportFailure(classifyFetchFailure({ online, probe }), { cause })
     }
-  } catch (cause) {
-    if (cause instanceof ImportFailure) throw cause
-    throw new ImportFailure('network', { cause })
+
+    if (res.type === 'opaque' || res.type === 'opaqueredirect') throw new ImportFailure('cors')
+    if (!res.ok) throw new ImportFailure('network')
+    const max = deps.maxBytes ?? MAX_FILE_BYTES
+    if (Number(res.headers.get('content-length') ?? 0) > max) throw new ImportFailure('too-large')
+
+    let blob: Blob
+    try {
+      if (res.body === null) {
+        blob = await untilAborted(res.blob(), signal)
+        if (blob.size > max) throw new ImportFailure('too-large')
+      } else {
+        guard.kick()
+        const reader = res.body.getReader()
+        const chunks: Uint8Array<ArrayBuffer>[] = []
+        let total = 0
+        try {
+          for (;;) {
+            const { done, value } = await untilAborted(reader.read(), signal)
+            if (done) break
+            guard.kick()
+            total += value.byteLength
+            if (total > max) throw new ImportFailure('too-large')
+            chunks.push(value)
+          }
+        } catch (e) {
+          await reader.cancel().catch(() => undefined)
+          throw e
+        }
+        blob = new Blob(chunks, { type: res.headers.get('content-type') ?? '' })
+      }
+    } catch (cause) {
+      if (cause instanceof ImportFailure) throw cause
+      throw new ImportFailure('network', { cause })
+    }
+    const sniffed = sniffImage(new Uint8Array(await blob.slice(0, 64).arrayBuffer()))
+    if (sniffed === null) throw new ImportFailure('not-an-image')
+    return { blob, name: nameFromUrl(url, sniffed.kind) }
+  } finally {
+    guard.stop()
   }
-  const sniffed = sniffImage(new Uint8Array(await blob.slice(0, 64).arrayBuffer()))
-  if (sniffed === null) throw new ImportFailure('not-an-image')
-  return { blob, name: nameFromUrl(url, sniffed.kind) }
 }

@@ -6,6 +6,9 @@ export const MAX_CANVAS_AREA = 16_777_216
 export const THUMB_LONG_SIDE_PX = 256
 /** A phone must not decode 20 x 12 MP at once. HEIC WASM decoding is memory-heavy too. */
 export const DECODE_CONCURRENCY = 2
+/** Links pasted together download this many at a time, so they do not all sit in memory at once. */
+export const FETCH_CONCURRENCY = 2
+/** A download aborts after this long without progress (no headers, or no new body chunk). */
 export const FETCH_TIMEOUT_MS = 30_000
 export const PROBE_TIMEOUT_MS = 8_000
 export const MAX_PASTED_URLS = 20

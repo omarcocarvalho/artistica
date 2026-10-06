@@ -273,4 +273,51 @@ describe('ImportDropzone', () => {
     })
     expect(await screen.findAllByRole('alert')).toHaveLength(1)
   })
+
+  describe('imports discarded by Remove all report nothing', () => {
+    it('a picked file batch resolving to null shows no alert and reports no outcomes', async () => {
+      const { addFiles } = mockStore()
+      addFiles.mockResolvedValue(null)
+      const onOutcomes = vi.fn()
+      const { container } = renderWithProviders(<ImportDropzone onOutcomes={onOutcomes} />)
+      await userEvent.upload(fileInput(container), [file('a.jpg')])
+      await waitFor(() => {
+        expect(addFiles).toHaveBeenCalled()
+      })
+      await new Promise((r) => setTimeout(r, 0))
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(onOutcomes).not.toHaveBeenCalled()
+    })
+
+    it('a drop resolving to null does not say there is no image', async () => {
+      const { addFromDrop } = mockStore()
+      addFromDrop.mockResolvedValue(null)
+      const { container } = renderWithProviders(<ImportDropzone />)
+      fireEvent.drop(pick(container, '[data-dropzone]'), {
+        dataTransfer: { types: ['Files'], files: [file('a.jpg')], items: [], getData: () => '' },
+      })
+      await waitFor(() => {
+        expect(addFromDrop).toHaveBeenCalled()
+      })
+      await new Promise((r) => setTimeout(r, 0))
+      expect(screen.getByRole('status')).not.toHaveTextContent('No image on the clipboard')
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+
+    it('a link resolving to null shows no error and keeps the form as it was', async () => {
+      const { addFromUrl } = mockStore()
+      addFromUrl.mockResolvedValue(null)
+      const onOutcomes = vi.fn()
+      renderWithProviders(<ImportDropzone variant="card" onOutcomes={onOutcomes} />)
+      await userEvent.click(screen.getByRole('button', { name: /Add link/ }))
+      await userEvent.type(screen.getByLabelText('Image link'), 'https://x.com/a.jpg{enter}')
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Add' })).toBeEnabled()
+      })
+      expect(addFromUrl).toHaveBeenCalled()
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(screen.getByLabelText('Image link')).not.toHaveAttribute('aria-invalid')
+      expect(onOutcomes).not.toHaveBeenCalled()
+    })
+  })
 })

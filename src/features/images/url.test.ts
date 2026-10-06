@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ImportFailure } from './errors'
-import { MAX_FILE_BYTES } from './limits'
+import { FETCH_TIMEOUT_MS, MAX_FILE_BYTES } from './limits'
 import { skeletonJpeg } from './test-bytes'
 import {
   classifyFetchFailure,
@@ -163,6 +163,125 @@ describe('streaming size limit', () => {
     expect(
       await code(fetchImageBlob('https://x.com/a.jpg', deps({ fetch: f, maxBytes: 100_000 }))),
     ).toBe('resolved')
+  })
+})
+
+describe('connection drops', () => {
+  it('a body stream that errors mid-download is network', async () => {
+    let sent = false
+    const stream = new ReadableStream<Uint8Array>({
+      pull(c) {
+        if (sent) {
+          c.error(new TypeError('network error'))
+          return
+        }
+        sent = true
+        c.enqueue(skeletonJpeg(8, 8).slice(0, 16))
+      },
+    })
+    const f = vi.fn<typeof fetch>().mockResolvedValue(new Response(stream))
+    expect(await code(fetchImageBlob('https://x.com/a.jpg', deps({ fetch: f })))).toBe('network')
+  })
+})
+
+/** A fetch whose body yields `chunks` one by one, `gapMs` apart; aborting its signal errors it. */
+function slowFetch(chunks: Uint8Array[], gapMs: number, headersAfterMs = 0) {
+  return vi.fn<typeof fetch>((_input, init) => {
+    const signal = init?.signal
+    return new Promise<Response>((resolve, reject) => {
+      const onAbort = () => {
+        reject(signal?.reason as Error)
+      }
+      signal?.addEventListener('abort', onAbort, { once: true })
+      setTimeout(() => {
+        signal?.removeEventListener('abort', onAbort)
+        let i = 0
+        const stream = new ReadableStream<Uint8Array>({
+          pull: (c) =>
+            new Promise<void>((done) => {
+              setTimeout(() => {
+                const next = chunks[i++]
+                if (next === undefined) c.close()
+                else c.enqueue(next)
+                done()
+              }, gapMs)
+            }),
+        })
+        resolve(new Response(stream))
+      }, headersAfterMs)
+    })
+  })
+}
+
+describe('stall timeout', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+  const jpegChunks = () => {
+    const bytes = skeletonJpeg(8, 8)
+    const size = Math.ceil(bytes.length / 6)
+    return Array.from({ length: 6 }, (_, i) => bytes.slice(i * size, (i + 1) * size))
+  }
+
+  it('steady progress never times out, however long the whole download takes', async () => {
+    vi.useFakeTimers()
+    const f = slowFetch(jpegChunks(), FETCH_TIMEOUT_MS - 1_000)
+    const result = code(fetchImageBlob('https://x.com/a.jpg', deps({ fetch: f })))
+    await vi.advanceTimersByTimeAsync(FETCH_TIMEOUT_MS * 8)
+    expect(await result).toBe('resolved')
+  })
+
+  it('no headers for the timeout is network', async () => {
+    vi.useFakeTimers()
+    const f = slowFetch(jpegChunks(), 0, FETCH_TIMEOUT_MS * 10)
+    const result = code(fetchImageBlob('https://x.com/a.jpg', deps({ fetch: f })))
+    await vi.advanceTimersByTimeAsync(FETCH_TIMEOUT_MS - 1)
+    expect(f.mock.calls[0]?.[1]?.signal?.aborted).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(await result).toBe('network')
+    expect(f).toHaveBeenCalledTimes(1)
+  })
+
+  it('a body that stops sending chunks for the timeout is network', async () => {
+    vi.useFakeTimers()
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(skeletonJpeg(8, 8).slice(0, 16))
+      },
+    })
+    const f = vi.fn<typeof fetch>().mockResolvedValue(new Response(stream))
+    const result = code(fetchImageBlob('https://x.com/a.jpg', deps({ fetch: f })))
+    await vi.advanceTimersByTimeAsync(FETCH_TIMEOUT_MS)
+    expect(await result).toBe('network')
+  })
+
+  it('aborting the caller signal stops the download', async () => {
+    const caller = new AbortController()
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(skeletonJpeg(8, 8).slice(0, 16))
+      },
+    })
+    const f = vi.fn<typeof fetch>().mockResolvedValue(new Response(stream))
+    const result = code(
+      fetchImageBlob('https://x.com/a.jpg', deps({ fetch: f, signal: caller.signal })),
+    )
+    await vi.waitFor(() => {
+      expect(f).toHaveBeenCalled()
+    })
+    expect(f.mock.calls[0]?.[1]?.signal?.aborted).toBe(false)
+    caller.abort()
+    expect(await result).toBe('network')
+    expect(f.mock.calls[0]?.[1]?.signal?.aborted).toBe(true)
+  })
+
+  it('an already aborted caller signal never reaches the network', async () => {
+    const f = vi.fn<typeof fetch>()
+    const signal = AbortSignal.abort()
+    expect(await code(fetchImageBlob('https://x.com/a.jpg', deps({ fetch: f, signal })))).toBe(
+      'network',
+    )
+    expect(f).not.toHaveBeenCalled()
   })
 })
 
