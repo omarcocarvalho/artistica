@@ -34,7 +34,7 @@ function setup(over: Partial<ImagesDeps> = {}) {
       revoked.push(u)
     },
     newId: () => `id-${String(++n)}` as ImageId,
-    hash: vi.fn(sha256Hex),
+    hash: vi.fn((b: Blob) => Promise.resolve(`size-${String(b.size)}`)),
     ...over,
   }
   return { store: createImagesStore(deps), deps, revoked }
@@ -73,8 +73,30 @@ describe('addFiles', () => {
     gates[1]?.resolve(decoded())
     await Promise.resolve()
     gates[0]?.resolve(decoded())
+    const out = await p
+    const s = store.getState()
+    expect(s.images.map((x) => x.name)).toEqual(['slow.jpg', 'fast.jpg'])
+    expect(out.map((o) => (o.ok ? o.id : ''))).toEqual(['id-1', 'id-2'])
+    expect(s.images.map((x) => x.id)).toEqual(['id-1', 'id-2'])
+    expect(s.selectedId).toBe('id-1')
+  })
+
+  it('keeps a selection the user made while a batch is still importing', async () => {
+    const gates = [deferred<DecodedImage>(), deferred<DecodedImage>()]
+    let i = 0
+    const { store } = setup({
+      decode: () => (gates[i++] as { promise: Promise<DecodedImage> }).promise,
+    })
+    const p = store.getState().addFiles([file('slow.jpg'), file('fast.jpg')])
+    gates[1]?.resolve(decoded())
+    await vi.waitFor(() => {
+      expect(store.getState().images).toHaveLength(1)
+    })
+    store.getState().select(null)
+    store.getState().select('id-2' as ImageId)
+    gates[0]?.resolve(decoded())
     await p
-    expect(store.getState().images.map((x) => x.name)).toEqual(['slow.jpg', 'fast.jpg'])
+    expect(store.getState().selectedId).toBe('id-2')
   })
 
   it('a mixed drop still loads the good files and reports the bad one', async () => {
@@ -135,7 +157,7 @@ describe('addFiles', () => {
 
 describe('content hash', () => {
   it('hashes the source bytes: same bytes, same hash; different bytes, different hash', async () => {
-    const { store } = setup()
+    const { store } = setup({ hash: sha256Hex })
     await store
       .getState()
       .addFiles([file('a.jpg', 'one'), file('b.jpg', 'two'), file('c.jpg', 'one')])
@@ -148,7 +170,10 @@ describe('content hash', () => {
 
   it('hashes the fetched blob for a URL import', async () => {
     const blob = new Blob(['remote'])
-    const { store, deps } = setup({ fetchImage: () => Promise.resolve({ blob, name: 'r.jpg' }) })
+    const { store, deps } = setup({
+      fetchImage: () => Promise.resolve({ blob, name: 'r.jpg' }),
+      hash: vi.fn(sha256Hex),
+    })
     await store.getState().addFromUrl('https://x.com/r.jpg')
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(deps.hash).toHaveBeenCalledWith(blob)
