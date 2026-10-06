@@ -75,7 +75,7 @@ jobs:
           - browser: firefox
             projects: --project=firefox
           - browser: webkit
-            projects: --project=webkit
+            projects: --project=webkit --project=mobile-webkit
     steps:
       - uses: actions/checkout@v7
         with:
