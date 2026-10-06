@@ -149,4 +149,70 @@ describe('ImageList', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Remove a.jpg' }))
     expect(useImages.getState().images).toHaveLength(0)
   })
+
+  describe('focus after removal', () => {
+    const three = () => {
+      load(
+        makeLoadedImage({ id: 'a' as ImageId, name: 'a.jpg' }),
+        makeLoadedImage({ id: 'b' as ImageId, name: 'b.jpg' }),
+        makeLoadedImage({ id: 'c' as ImageId, name: 'c.jpg' }),
+      )
+    }
+    const withUpload = () =>
+      renderWithProviders(
+        <div data-images-panel>
+          <section data-dropzone>
+            <button type="button">Upload</button>
+          </section>
+          <ImageList onEdit={() => undefined} />
+        </div>,
+      )
+
+    it('moves to the next row Remove button', async () => {
+      three()
+      withUpload()
+      await userEvent.click(screen.getByRole('button', { name: 'Remove b.jpg' }))
+      expect(screen.getByRole('button', { name: 'Remove c.jpg' })).toHaveFocus()
+    })
+
+    it('moves to the previous row Remove button when the last row goes', async () => {
+      three()
+      withUpload()
+      await userEvent.click(screen.getByRole('button', { name: 'Remove c.jpg' }))
+      expect(screen.getByRole('button', { name: 'Remove b.jpg' })).toHaveFocus()
+    })
+
+    it('moves to Upload when the list empties', async () => {
+      load(makeLoadedImage({ id: 'a' as ImageId, name: 'a.jpg' }))
+      withUpload()
+      await userEvent.click(screen.getByRole('button', { name: 'Remove a.jpg' }))
+      expect(screen.getByRole('button', { name: 'Upload' })).toHaveFocus()
+    })
+
+    it('Remove all with one image moves to Upload', async () => {
+      load(makeLoadedImage({ id: 'a' as ImageId }))
+      withUpload()
+      await userEvent.click(screen.getByRole('button', { name: 'Remove all images' }))
+      expect(screen.getByRole('button', { name: 'Upload' })).toHaveFocus()
+    })
+
+    it('confirmed Remove all moves to Upload; Cancel returns to Remove all', async () => {
+      three()
+      withUpload()
+      await userEvent.click(screen.getByRole('button', { name: 'Remove all images' }))
+      await userEvent.click(
+        within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }),
+      )
+      await vi.waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Remove all images' })).toHaveFocus()
+      })
+      await userEvent.click(screen.getByRole('button', { name: 'Remove all images' }))
+      await userEvent.click(
+        within(screen.getByRole('dialog')).getByRole('button', { name: 'Remove all' }),
+      )
+      await vi.waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Upload' })).toHaveFocus()
+      })
+    })
+  })
 })

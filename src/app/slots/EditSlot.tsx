@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ImageEditSheet, useImages } from '../../features/images'
+import { ImageEditSheet, removalFocusTarget, useImages } from '../../features/images'
 import { ResponsiveSheet } from '../mobile/ResponsiveSheet'
 import { useAppUi } from '../state/useAppUi'
 
@@ -11,16 +11,11 @@ export function EditSlot() {
     useAppUi.getState().closeEdit()
   }, [])
   const image = useImages((s) => s.images.find((i) => i.id === editingId))
+  const index = useImages((s) => s.images.findIndex((i) => i.id === editingId))
 
   // The image can disappear while its sheet is open (Remove all, or removal from the sheet).
   useEffect(() => {
-    if (editingId !== null && !image) {
-      closeEdit()
-      // The element that opened the sheet is gone; hand focus to the images panel instead of <body>.
-      setTimeout(() => {
-        document.querySelector<HTMLElement>('[data-images-panel]')?.focus()
-      }, 0)
-    }
+    if (editingId !== null && !image) closeEdit()
   }, [editingId, image, closeEdit])
 
   if (editingId === null || !image) return null
@@ -29,6 +24,7 @@ export function EditSlot() {
       open
       title={image.name}
       closeLabel={t('editSheet.actions.close')}
+      returnFocus={() => removalFocusTarget(index, 'edit')}
       onOpenChange={(open) => {
         if (!open) closeEdit()
       }}

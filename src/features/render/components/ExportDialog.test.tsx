@@ -307,4 +307,48 @@ describe('ExportDialog', () => {
     expect(screen.getByText('Add at least one image to export.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Create PDF' })).toBeDisabled()
   })
+
+  describe('focus moves', () => {
+    it('focuses Cancel when the export starts and Create PDF after cancelling', async () => {
+      deferredExport()
+      const { user } = setup()
+      await user.click(screen.getByRole('button', { name: 'Create PDF' }))
+      expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
+      await user.click(screen.getByRole('button', { name: 'Cancel' }))
+      expect(screen.getByRole('button', { name: 'Create PDF' })).toHaveFocus()
+    })
+
+    it('focuses Create PDF after Make another', async () => {
+      const run = deferredExport()
+      const { user } = setup()
+      await user.click(screen.getByRole('button', { name: 'Create PDF' }))
+      await act(async () => {
+        run.resolve(new Blob(['%PDF']))
+        await Promise.resolve()
+      })
+      await user.click(screen.getByRole('button', { name: 'Make another' }))
+      expect(screen.getByRole('button', { name: 'Create PDF' })).toHaveFocus()
+    })
+
+    it('focuses Try again after a failure', async () => {
+      const run = deferredExport()
+      const { user } = setup()
+      await user.click(screen.getByRole('button', { name: 'Create PDF' }))
+      await act(async () => {
+        run.reject(new ExportError('failed'))
+        await Promise.resolve()
+      })
+      expect(screen.getByRole('button', { name: 'Try again' })).toHaveFocus()
+    })
+  })
+
+  it('announces progress through a live region that is mounted before the export starts', async () => {
+    deferredExport()
+    const { user } = setup()
+    const region = screen.getByRole('status')
+    expect(region).toHaveTextContent('')
+    await user.click(screen.getByRole('button', { name: 'Create PDF' }))
+    expect(screen.getByRole('status')).toBe(region)
+    expect(region).toHaveTextContent('Page 1 of 2…')
+  })
 })

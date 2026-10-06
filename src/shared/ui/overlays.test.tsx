@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -80,6 +80,78 @@ describe('BottomSheet', () => {
     expect(screen.getByRole('dialog', { name: 'Edit photo' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Close sheet' }))
     expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+})
+
+describe.each([
+  ['Dialog', Dialog],
+  ['BottomSheet', BottomSheet],
+] as const)('%s focus return', (_name, Overlay) => {
+  function Harness({ returnFocus }: { returnFocus?: () => HTMLElement | null }) {
+    const [open, setOpen] = useState(false)
+    const [opener, setOpener] = useState(true)
+    return (
+      <>
+        {opener ? (
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(true)
+            }}
+          >
+            Open
+          </button>
+        ) : null}
+        <button type="button">Fallback</button>
+        <Overlay
+          open={open}
+          onOpenChange={setOpen}
+          title="Overlay"
+          closeLabel="Close"
+          footer={
+            <button
+              type="button"
+              onClick={() => {
+                setOpener(false)
+                setOpen(false)
+              }}
+            >
+              Remove opener
+            </button>
+          }
+          {...(returnFocus ? { returnFocus } : {})}
+        >
+          <p>Body</p>
+        </Overlay>
+      </>
+    )
+  }
+
+  it('returns focus to the opener after Escape', async () => {
+    render(<Harness />)
+    await userEvent.click(screen.getByRole('button', { name: 'Open' }))
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Open' })).toHaveFocus()
+    })
+  })
+
+  it('returns focus to the opener after the close button', async () => {
+    render(<Harness />)
+    await userEvent.click(screen.getByRole('button', { name: 'Open' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Open' })).toHaveFocus()
+    })
+  })
+
+  it('focuses the returnFocus fallback when the opener is gone', async () => {
+    render(<Harness returnFocus={() => screen.getByRole('button', { name: 'Fallback' })} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Open' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Remove opener' }))
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Fallback' })).toHaveFocus()
+    })
   })
 })
 

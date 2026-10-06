@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { printedPixelSize, type ImageId } from '../../../shared/model/image'
 import { mmToUnit, roundForUnit, type Unit } from '../../../shared/model/units'
 import { Badge, Button, Dialog, IconButton } from '../../../shared/ui'
 import { useSettings } from '../../settings'
 import { dpiInfo } from '../dpi'
+import { removalFocusTarget, rowAction, uploadButton } from '../focus-after-removal'
 import { useImages } from '../store'
 import type { LoadedImage } from '../types'
 
@@ -14,11 +16,13 @@ export interface ImageListProps {
 
 function Row({
   image,
+  index,
   selected,
   unit,
   onEdit,
 }: {
   image: LoadedImage
+  index: number
   selected: boolean
   unit: Unit
   onEdit: (id: ImageId) => void
@@ -89,6 +93,7 @@ function Row({
         <IconButton
           label={t('list.edit', { name: image.name })}
           icon="edit"
+          {...rowAction('edit')}
           onClick={() => {
             onEdit(image.id)
           }}
@@ -97,8 +102,12 @@ function Row({
           label={t('list.remove', { name: image.name })}
           icon="trash"
           variant="danger"
+          {...rowAction('remove')}
           onClick={() => {
-            useImages.getState().remove(image.id)
+            flushSync(() => {
+              useImages.getState().remove(image.id)
+            })
+            removalFocusTarget(index, 'remove')?.focus()
           }}
         />
       </div>
@@ -116,7 +125,12 @@ export function ImageList({ onEdit }: ImageListProps) {
   const removeAll = (): void => {
     // Owner Q4, default: ask only when 2 or more images would go.
     if (images.length >= 2) setConfirming(true)
-    else useImages.getState().clear()
+    else {
+      flushSync(() => {
+        useImages.getState().clear()
+      })
+      uploadButton()?.focus()
+    }
   }
 
   if (images.length === 0) {
@@ -136,10 +150,11 @@ export function ImageList({ onEdit }: ImageListProps) {
         </Button>
       </div>
       <ul aria-label={t('list.ariaLabel')} className="flex flex-col gap-2 p-0">
-        {images.map((image) => (
+        {images.map((image, index) => (
           <Row
             key={image.id}
             image={image}
+            index={index}
             selected={image.id === selectedId}
             unit={unit}
             onEdit={onEdit}
@@ -149,6 +164,7 @@ export function ImageList({ onEdit }: ImageListProps) {
       <Dialog
         open={confirming}
         onOpenChange={setConfirming}
+        returnFocus={uploadButton}
         size="sm"
         title={t('list.removeAll.confirmTitle')}
         closeLabel={t('list.removeAll.close')}

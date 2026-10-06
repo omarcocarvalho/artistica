@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initI18n } from '../../shared/i18n'
@@ -6,15 +6,25 @@ import type { ImageId } from '../../shared/model/image'
 import { stubDesktop } from '../test-utils'
 import { useAppUi } from '../state/useAppUi'
 
-const store = vi.hoisted(() => ({ ref: undefined as { setState(s: object): void } | undefined }))
+interface Item {
+  id: string
+  name: string
+}
+const store = vi.hoisted(() => ({
+  ref: undefined as { setState(s: object): void } | undefined,
+  useImages: undefined as (<T>(select: (s: { images: Item[] }) => T) => T) | undefined,
+}))
 vi.mock('../../features/images', async () => {
   const { create } = await import('zustand')
   const useImages = create<{ images: { id: string; name: string }[] }>()(() => ({
     images: [{ id: 'a', name: 'anna.jpg' }],
   }))
   store.ref = useImages
+  store.useImages = useImages
+  const focus = await import('../../features/images/focus-after-removal')
   return {
     useImages,
+    removalFocusTarget: focus.removalFocusTarget,
     ImageEditSheet: ({ imageId }: { imageId: string }) => <p>editor for {imageId}</p>,
   }
 })
@@ -54,5 +64,77 @@ describe('EditSlot', () => {
     })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(useAppUi.getState().editingId).toBeNull()
+  })
+
+  describe('focus after removing the image from its sheet', () => {
+    function Rows() {
+      const images = (
+        store.ref as unknown as (
+          sel: (s: { images: { id: string; name: string }[] }) => unknown,
+        ) => unknown
+      )((s) => s.images) as { id: string; name: string }[]
+      return (
+        <>
+          <section data-dropzone>
+            <button type="button">Upload</button>
+          </section>
+          {images.map((i) => (
+            <button key={i.id} type="button" data-row-action="edit">
+              Edit {i.name}
+            </button>
+          ))}
+        </>
+      )
+    }
+    const open = (id: string) => {
+      render(
+        <>
+          <Rows />
+          <EditSlot />
+        </>,
+      )
+      act(() => {
+        screen.getByRole('button', { name: `Edit ${id}.jpg` }).focus()
+        useAppUi.getState().openEdit(id as ImageId)
+      })
+    }
+    const remove = (id: string, rest: string[]) => {
+      act(() => {
+        store.ref?.setState({ images: rest.map((r) => ({ id: r, name: `${r}.jpg` })) })
+      })
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: `Edit ${id}.jpg` })).not.toBeInTheDocument()
+    }
+
+    beforeEach(() => {
+      store.ref?.setState({
+        images: ['a', 'b', 'c'].map((id) => ({ id, name: `${id}.jpg` })),
+      })
+    })
+
+    it('focuses the next row Edit button', async () => {
+      open('b')
+      remove('b', ['a', 'c'])
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Edit c.jpg' })).toHaveFocus()
+      })
+    })
+
+    it('focuses the previous row Edit button when the last row goes', async () => {
+      open('c')
+      remove('c', ['a', 'b'])
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Edit b.jpg' })).toHaveFocus()
+      })
+    })
+
+    it('focuses Upload when no image is left', async () => {
+      store.ref?.setState({ images: [{ id: 'a', name: 'a.jpg' }] })
+      open('a')
+      remove('a', [])
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Upload' })).toHaveFocus()
+      })
+    })
   })
 })

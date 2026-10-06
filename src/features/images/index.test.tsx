@@ -11,6 +11,7 @@ describe('public API', () => {
         'MAX_DECODED_PIXELS',
         'MAX_FILE_BYTES',
         'importErrorKeys',
+        'removalFocusTarget',
         'selectImageDescriptors',
         'useImages',
       ].sort(),
