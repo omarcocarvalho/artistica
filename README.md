@@ -14,4 +14,6 @@ Requires Node 24 and pnpm (via corepack).
 
 All commands and project conventions are in [CLAUDE.md](CLAUDE.md); the product spec is [docs/spec.md](docs/spec.md).
 
+Contributors are listed in [CONTRIBUTORS.md](CONTRIBUTORS.md). Picking up the work? Start with [HANDOVER.md](HANDOVER.md).
+
 Licensed under the [MIT License](LICENSE).
