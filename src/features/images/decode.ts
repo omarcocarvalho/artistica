@@ -189,7 +189,7 @@ async function paintUpright(
 }
 
 function previewSize(w: number, h: number): { w: number; h: number } {
-  const s = Math.min(1, PREVIEW_LONG_SIDE_PX / Math.max(w, h))
+  const s = PREVIEW_LONG_SIDE_PX / Math.max(w, h)
   if (s >= 1) return { w, h }
   return { w: Math.max(1, Math.round(w * s)), h: Math.max(1, Math.round(h * s)) }
 }
