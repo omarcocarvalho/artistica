@@ -1,7 +1,8 @@
 import { readFileSync, writeFileSync } from 'node:fs'
-import { expect, test, type Locator } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { AppPage } from './support/app.ts'
 import { FIXTURES } from './support/fixtures.ts'
+import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { solidGrayPng } from './support/png.ts'
 import { runOnly } from './support/projects.ts'
 
@@ -86,12 +87,25 @@ async function redDirection(el: Locator): Promise<{ dx: number; dy: number; red:
   })
 }
 
+let guard: NetworkGuard | undefined
+
+/** Page object with the strict network guard installed before navigation (checked after each test). */
+function startApp(page: Page): AppPage {
+  guard = guardNetwork(page)
+  return new AppPage(page)
+}
+
+test.afterEach(() => {
+  expect(guard?.violations() ?? []).toEqual([])
+  guard = undefined
+})
+
 test.describe('import (all browsers)', () => {
   runOnly('chromium', 'firefox', 'webkit')
   test.use({ viewport: { width: 1280, height: 800 } })
 
   test('I1 upload JPG and PNG shows two rows and one preview page', async ({ page }) => {
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     await app.upload([FIXTURES.quadrantsJpg, FIXTURES.transparentPng])
     await app.expectImages(2)
@@ -101,7 +115,7 @@ test.describe('import (all browsers)', () => {
   test('I2 EXIF orientation 6 and 3 are shown upright (48 x 64; red top-right, then bottom-right)', async ({
     page,
   }) => {
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     await app.setSwitch('Crop marks', false)
     await app.setSwitch('Guides', false) // the dashed safe-area guides would widen the non-white box
@@ -139,7 +153,7 @@ test.describe('import (all browsers)', () => {
     page.on('request', (r) => {
       if (/heic/i.test(r.url())) heicRequests.push(r.url())
     })
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     expect(heicRequests).toEqual([]) // lazy: not loaded with the app
     await app.upload(FIXTURES.heic)
@@ -156,7 +170,7 @@ test.describe('import (all browsers)', () => {
     page.on('request', (r) => {
       if (/heic/i.test(r.url())) heicRequests.push(r.url())
     })
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     await app.upload([
       FIXTURES.quadrantsJpg,
@@ -170,7 +184,7 @@ test.describe('import (all browsers)', () => {
 
   test('I17 bytes beat names: a HEIC named .jpg imports', async ({ page }) => {
     test.setTimeout(90_000)
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     await app.upload(FIXTURES.mislabelledHeic)
     await app.expectImages(1, 60_000)
@@ -178,7 +192,7 @@ test.describe('import (all browsers)', () => {
   })
 
   test('I4 animated GIF uses its first frame (red)', async ({ page }) => {
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     await app.setSwitch('Crop marks', false)
     await app.upload(FIXTURES.animatedGif)
@@ -200,7 +214,7 @@ test.describe('import (all browsers)', () => {
   test('I5 transparent PNG is flattened onto white (no black), red centre kept', async ({
     page,
   }) => {
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     await app.setSwitch('Crop marks', false)
     await app.upload(FIXTURES.transparentPng)
@@ -223,7 +237,7 @@ test.describe('import (all browsers)', () => {
   test('I6 a non-image file gives exactly one alert (the dropzone callout), no toast, and adds nothing', async ({
     page,
   }) => {
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     await app.upload(FIXTURES.notesPdf)
     await expect(page.getByRole('alert')).toHaveCount(1)
@@ -233,7 +247,7 @@ test.describe('import (all browsers)', () => {
   })
 
   test('I9 imports an image URL the user typed', async ({ page }) => {
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     await page.route('https://photos.example/pic.jpg', (route) =>
       route.fulfill({
@@ -243,12 +257,15 @@ test.describe('import (all browsers)', () => {
         body: readFileSync(FIXTURES.quadrantsJpg),
       }),
     )
+    guard?.allowExternal('https://photos.example/pic.jpg')
     await app.submitLink('https://photos.example/pic.jpg')
     await app.expectImages(1)
+    await expect(app.imageRows.first()).toContainText('pic.jpg')
+    await expect(page.getByRole('alert')).toHaveCount(0)
   })
 
   test('I10 a URL blocked by CORS explains what to do (one alert)', async ({ page }) => {
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     // page.route().fulfill() adds CORS headers by itself, so a real block is simulated: the CORS
     // GET fails like a blocked request, while the app's no-cors HEAD probe still gets an answer.
@@ -257,6 +274,7 @@ test.describe('import (all browsers)', () => {
         ? route.fulfill({ status: 200, contentType: 'image/jpeg', body: '' })
         : route.abort('failed'),
     )
+    guard?.allowExternal('https://blocked.example/pic.jpg')
     await app.submitLink('https://blocked.example/pic.jpg')
     await expect(page.getByRole('alert')).toHaveCount(1)
     await expect(page.getByRole('alert')).toContainText(
@@ -266,7 +284,7 @@ test.describe('import (all browsers)', () => {
   })
 
   test('I18 a link that is not a picture says so', async ({ page }) => {
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     await page.route('https://pages.example/post', (route) =>
       route.fulfill({
@@ -276,6 +294,7 @@ test.describe('import (all browsers)', () => {
         body: '<p>hi</p>',
       }),
     )
+    guard?.allowExternal('https://pages.example/post')
     await app.submitLink('https://pages.example/post')
     await expect(page.getByRole('alert')).toContainText("That's not an image")
     await expect(app.imageRows).toHaveCount(0)
@@ -287,7 +306,7 @@ test.describe('import (paste)', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
 
   test('I7 pasting an image imports it (no toast)', async ({ page, browserName }) => {
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     const supported = await page.evaluate(() => {
       try {
@@ -318,7 +337,7 @@ test.describe('import (chromium only)', () => {
   test('I8 pasting text says there is nothing to paste, but pasting into the link field is left alone', async ({
     page,
   }) => {
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     await page.evaluate(() => {
       const dt = new DataTransfer()
@@ -343,11 +362,13 @@ test.describe('import (chromium only)', () => {
   })
 
   test('I11 a network failure is reported once', async ({ page }) => {
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     await page.route('https://down.example/pic.jpg', (route) => route.abort('connectionrefused'))
+    guard?.allowExternal('https://down.example/pic.jpg')
     await app.submitLink('https://down.example/pic.jpg')
     await expect(page.getByRole('alert')).toHaveCount(1)
+    await expect(page.getByRole('alert')).toContainText("Couldn't load this link")
     await expect(app.imageRows).toHaveCount(0)
   })
 
@@ -357,7 +378,7 @@ test.describe('import (chromium only)', () => {
   test.fixme('I12 dropping files imports the photo, reports the PDF once, and the page does not navigate', async ({
     page,
   }) => {
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     const url = page.url()
     const photo = Array.from(readFileSync(FIXTURES.quadrantsJpg))
@@ -380,21 +401,38 @@ test.describe('import (chromium only)', () => {
 
   test('I13 a 50 MP image is downscaled and loads', async ({ page }, testInfo) => {
     test.setTimeout(120_000)
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
+    await app.setSwitch('Crop marks', false)
     const path = testInfo.outputPath('50mp.png')
     writeFileSync(path, solidGrayPng(8000, 6250, 140))
     await app.upload(path)
     await app.expectImages(1, 90_000)
+    await expect(app.imageRows.first()).toContainText(/8000\s*[×x]\s*6250/)
     await expect(page.getByRole('alert')).toHaveCount(0)
     await app.expectPreviewPages(1)
+    await expect
+      .poll(() =>
+        app.pageCanvases.first().evaluate((c: CanvasLike) => {
+          const d = c.getContext('2d')?.getImageData(0, 0, c.width, c.height).data
+          let gray = 0
+          for (let i = 0; d && i < d.length; i += 16) {
+            const [r, g, b] = [d[i], d[i + 1], d[i + 2]]
+            if (Math.abs(r - 140) < 8 && Math.abs(g - 140) < 8 && Math.abs(b - 140) < 8) gray++
+          }
+          return gray
+        }),
+      )
+      .toBeGreaterThan(1000)
   })
 
   test('I14 removing images: one at a time, then Remove all (confirmed with 2+, immediate with 1); selection clears', async ({
     page,
   }) => {
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
+    const removeAll = page.getByRole('button', { name: 'Remove all images' })
+    const confirm = page.getByRole('dialog', { name: 'Remove all images?' })
     await app.upload([FIXTURES.quadrantsJpg, FIXTURES.transparentPng, FIXTURES.quadrantsPng])
     await app.expectImages(3)
     await app.selectButton('quadrants.jpg').click()
@@ -402,43 +440,50 @@ test.describe('import (chromium only)', () => {
     await app.removeButton('quadrants.jpg').click()
     await app.expectImages(2)
     await expect(page.getByRole('button', { name: 'Edit selected image' })).toBeDisabled()
-    // 2+ images: Remove all asks first. Cancel keeps everything.
-    await page.getByRole('button', { name: 'Remove all images' }).click()
-    const confirm = page.getByRole('dialog', { name: 'Remove all images?' })
+    await removeAll.click()
     await confirm.getByRole('button', { name: 'Cancel' }).click()
+    await expect(confirm).toBeHidden()
     await app.expectImages(2)
-    await app.removeAll()
+    await removeAll.click()
+    await confirm.getByRole('button', { name: 'Remove all' }).click()
     await expect(app.imageRows).toHaveCount(0)
     await expect(page.getByRole('heading', { name: 'Add some reference photos' })).toBeVisible()
     await expect(app.exportButton).toHaveAttribute('aria-disabled', 'true')
+
+    await app.upload(FIXTURES.quadrantsJpg)
+    await app.expectImages(1)
+    await removeAll.click()
+    await expect(app.imageRows).toHaveCount(0)
+    await expect(confirm).toHaveCount(0)
   })
 
-  test('I15 warns before leaving while images are loaded, and not otherwise', async ({ page }) => {
-    const app = new AppPage(page)
+  // Leaving is a navigation, not page.close(): goto() only resolves after any beforeunload
+  // prompt has been raised and answered, so the absence of a dialog is final when it returns.
+  test('I15 does not warn before leaving an empty workspace', async ({ page }) => {
+    const app = startApp(page)
     await app.goto()
     const types: string[] = []
     page.on('dialog', (d) => {
       types.push(d.type())
-      void d.dismiss().catch(() => undefined)
+      void d.accept()
     })
     await page.mouse.click(700, 400) // user activation, required by Chromium for beforeunload prompts
-    await page.close({ runBeforeUnload: true })
-    await new Promise((resolve) => setTimeout(resolve, 500)) // dialog events arrive after close()
-    expect(types).toEqual([]) // empty workspace: no prompt
+    await page.goto('about:blank')
+    expect(types).toEqual([])
   })
 
   test('I15b with an image loaded the beforeunload prompt appears', async ({ page }) => {
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     await app.upload(FIXTURES.quadrantsJpg)
     await app.expectImages(1)
     const types: string[] = []
     page.on('dialog', (d) => {
       types.push(d.type())
-      void d.dismiss().catch(() => undefined)
+      void d.accept()
     })
     await page.mouse.click(700, 400)
-    await page.close({ runBeforeUnload: true })
-    await expect.poll(() => types).toEqual(['beforeunload']) // the dialog event arrives after close()
+    await page.goto('about:blank')
+    expect(types).toEqual(['beforeunload'])
   })
 })
