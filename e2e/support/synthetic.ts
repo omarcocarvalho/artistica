@@ -6,16 +6,20 @@ export interface UploadFile {
   buffer: Buffer
 }
 
-/** `count` smooth-gradient JPEGs of width x height pixels, encoded by the page's own canvas. */
+/**
+ * `count` gradient JPEGs of width x height pixels, encoded by the page's own canvas. `noisy` adds
+ * thousands of small coloured rectangles so the files compress like camera photos.
+ */
 export async function syntheticJpegs(
   page: Page,
   count: number,
   width: number,
   height: number,
+  { noisy = false }: { noisy?: boolean } = {},
 ): Promise<UploadFile[]> {
   // The e2e tsconfig has no DOM lib, so the page-side code uses structural types.
   const encoded = await page.evaluate(
-    async ({ count, width, height }) => {
+    async ({ count, width, height, noisy }) => {
       interface Grad {
         addColorStop(offset: number, color: string): void
       }
@@ -48,6 +52,10 @@ export async function syntheticJpegs(
         grad.addColorStop(1, `hsl(${String((i * 47 + 90) % 360)} 60% 75%)`)
         g.fillStyle = grad
         g.fillRect(0, 0, width, height)
+        for (let k = 0; noisy && k < 4000; k++) {
+          g.fillStyle = `hsl(${String((k * 97 + i * 31) % 360)} 70% ${String(20 + ((k * 13) % 60))}%)`
+          g.fillRect((k * 7919) % width, (k * 104729) % height, 3 + (k % 40), 3 + ((k * 3) % 40))
+        }
         const blob = await new Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>(
           (resolve) => {
             canvas.toBlob(resolve, 'image/jpeg', 0.8)
@@ -58,7 +66,7 @@ export async function syntheticJpegs(
       }
       return out
     },
-    { count, width, height },
+    { count, width, height, noisy },
   )
   return encoded.map((bytes, i) => ({
     name: `synthetic-${String(i + 1).padStart(2, '0')}.jpg`,
