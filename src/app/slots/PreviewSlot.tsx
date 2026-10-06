@@ -41,8 +41,13 @@ export function PreviewSlot() {
           : 'flex snap-x snap-mandatory gap-4 overflow-x-auto p-4'
       }
     >
-      {status === 'computing' && (
-        <VisuallyHidden role="status">{t('app:preview.updating')}</VisuallyHidden>
+      <VisuallyHidden role="status">
+        {status === 'computing' ? t('app:preview.updating') : null}
+      </VisuallyHidden>
+      {status === 'error' && (
+        <Callout tone="danger" live>
+          {t('app:topBar.exportError')}
+        </Callout>
       )}
       {noRoom && (
         <Callout tone="warning" live>

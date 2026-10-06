@@ -22,4 +22,13 @@ describe('shouldHandlePaste', () => {
     file.type = 'file'
     expect(shouldHandlePaste(file)).toBe(true)
   })
+  it('ignores pastes inside a dialog but still leaves text fields to the browser', () => {
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    const button = dialog.appendChild(document.createElement('button'))
+    const input = dialog.appendChild(document.createElement('input'))
+    expect(shouldHandlePaste(dialog)).toBe(false)
+    expect(shouldHandlePaste(button)).toBe(false)
+    expect(shouldHandlePaste(input)).toBe(false)
+  })
 })

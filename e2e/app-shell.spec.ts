@@ -1,5 +1,17 @@
 import { expect, test, type Page } from '@playwright/test'
 import { expectNoAxeViolations } from './support/axe.ts'
+import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
+
+let guard: NetworkGuard | undefined
+
+test.beforeEach(({ page }) => {
+  guard = guardNetwork(page)
+})
+
+test.afterEach(() => {
+  expect(guard?.violations() ?? []).toEqual([])
+  guard = undefined
+})
 
 async function box(page: Page, name: string | RegExp) {
   const b = await page.getByRole('complementary', { name }).boundingBox()
@@ -32,6 +44,21 @@ test.describe('desktop layout', () => {
     await page.goto('app/')
     expect(Math.round((await box(page, /^Images/)).width)).toBe(248)
     expect(Math.round((await box(page, 'Settings')).width)).toBe(320)
+  })
+
+  test('the logo links to the landing page', async ({ page }) => {
+    await page.goto('app/')
+    const landing = new URL('/artistica/', page.url()).href
+    const home = page.getByRole('link', { name: 'Artistica home' })
+    expect(await home.evaluate((a: { href: string }) => a.href)).toBe(landing)
+    await home.click()
+    await expect(page).toHaveURL(landing)
+    await expect(
+      page.getByRole('heading', {
+        level: 1,
+        name: 'Turn reference photos into print-ready sheets.',
+      }),
+    ).toBeVisible()
   })
 
   test('has no language picker (D4)', async ({ page }) => {
