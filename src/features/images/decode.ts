@@ -6,6 +6,7 @@ import {
   MAX_CANVAS_AREA,
   MAX_DECODED_PIXELS,
   MAX_FILE_BYTES,
+  PREVIEW_LONG_SIDE_PX,
   THUMB_LONG_SIDE_PX,
 } from './limits'
 import {
@@ -35,13 +36,17 @@ export interface DecodeDeps {
 }
 
 export interface DecodedImage {
-  readonly bitmap: ImageBitmap
+  /** The whole image at most PREVIEW_LONG_SIDE_PX on its long side. */
+  readonly preview: ImageBitmap
+  /** Decoded size, capped and upright: what decodeFullImage(source) returns. */
   readonly pxW: number
   readonly pxH: number
   readonly originalPxW: number
   readonly originalPxH: number
   readonly thumbUrl: string
   readonly animatedGif: boolean
+  /** Compressed bytes that decodeFullImage decodes to pxW x pxH. Kept in memory only. */
+  readonly source: Blob
 }
 
 interface Oriented {
@@ -83,9 +88,9 @@ async function decodeStandard(
   }
 }
 
-async function decodeHeic(blob: Blob, deps: DecodeDeps): Promise<Oriented> {
+async function decodeHeic(blob: Blob, deps: DecodeDeps): Promise<Oriented & { source: Blob }> {
   try {
-    return { bitmap: await deps.createImageBitmap(blob), transform: null }
+    return { bitmap: await deps.createImageBitmap(blob), transform: null, source: blob }
   } catch {
     /* no native HEIC decoder: fall through to the lazy WASM converter */
   }
@@ -95,6 +100,7 @@ async function decodeHeic(blob: Blob, deps: DecodeDeps): Promise<Oriented> {
     return {
       bitmap: await deps.createImageBitmap(jpeg, { imageOrientation: 'from-image' }),
       transform: null,
+      source: jpeg,
     }
   } catch (cause) {
     throw new ImportFailure('decode-failed', { cause })
@@ -119,12 +125,7 @@ async function makeThumb(bitmap: ImageBitmap, deps: DecodeDeps): Promise<string>
   }
 }
 
-export async function decodeImage(
-  blob: Blob,
-  name: string,
-  deps: DecodeDeps,
-): Promise<DecodedImage> {
-  if (blob.size > MAX_FILE_BYTES) throw new ImportFailure('too-large')
+async function sniff(blob: Blob, name: string): Promise<{ kind: SniffedKind; head: Uint8Array }> {
   const head = new Uint8Array(await blob.slice(0, HEAD_BYTES).arrayBuffer())
   const sniffed = sniffImage(head)
   const kind: SniffedKind | null =
@@ -133,50 +134,119 @@ export async function decodeImage(
   const declared = readDeclaredSize(head, kind)
   if (declared !== null && declared.w * declared.h > MAX_DECODED_PIXELS)
     throw new ImportFailure('too-large')
-  const animatedGif = kind === 'gif' && isAnimatedGif(new Uint8Array(await blob.arrayBuffer()))
+  return { kind, head }
+}
 
-  const oriented =
-    kind === 'heic' ? await decodeHeic(blob, deps) : await decodeStandard(blob, kind, head, deps)
+/** Upright size of a decode. Closes it and throws when it is too large. */
+function uprightSize(oriented: Oriented): { w: number; h: number } {
+  const w = oriented.transform?.width ?? oriented.bitmap.width
+  const h = oriented.transform?.height ?? oriented.bitmap.height
+  if (w * h > MAX_DECODED_PIXELS) {
+    oriented.bitmap.close()
+    throw new ImportFailure('too-large')
+  }
+  return { w, h }
+}
+
+/**
+ * The whole upright image at w x h. Takes ownership of `oriented.bitmap` and closes it exactly once
+ * on every path; an upright JPEG already at w x h is returned as is (it has no alpha to flatten).
+ */
+async function paintUpright(
+  oriented: Oriented,
+  kind: SniffedKind,
+  w: number,
+  h: number,
+  deps: DecodeDeps,
+): Promise<ImageBitmap> {
   let original: ImageBitmap | null = oriented.bitmap
-  let final: ImageBitmap | null = null
   try {
-    const ow = oriented.transform?.width ?? oriented.bitmap.width
-    const oh = oriented.transform?.height ?? oriented.bitmap.height
-    if (ow * oh > MAX_DECODED_PIXELS) throw new ImportFailure('too-large')
-    const plan = planDownscale(ow, oh)
-    // A decoded, upright, full-size JPEG has no alpha and needs no copy. Everything else is repainted
-    // onto white (flattening transparency, applying manual orientation, downscaling).
-    if (kind !== 'jpeg' || oriented.transform !== null || plan.scale < 1) {
-      const canvas = deps.createCanvas(plan.w, plan.h)
-      try {
-        const m = oriented.transform?.matrix ?? IDENTITY
-        const sx = plan.w / ow
-        const sy = plan.h / oh
-        const scaled: Matrix = [sx * m[0], sy * m[1], sx * m[2], sy * m[3], sx * m[4], sy * m[5]]
-        if (!canvas.paint(original, scaled)) throw new ImportFailure('decode-failed')
-        original.close()
-        original = null
-        final = await canvas.toBitmap()
-      } finally {
-        canvas.release()
-      }
-    } else {
-      final = original
+    const ow = oriented.transform?.width ?? original.width
+    const oh = oriented.transform?.height ?? original.height
+    if (kind === 'jpeg' && oriented.transform === null && w === ow && h === oh) {
+      const same = original
       original = null
+      return same
     }
-    const thumbUrl = await makeThumb(final, deps)
-    return {
-      bitmap: final,
-      pxW: final.width,
-      pxH: final.height,
-      originalPxW: ow,
-      originalPxH: oh,
-      thumbUrl,
-      animatedGif,
+    const canvas = deps.createCanvas(w, h)
+    try {
+      const m = oriented.transform?.matrix ?? IDENTITY
+      const sx = w / ow
+      const sy = h / oh
+      const scaled: Matrix = [sx * m[0], sy * m[1], sx * m[2], sy * m[3], sx * m[4], sy * m[5]]
+      if (!canvas.paint(original, scaled)) throw new ImportFailure('decode-failed')
+      original.close()
+      original = null
+      return await canvas.toBitmap()
+    } finally {
+      canvas.release()
     }
   } catch (e) {
+    throw e instanceof ImportFailure ? e : new ImportFailure('decode-failed', { cause: e })
+  } finally {
     original?.close()
-    final?.close()
+  }
+}
+
+function previewSize(w: number, h: number): { w: number; h: number } {
+  const s = PREVIEW_LONG_SIDE_PX / Math.max(w, h)
+  if (s >= 1) return { w, h }
+  return { w: Math.max(1, Math.round(w * s)), h: Math.max(1, Math.round(h * s)) }
+}
+
+/**
+ * Import decode: checks the file, then keeps only a preview bitmap, a thumbnail and the compressed
+ * source. No full-size bitmap outlives this call.
+ */
+export async function decodeImage(
+  blob: Blob,
+  name: string,
+  deps: DecodeDeps,
+): Promise<DecodedImage> {
+  if (blob.size > MAX_FILE_BYTES) throw new ImportFailure('too-large')
+  const { kind, head } = await sniff(blob, name)
+  const animatedGif = kind === 'gif' && isAnimatedGif(new Uint8Array(await blob.arrayBuffer()))
+  const decoded =
+    kind === 'heic'
+      ? await decodeHeic(blob, deps)
+      : { ...(await decodeStandard(blob, kind, head, deps)), source: blob }
+  const upright = uprightSize(decoded)
+  const full = planDownscale(upright.w, upright.h)
+  const size = previewSize(full.w, full.h)
+  const preview = await paintUpright(decoded, kind, size.w, size.h, deps)
+  try {
+    const thumbUrl = await makeThumb(preview, deps)
+    return {
+      preview,
+      pxW: full.w,
+      pxH: full.h,
+      originalPxW: upright.w,
+      originalPxH: upright.h,
+      thumbUrl,
+      animatedGif,
+      source: decoded.source,
+    }
+  } catch (e) {
+    preview.close()
     throw e instanceof ImportFailure ? e : new ImportFailure('decode-failed', { cause: e })
   }
+}
+
+/**
+ * Decodes an imported image's `source` again at its full pxW x pxH (upright, capped).
+ * The caller owns the result and must close it.
+ */
+export async function decodeFullImage(
+  source: Blob,
+  name: string,
+  deps: DecodeDeps,
+): Promise<ImageBitmap> {
+  const { kind, head } = await sniff(source, name)
+  const decoded =
+    kind === 'heic'
+      ? await decodeHeic(source, deps)
+      : await decodeStandard(source, kind, head, deps)
+  const upright = uprightSize(decoded)
+  const full = planDownscale(upright.w, upright.h)
+  return paintUpright(decoded, kind, full.w, full.h, deps)
 }

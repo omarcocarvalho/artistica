@@ -158,7 +158,7 @@ The final review triaged every "minor (deferred)" line in `docs/superpowers/ledg
 
 **Memory (M5)**
 
-- **20 × 12 MP photos:** they stay below the 5100 px cap and are kept as full-size ImageBitmaps, about 975 MB. If the real-phone check crashes, the structural fix is to keep the compressed Blob and decode on demand, or to cap the size by the current paper.
+- **Per-image memory:** each image keeps its compressed source Blob and a preview ImageBitmap of at most `PREVIEW_LONG_SIDE_PX` (2048 px, about 12.6 MB). Export decodes one image at a time at full size from the source. The M3 E2E test guards the browser's RSS with 22 × 24 MP photos. Export is slower than holding full-size bitmaps, because every image is decoded again.
 - **Downloads waiting to decode:** finished URL downloads wait for a decode slot without holding a download slot. Memory is bounded only by how fast links download compared with how fast images decode.
 - **CORS probe:** the probe request after a failed fetch keeps its own 8 s timeout and is not cancelled by "Remove all". Its result is discarded.
 

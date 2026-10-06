@@ -70,7 +70,7 @@ function setup(open = true) {
       onOpenChange={onOpenChange}
       pages={pages}
       paperLabel="A4"
-      getBitmap={() => undefined}
+      getSource={() => undefined}
     />,
   )
   return { onOpenChange, user: userEvent.setup() }
@@ -268,7 +268,7 @@ describe('ExportDialog', () => {
         onOpenChange={vi.fn()}
         pages={pages}
         paperLabel="A4"
-        getBitmap={() => undefined}
+        getSource={() => undefined}
       />,
     )
     const button = screen.getAllByRole('button', { name: 'Create PDF' }).at(-1)
@@ -285,7 +285,7 @@ describe('ExportDialog', () => {
   it('cancels and resets when the parent closes it', async () => {
     const run = deferredExport()
     const onOpenChange = vi.fn()
-    const props = { onOpenChange, pages, paperLabel: 'A4', getBitmap: () => undefined }
+    const props = { onOpenChange, pages, paperLabel: 'A4', getSource: () => undefined }
     const view = render(<ExportDialog open {...props} />)
     await userEvent.setup().click(screen.getByRole('button', { name: 'Create PDF' }))
     view.rerender(<ExportDialog open={false} {...props} />)
@@ -301,7 +301,7 @@ describe('ExportDialog', () => {
         onOpenChange={vi.fn()}
         pages={[]}
         paperLabel="A4"
-        getBitmap={() => undefined}
+        getSource={() => undefined}
       />,
     )
     expect(screen.getByText('Add at least one image to export.')).toBeInTheDocument()

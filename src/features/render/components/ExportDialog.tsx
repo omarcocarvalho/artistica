@@ -1,11 +1,11 @@
 import { useEffect, useId, useLayoutEffect, useReducer, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ImageId } from '../../../shared/model/image'
 import { mmToUnit, roundForUnit } from '../../../shared/model/units'
 import { Button, Callout, Dialog, Icon, ProgressBar, buttonClasses } from '../../../shared/ui'
 import { useSettings } from '../../settings'
 import { EXPORT_ERROR_KEYS, isAbortError, toExportError } from '../export/errors'
 import { exportPdf } from '../export/export-pdf'
+import type { GetSource } from '../export/run-export'
 import {
   INITIAL_EXPORT_STATE,
   exportReducer,
@@ -21,7 +21,7 @@ export interface ExportDialogProps {
   readonly pages: readonly PageModel[]
   /** Paper name for the summary and the D10 file name, e.g. "A4", "Letter", "Custom". */
   readonly paperLabel: string
-  readonly getBitmap: (id: ImageId) => ImageBitmap | undefined
+  readonly getSource: GetSource
 }
 
 /** export.html: summary → page-by-page progress → download, plus error and cancel states. */
@@ -30,7 +30,7 @@ export function ExportDialog({
   onOpenChange,
   pages,
   paperLabel,
-  getBitmap,
+  getSource,
 }: ExportDialogProps) {
   const { t } = useTranslation('export')
   const unit = useSettings((s) => s.unit)
@@ -94,7 +94,7 @@ export function ExportDialog({
     const ctrl = new AbortController()
     controller.current = ctrl
     dispatch({ type: 'start', pageCount: pages.length })
-    void exportPdf(pages, getBitmap, {
+    void exportPdf(pages, getSource, {
       signal: ctrl.signal,
       onProgress: (progress) => {
         if (controller.current !== ctrl) return // stale run (cancelled or replaced)

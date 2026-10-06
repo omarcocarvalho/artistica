@@ -25,6 +25,7 @@ const MAX_STAGE_HEIGHT_PX = 420
 const HANDLE_REACH_PX = 22
 
 export interface CropEditorProps {
+  /** The whole image at any size; it is drawn over pxW x pxH. */
   bitmap: ImageBitmap
   pxW: number
   pxH: number
@@ -93,7 +94,7 @@ export function CropEditor({ bitmap, pxW, pxH, crop, ratio, view, onChange }: Cr
     try {
       ctx.setTransform(s * a, s * b, s * c, s * d, s * e, s * f)
       ctx.imageSmoothingQuality = 'high'
-      ctx.drawImage(bitmap, 0, 0)
+      ctx.drawImage(bitmap, 0, 0, pxW, pxH)
     } catch {
       /* the bitmap was closed because the image was removed while editing */
     }

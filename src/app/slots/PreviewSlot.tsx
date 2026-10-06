@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { GuidesLegend, GuidesToggle, PagePreview } from '../../features/render'
+import { GuidesLegend, GuidesToggle, PagePreview, type PreviewSource } from '../../features/render'
 import { useImages } from '../../features/images'
 import { useSettings } from '../../features/settings'
 import type { ImageId } from '../../shared/model/image'
@@ -13,7 +13,10 @@ import { useAppUi } from '../state/useAppUi'
 const selectImage = (id: ImageId) => {
   useImages.getState().select(id)
 }
-const getBitmap = (id: ImageId) => useImages.getState().images.find((i) => i.id === id)?.bitmap
+const getSource = (id: ImageId): PreviewSource | undefined => {
+  const image = useImages.getState().images.find((i) => i.id === id)
+  return image && { bitmap: image.preview, pxW: image.pxW, pxH: image.pxH }
+}
 
 export function PreviewSlot() {
   const { t } = useTranslation(['app', 'pageSetup'])
@@ -59,7 +62,7 @@ export function PreviewSlot() {
         <div key={model.index} className="w-full max-w-3xl shrink-0 snap-center">
           <PagePreview
             model={model}
-            getBitmap={getBitmap}
+            getSource={getSource}
             getName={getName}
             selectedId={selectedId}
             onSelect={selectImage}

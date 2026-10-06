@@ -3,7 +3,7 @@ import type { ImageDescriptor, ImageEdits, ImageId } from '../../shared/model/im
 import { sourcesFromDataTransfer, pastedName, type ImportSource } from './clipboard'
 import { createBrowserDecodeDeps } from './browser-deps'
 import { sha256Hex } from './content-hash'
-import { decodeImage, type DecodedImage } from './decode'
+import { decodeFullImage, decodeImage, type DecodedImage } from './decode'
 import { editsEqual, sanitizeEdits } from './edits'
 import { toImportErrorCode } from './errors'
 import { DECODE_CONCURRENCY, FETCH_CONCURRENCY } from './limits'
@@ -50,11 +50,11 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
   return create<ImagesState>()((set, get) => {
     const discard = (d: DecodedImage): void => {
       deps.revokeObjectURL(d.thumbUrl)
-      d.bitmap.close()
+      d.preview.close()
     }
     const dispose = (img: LoadedImage): void => {
       deps.revokeObjectURL(img.thumbUrl)
-      img.bitmap.close()
+      img.preview.close()
       order.delete(img.id)
     }
 
@@ -94,7 +94,8 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
           pxW: d.pxW,
           pxH: d.pxH,
           edits: DEFAULT_EDITS,
-          bitmap: d.bitmap,
+          preview: d.preview,
+          source: d.source,
           thumbUrl: d.thumbUrl,
           originalPxW: d.originalPxW,
           originalPxH: d.originalPxH,
@@ -232,6 +233,11 @@ export const useImages = createImagesStore({
   newId: () => crypto.randomUUID() as ImageId,
   hash: sha256Hex,
 })
+
+/** The image at its full pxW x pxH, decoded again from its source. The caller closes it. */
+export function decodeFull(image: Pick<LoadedImage, 'source' | 'name'>): Promise<ImageBitmap> {
+  return decodeFullImage(image.source, image.name, browserDecode)
+}
 
 const descriptorCache = new WeakMap<LoadedImage, ImageDescriptor>()
 let lastImages: readonly LoadedImage[] | null = null

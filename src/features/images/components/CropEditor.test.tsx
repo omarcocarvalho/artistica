@@ -64,6 +64,22 @@ describe('CropEditor', () => {
     expect(props.onChange).toHaveBeenCalledWith({ x: 130, y: 120, w: 100, h: 100 })
   })
 
+  it('draws a smaller preview bitmap over the whole image and keeps crops in image pixels', () => {
+    const drawImage = vi.fn()
+    const setTransform = vi.fn()
+    const ctx = { drawImage, setTransform, imageSmoothingQuality: 'low' }
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+      ctx as unknown as RenderingContext,
+    )
+    const bitmap = { width: 100, height: 75, close: () => undefined } as unknown as ImageBitmap
+    const props = base({ bitmap })
+    renderWithProviders(<CropEditor {...props} />)
+    expect(drawImage).toHaveBeenCalledWith(bitmap, 0, 0, 400, 300)
+    drag(area(), [150, 150], [180, 170])
+    expect(props.onChange).toHaveBeenCalledWith({ x: 130, y: 120, w: 100, h: 100 })
+    vi.restoreAllMocks()
+  })
+
   it('cannot be dragged outside the image', () => {
     const props = base()
     renderWithProviders(<CropEditor {...props} />)

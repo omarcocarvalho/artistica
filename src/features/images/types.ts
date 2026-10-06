@@ -19,7 +19,10 @@ export type ImportOutcome =
 
 export interface LoadedImage extends ImageDescriptor {
   readonly name: string
-  readonly bitmap: ImageBitmap
+  /** The whole image, at most PREVIEW_LONG_SIDE_PX on its long side (pxW x pxH maps onto it). */
+  readonly preview: ImageBitmap
+  /** Compressed bytes that decode to pxW x pxH again; in memory only, never persisted or sent. */
+  readonly source: Blob
   readonly thumbUrl: string
   readonly originalPxW: number
   readonly originalPxH: number

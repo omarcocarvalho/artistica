@@ -1,16 +1,18 @@
 import { act, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { GetSource } from '../../features/render'
 import type { ImageId } from '../../shared/model/image'
 
 const h = vi.hoisted(() => ({
   count: 1,
-  images: [] as { id: string; bitmap: unknown }[],
-  getBitmap: undefined as ((id: ImageId) => unknown) | undefined,
+  images: [] as { id: string; pxW: number; pxH: number }[],
+  getSource: undefined as GetSource | undefined,
+  decodeFull: vi.fn((image: unknown) => Promise.resolve({ image })),
 }))
 vi.mock('../state/hasImages', () => ({ useImageCount: () => h.count }))
 vi.mock('../../features/render', () => ({
-  ExportDialog: (p: { open: boolean; getBitmap: (id: ImageId) => unknown }) => {
-    h.getBitmap = p.getBitmap
+  ExportDialog: (p: { open: boolean; getSource: GetSource }) => {
+    h.getSource = p.getSource
     return <p data-testid="dialog">{String(p.open)}</p>
   },
 }))
@@ -23,7 +25,7 @@ vi.mock('../../features/images', () => {
   const useImages = Object.assign((sel: (s: typeof state) => unknown) => sel(state), {
     getState: () => state,
   })
-  return { useImages }
+  return { useImages, decodeFull: h.decodeFull }
 })
 
 import { usePages } from '../pages-store'
@@ -76,13 +78,17 @@ describe('ExportSlot', () => {
     rerender(<ExportSlot />)
     expect(useAppUi.getState().exportOpen).toBe(false)
   })
-  it('reads bitmaps from the live images store, not a snapshot', () => {
+  it('reads sources from the live images store, not a snapshot, and decodes on demand', async () => {
     usePages.setState({ pages: [page] })
     render(<ExportSlot />)
-    const getBitmap = h.getBitmap
-    expect(getBitmap?.('a' as ImageId)).toBeUndefined()
-    const bitmap = {}
-    h.images = [{ id: 'a', bitmap }]
-    expect(getBitmap?.('a' as ImageId)).toBe(bitmap)
+    const getSource = h.getSource
+    expect(getSource?.('a' as ImageId)).toBeUndefined()
+    const image = { id: 'a', pxW: 5100, pxH: 3825 }
+    h.images = [image]
+    const source = getSource?.('a' as ImageId)
+    expect(source).toMatchObject({ pxW: 5100, pxH: 3825 })
+    expect(h.decodeFull).not.toHaveBeenCalled()
+    await expect(source?.decode()).resolves.toEqual({ image })
+    expect(h.decodeFull).toHaveBeenCalledWith(image)
   })
 })

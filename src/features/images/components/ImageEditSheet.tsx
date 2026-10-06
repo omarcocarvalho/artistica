@@ -76,7 +76,7 @@ export function ImageEditSheet({ imageId }: ImageEditSheetProps) {
       <div className="grid gap-6 @xl:grid-cols-[minmax(0,1.25fr)_minmax(16rem,1fr)]">
         <div className="flex flex-col gap-4">
           <CropEditor
-            bitmap={image.bitmap}
+            bitmap={image.preview}
             pxW={d.pxW}
             pxH={d.pxH}
             crop={e.crop ?? fullCrop(d.pxW, d.pxH)}

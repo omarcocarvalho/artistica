@@ -2,10 +2,16 @@
 import fc from 'fast-check'
 import { describe, expect, it, vi } from 'vitest'
 import { MAX_SOURCE_LONG_SIDE_PX } from '../../shared/model/image'
-import { MAX_CANVAS_AREA, MAX_FILE_BYTES } from './limits'
+import { MAX_CANVAS_AREA, MAX_FILE_BYTES, PREVIEW_LONG_SIDE_PX } from './limits'
 import { ImportFailure } from './errors'
 import type { Matrix } from './exif'
-import { decodeImage, planDownscale, type CanvasLike, type DecodeDeps } from './decode'
+import {
+  decodeFullImage,
+  decodeImage,
+  planDownscale,
+  type CanvasLike,
+  type DecodeDeps,
+} from './decode'
 import { ANIMATED_GIF, heicHeader, pngHeader, skeletonJpeg, webpHeader } from './test-bytes'
 
 function bitmap(width: number, height: number) {
@@ -96,7 +102,7 @@ describe('decodeImage', () => {
     const out = await decodeImage(blobOf(skeletonJpeg(64, 48), 'image/jpeg'), 'a.jpg', deps)
     expect(paints).toHaveLength(1)
     expect(decoded[0]?.options).toEqual({ imageOrientation: 'from-image' })
-    expect(out.bitmap.width).toBe(64)
+    expect(out.preview.width).toBe(64)
   })
 
   it('applies EXIF itself when the browser does not (orientation 6)', async () => {
@@ -115,11 +121,11 @@ describe('decodeImage', () => {
   })
 
   it('downscales large images and keeps the original size', async () => {
-    const { deps, canvases } = makeDeps({
+    const { deps } = makeDeps({
       createImageBitmap: () => Promise.resolve(bitmap(8000, 6000)),
     })
     const out = await decodeImage(blobOf(skeletonJpeg(8000, 6000), 'image/jpeg'), 'big.jpg', deps)
-    expect(canvases[0]).toEqual([out.pxW, out.pxH])
+    expect([out.pxW, out.pxH]).toEqual([planDownscale(8000, 6000).w, planDownscale(8000, 6000).h])
     expect(Math.max(out.pxW, out.pxH)).toBeLessThanOrEqual(5100)
     expect([out.originalPxW, out.originalPxH]).toEqual([8000, 6000])
   })
@@ -351,5 +357,174 @@ describe('decodeImage: memory and size-limit paths', () => {
     ).rejects.toMatchObject({ code: 'decode-failed' })
     expect(decoded.close).toHaveBeenCalledTimes(1)
     expect(repainted.close).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('decodeImage: preview bitmap and compressed source', () => {
+  it('keeps only a preview of a 24 MP photo, sized like the capped image, and closes the decode', async () => {
+    const decoded = bitmap(5712, 4284)
+    const { deps, canvases, paints } = makeDeps({
+      createImageBitmap: () => Promise.resolve(decoded),
+    })
+    const blob = blobOf(skeletonJpeg(5712, 4284), 'image/jpeg')
+    const out = await decodeImage(blob, 'big.jpg', deps)
+    const full = planDownscale(5712, 4284)
+    expect([out.pxW, out.pxH]).toEqual([full.w, full.h])
+    expect([out.originalPxW, out.originalPxH]).toEqual([5712, 4284])
+    expect([out.preview.width, out.preview.height]).toEqual([2048, 1536])
+    expect(canvases).not.toContainEqual([full.w, full.h])
+    expect(canvases[0]).toEqual([2048, 1536])
+    expect(paints[0]?.matrix).toEqual([2048 / 5712, 0, 0, 1536 / 4284, 0, 0])
+    expect(decoded.close).toHaveBeenCalledTimes(1)
+    expect(out.source).toBe(blob)
+  })
+
+  it('makes the preview of an EXIF-rotated photo upright and never upscales a small one', async () => {
+    const { deps, paints } = makeDeps({
+      createImageBitmap: () => Promise.resolve(bitmap(3000, 1000)),
+    })
+    const out = await decodeImage(blobOf(skeletonJpeg(3000, 1000, 6), 'image/jpeg'), 'r.jpg', deps)
+    expect([out.pxW, out.pxH]).toEqual([1000, 3000])
+    expect([out.preview.width, out.preview.height]).toEqual([683, 2048])
+    expect(paints[0]?.matrix).toEqual([0, 2048 / 3000, -683 / 1000, 0, 683, 0])
+
+    const small = makeDeps({ createImageBitmap: () => Promise.resolve(bitmap(1000, 800)) })
+    const png = await decodeImage(blobOf(pngHeader(1000, 800), 'image/png'), 's.png', small.deps)
+    expect([png.preview.width, png.preview.height]).toEqual([1000, 800])
+  })
+
+  it('caps the preview long side at PREVIEW_LONG_SIDE_PX (property)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.integer({ min: 1, max: 14000 }),
+        fc.integer({ min: 1, max: 14000 }),
+        async (w, h) => {
+          const { deps } = makeDeps({ createImageBitmap: () => Promise.resolve(bitmap(w, h)) })
+          const out = await decodeImage(blobOf(pngHeader(w, h), 'image/png'), 'p.png', deps)
+          expect(Math.max(out.preview.width, out.preview.height)).toBeLessThanOrEqual(
+            PREVIEW_LONG_SIDE_PX,
+          )
+          expect(out.preview.width).toBeLessThanOrEqual(out.pxW)
+          expect(out.preview.height).toBeLessThanOrEqual(out.pxH)
+        },
+      ),
+      { numRuns: 50 },
+    )
+  })
+
+  it('makes the thumbnail from the preview, not from a full-size bitmap', async () => {
+    const { deps, paints } = makeDeps({
+      createImageBitmap: () => Promise.resolve(bitmap(5712, 4284)),
+    })
+    await decodeImage(blobOf(skeletonJpeg(5712, 4284), 'image/jpeg'), 'big.jpg', deps)
+    expect(paints[1]?.matrix).toEqual([256 / 2048, 0, 0, 192 / 1536, 0, 0])
+  })
+
+  it('closes the preview when the thumbnail fails', async () => {
+    const preview = bitmap(2048, 1536)
+    const decoded = bitmap(5712, 4284)
+    let n = 0
+    const { deps } = makeDeps({
+      createImageBitmap: () => Promise.resolve(decoded),
+      createCanvas: (w, h) => {
+        const isThumb = n++ > 0
+        return {
+          width: w,
+          height: h,
+          paint: () => true,
+          toBlob: () => Promise.resolve(isThumb ? null : new Blob(['t'])),
+          toBitmap: () => Promise.resolve(preview),
+          release: () => undefined,
+        }
+      },
+    })
+    await expect(
+      decodeImage(blobOf(skeletonJpeg(5712, 4284), 'image/jpeg'), 'big.jpg', deps),
+    ).rejects.toMatchObject({ code: 'decode-failed' })
+    expect(decoded.close).toHaveBeenCalledTimes(1)
+    expect(preview.close).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the HEIC file as the source when the browser decodes it natively', async () => {
+    const { deps } = makeDeps()
+    const heic = blobOf(heicHeader('heic'), 'image/heic')
+    expect((await decodeImage(heic, 'a.heic', deps)).source).toBe(heic)
+  })
+
+  it('keeps the converted JPEG as the source when HEIC needed the WASM converter', async () => {
+    const converted = blobOf(skeletonJpeg(64, 48), 'image/jpeg')
+    let calls = 0
+    const { deps } = makeDeps({
+      createImageBitmap: () =>
+        calls++ === 0 ? Promise.reject(new Error('unsupported')) : Promise.resolve(bitmap(64, 48)),
+      loadHeicConverter: () => Promise.resolve(() => Promise.resolve(converted)),
+    })
+    const out = await decodeImage(blobOf(heicHeader('heic'), 'image/heic'), 'a.heic', deps)
+    expect(out.source).toBe(converted)
+  })
+})
+
+describe('decodeFullImage', () => {
+  it('decodes a source again to exactly the capped, upright size and makes nothing else', async () => {
+    const decoded = bitmap(5712, 4284)
+    const createObjectURL = vi.fn(() => 'blob:x')
+    const { deps, canvases } = makeDeps({
+      createImageBitmap: () => Promise.resolve(decoded),
+      createObjectURL,
+    })
+    const blob = blobOf(skeletonJpeg(5712, 4284), 'image/jpeg')
+    const imported = await decodeImage(
+      blob,
+      'big.jpg',
+      makeDeps({
+        createImageBitmap: () => Promise.resolve(bitmap(5712, 4284)),
+      }).deps,
+    )
+    const full = await decodeFullImage(imported.source, 'big.jpg', deps)
+    expect([full.width, full.height]).toEqual([imported.pxW, imported.pxH])
+    expect(canvases).toEqual([[imported.pxW, imported.pxH]])
+    expect(createObjectURL).not.toHaveBeenCalled()
+    expect(decoded.close).toHaveBeenCalledTimes(1)
+  })
+
+  it('applies EXIF orientation like the import did', async () => {
+    const { deps } = makeDeps({ createImageBitmap: () => Promise.resolve(bitmap(64, 48)) })
+    const full = await decodeFullImage(blobOf(skeletonJpeg(64, 48, 6), 'image/jpeg'), 'r.jpg', deps)
+    expect([full.width, full.height]).toEqual([48, 64])
+  })
+
+  it('returns an upright, uncapped JPEG decode as is', async () => {
+    const decoded = bitmap(4032, 3024)
+    const { deps, canvases } = makeDeps({ createImageBitmap: () => Promise.resolve(decoded) })
+    const full = await decodeFullImage(blobOf(skeletonJpeg(4032, 3024)), 'a.jpg', deps)
+    expect(full).toBe(decoded)
+    expect(canvases).toEqual([])
+    expect(decoded.close).not.toHaveBeenCalled()
+  })
+
+  it('decodes a converted HEIC source without the WASM converter', async () => {
+    const load = vi.fn(() => Promise.resolve((b: Blob) => Promise.resolve(b)))
+    const { deps } = makeDeps({ loadHeicConverter: load })
+    await decodeFullImage(blobOf(skeletonJpeg(64, 48), 'image/jpeg'), 'a.heic', deps)
+    expect(load).not.toHaveBeenCalled()
+  })
+
+  it('closes the decode and reports decode-failed when the repaint fails', async () => {
+    const decoded = bitmap(5712, 4284)
+    const { deps } = makeDeps({
+      createImageBitmap: () => Promise.resolve(decoded),
+      createCanvas: (w, h) => ({
+        width: w,
+        height: h,
+        paint: () => true,
+        toBlob: () => Promise.resolve(null),
+        toBitmap: () => Promise.reject(new Error('oom')),
+        release: () => undefined,
+      }),
+    })
+    await expect(
+      decodeFullImage(blobOf(skeletonJpeg(5712, 4284)), 'a.jpg', deps),
+    ).rejects.toMatchObject({ code: 'decode-failed' })
+    expect(decoded.close).toHaveBeenCalledTimes(1)
   })
 })

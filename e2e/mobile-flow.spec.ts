@@ -4,6 +4,7 @@ import { FIXTURES } from './support/fixtures.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { summarizePdf } from './support/pdf.ts'
 import { runOnly } from './support/projects.ts'
+import { sampleBrowserMemory } from './support/memory.ts'
 import { syntheticJpegs } from './support/synthetic.ts'
 
 runOnly('mobile-chromium', 'mobile-webkit')
@@ -67,32 +68,66 @@ test('M1 phone flow: Images, edit sheet, Page, Preview, Export, parse the PDF', 
   expect(sum(info.pages.map((p) => p.imagePlacements))).toBe(2)
 })
 
-test('M3 @slow 20 x 12 MP photos import and export on a phone without running out of memory', async ({
+/** Total RSS of the browser's process tree, in MB. */
+const SETTLED_AFTER_IMPORT_BUDGET_MB = 1500
+const EXPORT_PEAK_BUDGET_MB = 1700
+
+test('M3 @slow 22 x 24 MP photos import and export on a phone within a memory budget', async ({
   page,
+  browser,
 }, testInfo) => {
   test.skip(
     testInfo.project.name !== 'mobile-chromium',
-    'chromium only: synthetic 12 MP JPEGs are encoded by the page canvas',
+    'chromium only: the photos are encoded by the page canvas and RSS comes from Chromium’s process list',
   )
   test.setTimeout(600_000)
   const crashed: string[] = []
   page.on('crash', () => crashed.push('page crashed'))
   const app = startApp(page)
   await app.goto()
-  const photos = await syntheticJpegs(page, 20, 4000, 3000)
-  await app.upload(photos)
-  await app.expectImages(20, 300_000)
-  await page.getByRole('button', { name: 'Next' }).click()
-  await page.getByRole('button', { name: 'Next' }).click()
-  const previewPages = await app.expectPreviewPages(1)
-  await page.getByRole('button', { name: 'Next' }).click()
-  await expect(page.getByText('20 images are ready to print.')).toBeVisible()
-  const { bytes } = await app.exportPdf('step')
-  const info = await summarizePdf(bytes)
+  const photos = await syntheticJpegs(page, 22, 5712, 4284, { noisy: true })
+  const memory = sampleBrowserMemory(browser)
+  let pdf: Buffer
+  let previewPages: number
+  let settledBreakdown: Record<string, number>
+  try {
+    await page.waitForTimeout(1000)
+    memory.phase('import')
+    await app.upload(photos)
+    await app.expectImages(22, 300_000)
+    await page.getByRole('button', { name: 'Next' }).click()
+    await app.setPaper('A5')
+    await page.getByRole('button', { name: 'Next' }).click()
+    await app.expectPreviewPages(3)
+    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0)
+    previewPages = await app.pageCanvases.count()
+    await page.waitForTimeout(2000)
+    const cdp = await page.context().newCDPSession(page)
+    await cdp.send('HeapProfiler.collectGarbage')
+    await cdp.detach()
+    await page.waitForTimeout(1000)
+    memory.phase('settled after import')
+    await page.waitForTimeout(2000)
+    settledBreakdown = await memory.breakdown()
+    await page.getByRole('button', { name: 'Next' }).click()
+    await expect(page.getByText('22 images are ready to print.')).toBeVisible()
+    memory.phase('export')
+    pdf = (await app.exportPdf('step')).bytes
+  } finally {
+    await memory.stop()
+  }
+  const peaks = memory.peaks()
+  const report = JSON.stringify({ previewPages, peaksMb: peaks, settledBreakdown })
+  console.log(`memory: ${report}`)
+  testInfo.annotations.push({ type: 'memory', description: report })
+
+  const info = await summarizePdf(pdf)
   expect(info.pageCount).toBe(previewPages)
-  expect(sum(info.pages.map((p) => p.imagePlacements))).toBe(20)
+  expect(sum(info.pages.map((p) => p.imagePlacements))).toBe(22)
   await expect(page.getByRole('alert')).toHaveCount(0)
   expect(crashed).toEqual([])
+  expect(peaks['settled after import']).toBeLessThan(SETTLED_AFTER_IMPORT_BUDGET_MB)
+  expect(peaks.export).toBeLessThan(EXPORT_PEAK_BUDGET_MB)
 })
 
 test('M2 touch targets in the step bar and footer are at least 44px tall', async ({ page }) => {

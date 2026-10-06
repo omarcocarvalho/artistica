@@ -1,13 +1,16 @@
 import { useEffect } from 'react'
-import { useImages } from '../../features/images'
-import { ExportDialog } from '../../features/render'
+import { decodeFull, useImages } from '../../features/images'
+import { ExportDialog, type GetSource } from '../../features/render'
 import { useSettings } from '../../features/settings'
-import type { ImageId } from '../../shared/model/image'
 import { usePages } from '../pages-store'
 import { useImageCount } from '../state/hasImages'
 import { useAppUi } from '../state/useAppUi'
 
-const getBitmap = (id: ImageId) => useImages.getState().images.find((i) => i.id === id)?.bitmap
+const getSource: GetSource = (id) => {
+  const image = useImages.getState().images.find((i) => i.id === id)
+  if (!image) return undefined
+  return { pxW: image.pxW, pxH: image.pxH, decode: () => decodeFull(image) }
+}
 
 export function ExportSlot() {
   const open = useAppUi((s) => s.exportOpen)
@@ -27,7 +30,7 @@ export function ExportSlot() {
       }}
       pages={pages}
       paperLabel={paper}
-      getBitmap={getBitmap}
+      getSource={getSource}
     />
   )
 }

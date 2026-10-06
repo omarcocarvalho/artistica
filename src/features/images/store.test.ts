@@ -7,9 +7,10 @@ import { createImagesStore, selectImageDescriptors, type ImagesDeps } from './st
 
 function decoded(
   over: Partial<DecodedImage> = {},
-): DecodedImage & { bitmap: { close: ReturnType<typeof vi.fn> } } {
+): DecodedImage & { preview: { close: ReturnType<typeof vi.fn> } } {
   return {
-    bitmap: { width: 400, height: 300, close: vi.fn() },
+    preview: { width: 400, height: 300, close: vi.fn() },
+    source: new Blob(['source']),
     pxW: 400,
     pxH: 300,
     originalPxW: 400,
@@ -17,7 +18,7 @@ function decoded(
     thumbUrl: 'blob:t',
     animatedGif: false,
     ...over,
-  } as DecodedImage & { bitmap: { close: ReturnType<typeof vi.fn> } }
+  } as DecodedImage & { preview: { close: ReturnType<typeof vi.fn> } }
 }
 
 function setup(over: Partial<ImagesDeps> = {}) {
@@ -152,6 +153,16 @@ describe('addFiles', () => {
     await store.getState().addFiles([file('big.jpg')])
     expect(store.getState().images[0]).toMatchObject({ pxW: 5100, originalPxW: 8000 })
   })
+
+  it('keeps the decoder’s preview bitmap and compressed source, not a full-size bitmap', async () => {
+    const d = decoded({ pxW: 5100, pxH: 3825 })
+    const { store } = setup({ decode: () => Promise.resolve(d) })
+    await store.getState().addFiles([file('big.jpg')])
+    const img = store.getState().images[0]
+    expect(img?.preview).toBe(d.preview)
+    expect(img?.source).toBe(d.source)
+    expect(img).not.toHaveProperty('bitmap')
+  })
 })
 
 describe('content hash', () => {
@@ -190,7 +201,7 @@ describe('content hash', () => {
     expect(store.getState().images).toHaveLength(0)
     expect(revoked).toContain('blob:h')
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(d.bitmap.close).toHaveBeenCalled()
+    expect(d.preview.close).toHaveBeenCalled()
   })
 })
 
@@ -296,14 +307,14 @@ describe('addFromUrl', () => {
 })
 
 describe('remove / clear / select', () => {
-  it('remove revokes the thumbnail, closes the bitmap and drops the selection', async () => {
+  it('remove revokes the thumbnail, closes the preview and drops the selection', async () => {
     const { store, revoked } = setup()
     await store.getState().addFiles([file('a.jpg')])
     const img = store.getState().images[0]
     store.getState().remove('id-1' as ImageId)
     expect(revoked).toEqual(['blob:a.jpg'])
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(img?.bitmap.close as ReturnType<typeof vi.fn>).toHaveBeenCalled()
+    expect(img?.preview.close as ReturnType<typeof vi.fn>).toHaveBeenCalled()
     expect(store.getState()).toMatchObject({ images: [], selectedId: null })
   })
 
@@ -332,7 +343,7 @@ describe('remove / clear / select', () => {
     expect(store.getState().images).toHaveLength(0)
     expect(revoked).toContain('blob:late')
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(late.bitmap.close).toHaveBeenCalled()
+    expect(late.preview.close).toHaveBeenCalled()
     expect(store.getState().importing).toBe(0)
   })
 

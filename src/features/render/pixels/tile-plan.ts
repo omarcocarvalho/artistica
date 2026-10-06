@@ -178,6 +178,17 @@ export function forCroppedSource(plan: TilePixelPlan): TilePixelPlan {
 }
 
 /**
+ * The same plan for a source bitmap that holds the whole image at sx × sy of the size the plan was
+ * made for (a preview bitmap, or a re-decode of another size). Only `src` changes.
+ * Never compute tileRenderKey from the result: always use the ORIGINAL plan.
+ */
+export function forScaledSource(plan: TilePixelPlan, sx: number, sy: number): TilePixelPlan {
+  if (sx === 1 && sy === 1) return plan
+  const { x, y, w, h } = plan.src
+  return { ...plan, src: { x: x * sx, y: y * sy, w: w * sx, h: h * sy } }
+}
+
+/**
  * Intermediate sizes for a high-quality downscale: halve until within 2× of the target.
  * Browsers that ignore imageSmoothingQuality ('high') still avoid aliasing this way.
  * Excludes the final size. Empty when no step is needed (including upscales).
