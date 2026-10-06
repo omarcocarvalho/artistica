@@ -1,4 +1,4 @@
-import { useEffect, useId, useReducer, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useReducer, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ImageId } from '../../../shared/model/image'
 import { mmToUnit, roundForUnit } from '../../../shared/model/units'
@@ -40,6 +40,9 @@ export function ExportDialog({
   const [fileName, setFileName] = useState(defaultName)
   const controller = useRef<AbortController | null>(null)
   const linkRef = useRef<HTMLAnchorElement | null>(null)
+  const createRef = useRef<HTMLButtonElement | null>(null)
+  const cancelRef = useRef<HTMLButtonElement | null>(null)
+  const shownStatus = useRef(state.status)
   const url = state.status === 'done' ? state.url : null
 
   // Fresh default name each time the dialog opens.
@@ -60,18 +63,24 @@ export function ExportDialog({
     [url],
   )
 
-  // Abort a running export when the parent closes the dialog.
-  useEffect(() => {
+  // Abort a running export when the parent closes the dialog, in the same commit as the reset above
+  // so a run that settles in between never creates an object URL.
+  useLayoutEffect(() => {
     if (!open) {
       controller.current?.abort()
       controller.current = null
     }
   }, [open])
 
-  // Move focus to the download link when the PDF is ready.
+  // The focused button unmounts on every step change; move focus to the new step's main control.
   useEffect(() => {
-    if (url) linkRef.current?.focus()
-  }, [url])
+    const changed = shownStatus.current !== state.status
+    shownStatus.current = state.status
+    if (!open || !changed) return
+    if (state.status === 'running') cancelRef.current?.focus()
+    else if (state.status === 'done') linkRef.current?.focus()
+    else createRef.current?.focus()
+  }, [open, state.status])
 
   // Abort a running export on unmount.
   useEffect(
@@ -129,6 +138,19 @@ export function ExportDialog({
       closeLabel={t('close')}
       size="sm"
     >
+      {/* Stays mounted in every state so screen readers pick up each change of its text. */}
+      <p role="status" className={state.status === 'running' ? 'm-0 mb-3 text-sm' : 'sr-only'}>
+        {state.status === 'running' ? (
+          <strong>
+            {t('progress.label', {
+              page: state.progress.pageIndex + 1,
+              total: state.progress.pageCount,
+            })}
+          </strong>
+        ) : state.status === 'done' ? (
+          t('done.title')
+        ) : null}
+      </p>
       {(state.status === 'ready' || state.status === 'error') && (
         <div className="flex flex-col gap-4">
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
@@ -171,6 +193,7 @@ export function ExportDialog({
           )}
           {pages.length === 0 && <Callout tone="quiet">{t('errors:export.empty')}</Callout>}
           <Button
+            ref={createRef}
             variant="primary"
             size="lg"
             block
@@ -185,14 +208,6 @@ export function ExportDialog({
 
       {state.status === 'running' && (
         <div className="flex flex-col gap-3">
-          <p className="m-0 text-sm" aria-live="polite">
-            <strong>
-              {t('progress.label', {
-                page: state.progress.pageIndex + 1,
-                total: state.progress.pageCount,
-              })}
-            </strong>
-          </p>
           <ProgressBar
             value={state.progress.fraction}
             label={t('progress.aria')}
@@ -214,7 +229,9 @@ export function ExportDialog({
             ))}
           </ol>
           <p className="text-ink-muted m-0 text-xs">{t('progress.hint')}</p>
-          <Button onClick={cancel}>{t('cancel')}</Button>
+          <Button ref={cancelRef} onClick={cancel}>
+            {t('cancel')}
+          </Button>
         </div>
       )}
 
@@ -249,10 +266,6 @@ export function ExportDialog({
           </Button>
         </div>
       )}
-      {/* Persistent live region: announces the result when the PDF is ready. */}
-      <p role="status" className="sr-only">
-        {state.status === 'done' ? t('done.title') : ''}
-      </p>
     </Dialog>
   )
 }

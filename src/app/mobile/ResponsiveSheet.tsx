@@ -9,6 +9,7 @@ export interface ResponsiveSheetProps {
   readonly title: string
   readonly closeLabel: string
   readonly footer?: ReactNode
+  readonly returnFocus?: () => HTMLElement | null
   readonly children: ReactNode
 }
 
