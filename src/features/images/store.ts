@@ -54,7 +54,12 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
       order.delete(img.id)
     }
 
-    async function loadOne(job: Job, seq: number, id: ImageId, gen: number): Promise<ImportOutcome | null> {
+    async function loadOne(
+      job: Job,
+      seq: number,
+      id: ImageId,
+      gen: number,
+    ): Promise<ImportOutcome | null> {
       const label = job.kind === 'url' ? job.url : job.name
       try {
         const { blob, name } =
@@ -110,7 +115,9 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
     async function run(jobs: Job[]): Promise<ImportOutcome[]> {
       const gen = generation
       set((s) => ({ importing: s.importing + jobs.length }))
-      const results = await Promise.all(jobs.map((job) => loadOne(job, nextSeq++, deps.newId(), gen)))
+      const results = await Promise.all(
+        jobs.map((job) => loadOne(job, nextSeq++, deps.newId(), gen)),
+      )
       return results.filter((r): r is ImportOutcome => r !== null)
     }
 
