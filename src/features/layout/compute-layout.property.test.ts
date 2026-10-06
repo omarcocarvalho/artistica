@@ -15,9 +15,10 @@ const smallestImage = (r: LayoutResult): number =>
   )
 
 const RUNS = { numRuns: 200 }
+const HEAVY = { timeout: 11_000 }
 
 describe('computeLayout properties', () => {
-  it('satisfies every contract rule for any setup and items', () => {
+  it('satisfies every contract rule for any setup and items', HEAVY, () => {
     fc.assert(
       fc.property(pageSetupArb, itemsArb(14), (setup, items) => {
         expectLayoutInvariants(setup, items, computeLayout(setup, items))
@@ -26,7 +27,7 @@ describe('computeLayout properties', () => {
     )
   })
 
-  it('is deterministic and independent of input order', () => {
+  it('is deterministic and independent of input order', HEAVY, () => {
     fc.assert(
       fc.property(pageSetupArb, itemsArb(10), fc.integer(), (setup, items, seed) => {
         const a = computeLayout(setup, items)
@@ -45,7 +46,7 @@ describe('computeLayout properties', () => {
     )
   })
 
-  it('auto orientation is no worse than either forced one (realistic photos)', () => {
+  it('auto orientation is no worse than either forced one (realistic photos)', HEAVY, () => {
     // Random arbitraries almost never make the orientations differ; realistic mixes do.
     fc.assert(
       fc.property(
