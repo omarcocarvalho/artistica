@@ -81,7 +81,10 @@ function recordingCtx() {
 describe('drawPage', () => {
   const scale = previewScale({ w: 210, h: 297 }, 210, 1) // 1 px per mm
   const page = pageModel([drawTile({ trim: { x: 20, y: 20, w: 100, h: 50 }, bleedMm: 3 })], {
-    cropMarks: [{ x1: 16, y1: 20, x2: 12, y2: 20 }],
+    cropMarks: [
+      { x1: 16, y1: 20, x2: 12, y2: 20 },
+      { x1: 20, y1: 16, x2: 20, y2: 12 },
+    ],
   })
   const img = {} as CanvasImageSource
 
@@ -99,6 +102,8 @@ describe('drawPage', () => {
       'beginPath',
       'moveTo 16.0 20.0',
       'lineTo 12.0 20.0',
+      'moveTo 20.0 16.0',
+      'lineTo 20.0 12.0',
       'stroke #000000 1.00',
     ])
   })

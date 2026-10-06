@@ -94,6 +94,63 @@ describe('actions', () => {
     expect(store.getState().pageSetupNotes).toEqual([])
   })
 
+  it('setPageSetup merges gutter and customSize one level deep', () => {
+    const store = createSettingsStore(memoryStorage())
+    store.getState().setPageSetup({ gutter: { mm: 9 } })
+    store.getState().setPageSetup({ gutter: { enabled: false } })
+    expect(store.getState().pageSetup.gutter).toEqual({ enabled: false, mm: 9 })
+    store.getState().setPageSetup({ customSize: { h: 250 } })
+    store.getState().setPageSetup({ customSize: { w: 100 } })
+    expect(store.getState().pageSetup.customSize).toEqual({ w: 100, h: 250 })
+  })
+
+  describe('setPageSetup treats keys set to undefined as not patched', () => {
+    function customised() {
+      const storage = memoryStorage()
+      const store = createSettingsStore(storage)
+      store.getState().setPageSetup({
+        paper: 'Letter',
+        safeAreaMm: 8,
+        gutter: { mm: 9 },
+        bleed: { enabled: true, mm: 4 },
+        customSize: { w: 100, h: 250 },
+      })
+      return { storage, store, before: store.getState().pageSetup }
+    }
+
+    it('gutter.mm', () => {
+      const { store } = customised()
+      store.getState().setPageSetup({ gutter: { mm: undefined } })
+      expect(store.getState().pageSetup.gutter).toEqual({ enabled: true, mm: 9 })
+      expect(store.getState().pageSetupNotes).toEqual([])
+    })
+
+    it('safeAreaMm', () => {
+      const { store } = customised()
+      store.getState().setPageSetup({ safeAreaMm: undefined })
+      expect(store.getState().pageSetup.safeAreaMm).toBe(8)
+      expect(store.getState().pageSetupNotes).toEqual([])
+    })
+
+    it('paper', () => {
+      const { store } = customised()
+      store.getState().setPageSetup({ paper: undefined })
+      expect(store.getState().pageSetup.paper).toBe('Letter')
+    })
+
+    it('every other key, and what is persisted', () => {
+      const { storage, store, before } = customised()
+      store.getState().setPageSetup({
+        orientation: undefined,
+        cropMarks: undefined,
+        bleed: { enabled: undefined, mm: undefined },
+        customSize: { w: undefined, h: undefined },
+      })
+      expect(store.getState().pageSetup).toEqual(before)
+      expect(saved(storage).state.pageSetup).toEqual(before)
+    })
+  })
+
   it('setPageSetup enforces the minimum safe area', () => {
     const store = createSettingsStore(memoryStorage())
     store.getState().setPageSetup({ safeAreaMm: 0 })

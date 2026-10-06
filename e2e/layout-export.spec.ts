@@ -56,6 +56,14 @@ test.describe('PDF export (all browsers)', () => {
     }
     expect(sum(info.pages.map((p) => p.imagePlacements))).toBe(THREE.length)
     expect(sum(info.pages.map((p) => p.strokes))).toBeGreaterThan(0)
+    for (const p of info.pages) {
+      expect(p.markSegments).toHaveLength(p.strokes)
+      for (const m of p.markSegments) {
+        expect(Math.hypot(m.x2 - m.x1, m.y2 - m.y1)).toBeGreaterThan(0)
+      }
+      expect(p.markSegments.some((m) => m.x1 === m.x2 && m.y1 !== m.y2)).toBe(true)
+      expect(p.markSegments.some((m) => m.y1 === m.y2 && m.x1 !== m.x2)).toBe(true)
+    }
   })
 
   test('X2 Letter with marks and 3 mm bleed', async ({ page }) => {

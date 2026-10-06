@@ -18,6 +18,14 @@ export interface PdfPageSummary {
   imageWidthsPt: number[]
   /** Start points of the stroked lines ("x y m"), in drawing order: the crop-mark geometry. */
   markGeometry: string[]
+  /** Each stroked line as start and end points ("x y m" then "x y l"), in drawing order. */
+  markSegments: PdfSegment[]
+}
+export interface PdfSegment {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
 }
 export interface PdfSummary {
   pageCount: number
@@ -41,6 +49,14 @@ export async function summarizePdf(bytes: Uint8Array): Promise<PdfSummary> {
         ...p.content.matchAll(/([\d.]+) 0 0 [\d.]+ 0 0 cm\s+(?:1 0 0 1 0 0 cm\s+)?\/\S+ Do\b/g),
       ].map((m) => Number(m[1])),
       markGeometry: [...p.content.matchAll(/^([\d.]+ [\d.]+) m$/gm)].map((m) => m[1]),
+      markSegments: [
+        ...p.content.matchAll(/^([\d.]+) ([\d.]+) m\s+([\d.]+) ([\d.]+) l\s+S\b/gm),
+      ].map((m) => ({
+        x1: Number(m[1]),
+        y1: Number(m[2]),
+        x2: Number(m[3]),
+        y2: Number(m[4]),
+      })),
     })),
   }
 }
