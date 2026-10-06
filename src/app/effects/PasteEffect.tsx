@@ -22,7 +22,7 @@ export function PasteEffect(): null {
         .getState()
         .addFromClipboard(event.clipboardData)
         .then((outcomes) => {
-          reportPasteOutcomes(outcomes, t, nameOf)
+          if (outcomes !== null) reportPasteOutcomes(outcomes, t, nameOf)
         })
     }
     document.addEventListener('paste', onPaste)

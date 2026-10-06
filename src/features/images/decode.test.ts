@@ -279,6 +279,55 @@ describe('decodeImage: memory and size-limit paths', () => {
     expect(decoded.close).toHaveBeenCalled()
   })
 
+  it('closes the decoded bitmap after painting, before the repainted copy is made', async () => {
+    const events: string[] = []
+    const decoded = bitmap(64, 48)
+    decoded.close.mockImplementation(() => events.push('close original'))
+    const { deps } = makeDeps({
+      createImageBitmap: () => Promise.resolve(decoded),
+      createCanvas: (w, h) => ({
+        width: w,
+        height: h,
+        paint: () => {
+          events.push('paint')
+          return true
+        },
+        toBlob: () => Promise.resolve(new Blob(['t'])),
+        toBitmap: () => {
+          events.push('toBitmap')
+          return Promise.resolve(bitmap(w, h))
+        },
+        release: () => undefined,
+      }),
+    })
+    await decodeImage(blobOf(pngHeader(64, 48), 'image/png'), 'a.png', deps)
+    expect(events.slice(0, 3)).toEqual(['paint', 'close original', 'toBitmap'])
+    expect(decoded.close).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['paint fails', { paint: false, toBitmap: true }],
+    ['toBitmap rejects', { paint: true, toBitmap: false }],
+  ])('closes the decoded bitmap exactly once when %s', async (_n, works) => {
+    const decoded = bitmap(64, 48)
+    const { deps } = makeDeps({
+      createImageBitmap: () => Promise.resolve(decoded),
+      createCanvas: (w, h) => ({
+        width: w,
+        height: h,
+        paint: () => works.paint,
+        toBlob: () => Promise.resolve(new Blob(['t'])),
+        toBitmap: () =>
+          works.toBitmap ? Promise.resolve(bitmap(w, h)) : Promise.reject(new Error('oom')),
+        release: () => undefined,
+      }),
+    })
+    await expect(
+      decodeImage(blobOf(pngHeader(64, 48), 'image/png'), 'a.png', deps),
+    ).rejects.toMatchObject({ code: 'decode-failed' })
+    expect(decoded.close).toHaveBeenCalledTimes(1)
+  })
+
   it('closes both bitmaps when the thumbnail fails after a repaint', async () => {
     const decoded = bitmap(64, 48)
     const repainted = bitmap(64, 48)
@@ -300,7 +349,7 @@ describe('decodeImage: memory and size-limit paths', () => {
     await expect(
       decodeImage(blobOf(pngHeader(64, 48), 'image/png'), 'a.png', deps),
     ).rejects.toMatchObject({ code: 'decode-failed' })
-    expect(decoded.close).toHaveBeenCalled()
-    expect(repainted.close).toHaveBeenCalled()
+    expect(decoded.close).toHaveBeenCalledTimes(1)
+    expect(repainted.close).toHaveBeenCalledTimes(1)
   })
 })

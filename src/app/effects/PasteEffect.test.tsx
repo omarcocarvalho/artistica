@@ -2,8 +2,11 @@ import { render } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { initI18n } from '../../shared/i18n'
 import type { ImageId } from '../../shared/model/image'
+import { useNotices } from '../state/useNotices'
 
-const addFromClipboard = vi.hoisted(() => vi.fn(() => Promise.resolve([])))
+const addFromClipboard = vi.hoisted(() =>
+  vi.fn<() => Promise<unknown[] | null>>(() => Promise.resolve([])),
+)
 vi.mock('../../features/images', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return { ...actual, useImages: { getState: () => ({ images: [], addFromClipboard }) } }
@@ -17,6 +20,7 @@ beforeAll(async () => {
 })
 afterEach(() => {
   addFromClipboard.mockClear()
+  useNotices.getState().clear()
   useAppUi.setState(useAppUi.getInitialState())
 })
 
@@ -47,6 +51,24 @@ describe('PasteEffect', () => {
     expect(addFromClipboard).not.toHaveBeenCalled()
     input.remove()
     editable.remove()
+  })
+  it('a paste discarded by Remove all (null) shows no notice', async () => {
+    addFromClipboard.mockResolvedValueOnce(null)
+    render(<PasteEffect />)
+    paste(document.body)
+    expect(addFromClipboard).toHaveBeenCalledTimes(1)
+    await new Promise((r) => setTimeout(r, 0))
+    expect(useNotices.getState().notices).toEqual([])
+  })
+  it('a paste with nothing importable still says there is no image', async () => {
+    render(<PasteEffect />)
+    paste(document.body)
+    await vi.waitFor(() => {
+      expect(useNotices.getState().notices).toHaveLength(1)
+    })
+    const [notice] = useNotices.getState().notices
+    expect(notice?.kind).toBe('info')
+    expect(notice?.message).toContain('No image')
   })
   it('stops listening after unmount', () => {
     const { unmount } = render(<PasteEffect />)

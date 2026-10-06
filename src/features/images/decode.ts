@@ -137,7 +137,8 @@ export async function decodeImage(
 
   const oriented =
     kind === 'heic' ? await decodeHeic(blob, deps) : await decodeStandard(blob, kind, head, deps)
-  let final: ImageBitmap = oriented.bitmap
+  let original: ImageBitmap | null = oriented.bitmap
+  let final: ImageBitmap | null = null
   try {
     const ow = oriented.transform?.width ?? oriented.bitmap.width
     const oh = oriented.transform?.height ?? oriented.bitmap.height
@@ -152,12 +153,16 @@ export async function decodeImage(
         const sx = plan.w / ow
         const sy = plan.h / oh
         const scaled: Matrix = [sx * m[0], sy * m[1], sx * m[2], sy * m[3], sx * m[4], sy * m[5]]
-        if (!canvas.paint(oriented.bitmap, scaled)) throw new ImportFailure('decode-failed')
+        if (!canvas.paint(original, scaled)) throw new ImportFailure('decode-failed')
+        original.close()
+        original = null
         final = await canvas.toBitmap()
       } finally {
         canvas.release()
       }
-      oriented.bitmap.close()
+    } else {
+      final = original
+      original = null
     }
     const thumbUrl = await makeThumb(final, deps)
     return {
@@ -170,8 +175,8 @@ export async function decodeImage(
       animatedGif,
     }
   } catch (e) {
-    final.close()
-    if (final !== oriented.bitmap) oriented.bitmap.close()
+    original?.close()
+    final?.close()
     throw e instanceof ImportFailure ? e : new ImportFailure('decode-failed', { cause: e })
   }
 }

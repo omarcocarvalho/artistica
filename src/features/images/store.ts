@@ -6,7 +6,7 @@ import { sha256Hex } from './content-hash'
 import { decodeImage, type DecodedImage } from './decode'
 import { editsEqual, sanitizeEdits } from './edits'
 import { toImportErrorCode } from './errors'
-import { DECODE_CONCURRENCY } from './limits'
+import { DECODE_CONCURRENCY, FETCH_CONCURRENCY } from './limits'
 import { createLimiter } from './limiter'
 import type { ImportOutcome, ImportWarning, LoadedImage } from './types'
 import { fetchImageBlob } from './url'
@@ -16,10 +16,11 @@ export interface ImagesState {
   images: LoadedImage[]
   selectedId: ImageId | null
   importing: number
-  addFiles(files: File[]): Promise<ImportOutcome[]>
-  addFromClipboard(data: DataTransfer): Promise<ImportOutcome[]>
-  addFromDrop(data: DataTransfer): Promise<ImportOutcome[]>
-  addFromUrl(url: string): Promise<ImportOutcome>
+  /** The import methods resolve to null when clear() discarded the batch before it finished. */
+  addFiles(files: File[]): Promise<ImportOutcome[] | null>
+  addFromClipboard(data: DataTransfer): Promise<ImportOutcome[] | null>
+  addFromDrop(data: DataTransfer): Promise<ImportOutcome[] | null>
+  addFromUrl(url: string): Promise<ImportOutcome | null>
   remove(id: ImageId): void
   clear(): void
   select(id: ImageId | null): void
@@ -28,7 +29,7 @@ export interface ImagesState {
 
 export interface ImagesDeps {
   decode(blob: Blob, name: string): Promise<DecodedImage>
-  fetchImage(url: string): Promise<{ blob: Blob; name: string }>
+  fetchImage(url: string, signal: AbortSignal): Promise<{ blob: Blob; name: string }>
   revokeObjectURL(url: string): void
   newId(): ImageId
   hash(blob: Blob): Promise<string>
@@ -38,6 +39,8 @@ type Job = { kind: 'blob'; blob: Blob; name: string } | { kind: 'url'; url: stri
 
 export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<ImagesState>> {
   const limit = createLimiter(DECODE_CONCURRENCY)
+  const fetchLimit = createLimiter(FETCH_CONCURRENCY)
+  let abort = new AbortController()
   const order = new Map<ImageId, number>()
   let autoSelectedId: ImageId | null = null
   let generation = 0
@@ -60,12 +63,16 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
       seq: number,
       id: ImageId,
       gen: number,
+      signal: AbortSignal,
     ): Promise<ImportOutcome | null> {
       const label = job.kind === 'url' ? job.url : job.name
       try {
         const { blob, name } =
-          job.kind === 'url' ? await deps.fetchImage(job.url) : { blob: job.blob, name: job.name }
-        const { d, contentHash } = await limit(async () => {
+          job.kind === 'url'
+            ? await fetchLimit(() => deps.fetchImage(job.url, signal))
+            : { blob: job.blob, name: job.name }
+        const work = await limit(async () => {
+          if (gen !== generation) return null
           const decoded = await deps.decode(blob, name)
           try {
             return { d: decoded, contentHash: await deps.hash(blob) }
@@ -74,6 +81,8 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
             throw e
           }
         })
+        if (work === null) return null
+        const { d, contentHash } = work
         if (gen !== generation) {
           discard(d)
           return null
@@ -108,18 +117,34 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
         return { ok: true, id, ...(warnings.length > 0 ? { warnings } : {}) }
       } catch (e) {
         return { ok: false, source: label, error: toImportErrorCode(e) }
-      } finally {
-        set((s) => ({ importing: s.importing - 1 }))
       }
     }
 
-    async function run(jobs: Job[]): Promise<ImportOutcome[]> {
+    /** Resolves to null when clear() ran before the batch finished: nothing of it is left to report. */
+    async function run(jobs: Job[]): Promise<ImportOutcome[] | null> {
       const gen = generation
+      const signal = abort.signal
+      let pending = jobs.length
+      const settle = (n: number): void => {
+        const k = Math.min(n, pending)
+        pending -= k
+        if (k > 0 && gen === generation) set((s) => ({ importing: s.importing - k }))
+      }
       set((s) => ({ importing: s.importing + jobs.length }))
-      const results = await Promise.all(
-        jobs.map((job) => loadOne(job, nextSeq++, deps.newId(), gen)),
-      )
-      return results.filter((r): r is ImportOutcome => r !== null)
+      try {
+        const planned = jobs.map((job) => ({ job, id: deps.newId(), seq: nextSeq++ }))
+        const results = await Promise.all(
+          planned.map(({ job, id, seq }) =>
+            loadOne(job, seq, id, gen, signal).finally(() => {
+              settle(1)
+            }),
+          ),
+        )
+        if (gen !== generation) return null
+        return results.filter((r): r is ImportOutcome => r !== null)
+      } finally {
+        settle(pending)
+      }
     }
 
     const jobsFromSources = (sources: ImportSource[]): Job[] =>
@@ -146,8 +171,8 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
       addFromDrop: (data) => run(jobsFromSources(sourcesFromDataTransfer(data, false))),
 
       addFromUrl: async (url) => {
-        const [outcome] = await run([{ kind: 'url', url }])
-        return outcome ?? { ok: false, source: url, error: 'decode-failed' }
+        const outcomes = await run([{ kind: 'url', url }])
+        return outcomes?.[0] ?? null
       },
 
       remove: (id) => {
@@ -162,8 +187,10 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
 
       clear: () => {
         generation += 1
+        abort.abort()
+        abort = new AbortController()
         for (const img of get().images) dispose(img)
-        set({ images: [], selectedId: null })
+        set({ images: [], selectedId: null, importing: 0 })
       },
 
       select: (id) => {
@@ -193,8 +220,12 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
 const browserDecode = createBrowserDecodeDeps()
 export const useImages = createImagesStore({
   decode: (blob, name) => decodeImage(blob, name, browserDecode),
-  fetchImage: (url) =>
-    fetchImageBlob(url, { fetch: (...a) => fetch(...a), isOnline: () => navigator.onLine }),
+  fetchImage: (url, signal) =>
+    fetchImageBlob(url, {
+      fetch: (...a) => fetch(...a),
+      isOnline: () => navigator.onLine,
+      signal,
+    }),
   revokeObjectURL: (u) => {
     URL.revokeObjectURL(u)
   },
