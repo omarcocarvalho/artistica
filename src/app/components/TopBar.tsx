@@ -22,7 +22,7 @@ export function TopBar({ onExport, exportDisabledReason }: TopBarProps) {
       >
         {t('skipToPreview')}
       </a>
-      <a href="./" aria-label={t('topBar.home')} className="shrink-0">
+      <a href="../" aria-label={t('topBar.home')} className="shrink-0">
         <Logo />
       </a>
       <h1 className="font-display min-w-0 truncate text-lg">{t('title')}</h1>

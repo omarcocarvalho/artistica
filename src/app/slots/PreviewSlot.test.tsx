@@ -106,9 +106,37 @@ describe('PreviewSlot', () => {
       usePages.setState({ layout: layout(0), pages: [] })
     })
     render(<PreviewSlot />)
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'This page setup leaves no room for images.',
+    expect(
+      screen.getByText(/This page setup leaves no room for images\./).closest('[role="status"]'),
+    ).not.toBeNull()
+  })
+  it('keeps the "Updating layout…" live region mounted and only changes its text', () => {
+    render(<PreviewSlot />)
+    const region = screen.getByRole('status')
+    expect(region).toBeEmptyDOMElement()
+    act(() => {
+      usePages.setState({ status: 'computing' })
+    })
+    expect(screen.getByRole('status')).toBe(region)
+    expect(region).toHaveTextContent('Updating layout…')
+    act(() => {
+      usePages.setState({ status: 'idle' })
+    })
+    expect(screen.getByRole('status')).toBe(region)
+    expect(region).toBeEmptyDOMElement()
+  })
+  it('shows a persistent error callout while the layout has failed', () => {
+    act(() => {
+      usePages.setState({ status: 'error', layout: null, pages: [] })
+    })
+    render(<PreviewSlot />)
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'The layout could not be computed. Change a setting or reload the page.',
     )
+    act(() => {
+      usePages.setState({ status: 'idle', layout: layout(1) })
+    })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })
 
