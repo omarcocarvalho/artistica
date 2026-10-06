@@ -3,7 +3,6 @@ import {
   type CropAspect,
   type CropRect,
   type ImageEdits,
-  type ImageId,
 } from '../../shared/model/image'
 import { defaultFixedSize, withAxis } from './dpi'
 import { sanitizeEdits } from './edits'
@@ -15,8 +14,7 @@ export interface Dims {
 }
 
 const fix = (e: ImageEdits, d: Dims): ImageEdits => sanitizeEdits(e, d.pxW, d.pxH)
-const printed = (e: ImageEdits, d: Dims) =>
-  printedPixelSize({ id: 'edit' as ImageId, pxW: d.pxW, pxH: d.pxH, edits: e })
+const printed = (e: ImageEdits, d: Dims) => printedPixelSize({ pxW: d.pxW, pxH: d.pxH, edits: e })
 
 export const setAspect = (e: ImageEdits, d: Dims, cropAspect: CropAspect): ImageEdits =>
   fix({ ...e, cropAspect }, d)

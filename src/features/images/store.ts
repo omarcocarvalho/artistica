@@ -2,6 +2,7 @@ import { create, type StoreApi, type UseBoundStore } from 'zustand'
 import type { ImageDescriptor, ImageEdits, ImageId } from '../../shared/model/image'
 import { sourcesFromDataTransfer, pastedName, type ImportSource } from './clipboard'
 import { createBrowserDecodeDeps } from './browser-deps'
+import { sha256Hex } from './content-hash'
 import { decodeImage, type DecodedImage } from './decode'
 import { editsEqual, sanitizeEdits } from './edits'
 import { toImportErrorCode } from './errors'
@@ -29,6 +30,7 @@ export interface ImagesDeps {
   fetchImage(url: string): Promise<{ blob: Blob; name: string }>
   revokeObjectURL(url: string): void
   newId(): ImageId
+  hash(blob: Blob): Promise<string>
 }
 
 type Job = { kind: 'blob'; blob: Blob; name: string } | { kind: 'url'; url: string }
@@ -56,7 +58,15 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
       try {
         const { blob, name } =
           job.kind === 'url' ? await deps.fetchImage(job.url) : { blob: job.blob, name: job.name }
-        const d = await limit(() => deps.decode(blob, name))
+        const { d, contentHash } = await limit(async () => {
+          const decoded = await deps.decode(blob, name)
+          try {
+            return { d: decoded, contentHash: await deps.hash(blob) }
+          } catch (e) {
+            discard(decoded)
+            throw e
+          }
+        })
         if (gen !== generation) {
           discard(d)
           return null
@@ -64,6 +74,7 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
         const id = deps.newId()
         const image: LoadedImage = {
           id,
+          contentHash,
           name,
           pxW: d.pxW,
           pxH: d.pxH,
@@ -174,19 +185,26 @@ export const useImages = createImagesStore({
     URL.revokeObjectURL(u)
   },
   newId: () => crypto.randomUUID() as ImageId,
+  hash: sha256Hex,
 })
 
 const descriptorCache = new WeakMap<LoadedImage, ImageDescriptor>()
 let lastImages: readonly LoadedImage[] | null = null
 let lastResult: ImageDescriptor[] = []
 
-/** Plain `{ id, pxW, pxH, edits }` objects (no bitmap), memoised so `useImages(selectImageDescriptors)` is safe. */
+/** Plain `{ id, contentHash, pxW, pxH, edits }` objects (no bitmap), memoised so `useImages(selectImageDescriptors)` is safe. */
 export function selectImageDescriptors(state: Pick<ImagesState, 'images'>): ImageDescriptor[] {
   if (state.images === lastImages) return lastResult
   lastResult = state.images.map((img) => {
     let d = descriptorCache.get(img)
     if (!d) {
-      d = { id: img.id, pxW: img.pxW, pxH: img.pxH, edits: img.edits }
+      d = {
+        id: img.id,
+        contentHash: img.contentHash,
+        pxW: img.pxW,
+        pxH: img.pxH,
+        edits: img.edits,
+      }
       descriptorCache.set(img, d)
     }
     return d

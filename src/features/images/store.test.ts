@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_EDITS, type ImageId } from '../../shared/model/image'
 import type { DecodedImage } from './decode'
+import { sha256Hex } from './content-hash'
 import { ImportFailure } from './errors'
 import { createImagesStore, selectImageDescriptors, type ImagesDeps } from './store'
 
@@ -33,12 +34,13 @@ function setup(over: Partial<ImagesDeps> = {}) {
       revoked.push(u)
     },
     newId: () => `id-${String(++n)}` as ImageId,
+    hash: vi.fn(sha256Hex),
     ...over,
   }
   return { store: createImagesStore(deps), deps, revoked }
 }
 
-const file = (name: string) => new File(['x'], name, { type: 'image/jpeg' })
+const file = (name: string, bytes = 'x') => new File([bytes], name, { type: 'image/jpeg' })
 const deferred = <T>() => {
   let resolve!: (v: T) => void
   let reject!: (e: unknown) => void
@@ -128,6 +130,43 @@ describe('addFiles', () => {
     })
     await store.getState().addFiles([file('big.jpg')])
     expect(store.getState().images[0]).toMatchObject({ pxW: 5100, originalPxW: 8000 })
+  })
+})
+
+describe('content hash', () => {
+  it('hashes the source bytes: same bytes, same hash; different bytes, different hash', async () => {
+    const { store } = setup()
+    await store
+      .getState()
+      .addFiles([file('a.jpg', 'one'), file('b.jpg', 'two'), file('c.jpg', 'one')])
+    const [a, b, c] = store.getState().images
+    expect(a?.contentHash).toBe(await sha256Hex(new Blob(['one'])))
+    expect(c?.contentHash).toBe(a?.contentHash)
+    expect(b?.contentHash).not.toBe(a?.contentHash)
+    expect(c?.id).not.toBe(a?.id)
+  })
+
+  it('hashes the fetched blob for a URL import', async () => {
+    const blob = new Blob(['remote'])
+    const { store, deps } = setup({ fetchImage: () => Promise.resolve({ blob, name: 'r.jpg' }) })
+    await store.getState().addFromUrl('https://x.com/r.jpg')
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(deps.hash).toHaveBeenCalledWith(blob)
+    expect(store.getState().images[0]?.contentHash).toBe(await sha256Hex(blob))
+  })
+
+  it('a hashing failure fails that import and disposes the decoded image', async () => {
+    const d = decoded({ thumbUrl: 'blob:h' })
+    const { store, revoked } = setup({
+      decode: () => Promise.resolve(d),
+      hash: () => Promise.reject(new Error('no subtle crypto')),
+    })
+    const [out] = await store.getState().addFiles([file('a.jpg')])
+    expect(out).toEqual({ ok: false, source: 'a.jpg', error: 'decode-failed' })
+    expect(store.getState().images).toHaveLength(0)
+    expect(revoked).toContain('blob:h')
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(d.bitmap.close).toHaveBeenCalled()
   })
 })
 
@@ -252,7 +291,7 @@ describe('selectImageDescriptors', () => {
     await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
     const a = selectImageDescriptors(store.getState())
     expect(selectImageDescriptors(store.getState())).toBe(a)
-    expect(Object.keys(a[0] ?? {}).sort()).toEqual(['edits', 'id', 'pxH', 'pxW'])
+    expect(Object.keys(a[0] ?? {}).sort()).toEqual(['contentHash', 'edits', 'id', 'pxH', 'pxW'])
     store.getState().updateEdits('id-2' as ImageId, { copies: 3 })
     const b = selectImageDescriptors(store.getState())
     expect(b).not.toBe(a)

@@ -24,7 +24,13 @@ export function descriptor(
   pxH = 2000,
   edits: Partial<ImageEdits> = {},
 ): ImageDescriptor {
-  return { id: id(name), pxW, pxH, edits: { ...DEFAULT_EDITS, ...edits } }
+  return {
+    id: id(name),
+    contentHash: `hash-${name}`,
+    pxW,
+    pxH,
+    edits: { ...DEFAULT_EDITS, ...edits },
+  }
 }
 
 export function placement(

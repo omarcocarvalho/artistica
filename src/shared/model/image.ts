@@ -46,6 +46,8 @@ export const DEFAULT_EDITS: ImageEdits = {
 /** Everything about an image the pure core needs (no pixels). */
 export interface ImageDescriptor {
   readonly id: ImageId
+  /** SHA-256 of the source file bytes, lowercase hex. Orders layout ties the same way in every session. */
+  readonly contentHash: string
   /** Decoded (possibly downscaled), EXIF-corrected. */
   readonly pxW: number
   readonly pxH: number
@@ -53,7 +55,10 @@ export interface ImageDescriptor {
 }
 
 /** Pixel size after crop and rotation (what gets printed). */
-export function printedPixelSize(img: ImageDescriptor): { pxW: number; pxH: number } {
+export function printedPixelSize(img: Pick<ImageDescriptor, 'pxW' | 'pxH' | 'edits'>): {
+  pxW: number
+  pxH: number
+} {
   const w = img.edits.crop?.w ?? img.pxW
   const h = img.edits.crop?.h ?? img.pxH
   const quarterTurn = img.edits.rotation === 90 || img.edits.rotation === 270
