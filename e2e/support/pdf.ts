@@ -14,6 +14,10 @@ export interface PdfPageSummary {
   imagePlacements: number
   /** Stroked straight lines: the vector crop marks. */
   strokes: number
+  /** Width in pt of each drawn image (the `W 0 0 H 0 0 cm` matrix right before its `Do`). */
+  imageWidthsPt: number[]
+  /** Start points of the stroked lines ("x y m"), in drawing order: the crop-mark geometry. */
+  markGeometry: string[]
 }
 export interface PdfSummary {
   pageCount: number
@@ -33,6 +37,10 @@ export async function summarizePdf(bytes: Uint8Array): Promise<PdfSummary> {
       heightPt: p.heightPt,
       imagePlacements: countImageDraws(p.content),
       strokes: countStrokedLines(p.content),
+      imageWidthsPt: [
+        ...p.content.matchAll(/([\d.]+) 0 0 [\d.]+ 0 0 cm\s+(?:1 0 0 1 0 0 cm\s+)?\/\S+ Do\b/g),
+      ].map((m) => Number(m[1])),
+      markGeometry: [...p.content.matchAll(/^([\d.]+ [\d.]+) m$/gm)].map((m) => m[1]),
     })),
   }
 }
