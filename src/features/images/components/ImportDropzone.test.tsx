@@ -32,9 +32,10 @@ function fileInput(container: HTMLElement): HTMLInputElement {
 function mockStore(over: Partial<ReturnType<typeof useImages.getState>> = {}) {
   const addFiles = vi.fn().mockResolvedValue([ok('1')])
   const addFromClipboard = vi.fn().mockResolvedValue([ok('1')])
+  const addFromDrop = vi.fn().mockResolvedValue([ok('1')])
   const addFromUrl = vi.fn().mockResolvedValue(ok('1'))
-  useImages.setState({ addFiles, addFromClipboard, addFromUrl, ...over })
-  return { addFiles, addFromClipboard, addFromUrl }
+  useImages.setState({ addFiles, addFromClipboard, addFromDrop, addFromUrl, ...over })
+  return { addFiles, addFromClipboard, addFromDrop, addFromUrl }
 }
 
 describe('ImportDropzone', () => {
@@ -67,8 +68,8 @@ describe('ImportDropzone', () => {
   })
 
   it('a mixed drop: one callout for the bad file, the good ones are accepted', async () => {
-    const { addFromClipboard } = mockStore()
-    addFromClipboard.mockResolvedValue([
+    const { addFromClipboard, addFromDrop } = mockStore()
+    addFromDrop.mockResolvedValue([
       ok('1'),
       { ok: false, source: 'notes.pdf', error: 'unsupported-format' },
     ])
@@ -80,8 +81,9 @@ describe('ImportDropzone', () => {
       getData: () => '',
     }
     fireEvent.drop(zone, { dataTransfer })
-    expect(addFromClipboard).toHaveBeenCalledTimes(1)
-    expect((addFromClipboard.mock.calls[0]?.[0] as DataTransfer).files).toEqual(dataTransfer.files)
+    expect(addFromDrop).toHaveBeenCalledTimes(1)
+    expect((addFromDrop.mock.calls[0]?.[0] as DataTransfer).files).toEqual(dataTransfer.files)
+    expect(addFromClipboard).not.toHaveBeenCalled()
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent("notes.pdf can't be added")
     expect(alert).toHaveTextContent('Use JPG, PNG, WebP, GIF or HEIC.')
@@ -90,8 +92,8 @@ describe('ImportDropzone', () => {
   })
 
   it('a drop with nothing importable says there is no image', async () => {
-    const { addFromClipboard } = mockStore()
-    addFromClipboard.mockResolvedValue([])
+    const { addFromDrop } = mockStore()
+    addFromDrop.mockResolvedValue([])
     const { container } = renderWithProviders(<ImportDropzone />)
     fireEvent.drop(pick(container, '[data-dropzone]'), {
       dataTransfer: { files: [], types: ['text/plain'], getData: () => 'just words' },
@@ -109,13 +111,14 @@ describe('ImportDropzone', () => {
   })
 
   it('guards the window against navigating to a dropped file, without importing it', () => {
-    const { addFromClipboard } = mockStore()
+    const { addFromClipboard, addFromDrop } = mockStore()
     renderWithProviders(<ImportDropzone />)
     const notPrevented = fireEvent.drop(document.body, {
       dataTransfer: { files: [file('a.jpg')], types: ['Files'], getData: () => '' },
     })
     expect(notPrevented).toBe(false) // default prevented
     expect(addFromClipboard).not.toHaveBeenCalled()
+    expect(addFromDrop).not.toHaveBeenCalled()
   })
 
   it('the Paste button reads the clipboard into a DataTransfer and imports it', async () => {

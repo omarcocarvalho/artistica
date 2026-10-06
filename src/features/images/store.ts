@@ -17,6 +17,7 @@ export interface ImagesState {
   importing: number
   addFiles(files: File[]): Promise<ImportOutcome[]>
   addFromClipboard(data: DataTransfer): Promise<ImportOutcome[]>
+  addFromDrop(data: DataTransfer): Promise<ImportOutcome[]>
   addFromUrl(url: string): Promise<ImportOutcome>
   remove(id: ImageId): void
   clear(): void
@@ -117,11 +118,9 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
       addFiles: (files) =>
         run(files.map((file) => ({ kind: 'blob', blob: file, name: file.name }))),
 
-      addFromClipboard: (data) => {
-        // Synchronous on purpose: a DataTransfer is empty once the event handler returns.
-        const jobs = jobsFromSources(sourcesFromDataTransfer(data, true))
-        return run(jobs)
-      },
+      // Both read the DataTransfer synchronously on purpose: it is empty once the event handler returns.
+      addFromClipboard: (data) => run(jobsFromSources(sourcesFromDataTransfer(data, true))),
+      addFromDrop: (data) => run(jobsFromSources(sourcesFromDataTransfer(data, false))),
 
       addFromUrl: async (url) => {
         const [outcome] = await run([{ kind: 'url', url }])
