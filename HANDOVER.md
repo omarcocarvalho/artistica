@@ -6,7 +6,7 @@ This is for the next developer and their AI agent. Read it first, then [CLAUDE.m
 
 Artistica is a free, static web app for artists:
 
-- Load reference photos (upload, paste, link, or HEIC from phones).
+- Load reference photos (upload, paste, drop, link, or HEIC from phones).
 - Crop and rotate them.
 - Pack them onto printable pages.
 - Export a print-ready PDF with crop marks and bleed.
@@ -16,79 +16,68 @@ Later milestones add blur and value studies, composition lines (some AI, in the 
 - **Everything runs in the browser.** Photos are never uploaded or persisted.
 - **Hosting:** GitHub Pages. The landing page is at `/artistica/` and the tool at `/artistica/app/`.
 - **Product spec:** [docs/spec.md](docs/spec.md). It is the source of truth.
-- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (in progress), M2–M5 → `v0.2.0`–`v0.5.0`, M6 → `v1.0.0`.
+- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (awaiting owner sign-off), M2–M5 → `v0.2.0`–`v0.5.0`, M6 → `v1.0.0`.
 
 ## Current status
 
-**M0 is done** and released as `v0.0.1`. It covered scaffolding, CI, the landing page and design mockups.
+**M0 is done** and released as `v0.0.1`.
 
-**M1 ("print-ready PDF from photos") is nearly finished.** The M1 plan has 5 sub-plans in [docs/superpowers/plans/](docs/superpowers/plans/), with the overview at `2026-10-03-m1-overview.md`:
+**M1 ("print-ready PDF from photos") is implemented, reviewed and merged. It is waiting for the owner's sign-off.** The plans are in [docs/superpowers/plans/](docs/superpowers/plans/) (overview: `2026-10-03-m1-overview.md`). Every task of sub-plans A–E is merged, including the E2E suites:
 
-| Sub-plan | What | Status |
-|---|---|---|
-| A foundation | deps, i18n, settings store, units, design-system primitives | ✅ all merged |
-| B layout | pure layout engine (MaxRects packer, auto sizing, orientation search) + Comlink worker | ✅ all merged |
-| C images | intake (upload/paste/URL/HEIC/EXIF), in-memory store, ImageList, CropEditor, edit sheet | ✅ all merged |
-| D render | page model, canvas preview, pdf-lib PDF composer in a worker, ExportDialog | ✅ all merged |
-| E shell | app shell, phone flow, wiring of B/C/D, E2E suites | E0–E10 ✅ merged. E11 and E12 are open PRs. E13 not started |
+- E11, import: PR #64.
+- E12, layout and export: PR #63.
+- E13, phone flow, axe on every screen, and privacy: PR #69.
 
-**In progress:**
+**Final M1-wide review (ruling A-5).** It was done in three parts: layout, render and settings; image intake; and the app shell, UI and accessibility. Every deferred minor in the ledgers was triaged. Fixes merged:
 
-- **E11: import E2E, PR [#64](https://github.com/omarcocarvalho/artistica/pull/64), branch `test/e2e-import`.**
-  - The implementer finished and all 8 CI checks are green.
-  - It has **not been reviewed yet**.
-  - One test (I12) is marked `test.fixme` because it found a real app bug (see "Known issues").
-  - Brief deviations I2, I3, I10 and I15b are explained in the PR and commits.
-- **E12: layout/export E2E, PR [#63](https://github.com/omarcocarvalho/artistica/pull/63), branch `test/e2e-layout-export`.**
-  - It was reviewed. The review fix round is **half done** and committed as `wip(e2e): …`. That commit message lists what is incomplete.
-  - Done: an X14 content-box width assertion (new `imageWidthsPt`-style field in `e2e/support/pdf.ts`), the X2 callout and bleed check, X11 CPU throttling, and the X8 direction checks.
-  - Still to do:
-    1. Prove the X14 bound bites: mutate it, see the test fail, then revert.
-    2. Let CI run firefox and webkit.
-    3. Get a short re-review.
-    4. Merge.
+| PR | Fix |
+|---|---|
+| #68 | Dropped files keep their real names. They were renamed `pasted-image-N`. |
+| #66 | Same-size images are ordered by a SHA-256 of their bytes, so the same photos give the same layout in every session. Ids and the first selection follow input order. |
+| #67 | Explicit timeouts on the heavy layout property tests, sized from the measured CI worst case. |
+| #70 | The logo links to the landing page. Paste is ignored while a dialog is open. Layout errors stay visible as a callout. Live regions stay mounted. |
+| #71 | Imports cancelled by "Remove all" show no notices and abort their downloads. URL downloads use a stall timeout and a limiter. Decoding has a lower peak memory. |
+| #72 | `setPageSetup` ignores `undefined` patch values. Tests pin crop-mark end points and several render edge cases. |
+| #73 | **Accessibility:** focus returns to the opener when any dialog closes, and moves to a sensible target after removing images and during export. The crop handles are no longer clipped. A PDF object-URL leak is fixed. |
 
-**Release:** the release-please PR [#18](https://github.com/omarcocarvalho/artistica/pull/18) (`chore(master): release 0.1.0`) is open. It must **not** be merged until the owner signs off on M1, including a check on a real phone.
-
-**Test results** (run on this branch, 2026-10-06, macOS, Node 24.21.0, pnpm 12.8.1):
-
-- `pnpm lint`: pass. This first needed the ESLint ignore fix in this branch (see "Known issues").
-- `pnpm format:check`: pass.
-- `pnpm typecheck`: pass.
-- `pnpm test:coverage`: **94 files, 809 tests, all pass.** Coverage: 98.85% statements, 94.31% branches, 100% functions, 99.86% lines.
-- `pnpm e2e --project=chromium`: see the "E2E result" line at the end of this file.
+**Release:** the release-please PR [#18](https://github.com/omarcocarvalho/artistica/pull/18) (`chore(master): release 0.1.0`) is the only open PR. It must **not** be merged until the owner signs off.
 
 ## Branch map
 
-| Branch | Contents | vs `master` | Use |
-|---|---|---|---|
-| `master` | all merged work through E9 (`0e4f36c`) | n/a | base for new work |
-| `handover/m1-paused-state` | this file, `CONTRIBUTORS.md`, ESLint ignore fix, M1 ledgers in `docs/superpowers/ledgers/` | +docs/chore commits | draft PR. Merge it first: docs-only plus the lint fix |
-| `test/e2e-import` | E11 import E2E spec (PR #64) | ahead, unreviewed | review, then merge |
-| `test/e2e-layout-export` | E12 layout/export E2E spec (PR #63) plus the WIP fix round | ahead, WIP on top | **continue here first** |
-| `release-please--branches--master--components--artistica` | bot-managed release PR #18 for v0.1.0 | bot | don't touch; merge only after owner sign-off |
-| `docs/m1-plans`, `feat/render-export` (local only, on the previous machine) | stale. Their PRs (#13, #55) were squash-merged, and their contents are on `master` | n/a | ignore |
+| Branch | Use |
+|---|---|
+| `master` | all M1 work; base for new work |
+| `release-please--branches--master--components--artistica` | bot-managed release PR #18 for v0.1.0. Don't touch it; merge only after owner sign-off |
 
 ## Next steps (in order)
 
-1. **Merge this handover PR** (docs plus the ESLint ignore fix).
-2. **Finish E12 (PR #63)** on `test/e2e-layout-export`:
-   - Prove the X14 assertion in `e2e/layout-export.spec.ts` fails when the bound is loosened, then revert.
-   - Wait for the 8 CI checks.
-   - Re-review the fix commit against the review findings in `docs/superpowers/ledgers/m1-e-shell.md` (lines starting "E12:").
-   - Merge with a squash.
-3. **Review E11 (PR #64)** against its brief, which is "Task E11" in `docs/superpowers/plans/2026-10-03-m1-e-shell.md`. Fix any findings, then merge.
-4. **Fix the drop-rename bug** (see "Known issues"). It is in `src/features/images/components/ImportDropzone.tsx` (`onZoneDrop` → `fromTransfer`) and `src/features/images/store.ts` (`addFromClipboard`).
-   - Dropped files must keep their real names and must not be treated as pasted.
-   - Then remove `test.fixme` from I12 in `e2e/import.spec.ts`.
-5. **Do Task E13** (phone flow, axe on every screen, privacy network guard, `mobile-webkit` project, final bundle-size check). The brief is "Task E13" in the E plan. It runs last.
-6. **Run the final M1-wide review** across all of M1. Ruling A-5 says this is one final review, not one per sub-plan.
-   - Triage every "minor (deferred)" line in `docs/superpowers/ledgers/*.md`.
-   - Fix what matters before release. The notable ones are listed under "Known issues".
-7. **Owner sign-off for v0.1.0.** Show the owner the M1 sign-off checklist (in E13) and the "Owner notes" below.
-   - After approval, refresh the release PR's merge ref: `gh pr view 18 --json mergeable`, and wait until it isn't `UNKNOWN`.
-   - Close and reopen PR #18, wait for green, then run `gh pr merge 18 --squash`. This releases and deploys to Pages.
-8. **Start M2.** Write the M2 implementation plan in `docs/superpowers/plans/` and get owner approval **before** coding.
+1. **Owner sign-off for v0.1.0.**
+   - **Real-phone checklist:** the "M1 sign-off checklist (owner, on a real phone)" section of `docs/superpowers/plans/2026-10-03-m1-e-shell.md`. Record the device, OS version and export time in the release PR.
+   - **Test over HTTPS:** use the deployed site (`gh workflow run deploy-pages.yml --ref master` for a demo deploy) or an HTTPS tunnel. Over plain `http://<LAN-IP>`, `crypto.subtle` and `crypto.randomUUID` are missing and every import fails.
+   - **Memory:** the checklist's "20 photos at full resolution" export is the key memory check (see "Known issues").
+   - Also bring the owner questions below.
+2. **Release v0.1.0 after approval.**
+   1. Run `gh pr view 18 --json mergeable` until it isn't `UNKNOWN`.
+   2. Close and reopen PR #18 and wait for the checks to pass.
+   3. Run `gh pr merge 18 --squash`. This creates the release and deploys to Pages.
+3. **Start M2.** Write the M2 implementation plan in `docs/superpowers/plans/` and get owner approval **before** coding. Fold in the owner's answers to the questions below.
+
+## Owner questions (for M1 sign-off)
+
+The spec doesn't answer these. Nothing was changed for them.
+
+1. **Phone form controls:** inputs, selects, segmented controls and switches measure 28–35 px on phones. The design says 44 px. WCAG AA (24 px) is met.
+2. **Phone export:** export opens the same centred dialog as on desktop (ruling Q10). `design/mobile-flow.html` shows it inline in the Export step, and the user currently meets two "Create PDF" buttons in a row. Keep it, make it a bottom sheet, or put it inline?
+3. **Disabled Export button:** should the reason it is disabled be visible? Today it is only announced to screen readers.
+4. **Export file name:** `artistica-A4-…` (as in the spec's D10 example) or `artistica-a4-…` (as in the mockup)?
+5. **Cancelling imports:** should the user be able to cancel a pending import, such as a slow link? "Remove all" is hidden while no image has loaded yet.
+6. **Duplicate photos:** the same file added twice is kept as two images. Keep that, merge them, or flag them?
+7. **Phone image limit:** decoding up to 200 MP is allowed and will likely crash a phone tab. Should phones get a lower limit?
+8. **Custom paper vs the 5100 px downscale cap:** custom paper goes up to 1200 mm, but 5100 px covers only about 432 mm at 300 DPI. Large custom pages show early low-DPI warnings. Raise the cap for Custom, or accept the limit?
+9. **Crop marks with bleed:** at the minimum gutter (2 × bleed), marks between neighbouring photos are dropped (spec §2.3). In an irregular layout an interior photo can end up with no marks. Should the gutter grow when marks and bleed are both on?
+10. **Drop copy:** dropping something with no image says "No image on the clipboard". Should drops get their own wording?
+11. **Empty state:** it uses the *compact* dropzone, because the card variant repeated the EmptyState headline.
+12. **Default unit:** the locale-based default unit (Q8: inches for en-US and en-CA) is recorded only in the plan overview. Should `docs/spec.md` mention it?
 
 ## Key decisions & context
 
@@ -98,10 +87,15 @@ Later milestones add blur and value studies, composition lines (some AI, in the 
 - **Pure core, thin UI.** Layout, page models and PDF composition are plain TypeScript with no DOM, and they run in workers through Comlink.
   - The layout worker is `src/features/layout/layout-client.ts`. `layoutAsync` follows a latest-call-wins rule: superseded calls reject with a DOMException `AbortError`.
   - The PDF worker is `src/features/render/export/export-pdf.ts`, and pdf-lib lives only in that worker's chunk.
-- **Determinism.** The same input gives the same layout. A golden snapshot test (`src/features/layout/golden.test.ts`) pins 31 layouts. PDFs carry no CreationDate (ruling D-2).
+- **Determinism.** The same photos give the same layout, in any order and in any session.
+  - Layout item keys are `${sha256(bytes)}~${occurrence}#${copy}` (`src/features/layout/build-items.ts`).
+  - `image.id` is a random UUID, used only for identity.
+  - A golden snapshot test (`src/features/layout/golden.test.ts`) pins the layouts.
+  - PDFs carry no CreationDate (ruling D-2).
 - **Privacy.**
   - Images live in memory only, in the `useImages` store. Only settings are persisted, in `localStorage` under `artistica:settings`, validated with Zod.
-  - E2E tests have a strict network guard (`e2e/support/network-guard.ts`). It flags any non-same-origin request and any WebSocket.
+  - Every E2E spec installs a strict network guard (`e2e/support/network-guard.ts`). It flags any non-same-origin request and any WebSocket.
+  - `e2e/privacy.spec.ts` also checks that storage holds only the settings.
   - A leave-page warning appears while images exist.
 
 **Gotchas**
@@ -109,10 +103,14 @@ Later milestones add blur and value studies, composition lines (some AI, in the 
 - **Errors lose their class across Comlink.** A `RangeError` from the worker arrives as a plain `Error` with `name === 'RangeError'`, so always check `err.name`.
 - **Crops are fractional source pixels.** The export worker crops with `integerCropBox` and renders with `forCroppedSource`. The cache key comes from the *original* plan (ruling D-1).
 - **ExportDialog doesn't auto-start.** The user clicks "Create PDF", and "Download PDF" is an `<a download>`.
-- **The default unit depends on locale.** It is inches for en-US and en-CA and mm elsewhere (owner answer Q8 in the overview). E2E tests switch to mm first.
+- **The default unit depends on locale.** It is inches for en-US and en-CA and mm elsewhere. E2E tests switch to mm first.
+- **Import batches resolve to `null` when "Remove all" interrupts them.** Callers show nothing for `null`.
+- **The app needs a secure context.** It uses `crypto.subtle` and `crypto.randomUUID`.
+- **Dialogs return focus to whatever opened them.** If the opener is gone, they use the `returnFocus` fallback (`src/shared/ui/use-return-focus.ts`). WebKit doesn't focus buttons on mouse click, so with the mouse in Safari focus can return to the nearest focusable ancestor. The keyboard path is correct.
 - **CI release PRs don't trigger checks.** A release PR opened by `GITHUB_TOKEN` doesn't run CI. A person must close and reopen it.
-- **Branch protection uses `strict: false`.** Run `gh pr update-branch <n>` before merging a PR when master has moved.
+- **Branch protection uses `strict: false`.** Two green PRs can still conflict, so check `master` CI after merges. `gh pr update-branch <n>` can't resolve conflicts; merge `origin/master` into the branch instead.
 - **macOS has no `timeout` command.**
+- **pnpm bootstrap:** if the global `pnpm` shim fails to bootstrap the pinned pnpm version, run `corepack pnpm …`.
 
 **Process**
 
@@ -133,7 +131,7 @@ Plans were executed with subagent-driven development: one worktree and PR per ta
 There are no env vars, secrets or external services. It is a static app, so there is no `.env.example`.
 
 ```bash
-# Node 24 (fnm/nvm: .node-version / .nvmrc), pnpm 12.8.1 via corepack
+# Node 24 (fnm/nvm: .node-version / .nvmrc), pnpm via corepack (version pinned in package.json)
 corepack enable
 pnpm install --frozen-lockfile
 pnpm dev            # http://localhost:5173/artistica/   (app at /artistica/app/)
@@ -152,52 +150,42 @@ pnpm build && pnpm preview     # production build → http://localhost:4173/arti
 - `gh` CLI, logged in.
 - Merging the release PR needs maintainer rights.
 
-**CI** has 8 required checks: `lint`, `typecheck`, `unit`, `build` (with a bundle budget), `e2e (chromium)`, `e2e (firefox)`, `e2e (webkit)` and `pr-title`. Merges are squash-only, with Conventional Commit PR titles.
+**CI** has 8 required checks: `lint`, `typecheck`, `unit`, `build` (with a bundle budget), `e2e (chromium)`, `e2e (firefox)`, `e2e (webkit)` and `pr-title`. The webkit leg also runs the `mobile-webkit` project. Merges are squash-only, with Conventional Commit PR titles.
 
-## Open questions / known issues
+## Known issues (deferred)
 
-**Bugs**
+The final review triaged every "minor (deferred)" line in `docs/superpowers/ledgers/*.md`. The items below are the ones that matter after M1. The other ledger minors are deferred to M2+ or judged not to be issues.
 
-- **Drop-rename bug, found by E11 I12.** Files dropped on the dropzone go through `addFromClipboard(pasted=true)` and get renamed `pasted-image-N.ext`. Error messages then name the wrong file, e.g. "pasted-image-2.png can't be added" instead of `notes.pdf`.
+**Memory (M5)**
 
-**Flaky or slow tests**
+- **20 × 12 MP photos:** they stay below the 5100 px cap and are kept as full-size ImageBitmaps, about 975 MB. If the real-phone check crashes, the structural fix is to keep the compressed Blob and decode on demand, or to cap the size by the current paper.
+- **Downloads waiting to decode:** finished URL downloads wait for a decode slot without holding a download slot. Memory is bounded only by how fast links download compared with how fast images decode.
+- **CORS probe:** the probe request after a failed fetch keeps its own 8 s timeout and is not cancelled by "Remove all". Its result is discarded.
 
-- `src/features/layout/compute-layout.property.test.ts` hit the 5 s Vitest timeout once in CI under load. Fix: set explicit timeouts on heavy property tests.
-- `src/features/layout/perf.test.ts` timings are load-sensitive. The CI bound is 2000 ms.
-- E12's X11 (cancel export) is timing-based. It is hardened with CDP CPU throttling in the WIP commit.
+**i18n (M6)**
 
-**Fixed on this branch**
+Only English ships until M6, so these don't show yet:
 
-- ESLint ran out of heap locally when agent worktrees existed under `.worktrees/`. It now ignores them.
+- `pageTitle('App')` is hard-coded English.
+- The export summary shows the raw paper id ("Custom").
+- The unit codes `mm`/`in` are interpolated raw in `ImageEditSheet` and `ImageList`.
+- Some strings are built by concatenation in `ThemeToggle`, `import-notices` and `PageSetupPanel`. Each needs to become one key with interpolation.
 
-**Deferred minors to triage in the final review** (full list in the ledgers):
+**Tests**
 
-- **Form controls on phones:**
-  - Inputs, selects, switches, tabs and chips are 32 px on phones. The design says 44 px (WCAG AA 24 px is met).
-- **Focus after removing an image:**
-  - On the phone, focus falls to `<body>` after removing the *last* image.
-  - After removing an image inside the edit sheet, focus also falls to `<body>`.
-- **Stale error notices after "Remove all".** These appear for imports that were cancelled by the removal. The images store doesn't expose a generation counter.
-- **Decode memory:**
-  - A full-size bitmap is decoded before downscaling, about 290 MB peak for a 12 MP PNG at concurrency 2.
-  - Export peak memory is roughly 20 × 48 MB of decoded originals plus 80–180 MB in the worker at save.
-- **Layout failure feedback.** Only a toast shows; there is no persistent error callout. `SettingsSlot`/`PipelineEffect` have no unit tests.
-- **Settings patch.** A `setPageSetup` patch containing explicit `undefined` can overwrite valid values.
-- **Visual check.** The export dialog hasn't had a pixel-level visual check against `design/export.html`. Structure and contrast were checked from screenshots.
+- `src/features/layout/golden.test.ts` peaked at about 3.3 s on CI, under the 5 s default timeout. It isn't flaking yet.
+- `src/features/layout/perf.test.ts` timings are load-sensitive. The CI bound is 2000 ms; the measured CI peak was 924 ms.
 
-**Owner notes to raise at M1 sign-off**
+**Layout quality**
 
-- The empty state uses the *compact* dropzone. The card variant repeated the EmptyState headline.
-- The locale-based default unit (Q8) is recorded only in the plan overview. `docs/spec.md` could mention it.
+- **B3:** the fresh-page fallback can cost a page under the wide/tall policies. The `free` policy is always tried too, and the best result wins.
 
 ## Related links
 
 - Repo: https://github.com/omarcocarvalho/artistica
 - Live site: https://omarcocarvalho.github.io/artistica/
-- Open PRs: [#63 E12](https://github.com/omarcocarvalho/artistica/pull/63), [#64 E11](https://github.com/omarcocarvalho/artistica/pull/64), [#18 release 0.1.0](https://github.com/omarcocarvalho/artistica/pull/18)
+- Release PR: [#18 release 0.1.0](https://github.com/omarcocarvalho/artistica/pull/18)
 - Spec: [docs/spec.md](docs/spec.md)
 - M1 plans: [docs/superpowers/plans/](docs/superpowers/plans/), starting with `2026-10-03-m1-overview.md`
 - Execution ledgers (progress, rulings, deferred minors per task): [docs/superpowers/ledgers/](docs/superpowers/ledgers/)
 - Design mockups: [design/](design/) (open `design/index.html`)
-
-E2E result (2026-10-06, this branch, chromium only, `--workers=2`): **38 passed, 0 failed.** E11 and E12 specs are not on master yet. Firefox and WebKit run in CI.
