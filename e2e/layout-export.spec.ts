@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { AppPage } from './support/app.ts'
+import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { FIXTURES } from './support/fixtures.ts'
 import { mmToPt, summarizePdf } from './support/pdf.ts'
 import { runOnly } from './support/projects.ts'
@@ -8,8 +9,22 @@ test.use({ viewport: { width: 1280, height: 900 } })
 
 const THREE = [FIXTURES.quadrantsJpg, FIXTURES.quadrantsExif6, FIXTURES.transparentPng]
 
+let guard: NetworkGuard | undefined
+
+/** Page object with the strict network guard installed before navigation (checked after each test). */
+function startApp(page: Page): AppPage {
+  guard = guardNetwork(page)
+  return new AppPage(page)
+}
+
+test.afterEach(() => {
+  // Privacy rule: no request may leave the app, whatever the test did.
+  expect(guard?.violations() ?? []).toEqual([])
+  guard = undefined
+})
+
 async function loaded(page: Page, files: string[] = THREE) {
-  const app = new AppPage(page)
+  const app = startApp(page)
   await app.goto()
   await app.upload(files)
   await app.expectImages(files.length)
@@ -47,18 +62,29 @@ test.describe('PDF export (all browsers)', () => {
     test.setTimeout(120_000)
     const app = await loaded(page)
     await app.setPaper('Letter')
+    await useMm(page)
     await app.setSwitch('Crop marks', true)
-    await app.setSwitch('Bleed', true)
-    await expect(page.getByRole('switch', { name: 'Gutter between images' })).toBeChecked()
+    await expect(page.getByRole('switch', { name: 'Bleed' })).not.toBeChecked()
     await app.expectPreviewPages(1)
-    const { bytes } = await app.exportPdf()
-    const info = await summarizePdf(bytes)
+    const before = await summarizePdf((await app.exportPdf()).bytes)
+    await page.keyboard.press('Escape') // close the export dialog
+
+    await app.setField('Gutter size', '2') // below 2 x bleed, so turning bleed on must raise it
+    await app.setSwitch('Bleed', true)
+    await expect(page.getByText(/Gutter raised to 6/)).toBeVisible()
+    await expect(page.getByLabel('Gutter size')).toHaveValue('6')
+    await app.expectPreviewPages(1)
+    const info = await summarizePdf((await app.exportPdf()).bytes)
     for (const p of info.pages) {
       expect(p.widthPt).toBeCloseTo(612, 0)
       expect(p.heightPt).toBeCloseTo(792, 0)
     }
     expect(sum(info.pages.map((p) => p.imagePlacements))).toBe(THREE.length)
     expect(sum(info.pages.map((p) => p.strokes))).toBeGreaterThan(0)
+    // Bleed changes the output: the marks move away from the cut lines and/or the images grow.
+    const shape = (i: typeof info) =>
+      JSON.stringify(i.pages.map((p) => [p.imageWidthsPt, p.markGeometry]))
+    expect(shape(info)).not.toBe(shape(before))
   })
 })
 
@@ -138,7 +164,7 @@ test.describe('page setup and export (chromium)', () => {
   test('X10 the fits-per-page suggestion shows even with no images, and follows the paper', async ({
     page,
   }) => {
-    const empty = new AppPage(page)
+    const empty = startApp(page)
     await empty.goto()
     const tip = page.getByText(/fits \d+ references? per page comfortably/)
     await expect(tip).toContainText('A4 fits')
@@ -153,7 +179,7 @@ test.describe('page setup and export (chromium)', () => {
     page,
   }, testInfo) => {
     test.setTimeout(120_000)
-    const app = new AppPage(page)
+    const app = startApp(page)
     await app.goto()
     await app.upload(Array<string>(20).fill(FIXTURES.quadrantsJpg))
     await app.expectImages(20)
@@ -185,6 +211,11 @@ test.describe('page setup and export (chromium)', () => {
     const info = await summarizePdf((await app.exportPdf()).bytes)
     expect(info.pages[0]?.widthPt).toBeCloseTo(mmToPt(210), 0)
     expect(sum(info.pages.map((p) => p.imagePlacements))).toBe(1)
+    // The 400 mm request is scaled down to at most the content box (page minus the 5 mm safe area).
+    const widths = info.pages.flatMap((p) => p.imageWidthsPt)
+    expect(widths).toHaveLength(1)
+    expect(widths[0]).toBeLessThanOrEqual(mmToPt(150))
+    expect(widths[0]).toBeGreaterThan(mmToPt(50)) // and it was not collapsed
   })
 
   test('X11 export can be cancelled and run again', async ({ page }) => {
@@ -195,10 +226,15 @@ test.describe('page setup and export (chromium)', () => {
     await app.expectPreviewPages(4)
     await app.exportButton.click()
     const dialog = page.getByRole('dialog')
+    // Slow the CPU so the export cannot finish before Cancel lands (chromium only).
+    const cdp = await page.context().newCDPSession(page)
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 6 })
     await dialog.getByRole('button', { name: /create pdf/i }).click()
     // The Cancel button re-renders with each progress tick, so click without waiting for stability.
     await dialog.getByRole('button', { name: /cancel/i }).dispatchEvent('click')
-    // Cancel returns the dialog to idle, with no error.
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 })
+    // Cancel returns the dialog to idle, with no error and no PDF.
+    await expect(dialog.getByRole('link', { name: /download pdf/i })).toHaveCount(0)
     await expect(dialog.getByRole('button', { name: /create pdf/i })).toBeVisible()
     await expect(dialog.getByRole('alert')).toHaveCount(0)
     await page.keyboard.press('Escape')
@@ -220,14 +256,20 @@ test.describe('crop by keyboard and selection sync (chromium, firefox)', () => {
     await sheet.getByRole('radio', { name: '1:1' }).click()
     const box = sheet.getByTestId('crop-area')
     const readout = async () => (await sheet.getByTestId('crop-readout').textContent()) ?? ''
+    const parse = async () => {
+      const m = /^Crop (\d+) × (\d+) px at (\d+), (\d+)$/.exec(await readout())
+      if (!m) throw new Error(`unexpected crop readout: ${await readout()}`)
+      return { w: Number(m[1]), h: Number(m[2]), x: Number(m[3]), y: Number(m[4]) }
+    }
     await box.focus()
-    const initial = await readout()
+    const initial = await parse()
     for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight')
-    const moved = await readout()
-    expect(moved).not.toBe(initial)
+    const moved = await parse()
+    expect(moved.x).toBeGreaterThan(initial.x)
+    expect(moved.w).toBe(initial.w)
     for (let i = 0; i < 3; i++) await page.keyboard.press('Shift+ArrowLeft')
-    const resized = await readout()
-    expect(resized).not.toBe(moved)
+    const resized = await parse()
+    expect(resized.w).toBeLessThan(moved.w)
     await sheet.getByRole('button', { name: 'Reset crop' }).click()
     expect(await readout()).toMatch(/^Crop 64 × 48 px at 0, 0$/)
     await sheet.getByRole('button', { name: 'Done' }).click()
