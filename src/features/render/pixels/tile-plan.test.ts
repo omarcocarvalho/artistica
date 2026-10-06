@@ -110,6 +110,7 @@ describe('planTilePixels', () => {
 
   it('keeps at least 1 px of bleed at tiny preview resolutions', () => {
     expect(planTilePixels(drawTile({ bleedMm: 3 }), { dpi: 5 }).bleedPx).toBe(1)
+    expect(planTilePixels(drawTile({ bleedMm: 1 }), { dpi: 5 }).bleedPx).toBe(1)
   })
 
   it('stays under the cap when rounding and the 1 px bleed floor would overshoot', () => {
@@ -238,5 +239,11 @@ describe('tileRenderKey', () => {
 describe('tileSourceDpi', () => {
   it('reports the source resolution over the printed width', () => {
     expect(tileSourceDpi(drawTile({ crop: { x: 0, y: 0, w: 800, h: 400 } }))).toBe(203)
+  })
+
+  it('uses the crop height as the printed width after a quarter turn', () => {
+    const crop = { x: 0, y: 0, w: 800, h: 400 }
+    expect(tileSourceDpi(drawTile({ crop, rotation: 90 }))).toBe(102)
+    expect(tileSourceDpi(drawTile({ crop, rotation: 270 }))).toBe(102)
   })
 })

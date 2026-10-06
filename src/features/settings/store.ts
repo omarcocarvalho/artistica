@@ -34,13 +34,21 @@ export interface SettingsState extends SettingsData {
   reset(): void
 }
 
+/** A key set to `undefined` means "not patched", the same as a missing key. */
+function definedOnly<T extends object>(patch: T | undefined): Partial<T> {
+  if (patch === undefined) return {}
+  return Object.fromEntries(
+    Object.entries(patch).filter(([, value]) => value !== undefined),
+  ) as Partial<T>
+}
+
 function mergePageSetup(base: PageSetup, patch: PageSetupPatch): PageSetup {
   return {
     ...base,
-    ...patch,
-    customSize: { ...base.customSize, ...patch.customSize },
-    gutter: { ...base.gutter, ...patch.gutter },
-    bleed: { ...base.bleed, ...patch.bleed },
+    ...definedOnly(patch),
+    customSize: { ...base.customSize, ...definedOnly(patch.customSize) },
+    gutter: { ...base.gutter, ...definedOnly(patch.gutter) },
+    bleed: { ...base.bleed, ...definedOnly(patch.bleed) },
   }
 }
 

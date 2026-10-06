@@ -91,7 +91,10 @@ describe('composePdf', () => {
     const pages = [
       pageModel([drawTile()], {
         size: { w: 210, h: 297 },
-        cropMarks: [{ x1: 19, y1: 30, x2: 15, y2: 30 }],
+        cropMarks: [
+          { x1: 19, y1: 30, x2: 15, y2: 30 },
+          { x1: 40, y1: 29, x2: 40, y2: 25 },
+        ],
       }),
     ]
     const report = await inspectPdf(await composePdf(pages, encodedFor(pages)))
@@ -100,6 +103,8 @@ describe('composePdf', () => {
     const y = f(297 - 30)
     expect(content).toContain(`${f(19)} ${y} m`)
     expect(content).toContain(`${f(15)} ${y} l`)
+    expect(content).toContain(`${f(40)} ${f(297 - 29)} m`)
+    expect(content).toContain(`${f(40)} ${f(297 - 25)} l`)
     const lastDo = content.lastIndexOf(' Do')
     const firstStroke = content.search(/\sS\s/)
     expect(lastDo).toBeGreaterThan(-1)
