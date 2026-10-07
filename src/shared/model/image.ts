@@ -1,3 +1,4 @@
+import type { StudySettings } from './study'
 import type { Mm } from './units'
 
 export type ImageId = string & { readonly __brand: 'ImageId' }
@@ -52,6 +53,8 @@ export interface ImageDescriptor {
   readonly pxW: number
   readonly pxH: number
   readonly edits: ImageEdits
+  /** Which versions print and how (M2-R1). DEFAULT_STUDY prints the original only. */
+  readonly study: StudySettings
 }
 
 /** Pixel size after crop and rotation (what gets printed). */

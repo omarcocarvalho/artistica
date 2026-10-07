@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_EDITS, type ImageId } from '../../shared/model/image'
+import { DEFAULT_STUDY, patchStudy } from '../../shared/model/study'
 import type { DecodedImage } from './decode'
 import { sha256Hex } from './content-hash'
 import { ImportFailure } from './errors'
 import { createImagesStore, selectImageDescriptors, type ImagesDeps } from './store'
+import { makeLoadedImage } from './test-utils'
 
 function decoded(
   over: Partial<DecodedImage> = {},
@@ -62,6 +64,12 @@ describe('addFiles', () => {
     expect(s.images.map((i) => i.name)).toEqual(['a.jpg', 'b.jpg'])
     expect(s.selectedId).toBe('id-1')
     expect(s.importing).toBe(0)
+  })
+
+  it('gives every new image the default study (Original only)', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    expect(store.getState().images[0]?.study).toEqual(DEFAULT_STUDY)
   })
 
   it('keeps input order even when a later file finishes first', async () => {
@@ -568,11 +576,28 @@ describe('selectImageDescriptors', () => {
     await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
     const a = selectImageDescriptors(store.getState())
     expect(selectImageDescriptors(store.getState())).toBe(a)
-    expect(Object.keys(a[0] ?? {}).sort()).toEqual(['contentHash', 'edits', 'id', 'pxH', 'pxW'])
+    expect(Object.keys(a[0] ?? {}).sort()).toEqual([
+      'contentHash',
+      'edits',
+      'id',
+      'pxH',
+      'pxW',
+      'study',
+    ])
     store.getState().updateEdits('id-2' as ImageId, { copies: 3 })
     const b = selectImageDescriptors(store.getState())
     expect(b).not.toBe(a)
     expect(b[0]).toBe(a[0]) // unchanged image keeps its descriptor object
     expect(b[1]).not.toBe(a[1])
+  })
+
+  it("passes each image's own study through", () => {
+    const study = patchStudy(DEFAULT_STUDY, {
+      versions: ['original', 'values'],
+      blurPct: 70,
+      values: { count: 9, hue: 200, neutral: true },
+    })
+    const [d] = selectImageDescriptors({ images: [makeLoadedImage({ study })] })
+    expect(d?.study).toBe(study)
   })
 })
