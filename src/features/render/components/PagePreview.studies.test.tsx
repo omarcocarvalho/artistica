@@ -2,7 +2,9 @@ import { act, render, screen } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initI18n } from '../../../shared/i18n'
-import type { PageModel } from '../types'
+import { DEFAULT_LINES, type LinesPatch, patchLines } from '../../../shared/model/lines'
+import { tileLinesFor } from '../page-model/tile-lines'
+import type { PageModel, TileLines } from '../types'
 import { fakeStudyTiles } from '../test-support/fake-study-tiles'
 import { drawTile, id, pageModel } from '../test-support/fixtures'
 import { PagePreview, type PagePreviewProps } from './PagePreview'
@@ -20,6 +22,7 @@ vi.mock('../preview/draw-page', async (orig) => {
 })
 
 const renderSpy = vi.hoisted(() => vi.fn())
+const releaseSpy = vi.hoisted(() => vi.fn())
 vi.mock('../pixels/render-tile', async (orig) => {
   const actual = await orig<typeof import('../pixels/render-tile')>()
   return {
@@ -27,6 +30,10 @@ vi.mock('../pixels/render-tile', async (orig) => {
     renderTile: (...a: Parameters<typeof actual.renderTile>) => {
       renderSpy(...a)
       return actual.renderTile(...a)
+    },
+    releaseCanvas: (...a: Parameters<typeof actual.releaseCanvas>) => {
+      releaseSpy(...a)
+      actual.releaseCanvas(...a)
     },
   }
 })
@@ -77,6 +84,7 @@ function fakeCtx() {
 beforeEach(() => {
   drawSpy.mockClear()
   renderSpy.mockClear()
+  releaseSpy.mockClear()
   vi.restoreAllMocks()
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
     fakeCtx() as unknown as RenderingContext,
@@ -277,6 +285,35 @@ describe('PagePreview study tiles', () => {
     expect(screen.getAllByText('Scaled to fit')).toHaveLength(1)
     for (const name of ['pears.heic', 'pears.heic, Blurred', 'pears.heic, Values'])
       expect(screen.getByRole('button', { name })).toHaveAccessibleDescription(/Scaled down/)
+  })
+
+  it('redraws a line-only change from the cached tiles: no tile render, release or new study key (M3-R5)', () => {
+    const linesFor = (patch: LinesPatch): TileLines[] =>
+      group.tiles.flatMap(
+        (t, i) => tileLinesFor(patchLines(DEFAULT_LINES, patch), t.trim, false, i) ?? [],
+      )
+    expect(linesFor({ thirds: true })).toHaveLength(3)
+    const { f, rerender } = show()
+    const keys = f.wanted().map((r) => r.key)
+    const draws = drawSpy.mock.calls.length
+    expect(renderSpy).toHaveBeenCalledTimes(1)
+    for (const lines of [
+      linesFor({ thirds: true }),
+      linesFor({
+        thirds: true,
+        spiral: { on: true },
+        style: { colour: '#102030', opacityPct: 40 },
+      }),
+      [],
+    ]) {
+      const changed = { ...group, lines }
+      rerender(<PagePreview {...props(f, changed)} />)
+      expect(drawSpy.mock.calls.at(-1)?.[1]).toBe(changed)
+      expect(f.wanted().map((r) => r.key)).toEqual(keys)
+    }
+    expect(drawSpy.mock.calls.length).toBe(draws + 3)
+    expect(renderSpy).toHaveBeenCalledTimes(1)
+    expect(releaseSpy).not.toHaveBeenCalled()
   })
 
   it('without a provider, study tiles draw the missing fill and the page still works', () => {

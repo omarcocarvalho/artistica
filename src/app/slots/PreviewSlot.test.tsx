@@ -81,6 +81,7 @@ beforeEach(() => {
         size: { w: 210, h: 297 },
         safeArea: { x: 5, y: 5, w: 200, h: 287 },
         cropMarks: [],
+        lines: [],
         tiles: [{ imageId: 'a', version: 'original', trim: { x: 10, y: 10, w: 100, h: 60 } }],
       },
     ] as never,
@@ -112,6 +113,7 @@ describe('PreviewSlot', () => {
           size: { w: 210, h: 297 },
           safeArea: { x: 5, y: 5, w: 200, h: 287 },
           cropMarks: [],
+          lines: [],
           tiles: [],
         })) as never,
       })
@@ -129,6 +131,7 @@ describe('PreviewSlot', () => {
             size: { w: 210, h: 297 },
             safeArea: { x: 5, y: 5, w: 200, h: 287 },
             cropMarks: [],
+            lines: [],
             tiles: [
               { imageId: 'a', version: 'original', trim: { x: 10, y: 10, w: 60, h: 40 } },
               { imageId: 'a', version: 'blurValues', trim: { x: 76, y: 10, w: 60, h: 40 } },
