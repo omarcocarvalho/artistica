@@ -21,6 +21,11 @@
     "settings": "Settings",
     "preview": "Page preview"
   },
+  "settingsTabs": {
+    "label": "Settings",
+    "page": "Page",
+    "studies": "Studies"
+  },
   "empty": {
     "titleBefore": "Add some ",
     "titleHighlight": "reference photos",
@@ -44,6 +49,7 @@
     "names": {
       "images": "Images",
       "page": "Page",
+      "studies": "Studies",
       "preview": "Preview",
       "export": "Export"
     },
@@ -55,6 +61,9 @@
       "summary_other": "{{count}} images are ready to print.",
       "create": "Create PDF",
       "tip": "One page at a time to save memory. Keep this tab open."
+    },
+    "studies": {
+      "picker": "Image"
     }
   },
   "import": {
@@ -72,6 +81,7 @@
     "orientation": {
       "portrait": "portrait",
       "landscape": "landscape"
-    }
+    },
+    "itemVersion": "{{name}}, {{version}}, {{w}} × {{h}} mm"
   }
 }

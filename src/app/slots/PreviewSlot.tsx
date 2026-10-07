@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { GuidesLegend, GuidesToggle, PagePreview, type PreviewSource } from '../../features/render'
+import { GuidesLegend, GuidesToggle, PagePreview } from '../../features/render'
 import { useImages } from '../../features/images'
 import { useSettings } from '../../features/settings'
 import type { ImageId } from '../../shared/model/image'
@@ -9,17 +9,14 @@ import { describePage } from '../describe-page'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import { usePages } from '../pages-store'
 import { useAppUi } from '../state/useAppUi'
+import { appStudyProvider, getPreviewSource } from '../study-provider'
 
 const selectImage = (id: ImageId) => {
   useImages.getState().select(id)
 }
-const getSource = (id: ImageId): PreviewSource | undefined => {
-  const image = useImages.getState().images.find((i) => i.id === id)
-  return image && { bitmap: image.preview, pxW: image.pxW, pxH: image.pxH }
-}
 
 export function PreviewSlot() {
-  const { t } = useTranslation(['app', 'pageSetup'])
+  const { t } = useTranslation(['app', 'pageSetup', 'studies'])
   const pages = usePages((s) => s.pages)
   const layout = usePages((s) => s.layout)
   const status = usePages((s) => s.status)
@@ -62,7 +59,8 @@ export function PreviewSlot() {
         <div key={model.index} className="w-full max-w-3xl shrink-0 snap-center">
           <PagePreview
             model={model}
-            getSource={getSource}
+            getSource={getPreviewSource}
+            studyTiles={appStudyProvider}
             getName={getName}
             selectedId={selectedId}
             onSelect={selectImage}
@@ -77,7 +75,14 @@ export function PreviewSlot() {
           <ul aria-label={t('app:preview.pageItems', { current: i + 1 })} className="sr-only">
             {describePage(model, names).map((d, k) => (
               <li key={`${d.imageId}-${String(k)}`}>
-                {t('app:preview.item', { name: d.name, w: d.widthMm, h: d.heightMm })}
+                {d.version === 'original'
+                  ? t('app:preview.item', { name: d.name, w: d.widthMm, h: d.heightMm })
+                  : t('app:preview.itemVersion', {
+                      name: d.name,
+                      version: t(`studies:version.${d.version}`),
+                      w: d.widthMm,
+                      h: d.heightMm,
+                    })}
               </li>
             ))}
           </ul>

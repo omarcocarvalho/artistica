@@ -1,26 +1,39 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initI18n } from '../../shared/i18n'
 import type { ImageId } from '../../shared/model/image'
 import { stubDesktop } from '../test-utils'
 
-const h = vi.hoisted(() => ({ select: vi.fn(), selectedId: null as string | null }))
+const h = vi.hoisted(() => ({
+  select: vi.fn(),
+  selectedId: null as string | null,
+  studyTiles: [] as unknown[],
+  provider: { name: 'app study provider' },
+}))
+vi.mock('../study-provider', () => ({
+  appStudyProvider: h.provider,
+  getPreviewSource: () => undefined,
+}))
 vi.mock('../../features/render', () => ({
   PagePreview: (p: {
     label: string
     getName: (id: ImageId) => string
     onSelect: (id: ImageId) => void
-  }) => (
-    <button
-      type="button"
-      onClick={() => {
-        p.onSelect('a' as ImageId)
-      }}
-    >
-      {p.label} / {p.getName('a' as ImageId)}
-    </button>
-  ),
+    studyTiles?: unknown
+  }) => {
+    h.studyTiles.push(p.studyTiles)
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          p.onSelect('a' as ImageId)
+        }}
+      >
+        {p.label} / {p.getName('a' as ImageId)}
+      </button>
+    )
+  },
   GuidesToggle: () => null,
   GuidesLegend: () => <p>legend</p>,
 }))
@@ -57,6 +70,7 @@ beforeEach(() => {
   stubDesktop(true)
   h.selectedId = null
   h.select.mockClear()
+  h.studyTiles = []
   useAppUi.setState({ editingId: null })
   usePages.setState({
     status: 'idle',
@@ -67,7 +81,7 @@ beforeEach(() => {
         size: { w: 210, h: 297 },
         safeArea: { x: 5, y: 5, w: 200, h: 287 },
         cropMarks: [],
-        tiles: [{ imageId: 'a', trim: { x: 10, y: 10, w: 100, h: 60 } }],
+        tiles: [{ imageId: 'a', version: 'original', trim: { x: 10, y: 10, w: 100, h: 60 } }],
       },
     ] as never,
   })
@@ -88,6 +102,49 @@ describe('PreviewSlot', () => {
     expect(screen.getByText('legend')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /Page 1 of 1/ }))
     expect(h.select).toHaveBeenCalledWith('a')
+  })
+  it('passes the one app study provider to every page', () => {
+    act(() => {
+      usePages.setState({
+        layout: layout(2),
+        pages: [0, 1].map((index) => ({
+          index,
+          size: { w: 210, h: 297 },
+          safeArea: { x: 5, y: 5, w: 200, h: 287 },
+          cropMarks: [],
+          tiles: [],
+        })) as never,
+      })
+    })
+    render(<PreviewSlot />)
+    expect(h.studyTiles).toHaveLength(2)
+    for (const p of h.studyTiles) expect(p).toBe(h.provider)
+  })
+  it('names the version of study tiles in the text alternative', () => {
+    act(() => {
+      usePages.setState({
+        pages: [
+          {
+            index: 0,
+            size: { w: 210, h: 297 },
+            safeArea: { x: 5, y: 5, w: 200, h: 287 },
+            cropMarks: [],
+            tiles: [
+              { imageId: 'a', version: 'original', trim: { x: 10, y: 10, w: 60, h: 40 } },
+              { imageId: 'a', version: 'blurValues', trim: { x: 76, y: 10, w: 60, h: 40 } },
+            ],
+          },
+        ] as never,
+      })
+    })
+    render(<PreviewSlot />)
+    const items = within(screen.getByRole('list', { name: 'Page 1 contents' })).getAllByRole(
+      'listitem',
+    )
+    expect(items.map((i) => i.textContent)).toEqual([
+      'anna.jpg, 60 × 40 mm',
+      'anna.jpg, Blur + Values, 60 × 40 mm',
+    ])
   })
   it('renders no figure or caption of its own (PagePreview owns them)', () => {
     const { container } = render(<PreviewSlot />)

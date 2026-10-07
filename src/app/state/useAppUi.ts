@@ -1,19 +1,22 @@
 import { create } from 'zustand'
 import type { ImageId } from '../../shared/model/image'
 
-export type StepId = 'images' | 'page' | 'preview' | 'export'
+export type StepId = 'images' | 'page' | 'studies' | 'preview' | 'export'
+export type SettingsTab = 'page' | 'studies'
 
 export interface AppUiState {
   step: StepId
   editingId: ImageId | null
   exportOpen: boolean
   showGuides: boolean
+  settingsTab: SettingsTab
   setStep(step: StepId): void
   openEdit(id: ImageId): void
   closeEdit(): void
   openExport(): void
   closeExport(): void
   setShowGuides(show: boolean): void
+  setSettingsTab(tab: SettingsTab): void
 }
 
 export const useAppUi = create<AppUiState>()((set) => ({
@@ -21,6 +24,7 @@ export const useAppUi = create<AppUiState>()((set) => ({
   editingId: null,
   exportOpen: false,
   showGuides: true,
+  settingsTab: 'page',
   setStep: (step) => {
     set({ step })
   },
@@ -38,5 +42,8 @@ export const useAppUi = create<AppUiState>()((set) => ({
   },
   setShowGuides: (showGuides) => {
     set({ showGuides })
+  },
+  setSettingsTab: (settingsTab) => {
+    set({ settingsTab })
   },
 }))

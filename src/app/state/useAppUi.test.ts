@@ -16,6 +16,11 @@ describe('useAppUi', () => {
     expect(s.exportOpen).toBe(false)
     expect(s.showGuides).toBe(true)
   })
+  it('remembers the settings tab, starting on Page', () => {
+    expect(useAppUi.getState().settingsTab).toBe('page')
+    useAppUi.getState().setSettingsTab('studies')
+    expect(useAppUi.getState().settingsTab).toBe('studies')
+  })
   it('opens and closes the editor and the export dialog independently', () => {
     useAppUi.getState().openEdit(id)
     expect(useAppUi.getState().editingId).toBe(id)

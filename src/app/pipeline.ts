@@ -28,6 +28,7 @@ export interface Pipeline {
 export function createPipeline(deps: PipelineDeps, sink: PipelineSink): Pipeline {
   let timer: ReturnType<typeof setTimeout> | undefined
   let seq = 0
+  let memo: { key: string; layout: LayoutResult } | null = null
 
   async function run(
     mine: number,
@@ -37,8 +38,11 @@ export function createPipeline(deps: PipelineDeps, sink: PipelineSink): Pipeline
     const empty = images.length === 0
     try {
       // Even with no images the engine is asked (cheap), so "fits N per page" shows on an empty workspace (CR-B6).
-      const layout = await deps.layout(setup, deps.buildItems(images))
+      const items = deps.buildItems(images)
+      const key = JSON.stringify([setup, items])
+      const layout = memo?.key === key ? memo.layout : await deps.layout(setup, items)
       if (mine !== seq) return
+      memo = { key, layout }
       if (empty) sink.cleared(layout)
       else sink.done(layout, deps.buildModels(layout, setup, images))
     } catch (error) {

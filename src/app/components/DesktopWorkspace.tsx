@@ -40,7 +40,7 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
       </main>
       <aside
         aria-label={t('panels.settings')}
-        className="border-line bg-surface min-h-0 overflow-y-auto border-l px-4"
+        className="border-line bg-surface min-h-0 overflow-y-auto border-l"
       >
         {props.settings}
       </aside>

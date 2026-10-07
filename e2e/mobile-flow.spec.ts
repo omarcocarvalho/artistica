@@ -31,7 +31,7 @@ test('M1 phone flow: Images, edit sheet, Page, Preview, Export, parse the PDF', 
   const app = startApp(page)
   await app.goto()
 
-  await expect(page.getByRole('region', { name: 'Step 1 of 4: Images' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Step 1 of 5: Images' })).toBeVisible()
   await app.upload([FIXTURES.quadrantsJpg, FIXTURES.quadrantsExif6])
   await app.expectImages(2)
   await app.editButton('quadrants.jpg').click()
@@ -44,12 +44,14 @@ test('M1 phone flow: Images, edit sheet, Page, Preview, Export, parse the PDF', 
   await expect(sheet).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Next' }).click()
-  await expect(page.getByRole('region', { name: 'Step 2 of 4: Page' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Step 2 of 5: Page' })).toBeVisible()
   await app.setPaper('Letter')
   await expect(page.getByText(/Letter fits \d+ references? per page/)).toBeVisible()
 
   await page.getByRole('button', { name: 'Next' }).click()
-  await expect(page.getByRole('region', { name: 'Step 3 of 4: Preview' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Step 3 of 5: Studies' })).toBeVisible()
+  await page.getByRole('button', { name: 'Next' }).click()
+  await expect(page.getByRole('region', { name: 'Step 4 of 5: Preview' })).toBeVisible()
   expect(await app.expectPreviewPages(1)).toBe(1)
   const overflow = await page
     .locator('html')
@@ -98,6 +100,7 @@ test('M3 @slow 22 x 24 MP photos import and export on a phone within a memory bu
     await page.getByRole('button', { name: 'Next' }).click()
     await app.setPaper('A5')
     await page.getByRole('button', { name: 'Next' }).click()
+    await page.getByRole('button', { name: 'Next' }).click()
     await app.expectPreviewPages(3)
     await expect(page.locator('[aria-busy="true"]')).toHaveCount(0)
     previewPages = await app.pageCanvases.count()
@@ -136,7 +139,9 @@ test('M2 touch targets in the step bar and footer are at least 44px tall', async
   const targets = [
     page.getByRole('button', { name: 'Back', exact: true }),
     page.getByRole('button', { name: 'Next', exact: true }),
-    ...(['Images', 'Page', 'Preview', 'Export'] as const).map((name) => app.stepTab(name)),
+    ...(['Images', 'Page', 'Studies', 'Preview', 'Export'] as const).map((name) =>
+      app.stepTab(name),
+    ),
   ]
   for (const target of targets) {
     await expect(target).toBeVisible()

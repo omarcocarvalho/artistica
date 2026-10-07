@@ -5,6 +5,7 @@ import { EmptyState } from '../components/EmptyState'
 import { EmptyActionsSlot, ImagesSlot } from '../slots/ImagesSlot'
 import { PreviewSlot } from '../slots/PreviewSlot'
 import { SettingsSlot } from '../slots/SettingsSlot'
+import { StudiesSlot } from '../slots/StudiesSlot'
 import { useImageCount } from '../state/hasImages'
 import { useAppUi, type StepId } from '../state/useAppUi'
 import { useExportGate } from '../useExportGate'
@@ -37,7 +38,7 @@ export function MobileFlow() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <nav aria-label={t('mobile.steps')} className="border-line bg-surface border-b">
-        <ol className="grid grid-cols-4">
+        <ol className="grid grid-cols-5">
           {STEPS.map((s: StepId) => (
             <li key={s}>
               <button
@@ -65,7 +66,13 @@ export function MobileFlow() {
           </h2>
           {step === 'images' &&
             (noImages ? <EmptyState actions={<EmptyActionsSlot />} /> : <ImagesSlot />)}
-          {step === 'page' && <SettingsSlot />}
+          {step === 'page' && <SettingsSlot variant="phone" />}
+          {step === 'studies' &&
+            (noImages ? (
+              <EmptyState actions={<EmptyActionsSlot />} />
+            ) : (
+              <StudiesSlot variant="phone" />
+            ))}
           {step === 'preview' &&
             (noImages ? <EmptyState actions={<EmptyActionsSlot />} /> : <PreviewSlot />)}
           {step === 'export' && (

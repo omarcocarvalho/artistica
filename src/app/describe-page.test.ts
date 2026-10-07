@@ -11,8 +11,8 @@ const model = {
   safeArea: { x: 5, y: 5, w: 200, h: 287 },
   cropMarks: [],
   tiles: [
-    { imageId: a, trim: { x: 10, y: 10, w: 100.04, h: 60.06 } },
-    { imageId: b, trim: { x: 10, y: 80, w: 50, h: 50 } },
+    { imageId: a, version: 'original', trim: { x: 10, y: 10, w: 100.04, h: 60.06 } },
+    { imageId: b, version: 'blurred', trim: { x: 10, y: 80, w: 50, h: 50 } },
   ],
 } as unknown as PageModel
 
@@ -27,8 +27,8 @@ describe('describePage', () => {
         ]),
       ),
     ).toEqual([
-      { imageId: a, name: 'anna.jpg', widthMm: 100, heightMm: 60.1 },
-      { imageId: b, name: 'pears.heic', widthMm: 50, heightMm: 50 },
+      { imageId: a, name: 'anna.jpg', version: 'original', widthMm: 100, heightMm: 60.1 },
+      { imageId: b, name: 'pears.heic', version: 'blurred', widthMm: 50, heightMm: 50 },
     ])
   })
   it('falls back to the id when a name is unknown', () => {
