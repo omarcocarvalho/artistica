@@ -1,9 +1,10 @@
 import type { CropRect, ImageDescriptor, ImageId, Rotation } from '../../../shared/model/image'
 import type { PageSetup } from '../../../shared/model/page-setup'
 import type { SizeMm } from '../../../shared/model/paper'
+import { tileStudyFor } from '../../../shared/model/study'
 import type { Mm } from '../../../shared/model/units'
 import type { LayoutResult, Placement, RectMm } from '../../layout/types'
-import type { DrawTile, PageModel } from '../types'
+import type { DrawTile, PageModel, StudyGroupOutline } from '../types'
 import { cropMarksForTiles } from './crop-marks'
 
 /** `null` → the full image; otherwise clamped to the image and at least 1 px each way. Fractional values are kept as is. */
@@ -32,36 +33,54 @@ export function safeAreaRect(size: SizeMm, safeAreaMm: Mm): RectMm {
   }
 }
 
+const ROW_EPS_MM = 1e-6
+
+/** Rects in reading order: top to bottom, then left to right (M2-R4). Rows within 1e-6 mm in y count as one. */
+export function readingOrder(rects: readonly RectMm[]): RectMm[] {
+  return [...rects].sort((a, b) => (Math.abs(a.y - b.y) > ROW_EPS_MM ? a.y - b.y : a.x - b.x))
+}
+
 /**
- * One DrawTile per trim rect of a placement.
+ * One DrawTile per trim rect of a placement, in reading order, carrying the image's study versions
+ * in canonical order (M2-R4).
  * Flips are defined in the user's view (after edits.rotation). When the engine turns the item a further
  * 90° clockwise, a horizontal flip in the user's view becomes a vertical flip on the page
  * (R90·FH = FV·R90), so the two flags swap.
+ * Returns [] when the placement's tile count differs from the image's version count (a stale layout
+ * racing a version toggle), so it is skipped like a removed image.
  */
 export function drawTilesFor(img: ImageDescriptor, placement: Placement, bleedMm: Mm): DrawTile[] {
+  const versions = img.study.versions
+  if (placement.tiles.length !== versions.length) return []
   const crop = resolveCrop(img)
   const rotation = combineRotation(img.edits.rotation, placement.turned)
   const flipH = placement.turned ? img.edits.flipV : img.edits.flipH
   const flipV = placement.turned ? img.edits.flipH : img.edits.flipV
   const lowDpi = placement.warnings.includes('low-dpi')
   const scaledToFit = placement.warnings.includes('scaled-to-fit')
-  return placement.tiles.map((trim) => ({
-    imageId: img.id,
-    trim,
-    bleedMm,
-    crop,
-    rotation,
-    flipH,
-    flipV,
-    lowDpi,
-    scaledToFit,
-  }))
+  return readingOrder(placement.tiles).map((trim, i) => {
+    const version = versions[i] ?? 'original' // never the fallback: lengths are equal (checked above)
+    return {
+      imageId: img.id,
+      trim,
+      bleedMm,
+      crop,
+      rotation,
+      flipH,
+      flipV,
+      lowDpi,
+      scaledToFit,
+      version,
+      study: tileStudyFor(version, img.study),
+    }
+  })
 }
 
 /**
  * Pure: layout + setup + image descriptors → one PageModel per non-empty page.
- * Placements whose image is no longer present (a stale layout racing a removal) are skipped;
- * pages left empty are dropped and the remaining pages are re-indexed from 0.
+ * Placements whose image is no longer present, or whose tile count no longer matches the image's
+ * versions (a stale layout), are skipped; pages left empty are dropped and the remaining pages are
+ * re-indexed from 0. A placement's tiles stay consecutive, in reading order (CR-M2-5).
  */
 export function buildPageModels(
   layout: LayoutResult,
@@ -73,10 +92,14 @@ export function buildPageModels(
   const safeArea = safeAreaRect(layout.pageSize, setup.safeAreaMm)
   const pages: PageModel[] = []
   for (const page of layout.pages) {
-    const tiles = page.placements.flatMap((placement) => {
+    const tiles: DrawTile[] = []
+    const groups: StudyGroupOutline[] = []
+    for (const placement of page.placements) {
       const img = byId.get(placement.imageId)
-      return img ? drawTilesFor(img, placement, bleedMm) : []
-    })
+      const drawn = img ? drawTilesFor(img, placement, bleedMm) : []
+      tiles.push(...drawn)
+      if (drawn.length >= 2) groups.push({ imageId: placement.imageId, block: placement.block })
+    }
     if (tiles.length === 0) continue
     pages.push({
       index: pages.length,
@@ -84,6 +107,7 @@ export function buildPageModels(
       safeArea,
       tiles,
       cropMarks: setup.cropMarks ? cropMarksForTiles(tiles, safeArea) : [],
+      groups,
     })
   }
   return pages

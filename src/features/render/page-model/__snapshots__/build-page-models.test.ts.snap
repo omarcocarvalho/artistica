@@ -76,6 +76,7 @@ exports[`buildPageModels > crop marks never cross another tile’s trim+bleed bo
       "y2": 82,
     },
   ],
+  "groups": [],
   "index": 0,
   "safeArea": {
     "h": 287,
@@ -102,12 +103,14 @@ exports[`buildPageModels > crop marks never cross another tile’s trim+bleed bo
       "lowDpi": false,
       "rotation": 0,
       "scaledToFit": false,
+      "study": null,
       "trim": {
         "h": 60,
         "w": 88,
         "x": 14,
         "y": 14,
       },
+      "version": "original",
     },
     {
       "bleedMm": 3,
@@ -123,12 +126,208 @@ exports[`buildPageModels > crop marks never cross another tile’s trim+bleed bo
       "lowDpi": false,
       "rotation": 0,
       "scaledToFit": false,
+      "study": null,
       "trim": {
         "h": 60,
         "w": 88,
         "x": 108,
         "y": 14,
       },
+      "version": "original",
+    },
+  ],
+}
+`;
+
+exports[`study versions (M2-R4) > snapshot of a 3-version turned group with bleed and crop marks 1`] = `
+{
+  "cropMarks": [
+    {
+      "x1": 8,
+      "x2": 8,
+      "y1": 10,
+      "y2": 6,
+    },
+    {
+      "x1": 52,
+      "x2": 52,
+      "y1": 10,
+      "y2": 6,
+    },
+    {
+      "x1": 52,
+      "x2": 52,
+      "y1": 84,
+      "y2": 88,
+    },
+    {
+      "x1": 8,
+      "x2": 8,
+      "y1": 84,
+      "y2": 88,
+    },
+    {
+      "x1": 58,
+      "x2": 58,
+      "y1": 10,
+      "y2": 6,
+    },
+    {
+      "x1": 102,
+      "x2": 102,
+      "y1": 10,
+      "y2": 6,
+    },
+    {
+      "x1": 102,
+      "x2": 102,
+      "y1": 84,
+      "y2": 88,
+    },
+    {
+      "x1": 58,
+      "x2": 58,
+      "y1": 84,
+      "y2": 88,
+    },
+    {
+      "x1": 108,
+      "x2": 108,
+      "y1": 10,
+      "y2": 6,
+    },
+    {
+      "x1": 156,
+      "x2": 160,
+      "y1": 14,
+      "y2": 14,
+    },
+    {
+      "x1": 152,
+      "x2": 152,
+      "y1": 10,
+      "y2": 6,
+    },
+    {
+      "x1": 156,
+      "x2": 160,
+      "y1": 80,
+      "y2": 80,
+    },
+    {
+      "x1": 152,
+      "x2": 152,
+      "y1": 84,
+      "y2": 88,
+    },
+    {
+      "x1": 108,
+      "x2": 108,
+      "y1": 84,
+      "y2": 88,
+    },
+  ],
+  "groups": [
+    {
+      "block": {
+        "h": 66,
+        "w": 144,
+        "x": 8,
+        "y": 14,
+      },
+      "imageId": "a",
+    },
+  ],
+  "index": 0,
+  "safeArea": {
+    "h": 287,
+    "w": 200,
+    "x": 5,
+    "y": 5,
+  },
+  "size": {
+    "h": 297,
+    "w": 210,
+  },
+  "tiles": [
+    {
+      "bleedMm": 3,
+      "crop": {
+        "h": 2000,
+        "w": 3000,
+        "x": 0,
+        "y": 0,
+      },
+      "flipH": false,
+      "flipV": false,
+      "imageId": "a",
+      "lowDpi": false,
+      "rotation": 90,
+      "scaledToFit": false,
+      "study": null,
+      "trim": {
+        "h": 66,
+        "w": 44,
+        "x": 8,
+        "y": 14,
+      },
+      "version": "original",
+    },
+    {
+      "bleedMm": 3,
+      "crop": {
+        "h": 2000,
+        "w": 3000,
+        "x": 0,
+        "y": 0,
+      },
+      "flipH": false,
+      "flipV": false,
+      "imageId": "a",
+      "lowDpi": false,
+      "rotation": 90,
+      "scaledToFit": false,
+      "study": {
+        "blurPct": 40,
+        "values": null,
+      },
+      "trim": {
+        "h": 66,
+        "w": 44,
+        "x": 58,
+        "y": 14,
+      },
+      "version": "blurred",
+    },
+    {
+      "bleedMm": 3,
+      "crop": {
+        "h": 2000,
+        "w": 3000,
+        "x": 0,
+        "y": 0,
+      },
+      "flipH": false,
+      "flipV": false,
+      "imageId": "a",
+      "lowDpi": false,
+      "rotation": 90,
+      "scaledToFit": false,
+      "study": {
+        "blurPct": null,
+        "values": {
+          "count": 5,
+          "hue": 55,
+          "neutral": false,
+        },
+      },
+      "trim": {
+        "h": 66,
+        "w": 44,
+        "x": 108,
+        "y": 14,
+      },
+      "version": "values",
     },
   ],
 }
