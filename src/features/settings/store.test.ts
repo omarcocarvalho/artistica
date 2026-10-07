@@ -1,7 +1,9 @@
+import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import type { StateStorage } from 'zustand/middleware'
+import { DEFAULT_LINES, SPIRAL_CORNERS, type LineSettings } from '../../shared/model/lines'
 import { DEFAULT_STUDY } from '../../shared/model/study'
-import { DEFAULT_SETTINGS } from './schema'
+import { DEFAULT_SETTINGS, parseSettings } from './schema'
 import {
   SETTINGS_STORAGE_KEY,
   SETTINGS_VERSION,
@@ -180,17 +182,18 @@ describe('actions', () => {
 })
 
 describe('persistence', () => {
-  it('writes version 2 under artistica:settings, without notes or actions', () => {
+  it('writes version 3 under artistica:settings, without notes or actions', () => {
     const storage = memoryStorage()
     const store = createSettingsStore(storage)
     store.getState().setTheme('light')
     store.getState().setPageSetup({ safeAreaMm: 1 })
     const { version, state } = saved(storage)
     expect(SETTINGS_STORAGE_KEY).toBe('artistica:settings')
-    expect(version).toBe(2)
-    expect(SETTINGS_VERSION).toBe(2)
+    expect(version).toBe(3)
+    expect(SETTINGS_VERSION).toBe(3)
     expect(Object.keys(state).sort()).toEqual([
       'language',
+      'lineDefaults',
       'pageSetup',
       'studyDefaults',
       'theme',
@@ -306,11 +309,7 @@ describe('storage that fails', () => {
 describe('study defaults (schema v2)', () => {
   const D = { blurPct: DEFAULT_STUDY.blurPct, values: DEFAULT_STUDY.values }
 
-  it('is version 2', () => {
-    expect(SETTINGS_VERSION).toBe(2)
-  })
-
-  it('migrates a v1 envelope to v2 keeping every field', () => {
+  it('migrates a v1 envelope keeping every field', () => {
     const v1 = {
       pageSetup: { ...DEFAULT_SETTINGS.pageSetup, paper: 'Letter', safeAreaMm: 7 },
       unit: 'in',
@@ -366,7 +365,7 @@ describe('study defaults (schema v2)', () => {
     expect(loaded.getState().studyDefaults).not.toEqual(DEFAULT_SETTINGS.studyDefaults)
   })
 
-  it('setStudyDefaults persists blur and values, sanitized, under version 2', () => {
+  it('setStudyDefaults persists blur and values, sanitized, under the current version', () => {
     const storage = memoryStorage()
     const store = createSettingsStore(storage)
     store
@@ -377,16 +376,17 @@ describe('study defaults (schema v2)', () => {
       values: { count: 7, hue: 60, neutral: false },
     })
     const env = saved(storage)
-    expect(env.version).toBe(2)
+    expect(env.version).toBe(SETTINGS_VERSION)
     expect(env.state.studyDefaults).toEqual(store.getState().studyDefaults)
   })
 
-  it('persists nothing but the four M1 fields and studyDefaults', () => {
+  it('persists nothing but the four M1 fields, studyDefaults and lineDefaults', () => {
     const storage = memoryStorage()
     const store = createSettingsStore(storage)
     store.getState().setStudyDefaults({ blurPct: 10, values: DEFAULT_STUDY.values })
     expect(Object.keys(saved(storage).state).sort()).toEqual([
       'language',
+      'lineDefaults',
       'pageSetup',
       'studyDefaults',
       'theme',
@@ -442,5 +442,156 @@ describe('study defaults (schema v2)', () => {
     const before = store.getState().studyDefaults
     store.getState().setStudyDefaults({ ...before, values: { ...before.values } })
     expect(store.getState().studyDefaults).toBe(before)
+  })
+})
+
+describe('line defaults (schema v3)', () => {
+  const allOn: LineSettings = {
+    grid: { on: true, cols: 3, rows: 2 },
+    thirds: true,
+    armature: true,
+    golden: true,
+    spiral: { on: true, corner: 'bottomRight' },
+    centre: true,
+    style: { colour: '#1F3FBF', widthMm: 1.37, opacityPct: 55.6 },
+  }
+  const remembered: LineSettings = {
+    ...DEFAULT_LINES,
+    grid: { on: false, cols: 3, rows: 2 },
+    spiral: { on: false, corner: 'bottomRight' },
+    style: { colour: '#1f3fbf', widthMm: 1.35, opacityPct: 56 },
+  }
+  const v2 = {
+    pageSetup: { ...DEFAULT_SETTINGS.pageSetup, paper: 'Letter', safeAreaMm: 7 },
+    unit: 'in',
+    language: 'ja',
+    theme: 'dark',
+    studyDefaults: { blurPct: 70, values: { count: 7, hue: 200, neutral: true } },
+  }
+
+  it('is version 3', () => {
+    expect(SETTINGS_VERSION).toBe(3)
+  })
+
+  it('starts from DEFAULT_LINES', () => {
+    expect(createSettingsStore(memoryStorage()).getState().lineDefaults).toEqual(DEFAULT_LINES)
+  })
+
+  it('migrates a stored v2 envelope keeping every v2 field and adding the default lines', () => {
+    const storage = memoryStorage(JSON.stringify({ version: 2, state: v2 }))
+    const s = createSettingsStore(storage, 'mm').getState()
+    expect({
+      pageSetup: s.pageSetup,
+      unit: s.unit,
+      language: s.language,
+      theme: s.theme,
+      studyDefaults: s.studyDefaults,
+    }).toEqual(v2)
+    expect(s.lineDefaults).toEqual(DEFAULT_LINES)
+  })
+
+  it('migrates a stored v1 envelope with default studies and lines', () => {
+    const v1 = { pageSetup: v2.pageSetup, unit: v2.unit, language: v2.language, theme: v2.theme }
+    const s = createSettingsStore(
+      memoryStorage(JSON.stringify({ version: 1, state: v1 })),
+    ).getState()
+    expect(s.pageSetup).toEqual(v1.pageSetup)
+    expect(s).toMatchObject({ unit: 'in', language: 'ja', theme: 'dark' })
+    expect(s.studyDefaults).toEqual(DEFAULT_SETTINGS.studyDefaults)
+    expect(s.lineDefaults).toEqual(DEFAULT_LINES)
+  })
+
+  it('setLineDefaults normalises and drops the line types (owner Q7, default)', () => {
+    const store = createSettingsStore(memoryStorage())
+    store.getState().setLineDefaults(allOn)
+    expect(store.getState().lineDefaults).toEqual(remembered)
+  })
+
+  it('persists lineDefaults under version 3, with every on flag false', () => {
+    const storage = memoryStorage()
+    createSettingsStore(storage).getState().setLineDefaults(allOn)
+    const env = saved(storage)
+    expect(env.version).toBe(3)
+    expect(env.state.lineDefaults).toEqual(remembered)
+    expect(JSON.stringify(env.state.lineDefaults)).not.toMatch(/true/)
+  })
+
+  it('reloads the saved line defaults', () => {
+    const storage = memoryStorage()
+    createSettingsStore(storage).getState().setLineDefaults(allOn)
+    expect(createSettingsStore(storage).getState().lineDefaults).toEqual(remembered)
+  })
+
+  it('a stored v3 envelope with the types on loads with them off and keeps the rest', () => {
+    const state = { ...v2, lineDefaults: allOn }
+    const s = createSettingsStore(memoryStorage(JSON.stringify({ version: 3, state }))).getState()
+    expect(s.lineDefaults).toEqual(remembered)
+    expect(s.studyDefaults).toEqual(v2.studyDefaults)
+    expect(s.unit).toBe('in')
+  })
+
+  it('a corrupted lineDefaults never throws and never wipes the other settings', () => {
+    for (const lineDefaults of [null, 'x', 7, [1], { grid: 'x', style: { widthMm: '1' } }]) {
+      const raw = JSON.stringify({ version: 3, state: { ...v2, lineDefaults } })
+      const s = createSettingsStore(memoryStorage(raw)).getState()
+      expect(s.studyDefaults).toEqual(v2.studyDefaults)
+      expect(s).toMatchObject({ unit: 'in', language: 'ja', theme: 'dark' })
+      expect(s.lineDefaults).toEqual(DEFAULT_LINES)
+    }
+  })
+
+  it('reset restores the default line defaults', () => {
+    const store = createSettingsStore(memoryStorage())
+    store.getState().setLineDefaults(allOn)
+    store.getState().reset()
+    expect(store.getState().lineDefaults).toEqual(DEFAULT_LINES)
+  })
+
+  it('keeps the same state when setLineDefaults gets equal values (no storage write churn)', () => {
+    const store = createSettingsStore(memoryStorage())
+    store.getState().setLineDefaults(allOn)
+    const before = store.getState().lineDefaults
+    store.getState().setLineDefaults({ ...allOn, thirds: false })
+    expect(store.getState().lineDefaults).toBe(before)
+  })
+
+  const anyValue = fc.oneof(
+    fc.double(),
+    fc.integer({ min: -100, max: 100 }),
+    fc.constantFrom(Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, '2', true, [3], null),
+    fc.string(),
+  )
+  const arbitraryLines = fc.record({
+    grid: fc.record({ on: anyValue, cols: anyValue, rows: anyValue }),
+    thirds: anyValue,
+    armature: anyValue,
+    golden: anyValue,
+    spiral: fc.record({
+      on: anyValue,
+      corner: fc.oneof(fc.constantFrom(...SPIRAL_CORNERS), anyValue),
+    }),
+    centre: anyValue,
+    style: fc.record({
+      colour: fc.oneof(fc.constantFrom('#A1B2C3', '#a1b2c3', 'red'), anyValue),
+      widthMm: anyValue,
+      opacityPct: anyValue,
+    }),
+  }) as fc.Arbitrary<unknown> as fc.Arbitrary<LineSettings>
+
+  it('ranges are owned by sanitizeLines: load and setLineDefaults give identical values (property)', () => {
+    fc.assert(
+      fc.property(arbitraryLines, (raw) => {
+        const loaded = parseSettings({ lineDefaults: raw }).lineDefaults
+        const viaStore = createSettingsStore(
+          memoryStorage(JSON.stringify({ version: 3, state: { lineDefaults: raw } })),
+        ).getState().lineDefaults
+        const store = createSettingsStore(memoryStorage())
+        store.getState().setLineDefaults(raw)
+        expect(store.getState().lineDefaults).toEqual(loaded)
+        expect(viaStore).toEqual(loaded)
+        store.getState().setLineDefaults(store.getState().lineDefaults)
+        expect(store.getState().lineDefaults).toEqual(loaded)
+      }),
+    )
   })
 })

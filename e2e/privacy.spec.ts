@@ -112,9 +112,10 @@ test('P2 nothing from the photos is persisted: storage stays small and a reload 
     version: number
     state: Record<string, unknown>
   }
-  expect(envelope.version).toBe(2)
+  expect(envelope.version).toBe(3)
   expect(Object.keys(envelope.state).sort()).toEqual([
     'language',
+    'lineDefaults',
     'pageSetup',
     'studyDefaults',
     'theme',
@@ -124,6 +125,15 @@ test('P2 nothing from the photos is persisted: storage stays small and a reload 
   expect(envelope.state.studyDefaults).toEqual({
     blurPct: 63,
     values: { count: 9, hue: 55, neutral: false },
+  })
+  expect(envelope.state.lineDefaults).toEqual({
+    grid: { on: false, cols: 4, rows: 5 },
+    thirds: false,
+    armature: false,
+    golden: false,
+    spiral: { on: false, corner: 'topLeft' },
+    centre: false,
+    style: { colour: '#e0457b', widthMm: 0.35, opacityPct: 90 },
   })
   expect(stored.local).toBeLessThan(2_000)
   expect(stored.session).toBe(0)

@@ -1,5 +1,11 @@
 import { z } from 'zod'
 import { LANGUAGES, type LanguageCode } from '../../shared/i18n/languages'
+import {
+  DEFAULT_LINES,
+  sanitizeLines,
+  withoutLineTypes,
+  type LineSettings,
+} from '../../shared/model/lines'
 import { CUSTOM_PAPER_LIMITS, PAPER_IDS, type PaperId } from '../../shared/model/paper'
 import {
   DEFAULT_PAGE_SETUP,
@@ -22,6 +28,8 @@ export interface SettingsData {
   readonly language: LanguageCode | null
   readonly theme: Theme
   readonly studyDefaults: StudyDefaults
+  /** What new photos start with: every line type off (owner Q7, default). */
+  readonly lineDefaults: LineSettings
 }
 
 const DS: StudyDefaults = { blurPct: DEFAULT_STUDY.blurPct, values: DEFAULT_STUDY.values }
@@ -32,6 +40,7 @@ export const DEFAULT_SETTINGS: SettingsData = {
   language: null,
   theme: 'auto',
   studyDefaults: DS,
+  lineDefaults: DEFAULT_LINES,
 }
 
 const D = DEFAULT_PAGE_SETUP
@@ -86,12 +95,48 @@ export function normalizeStudyDefaults(defaults: StudyDefaults): StudyDefaults {
   return { blurPct: study.blurPct, values: study.values }
 }
 
+const L = DEFAULT_LINES
+
+/** Total and types-only, like studyDefaultsSchema: ranges, hex and corner names belong to `sanitizeLines` (M3-R16). */
+const lineDefaultsSchema = z.object({
+  grid: z
+    .object({
+      on: z.boolean().catch(L.grid.on),
+      cols: z.number().catch(L.grid.cols),
+      rows: z.number().catch(L.grid.rows),
+    })
+    .catch(L.grid),
+  thirds: z.boolean().catch(L.thirds),
+  armature: z.boolean().catch(L.armature),
+  golden: z.boolean().catch(L.golden),
+  spiral: z
+    .object({
+      on: z.boolean().catch(L.spiral.on),
+      corner: z.string().catch(L.spiral.corner),
+    })
+    .catch(L.spiral),
+  centre: z.boolean().catch(L.centre),
+  style: z
+    .object({
+      colour: z.string().catch(L.style.colour),
+      widthMm: z.number().catch(L.style.widthMm),
+      opacityPct: z.number().catch(L.style.opacityPct),
+    })
+    .catch(L.style),
+})
+
+/** The one normalisation for line defaults, on load and in `setLineDefaults` (owner Q7, default: types are not remembered). */
+export function normalizeLineDefaults(lines: LineSettings): LineSettings {
+  return withoutLineTypes(sanitizeLines(lines))
+}
+
 export const settingsSchema = z.object({
   pageSetup: pageSetupSchema.catch(D),
   unit: z.enum(['mm', 'in']).catch(DEFAULT_SETTINGS.unit),
   language: z.enum(LANGUAGES).nullable().catch(null),
   theme: z.enum(THEMES).catch(DEFAULT_SETTINGS.theme),
   studyDefaults: studyDefaultsSchema.catch(DS),
+  lineDefaults: lineDefaultsSchema.catch(L),
 })
 
 let warned = false
@@ -116,7 +161,13 @@ export function parseSettings(input: unknown): SettingsData {
     const { w, h } = parsed.pageSetup.customSize
     const customSize = w <= h ? { w, h } : { w: h, h: w }
     const pageSetup = normalizePageSetup({ ...parsed.pageSetup, customSize }).setup
-    return { ...parsed, pageSetup, studyDefaults: normalizeStudyDefaults(parsed.studyDefaults) }
+    return {
+      ...parsed,
+      pageSetup,
+      studyDefaults: normalizeStudyDefaults(parsed.studyDefaults),
+      // The corner is any string until sanitizeLines, which is total, narrows it.
+      lineDefaults: normalizeLineDefaults(parsed.lineDefaults as LineSettings),
+    }
   } catch (error) {
     warnOnce(error)
     return DEFAULT_SETTINGS

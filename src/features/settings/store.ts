@@ -8,8 +8,10 @@ import {
 } from '../../shared/model/page-setup'
 import type { SizeMm } from '../../shared/model/paper'
 import { defaultUnitForLocale, type Unit } from '../../shared/model/units'
+import { linesEqual, type LineSettings } from '../../shared/model/lines'
 import {
   DEFAULT_SETTINGS,
+  normalizeLineDefaults,
   normalizeStudyDefaults,
   parseSettings,
   type SettingsData,
@@ -18,7 +20,7 @@ import {
 } from './schema'
 
 export const SETTINGS_STORAGE_KEY = 'artistica:settings'
-export const SETTINGS_VERSION = 2
+export const SETTINGS_VERSION = 3
 
 /** Nested objects are merged one level deep, so callers can change one gutter field. */
 export interface PageSetupPatch {
@@ -40,6 +42,8 @@ export interface SettingsState extends SettingsData {
   setTheme(theme: Theme): void
   /** Remember the last-used study settings (owner Q5, default). Normalised; same state when equal. */
   setStudyDefaults(defaults: StudyDefaults): void
+  /** Remember the last-used line settings, every type off (owner Q7, default). Normalised; same state when equal. */
+  setLineDefaults(lines: LineSettings): void
   reset(): void
 }
 
@@ -150,6 +154,12 @@ export function createSettingsStore(
             return equal ? state : { studyDefaults: next }
           })
         },
+        setLineDefaults: (lines) => {
+          set((state) => {
+            const next = normalizeLineDefaults(lines)
+            return linesEqual(next, state.lineDefaults) ? state : { lineDefaults: next }
+          })
+        },
         reset: () => {
           set({ ...DEFAULT_SETTINGS, unit: initialUnit, pageSetupNotes: [] })
         },
@@ -158,15 +168,16 @@ export function createSettingsStore(
         name: SETTINGS_STORAGE_KEY,
         version: SETTINGS_VERSION,
         storage: createJSONStorage(() => storage),
-        partialize: ({ pageSetup, unit, language, theme, studyDefaults }) => ({
+        partialize: ({ pageSetup, unit, language, theme, studyDefaults, lineDefaults }) => ({
           pageSetup,
           unit,
           language,
           theme,
           studyDefaults,
+          lineDefaults,
         }),
-        // Runs for v1 and any other version. parseSettings keeps every v1 field and fills
-        // studyDefaults with the default; there is no other format to convert.
+        // Runs for v1, v2 and any other version. parseSettings keeps every stored field and fills
+        // a missing studyDefaults or lineDefaults with its default; there is no other format to convert.
         migrate: (persisted) => parseSettings(persisted),
         // Runs for every load, including current-version data that was edited by hand.
         // Nothing saved (or unreadable JSON, which storage reports as null) keeps the initial
