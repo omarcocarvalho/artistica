@@ -10,6 +10,8 @@ describe('ui barrel', () => {
         'Button',
         'Callout',
         'Chip',
+        'ColourField',
+        'CountField',
         'Dialog',
         'ICON_NAMES',
         'Icon',

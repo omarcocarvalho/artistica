@@ -2,6 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import { ColourField } from './ColourField'
+import { CountField } from './CountField'
 import { NumberField } from './NumberField'
 import { parseDecimal } from './parse-decimal'
 import { SegmentedControl } from './SegmentedControl'
@@ -41,12 +43,57 @@ describe('Switch', () => {
   })
 })
 
+describe('Switch describedBy', () => {
+  it('adds the given description after its hint', () => {
+    render(
+      <>
+        <Switch
+          label="Grid"
+          checked={false}
+          onCheckedChange={vi.fn()}
+          hint="Equal cells"
+          describedBy="why"
+        />
+        <Switch label="Thirds" checked={false} onCheckedChange={vi.fn()} describedBy="why" />
+        <span id="why">Waiting</span>
+      </>,
+    )
+    expect(screen.getByRole('switch', { name: 'Grid' })).toHaveAccessibleDescription(
+      'Equal cells Waiting',
+    )
+    expect(screen.getByRole('switch', { name: 'Thirds' })).toHaveAccessibleDescription('Waiting')
+  })
+})
+
 describe('SegmentedControl', () => {
   const options = [
     { value: 'auto', label: 'Auto' },
     { value: 'portrait', label: 'Portrait' },
     { value: 'landscape', label: 'Landscape' },
   ] as const
+
+  it('disables every option and describes each one when asked', async () => {
+    const onValueChange = vi.fn()
+    render(
+      <>
+        <SegmentedControl
+          label="Orientation"
+          value="auto"
+          onValueChange={onValueChange}
+          options={options}
+          disabled
+          describedBy="why"
+        />
+        <span id="why">Waiting</span>
+      </>,
+    )
+    for (const radio of screen.getAllByRole('radio')) {
+      expect(radio).toBeDisabled()
+      expect(radio).toHaveAccessibleDescription('Waiting')
+    }
+    await userEvent.click(screen.getByRole('radio', { name: 'Landscape' }))
+    expect(onValueChange).not.toHaveBeenCalled()
+  })
 
   it('is a named radio group with the current value checked', () => {
     render(
@@ -314,5 +361,214 @@ describe('NumberField', () => {
     await userEvent.clear(field)
     await userEvent.type(field, '7{Enter}')
     expect(onSubmit).not.toHaveBeenCalled()
+  })
+})
+
+describe('CountField', () => {
+  function Harness({
+    initial = 4,
+    onValueChange,
+    disabled,
+    describedBy,
+  }: {
+    initial?: number
+    onValueChange?: (v: number) => void
+    disabled?: boolean
+    describedBy?: string
+  }) {
+    const [value, setValue] = useState(initial)
+    return (
+      <>
+        <CountField
+          label="Columns"
+          value={value}
+          min={1}
+          max={20}
+          rangeHint="1 to 20"
+          disabled={disabled}
+          describedBy={describedBy}
+          onValueChange={(v) => {
+            onValueChange?.(v)
+            setValue(v)
+          }}
+        />
+        <span id="why">Waiting</span>
+      </>
+    )
+  }
+  const field = () => screen.getByRole('textbox', { name: 'Columns' })
+
+  it('is a labelled numeric text box, not a spinner, with the range as its description', () => {
+    render(<Harness />)
+    const input = field()
+    expect(input).toHaveAttribute('type', 'text')
+    expect(input).toHaveAttribute('inputmode', 'numeric')
+    expect(input).toHaveValue('4')
+    expect(input).not.toHaveAttribute('aria-valuemin')
+    expect(input).not.toHaveAttribute('aria-valuemax')
+    expect(input).toHaveAccessibleDescription('1 to 20')
+    expect(screen.getByText('Columns').tagName).toBe('LABEL')
+  })
+
+  it.each([
+    ['0', 1],
+    ['25', 20],
+    ['3.7', 4],
+    ['3,2', 3],
+    [' 7 ', 7],
+  ])('commits %j on blur as %i', async (typed, committed) => {
+    const user = userEvent.setup()
+    const onValueChange = vi.fn()
+    render(<Harness initial={9} onValueChange={onValueChange} />)
+    await user.clear(field())
+    await user.type(field(), typed)
+    expect(onValueChange).not.toHaveBeenCalled()
+    await user.tab()
+    expect(onValueChange).toHaveBeenCalledTimes(1)
+    expect(onValueChange).toHaveBeenCalledWith(committed)
+    expect(field()).toHaveValue(String(committed))
+  })
+
+  it('commits on Enter and keeps focus', async () => {
+    const user = userEvent.setup()
+    const onValueChange = vi.fn()
+    render(<Harness onValueChange={onValueChange} />)
+    await user.clear(field())
+    await user.type(field(), '12{Enter}')
+    expect(onValueChange).toHaveBeenCalledWith(12)
+    expect(field()).toHaveValue('12')
+    expect(field()).toHaveFocus()
+  })
+
+  it('does not submit an enclosing form on Enter', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn((e: { preventDefault: () => void }) => {
+      e.preventDefault()
+    })
+    render(
+      <form onSubmit={onSubmit}>
+        <Harness />
+      </form>,
+    )
+    await user.clear(field())
+    await user.type(field(), '7{Enter}')
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it.each(['', 'abc', '-3', '1e3', '.', 'Infinity'])(
+    'keeps the previous value for %j and shows it again',
+    async (typed) => {
+      const user = userEvent.setup()
+      const onValueChange = vi.fn()
+      render(<Harness initial={6} onValueChange={onValueChange} />)
+      await user.clear(field())
+      if (typed) await user.type(field(), typed)
+      await user.keyboard('{Enter}')
+      expect(onValueChange).not.toHaveBeenCalled()
+      expect(field()).toHaveValue('6')
+    },
+  )
+
+  it('sends nothing when the committed number equals the value', async () => {
+    const user = userEvent.setup()
+    const onValueChange = vi.fn()
+    render(<Harness initial={6} onValueChange={onValueChange} />)
+    await user.clear(field())
+    await user.type(field(), '6.2{Enter}')
+    expect(onValueChange).not.toHaveBeenCalled()
+    expect(field()).toHaveValue('6')
+  })
+
+  it('steps with the arrow keys, clamps, and commits at once', async () => {
+    const user = userEvent.setup()
+    const onValueChange = vi.fn()
+    render(<Harness initial={19} onValueChange={onValueChange} />)
+    field().focus()
+    await user.keyboard('{ArrowUp}')
+    expect(onValueChange).toHaveBeenLastCalledWith(20)
+    expect(field()).toHaveValue('20')
+    onValueChange.mockClear()
+    await user.keyboard('{ArrowUp}')
+    expect(onValueChange).not.toHaveBeenCalled()
+    expect(field()).toHaveValue('20')
+    await user.keyboard('{ArrowDown}{ArrowDown}')
+    expect(onValueChange).toHaveBeenLastCalledWith(18)
+    expect(field()).toHaveValue('18')
+  })
+
+  it('steps from what was typed, and clamps at the minimum', async () => {
+    const user = userEvent.setup()
+    const onValueChange = vi.fn()
+    render(<Harness initial={9} onValueChange={onValueChange} />)
+    await user.clear(field())
+    await user.type(field(), '1{ArrowDown}')
+    expect(onValueChange).toHaveBeenLastCalledWith(1)
+    expect(field()).toHaveValue('1')
+    await user.clear(field())
+    await user.type(field(), '5{ArrowUp}')
+    expect(onValueChange).toHaveBeenLastCalledWith(6)
+    expect(field()).toHaveValue('6')
+  })
+
+  it('passes disabled and extra descriptions through', () => {
+    render(<Harness disabled describedBy="why" />)
+    expect(field()).toBeDisabled()
+    expect(field()).toHaveAccessibleDescription('1 to 20 Waiting')
+  })
+
+  it('shows a new value from outside when not editing', () => {
+    const props = { label: 'Rows', min: 1, max: 20, rangeHint: '1 to 20', onValueChange: vi.fn() }
+    const { rerender } = render(<CountField {...props} value={3} />)
+    rerender(<CountField {...props} value={8} />)
+    expect(screen.getByRole('textbox', { name: 'Rows' })).toHaveValue('8')
+  })
+})
+
+describe('ColourField', () => {
+  it('is a labelled native colour input with its hex shown and in its description', () => {
+    render(<ColourField label="Colour" value="#e0457b" onValueChange={vi.fn()} />)
+    const input = screen.getByLabelText('Colour')
+    expect(input).toHaveAttribute('type', 'color')
+    expect(input).toHaveValue('#e0457b')
+    expect(screen.getByText('#e0457b')).toBeVisible()
+    expect(input).toHaveAccessibleDescription('#e0457b')
+  })
+
+  it('sends the lowercase #rrggbb on every input event', () => {
+    const onValueChange = vi.fn()
+    render(<ColourField label="Colour" value="#e0457b" onValueChange={onValueChange} />)
+    const input = screen.getByLabelText('Colour')
+    fireEvent.input(input, { target: { value: '#1F3FBF' } })
+    expect(onValueChange).toHaveBeenLastCalledWith('#1f3fbf')
+    fireEvent.input(input, { target: { value: '#00ff00' } })
+    expect(onValueChange).toHaveBeenLastCalledWith('#00ff00')
+    expect(onValueChange).toHaveBeenCalledTimes(2)
+  })
+
+  it('shows the hex of the value it is given, lowercased', () => {
+    const { rerender } = render(
+      <ColourField label="Colour" value="#e0457b" onValueChange={vi.fn()} />,
+    )
+    rerender(<ColourField label="Colour" value="#1F3FBF" onValueChange={vi.fn()} />)
+    expect(screen.getByText('#1f3fbf')).toBeVisible()
+    expect(screen.getByLabelText('Colour')).toHaveValue('#1f3fbf')
+  })
+
+  it('passes disabled and extra descriptions through', () => {
+    render(
+      <>
+        <ColourField
+          label="Colour"
+          value="#e0457b"
+          onValueChange={vi.fn()}
+          disabled
+          describedBy="why"
+        />
+        <span id="why">Waiting</span>
+      </>,
+    )
+    const input = screen.getByLabelText('Colour')
+    expect(input).toBeDisabled()
+    expect(input).toHaveAccessibleDescription('#e0457b Waiting')
   })
 })

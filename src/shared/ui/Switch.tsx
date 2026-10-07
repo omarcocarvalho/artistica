@@ -10,6 +10,8 @@ export interface SwitchProps {
   /** Small helper text under the label. */
   hint?: string
   disabled?: boolean
+  /** Id(s) of more text that describes the switch, after its hint, e.g. why it is disabled. */
+  describedBy?: string
   className?: string
 }
 
@@ -19,10 +21,12 @@ export function Switch({
   onCheckedChange,
   hint,
   disabled,
+  describedBy,
   className,
 }: SwitchProps) {
   const id = useId()
   const hintId = `${id}-hint`
+  const description = [hint ? hintId : undefined, describedBy].filter(Boolean).join(' ')
   return (
     <div className={cx('ds-switch-row', className)}>
       <div className="ds-switch-row__text">
@@ -41,7 +45,7 @@ export function Switch({
         checked={checked}
         onCheckedChange={onCheckedChange}
         disabled={disabled}
-        aria-describedby={hint ? hintId : undefined}
+        aria-describedby={description || undefined}
       >
         <RadixSwitch.Thumb className="ds-switch__thumb" />
       </RadixSwitch.Root>
