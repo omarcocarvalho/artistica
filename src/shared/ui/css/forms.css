@@ -302,4 +302,51 @@
       outline-offset: var(--focus-ring-offset);
     }
   }
+  /* Forced colors (Windows high contrast) drop author backgrounds and box shadows, which carry the
+     state of these controls. System colours redraw that state: Highlight marks what is on, selected
+     or filled. */
+  @media (forced-colors: active) {
+    .ds-switch__thumb {
+      forced-color-adjust: none;
+      background: CanvasText;
+    }
+    .ds-switch[data-state='checked']::before {
+      forced-color-adjust: none;
+      background: Highlight;
+      border-color: Highlight;
+    }
+    .ds-switch[data-state='checked'] .ds-switch__thumb {
+      background: HighlightText;
+    }
+    .ds-switch:focus-visible::before {
+      outline-color: CanvasText;
+    }
+    .ds-seg__item[data-state='checked'] {
+      forced-color-adjust: none;
+      background: Highlight;
+      color: HighlightText;
+    }
+    .ds-slider input[type='range']::-webkit-slider-runnable-track {
+      forced-color-adjust: none;
+      background: linear-gradient(90deg, Highlight 0 var(--fill, 50%), Canvas var(--fill, 50%));
+      border-color: CanvasText;
+    }
+    .ds-slider input[type='range']::-moz-range-track {
+      forced-color-adjust: none;
+      background: Canvas;
+      border-color: CanvasText;
+    }
+    .ds-slider input[type='range']::-moz-range-progress {
+      forced-color-adjust: none;
+      background: Highlight;
+    }
+    .ds-slider input[type='range']::-webkit-slider-thumb {
+      background: Canvas;
+      border-color: CanvasText;
+    }
+    .ds-slider input[type='range']::-moz-range-thumb {
+      background: Canvas;
+      border-color: CanvasText;
+    }
+  }
 }

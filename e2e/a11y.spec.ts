@@ -305,3 +305,36 @@ test.describe('desktop control density (chromium)', () => {
     expect(await Promise.all(fields.map(fontSize))).toEqual([14, 14])
   })
 })
+
+test.describe('forced colors (chromium)', () => {
+  runOnly('chromium')
+
+  test('switches and segmented controls keep a visible on and off state', async ({ page }) => {
+    const app = startApp(page)
+    await app.goto()
+    await app.upload([FIXTURES.quadrantsJpg])
+    await app.expectImages(1)
+    await app.setSwitch('Gutter between images', true)
+    await app.setSwitch('Bleed', false)
+    const on = page.getByRole('switch', { name: 'Gutter between images' })
+    const off = page.getByRole('switch', { name: 'Bleed' })
+    const units = page.getByRole('radiogroup', { name: 'Units' })
+    const checked = units.locator('[data-state="checked"]')
+    const unchecked = units.locator('[data-state="unchecked"]')
+
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ forcedColors: 'active', colorScheme })
+      const thumbOn = await paintStyle(on.locator('.ds-switch__thumb'))
+      const thumbOff = await paintStyle(off.locator('.ds-switch__thumb'))
+      const trackOn = await paintStyle(on, '::before')
+      const trackOff = await paintStyle(off, '::before')
+      expect(thumbOn.bg).not.toBe(trackOn.bg)
+      expect(thumbOff.bg).not.toBe(trackOff.bg)
+      expect(trackOn.bg).not.toBe(trackOff.bg)
+      const segOn = await paintStyle(checked)
+      const segOff = await paintStyle(unchecked)
+      expect(segOn.bg).not.toBe(segOff.bg)
+      expect(segOn.color).not.toBe(segOn.bg)
+    }
+  })
+})

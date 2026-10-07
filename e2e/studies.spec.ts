@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { AppPage } from './support/app.ts'
 import { FIXTURES } from './support/fixtures.ts'
+import { paintedPixels } from './support/png.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import {
   drawnImageData,
@@ -318,6 +319,21 @@ test.describe('studies on chromium', () => {
       expect(disc.bg).not.toBe('rgba(0, 0, 0, 0)')
       expect(tick.bg).not.toBe('rgba(0, 0, 0, 0)')
       expect(tick.bg).not.toBe(disc.bg)
+
+      // The slider's filled part differs from its empty part and from the panel behind it. The
+      // thumb sits at the value (40 %), clear of both track ends.
+      const slider = app.studySlider('Amount')
+      await expect(slider).toHaveValue('40')
+      const sliderBox = await slider.boundingBox()
+      if (!sliderBox) throw new Error('slider is not laid out')
+      const midY = sliderBox.height / 2
+      const [filled, empty, behind] = await paintedPixels(slider, [
+        [6, midY],
+        [sliderBox.width - 6, midY],
+        [sliderBox.width - 6, 1],
+      ])
+      expect(filled).not.toEqual(empty)
+      expect(filled).not.toEqual(behind)
 
       await app.studiesPanel.screenshot({
         path: testInfo.outputPath(`forced-colors-${colorScheme}.png`),
