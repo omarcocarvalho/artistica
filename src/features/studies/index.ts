@@ -26,6 +26,9 @@ export type {
 } from '../../shared/model/study'
 // --- maths (A3–A5) ---
 export { blurSigmaPx, boxRadiiForGauss, gaussianBlurRGBA } from './blur'
+export { RAMP_L_DARK, RAMP_L_LIGHT, rampChroma, valueRamp } from './ramp'
+export { LIGHTNESS_BINS, VALUE_CLIP, lightnessRange, posterizeRGBA, valueIndex } from './posterize'
+export type { LightnessRange } from './posterize'
 // --- preview (C1, C2) ---
 export {
   createStudyPreviewProvider,
