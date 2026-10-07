@@ -47,11 +47,11 @@ const sizeModeArb: fc.Arbitrary<SizeMode> = fc.oneof(
 )
 
 /**
- * Layout items with unique keys; tiles up to 3 so M2 groups are exercised too.
+ * Layout items with unique keys; tiles up to 4, the most study versions an image can print.
  * Some images come with extra copies (identical items, keys `img<i>#<copy>`), so ties between
  * equal boxes are exercised. At most `maxItems` items in total.
  */
-export function itemsArb(maxItems: number, maxTiles = 3): fc.Arbitrary<LayoutItemInput[]> {
+export function itemsArb(maxItems: number, maxTiles = 4): fc.Arbitrary<LayoutItemInput[]> {
   return fc
     .array(
       fc.record({

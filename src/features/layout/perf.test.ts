@@ -43,6 +43,21 @@ function denseGroupItems(seed: number): LayoutItemInput[] {
   )
 }
 
+/** 50 photos, each printing all four study versions (the largest groups the UI can make). */
+function fourVersionItems(seed: number): LayoutItemInput[] {
+  const rnd = mulberry32(seed)
+  const aspects = [1.5, 2 / 3, 1, 4 / 3, 3 / 4]
+  return Array.from({ length: 50 }, (_, i) =>
+    item(
+      key(i),
+      aspects[Math.floor(rnd() * aspects.length)] ?? 1,
+      300 + rnd() * 700,
+      { kind: 'auto' },
+      4,
+    ),
+  )
+}
+
 describe('computeLayout performance (50 items)', () => {
   const cases: [string, PageSetup, LayoutItemInput[]][] = [
     ['A4 auto, mixed photos', DEFAULT_PAGE_SETUP, realisticItems(50, 1)],
@@ -71,6 +86,12 @@ describe('computeLayout performance (50 items)', () => {
       'Custom 1000 mm auto, dense: 50 random groups on one page',
       { ...DEFAULT_PAGE_SETUP, paper: 'Custom', customSize: { w: 1000, h: 1000 } },
       denseGroupItems(2),
+    ],
+    ['A4 auto, 50 photos × 4 versions', DEFAULT_PAGE_SETUP, fourVersionItems(7)],
+    [
+      'A3 auto, 50 photos × 4 versions',
+      { ...DEFAULT_PAGE_SETUP, paper: 'A3' },
+      fourVersionItems(8),
     ],
   ]
   for (const [name, setup, items] of cases) {
