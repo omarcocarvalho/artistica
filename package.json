@@ -25,7 +25,8 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage --project=!perf",
+    "test:perf": "vitest run --project=perf",
     "e2e": "playwright test"
   },
   "dependencies": {

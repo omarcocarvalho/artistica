@@ -2,18 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { applyStudy } from './apply-study'
 import { noise } from './test-support/pixels'
 
-interface Runtime {
-  process?: { env: Record<string, string | undefined> }
-  __vitest_worker__?: { config?: { coverage?: { enabled?: boolean } } }
-}
-const runtime = globalThis as Runtime
-/** Local desktop target 60 ms (overview, Performance budgets); CI runners are slower and shared. */
-const UNINSTRUMENTED_BOUND_MS = runtime.process?.env.CI ? 300 : 120
-/** v8 coverage (CI runs `test:coverage`) makes this pixel loop about 4× slower. */
-const COVERAGE_SLOWDOWN = 5
-const BOUND_MS =
-  UNINSTRUMENTED_BOUND_MS *
-  (runtime.__vitest_worker__?.config?.coverage?.enabled ? COVERAGE_SLOWDOWN : 1)
+/**
+ * The desktop budget is 60 ms (overview, Performance budgets). The bound is the CI one, 5× that:
+ * CI runners and busy desktops are slower and shared, and the log line records the real figure.
+ */
+const BOUND_MS = 300
 
 function medianMs(blurPct: number): number {
   const study = { blurPct, values: { count: 5, hue: 55, neutral: false } }

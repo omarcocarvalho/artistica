@@ -90,6 +90,18 @@ describe('applyStudy', () => {
       expect(sizes.filter((bytes) => bytes >= 64 * 1024)).toEqual([])
     }
   })
+
+  it('grows memory by less than half a copy of the tile (M2-R10)', () => {
+    const w = 1000
+    const h = 1000
+    for (const s of [study(40, VALUES), study(null, VALUES), study(100, null)]) {
+      applyStudy(noise(w, h, 1), w, h, s)
+      const d = noise(w, h, 12)
+      const before = memoryInUse()
+      applyStudy(d, w, h, s)
+      expect(memoryInUse() - before).toBeLessThan((w * h * 4) / 2)
+    }
+  })
 })
 
 describe('applyStudyToContext', () => {
@@ -142,6 +154,15 @@ describe('applyStudyToContext', () => {
     }
   })
 })
+
+/** JS heap plus typed-array backing stores, in bytes (the unit project runs in node). */
+function memoryInUse(): number {
+  const { process } = globalThis as unknown as {
+    process: { memoryUsage(): { heapUsed: number; arrayBuffers: number } }
+  }
+  const m = process.memoryUsage()
+  return m.heapUsed + m.arrayBuffers
+}
 
 const TYPED = [
   Int8Array,

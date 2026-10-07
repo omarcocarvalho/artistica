@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 
 // Served from https://omarcocarvalho.github.io/artistica/ (GitHub Pages project site).
 export default defineConfig({
@@ -39,6 +39,18 @@ export default defineConfig({
           name: 'unit',
           environment: 'node',
           include: ['src/**/*.test.ts', 'landing/**/*.test.ts', 'scripts/**/*.test.ts'],
+          exclude: [...configDefaults.exclude, '**/perf.test.ts'],
+        },
+      },
+      {
+        // Timing tests, one file at a time. `test:coverage` skips this project, because
+        // instrumentation slows the measured loops; CI runs it uninstrumented with `test:perf`.
+        extends: true,
+        test: {
+          name: 'perf',
+          environment: 'node',
+          fileParallelism: false,
+          include: ['src/**/perf.test.ts'],
         },
       },
       {
