@@ -1,6 +1,7 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import type { Rotation } from '../../../shared/model/image'
+import { studyKey } from '../../../shared/model/study'
 import { drawTile } from '../test-support/fixtures'
 import {
   MAX_CANVAS_AREA_PX,
@@ -292,5 +293,40 @@ describe('tileSourceDpi', () => {
     const crop = { x: 0, y: 0, w: 800, h: 400 }
     expect(tileSourceDpi(drawTile({ crop, rotation: 90 }))).toBe(102)
     expect(tileSourceDpi(drawTile({ crop, rotation: 270 }))).toBe(102)
+  })
+})
+
+describe('tileRenderKey with studies (M2)', () => {
+  const base = drawTile()
+  const blurred = drawTile({ version: 'blurred', study: { blurPct: 40, values: null } })
+  const blurred70 = drawTile({ version: 'blurred', study: { blurPct: 70, values: null } })
+  const values = drawTile({
+    version: 'values',
+    study: { blurPct: null, values: { count: 5, hue: 55, neutral: false } },
+  })
+  const values6 = drawTile({
+    version: 'values',
+    study: { blurPct: null, values: { count: 6, hue: 55, neutral: false } },
+  })
+  const blurValues = drawTile({
+    version: 'blurValues',
+    study: { blurPct: 40, values: { count: 5, hue: 55, neutral: false } },
+  })
+
+  it('differs per version and per study parameter', () => {
+    const keys = [base, blurred, blurred70, values, values6, blurValues].map((t) =>
+      tileRenderKey(t),
+    )
+    expect(new Set(keys).size).toBe(keys.length)
+  })
+
+  it('is equal for identical copies of the same version (one embedded image)', () => {
+    const copy = { ...blurred, trim: { ...blurred.trim, y: 200 } }
+    expect(tileRenderKey(copy)).toBe(tileRenderKey(blurred))
+  })
+
+  it('ends with the version and the study key', () => {
+    expect(tileRenderKey(values).endsWith(`|values|${studyKey(values.study)}`)).toBe(true)
+    expect(tileRenderKey(base).endsWith('|original|-')).toBe(true)
   })
 })
