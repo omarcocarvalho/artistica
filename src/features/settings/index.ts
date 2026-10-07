@@ -1,6 +1,7 @@
 export {
   DEFAULT_SETTINGS,
   THEMES,
+  normalizeLineDefaults,
   normalizeStudyDefaults,
   parseSettings,
   settingsSchema,
