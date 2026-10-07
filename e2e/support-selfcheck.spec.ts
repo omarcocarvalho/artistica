@@ -31,6 +31,8 @@ test('summarizePdf reads page sizes, image draws and vector strokes through the 
   expect(info.pages[0]?.heightPt).toBeCloseTo(841.89, 1)
   expect(info.pages[0]?.imagePlacements).toBe(2)
   expect(info.pages[0]?.strokes).toBe(1)
+  expect(info.pages[0]?.markSegments).toEqual([{ x1: 0, y1: 0, x2: 10, y2: 10 }])
+  expect(info.pages[0]?.markGeometry).toEqual(['0 0', '0 0'])
   expect(info.pages[1]).toMatchObject({ widthPt: 612, heightPt: 792, imagePlacements: 0 })
 })
 

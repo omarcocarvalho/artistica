@@ -1,7 +1,7 @@
 import { PDFDict, PDFDocument, PDFName, PDFRawStream, decodePDFRawStream } from '@pdfme/pdf-lib'
 import {
   countImageDraws,
-  countStrokedLines,
+  isRegistrationStroke,
   inspectPdf,
   type PdfImageInfo,
   type PdfReport,
@@ -19,9 +19,9 @@ export interface PdfPageSummary {
   strokes: number
   /** Width in pt of each drawn image (the `W 0 0 H 0 0 cm` matrix right before its `Do`). */
   imageWidthsPt: number[]
-  /** Start points of the stroked lines ("x y m"), in drawing order: the crop-mark geometry. */
+  /** Every move-to point ("x y") of the crop marks, in drawing order. */
   markGeometry: string[]
-  /** Each stroked line as start and end points ("x y m" then "x y l"), in drawing order. */
+  /** Each crop mark that ends in a move-to then a line-to, as that segment, in drawing order. */
   markSegments: PdfSegment[]
   /** Every image draw, in content-stream order. */
   draws: PdfDraw[]
@@ -101,25 +101,27 @@ export async function summarizePdf(bytes: Uint8Array): Promise<PdfSummary> {
     pageCount: report.pageCount,
     imageCount: report.imageCount,
     images: report.images,
-    pages: report.pages.map((p) => ({
-      widthPt: p.widthPt,
-      heightPt: p.heightPt,
-      imagePlacements: countImageDraws(p.content),
-      strokes: countStrokedLines(p.content),
-      imageWidthsPt: [
-        ...p.content.matchAll(/([\d.]+) 0 0 [\d.]+ 0 0 cm\s+(?:1 0 0 1 0 0 cm\s+)?\/\S+ Do\b/g),
-      ].map((m) => Number(m[1])),
-      markGeometry: [...p.content.matchAll(/^([\d.]+ [\d.]+) m$/gm)].map((m) => m[1]),
-      markSegments: [
-        ...p.content.matchAll(/^([\d.]+) ([\d.]+) m\s+([\d.]+) ([\d.]+) l\s+S\b/gm),
-      ].map((m) => ({
-        x1: Number(m[1]),
-        y1: Number(m[2]),
-        x2: Number(m[3]),
-        y2: Number(m[4]),
-      })),
-      draws: drawsOf(p),
-    })),
+    pages: report.pages.map((p) => {
+      const marks = p.strokes.filter(isRegistrationStroke)
+      return {
+        widthPt: p.widthPt,
+        heightPt: p.heightPt,
+        imagePlacements: countImageDraws(p.content),
+        strokes: marks.length,
+        imageWidthsPt: [
+          ...p.content.matchAll(/([\d.]+) 0 0 [\d.]+ 0 0 cm\s+(?:1 0 0 1 0 0 cm\s+)?\/\S+ Do\b/g),
+        ].map((m) => Number(m[1])),
+        markGeometry: marks.flatMap((s) =>
+          s.path.flatMap((op) => (op.op === 'm' ? [`${String(op.x)} ${String(op.y)}`] : [])),
+        ),
+        markSegments: marks.flatMap((s) => {
+          const a = s.path.at(-2)
+          const b = s.path.at(-1)
+          return a?.op === 'm' && b?.op === 'l' ? [{ x1: a.x, y1: a.y, x2: b.x, y2: b.y }] : []
+        }),
+        draws: drawsOf(p),
+      }
+    }),
   }
 }
 
