@@ -195,7 +195,7 @@ Reference values (from the paper's table and widely published conversions; toler
   radius_i = (size_i − 1) / 2
   ```
 
-  `m` is clamped to `[0, 3]` (it can fall outside for σ < 0.8). The variance of three boxes of radius `r_i` is `Σ ((2r_i + 1)² − 1) / 12`; it is within 5% of σ² for σ ≥ 1.
+  `m` is clamped to `[0, 3]` defensively: `wl ≤ wIdeal < wl + 2`, so `mIdeal` lies in `(0, 3]` for every σ ≥ 0. The variance of three boxes of radius `r_i` is `Σ ((2r_i + 1)² − 1) / 12 = Σ r_i(r_i + 1) / 3`. Moving one box from `wl` to `wl + 2` changes it by `(wl + 1) / 3`, so rounding `m` leaves it within half that step, `(r_min + 1) / 3` with `r_min = (wl − 1) / 2`, of σ². That is within 5% of σ² only from σ ≈ 6.7 up: at σ = 1 the nearest variances any three integer boxes reach are 2/3 and 4/3 (33% off), and this construction is 15% off at σ = 1.7 and 8.3% off at σ = 4. All three radii are 0 below σ = 1/√3 ≈ 0.577, so the blur changes nothing there.
 
 - **One box pass along one line** (horizontal: a row of `w` pixels; vertical: a column of `h` pixels), radius `r`, window `d = 2r + 1`, per colour channel c ∈ {R, G, B} (alpha untouched):
   1. Copy the line's RGBA bytes into the line buffer `buf` (a `Uint8ClampedArray` of `4 · max(w, h)`, allocated once per `gaussianBlurRGBA` call). The output is written straight back into `data`.
@@ -1297,11 +1297,13 @@ describe('blurSigmaPx (M2-R6)', () => {
 
 describe('boxRadiiForGauss', () => {
   it('three boxes approximate the Gaussian variance', () => {
-    for (const sigma of [1, 1.7, 2.5, 6, 15, 40, 120]) {
+    const halfStep = (radii: readonly number[]) => (Math.min(...radii) + 1) / 3
+    for (const sigma of [1, 1.7, 2.5, 4, 6, 15, 40, 120]) {
       const radii = boxRadiiForGauss(sigma)
       expect(radii).toHaveLength(3)
       for (const r of radii) expect(Number.isInteger(r) && r >= 0).toBe(true)
-      expect(Math.abs(variance(radii) - sigma ** 2) / sigma ** 2).toBeLessThan(0.05)
+      expect(Math.abs(variance(radii) - sigma ** 2)).toBeLessThanOrEqual(halfStep(radii) + 1e-9)
+      if (sigma >= 7) expect(Math.abs(variance(radii) - sigma ** 2) / sigma ** 2).toBeLessThan(0.05)
     }
   })
   it('never returns negative radii for tiny sigmas', () => {
