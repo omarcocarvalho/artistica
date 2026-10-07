@@ -1,6 +1,6 @@
 # Artistica — notes for Claude
 
-> **Picking up this project? Read [HANDOVER.md](HANDOVER.md) first.** It has the current state, the branch map and the prioritised next steps. Per-task progress, rulings and deferred issues for M1 are in `docs/superpowers/ledgers/`.
+> **Picking up this project? Read [HANDOVER.md](HANDOVER.md) first.** It has the current state, the branch map and the prioritised next steps. Per-task progress, rulings and deferred issues for each milestone are in `docs/superpowers/ledgers/`.
 
 Artistica is a free, static web app for artists: load reference photos, pack them onto printable pages, export a print-ready PDF (crop marks, bleed), plus study versions (blur, values) and composition/construction lines (some AI, in-browser).
 
@@ -26,6 +26,8 @@ pnpm lint           # ESLint, zero warnings allowed
 pnpm format         # Prettier write   | pnpm format:check — CI uses this
 pnpm typecheck      # tsc -b
 pnpm test           # Vitest (unit + property tests) | pnpm test:watch
+pnpm test:coverage  # unit tests with the coverage gate (CI); skips the timing tests
+pnpm test:perf      # timing tests (*/perf.test.ts), uninstrumented; CI runs them in the unit job
 pnpm e2e            # Playwright, all projects (chromium, firefox, webkit, mobile-chromium, mobile-webkit)
 pnpm e2e --project=chromium   # one browser
 # In parallel worktrees use a unique port, e.g. E2E_PORT=4201 pnpm e2e
@@ -78,7 +80,7 @@ Architecture rules:
   gh pr create --base master --title "feat: …" --body "…"
   gh pr merge --auto --squash
   ```
-- **Coverage (from M1):** unit-test coverage threshold of 80% on the core modules (layout, studies, lines, render), enforced in CI.
+- **Coverage (from M1):** unit-test coverage threshold of 80% on the core modules (the `include` list in `vite.config.ts`: layout, studies, render, shared colour and the study model), enforced in CI.
 - **Required checks:** `lint`, `typecheck`, `unit`, `build`, `e2e (chromium)`, `e2e (firefox)`, `e2e (webkit)`, `pr-title`. Never add `paths:` filters to these workflows (a PR whose required checks never run can never merge).
 - **Releases: one per milestone.** release-please keeps a release PR (`chore(master): release x.y.z`) open. It is **never auto-merged**. At the end of a milestone, after the owner signs off: close and reopen the release PR (PRs opened by `GITHUB_TOKEN` don't trigger CI; a reopen by a person does), wait for green checks, then `gh pr merge <n> --squash`. Merging creates the GitHub release and deploys to Pages in the same workflow run.
   - Versions: M0 `v0.0.1`, M1 `v0.1.0`, M2 `v0.2.0`, M3 `v0.3.0`, M4 `v0.4.0`, M5 `v0.5.0`, M6 `v1.0.0` (put a `Release-As: 1.0.0` footer in the body of a normal PR that is squash-merged to master, so it becomes the commit footer; not in the release PR body, which release-please rewrites).
