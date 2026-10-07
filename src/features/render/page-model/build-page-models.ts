@@ -51,29 +51,31 @@ export function readingOrder(rects: readonly RectMm[]): RectMm[] {
  */
 export function drawTilesFor(img: ImageDescriptor, placement: Placement, bleedMm: Mm): DrawTile[] {
   const versions = img.study.versions
-  if (placement.tiles.length !== versions.length) return []
+  const trims = readingOrder(placement.tiles)
+  const paired = trims.flatMap((trim, i) => {
+    const version = versions[i]
+    return version === undefined ? [] : [{ trim, version }]
+  })
+  if (paired.length !== trims.length || paired.length !== versions.length) return []
   const crop = resolveCrop(img)
   const rotation = combineRotation(img.edits.rotation, placement.turned)
   const flipH = placement.turned ? img.edits.flipV : img.edits.flipH
   const flipV = placement.turned ? img.edits.flipH : img.edits.flipV
   const lowDpi = placement.warnings.includes('low-dpi')
   const scaledToFit = placement.warnings.includes('scaled-to-fit')
-  return readingOrder(placement.tiles).map((trim, i) => {
-    const version = versions[i] ?? 'original' // never the fallback: lengths are equal (checked above)
-    return {
-      imageId: img.id,
-      trim,
-      bleedMm,
-      crop,
-      rotation,
-      flipH,
-      flipV,
-      lowDpi,
-      scaledToFit,
-      version,
-      study: tileStudyFor(version, img.study),
-    }
-  })
+  return paired.map(({ trim, version }) => ({
+    imageId: img.id,
+    trim,
+    bleedMm,
+    crop,
+    rotation,
+    flipH,
+    flipV,
+    lowDpi,
+    scaledToFit,
+    version,
+    study: tileStudyFor(version, img.study),
+  }))
 }
 
 /**
