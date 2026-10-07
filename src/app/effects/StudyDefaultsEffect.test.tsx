@@ -4,7 +4,9 @@ import { useImages } from '../../features/images'
 import { makeLoadedImage } from '../../features/images/test-utils'
 import { useSettings } from '../../features/settings'
 import type { ImageId } from '../../shared/model/image'
+import { DEFAULT_LINES } from '../../shared/model/lines'
 import { DEFAULT_STUDY } from '../../shared/model/study'
+import { LineDefaultsEffect } from './LineDefaultsEffect'
 import { StudyDefaultsEffect } from './StudyDefaultsEffect'
 
 const A = 'a' as ImageId
@@ -128,6 +130,31 @@ describe('StudyDefaultsEffect', () => {
       blurPct: 70,
       values: { count: 7, hue: 120, neutral: true },
     })
+  })
+
+  it('"Apply to all" leaves the line defaults alone (owner Q8)', () => {
+    render(
+      <>
+        <StudyDefaultsEffect />
+        <LineDefaultsEffect />
+      </>,
+    )
+    useImages.getState().updateLines(B, {
+      thirds: true,
+      style: { colour: '#1f3fbf', widthMm: 1.5, opacityPct: 60 },
+    })
+    useImages.getState().updateStudy(B, { blurPct: 70 })
+    const lineDefaults = useSettings.getState().lineDefaults
+    const setLineDefaults = vi.spyOn(useSettings.getState(), 'setLineDefaults')
+    const setItem = vi.spyOn(localStorage, 'setItem')
+    act(() => {
+      useImages.getState().applyStudyToAll(B)
+    })
+    expect(useSettings.getState().studyDefaults.blurPct).toBe(70)
+    expect(useSettings.getState().lineDefaults).toBe(lineDefaults)
+    expect(setLineDefaults).not.toHaveBeenCalled()
+    expect(setItem).toHaveBeenCalledTimes(1)
+    expect(useImages.getState().images.find((i) => i.id === A)?.lines).toEqual(DEFAULT_LINES)
   })
 
   it('an apply that changes no image still counts as last used (owner M2-1)', () => {

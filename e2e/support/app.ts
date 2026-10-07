@@ -407,6 +407,9 @@ export class AppPage {
   get lineColour(): Locator {
     return this.page.getByLabel('Colour', { exact: true })
   }
+  get lineHex(): Locator {
+    return this.page.getByRole('textbox', { name: 'Colour hex code', exact: true })
+  }
   lineSlider(name: 'Thickness' | 'Opacity'): Locator {
     return this.page.getByRole('slider', { name, exact: true })
   }

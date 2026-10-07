@@ -599,7 +599,7 @@ test.describe('lines on desktop (all browsers)', () => {
     await expect(app.spiralCorner('Bottom left')).toHaveAttribute('aria-checked', 'true')
   })
 
-  test('L-D6 keyboard only: reach the Lines tab, switch, type a count, pick a corner, move a slider', async ({
+  test('L-D6 keyboard only: reach the Lines tab, switch, type a count, pick a corner, type a colour, move a slider', async ({
     page,
     browserName,
   }) => {
@@ -639,6 +639,12 @@ test.describe('lines on desktop (all browsers)', () => {
     // A plain press moves focus without selecting in chromium (Radix radio group).
     await page.keyboard.press('ArrowRight', { delay: 50 })
     await expect(app.spiralCorner('Top right')).toHaveAttribute('aria-checked', 'true')
+    await tabTo(app.lineHex)
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.type('#1F3FBF')
+    await page.keyboard.press('Enter')
+    await expect(app.lineHex).toHaveValue(BLUE)
+    await expect(app.lineColour).toHaveValue(BLUE)
     await tabTo(app.lineSlider('Thickness'))
     await page.keyboard.press('ArrowRight')
     await page.keyboard.press('ArrowRight')
@@ -652,7 +658,7 @@ test.describe('lines on desktop (all browsers)', () => {
       lineSettings({
         grid: { on: true, cols: 3, rows: 5 },
         spiral: { on: true, corner: 'topRight' },
-        style: { widthMm: 0.45 },
+        style: { colour: BLUE, widthMm: 0.45 },
       }),
     )
     expect(strokeErrors(info, tiles)).toEqual([])
@@ -829,7 +835,7 @@ test.describe('lines on desktop (all browsers)', () => {
     const app = await withPhotos(page)
     await app.setLineSwitch('Centre lines', true)
     await app.lineColour.fill('#1f3fbf')
-    await expect(app.linesPanel.getByText('#1f3fbf', { exact: true })).toBeVisible()
+    await expect(app.lineHex).toHaveValue('#1f3fbf')
     const storedColour = () =>
       page.evaluate(
         () =>
@@ -841,7 +847,7 @@ test.describe('lines on desktop (all browsers)', () => {
       )
     await expect.poll(storedColour).toBe('#1f3fbf')
     await app.lineColour.fill('#AABBCC')
-    await expect(app.linesPanel.getByText('#aabbcc', { exact: true })).toBeVisible()
+    await expect(app.lineHex).toHaveValue('#aabbcc')
     await expect.poll(storedColour).toBe('#aabbcc')
     await app.expectPreviewSettled()
     const { info } = await exported(app)

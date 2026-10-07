@@ -85,10 +85,11 @@
     color: var(--color-ink);
   }
   .ds-colour-field__hex {
+    flex: none;
+    width: 7.5em;
     font-family: var(--font-mono);
-    font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
-    color: var(--color-ink-muted);
+    text-align: center;
   }
   .ds-colour-input {
     flex: none;
