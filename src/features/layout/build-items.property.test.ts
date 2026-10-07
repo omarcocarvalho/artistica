@@ -6,6 +6,7 @@ import {
   type ImageId,
   type SizeMode,
 } from '../../shared/model/image'
+import { DEFAULT_LINES } from '../../shared/model/lines'
 import { gutterMm, normalizePageSetup, type PageSetup } from '../../shared/model/page-setup'
 import { DEFAULT_STUDY, STUDY_VERSIONS, studyKey, tileStudyFor } from '../../shared/model/study'
 import { buildLayoutItems } from './build-items'
@@ -65,6 +66,7 @@ function descriptors(photos: readonly Photo[], idPrefix: string): ImageDescripto
       versions: p.versions,
       values: { ...DEFAULT_STUDY.values, count: p.valueCount ?? DEFAULT_STUDY.values.count },
     },
+    lines: DEFAULT_LINES,
   }))
 }
 

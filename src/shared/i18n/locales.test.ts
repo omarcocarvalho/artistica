@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { COMPOSITION_LINE_TYPES, SPIRAL_CORNERS } from '../model/lines'
 import { NAMESPACES } from './languages'
 
 const files = import.meta.glob<Record<string, unknown>>('../../locales/en/*.json', {
@@ -38,5 +39,12 @@ describe('English locale files', () => {
     expect(Object.keys(errors ?? {})).toEqual(
       expect.arrayContaining(['images', 'export', 'generic']),
     )
+  })
+
+  it('names every composition-line type and spiral corner', () => {
+    const lines = Object.entries(files).find(([p]) => p.endsWith('/lines.json'))?.[1] as
+      { type?: Record<string, unknown>; corner?: Record<string, unknown> } | undefined
+    expect(Object.keys(lines?.type ?? {})).toEqual([...COMPOSITION_LINE_TYPES])
+    expect(Object.keys(lines?.corner ?? {})).toEqual([...SPIRAL_CORNERS])
   })
 })

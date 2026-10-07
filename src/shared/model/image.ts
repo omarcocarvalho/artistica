@@ -1,3 +1,4 @@
+import type { LineSettings } from './lines'
 import type { StudySettings } from './study'
 import type { Mm } from './units'
 
@@ -55,6 +56,8 @@ export interface ImageDescriptor {
   readonly edits: ImageEdits
   /** Which versions print and how (M2-R1). DEFAULT_STUDY prints the original only. */
   readonly study: StudySettings
+  /** Composition lines (M3-R1). DEFAULT_LINES prints none. */
+  readonly lines: LineSettings
 }
 
 /** Pixel size after crop and rotation (what gets printed). */

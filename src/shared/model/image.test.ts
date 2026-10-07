@@ -9,6 +9,7 @@ import {
   type ImageId,
   type Rotation,
 } from './image'
+import { DEFAULT_LINES } from './lines'
 import { DEFAULT_STUDY } from './study'
 
 const id = 'img-1' as ImageId
@@ -23,6 +24,7 @@ const make = (
   pxH,
   edits: { ...DEFAULT_EDITS, ...over },
   study: DEFAULT_STUDY,
+  lines: DEFAULT_LINES,
 })
 
 describe('constants', () => {

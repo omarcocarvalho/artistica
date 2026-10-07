@@ -6,6 +6,7 @@ import {
   withVersion,
   type StudySettings,
 } from '../../shared/model/study'
+import { DEFAULT_LINES, linesKey, patchLines } from '../../shared/model/lines'
 import type { DecodedImage } from './decode'
 import { sha256Hex } from './content-hash'
 import { ImportFailure } from './errors'
@@ -75,6 +76,14 @@ describe('addFiles', () => {
     const { store } = setup()
     await store.getState().addFiles([file('a.jpg')])
     expect(store.getState().images[0]?.study).toEqual(DEFAULT_STUDY)
+  })
+
+  it('gives every new image no composition lines', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    const lines = store.getState().images[0]?.lines
+    expect(lines).toEqual(DEFAULT_LINES)
+    expect(lines && linesKey(lines)).toBe('-')
   })
 
   it('keeps input order even when a later file finishes first', async () => {
@@ -681,6 +690,7 @@ describe('selectImageDescriptors', () => {
       'contentHash',
       'edits',
       'id',
+      'lines',
       'pxH',
       'pxW',
       'study',
@@ -700,6 +710,16 @@ describe('selectImageDescriptors', () => {
     })
     const [d] = selectImageDescriptors({ images: [makeLoadedImage({ study })] })
     expect(d?.study).toBe(study)
+  })
+
+  it("passes each image's own lines through", () => {
+    const lines = patchLines(DEFAULT_LINES, {
+      thirds: true,
+      spiral: { on: true, corner: 'bottomRight' },
+      style: { colour: '#1f3fbf' },
+    })
+    const [d] = selectImageDescriptors({ images: [makeLoadedImage({ lines })] })
+    expect(d?.lines).toBe(lines)
   })
 })
 

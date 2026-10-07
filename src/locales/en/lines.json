@@ -1,0 +1,16 @@
+{
+  "type": {
+    "grid": "Grid",
+    "thirds": "Rule of thirds",
+    "armature": "Diagonals & armature",
+    "golden": "Golden ratio",
+    "spiral": "Golden spiral",
+    "centre": "Centre lines"
+  },
+  "corner": {
+    "topLeft": "Top left",
+    "topRight": "Top right",
+    "bottomLeft": "Bottom left",
+    "bottomRight": "Bottom right"
+  }
+}

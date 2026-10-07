@@ -24,9 +24,11 @@ export default defineConfig({
       // `include` (0% if untested) and exits 0 when a glob matches nothing.
       include: [
         'src/features/layout/**',
+        'src/features/lines/**',
         'src/features/render/**',
         'src/features/studies/**',
         'src/shared/colour/**',
+        'src/shared/model/lines.ts',
         'src/shared/model/study.ts',
       ],
       exclude: ['**/*.test.*', '**/*.worker.ts', '**/components/**', '**/test-support/**'],
