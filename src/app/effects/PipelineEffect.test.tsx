@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
+import { StrictMode } from 'react'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useImages } from '../../features/images'
 import { computeLayout } from '../../features/layout'
@@ -116,5 +117,29 @@ describe('PipelineEffect layout memo (M2-R15)', () => {
       expect(usePages.getState().pages[0]?.tiles[1]?.study?.blurPct).toBe(12)
     })
     expect(layoutAsync).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('PipelineEffect lifetime', () => {
+  it('under StrictMode runs one layout and fills the pages', async () => {
+    layoutAsync.mockImplementation((setup, items) => Promise.resolve(computeLayout(setup, items)))
+    render(
+      <StrictMode>
+        <PipelineEffect />
+      </StrictMode>,
+    )
+    await waitFor(() => {
+      expect(usePages.getState().pages).toHaveLength(1)
+    })
+    expect(layoutAsync).toHaveBeenCalledTimes(1)
+  })
+
+  it('unmounted before the debounce ends, it runs no layout', async () => {
+    layoutAsync.mockImplementation((setup, items) => Promise.resolve(computeLayout(setup, items)))
+    const { unmount } = render(<PipelineEffect />)
+    unmount()
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    expect(layoutAsync).not.toHaveBeenCalled()
+    expect(usePages.getState().pages).toEqual([])
   })
 })

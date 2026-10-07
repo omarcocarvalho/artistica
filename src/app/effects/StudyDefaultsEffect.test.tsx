@@ -66,6 +66,17 @@ describe('StudyDefaultsEffect', () => {
     expect(set).toHaveBeenCalledTimes(2)
   })
 
+  it('compares the newly selected image with its own earlier state when the selection and images change together', () => {
+    useImages.getState().updateStudy(B, { blurPct: 12 })
+    render(<StudyDefaultsEffect />)
+    const set = vi.spyOn(useSettings.getState(), 'setStudyDefaults')
+    act(() => {
+      useImages.setState((s) => ({ images: s.images.filter((i) => i.id !== A), selectedId: B }))
+    })
+    expect(set).not.toHaveBeenCalled()
+    expect(useSettings.getState().studyDefaults.blurPct).toBe(DEFAULT_STUDY.blurPct)
+  })
+
   it('images imported after a change start with the new parameters and Original only', () => {
     const spy = vi.spyOn(useImages.getState(), 'setDefaultStudy')
     render(<StudyDefaultsEffect />)
