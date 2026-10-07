@@ -683,6 +683,21 @@ describe('updateStudy', () => {
     expect(store.getState().images).toBe(before)
   })
 
+  it('merges a partial values patch over the image’s own values', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    store.getState().updateStudy('id-1' as ImageId, {
+      blurPct: 70,
+      values: { count: 3, hue: 200, neutral: true },
+    })
+    store.getState().updateStudy('id-1' as ImageId, { values: { count: 7 } })
+    expect(store.getState().images[0]?.study).toEqual({
+      versions: ['original'],
+      blurPct: 70,
+      values: { count: 7, hue: 200, neutral: true },
+    })
+  })
+
   it('descriptors carry the new study', async () => {
     const { store } = setup()
     await store.getState().addFiles([file('a.jpg')])
@@ -757,6 +772,38 @@ describe('setDefaultStudy', () => {
     gate.resolve(decoded())
     await p
     expect(store.getState().images[0]?.study).toEqual(BLUR_VALUES)
+  })
+
+  it('reads the default when the image is created, after its hash, not when its decode ends', async () => {
+    const gate = deferred<string>()
+    const hash = vi.fn(() => gate.promise)
+    const { store } = setup({ hash })
+    const p = store.getState().addFiles([file('slow.jpg')])
+    await vi.waitFor(() => {
+      expect(hash).toHaveBeenCalled()
+    })
+    store.getState().setDefaultStudy(BLUR_VALUES)
+    gate.resolve('h')
+    await p
+    expect(store.getState().images[0]?.study).toEqual(BLUR_VALUES)
+  })
+
+  it('keeps the default across clear()', async () => {
+    const { store } = setup()
+    store.getState().setDefaultStudy(BLUR_VALUES)
+    store.getState().clear()
+    await store.getState().addFiles([file('a.jpg')])
+    expect(store.getState().images[0]?.study).toEqual(BLUR_VALUES)
+  })
+
+  it('belongs to one store: another store keeps its own default', async () => {
+    const first = setup().store
+    const second = setup().store
+    first.getState().setDefaultStudy(BLUR_VALUES)
+    await second.getState().addFiles([file('a.jpg')])
+    await first.getState().addFiles([file('b.jpg')])
+    expect(second.getState().images[0]?.study).toEqual(DEFAULT_STUDY)
+    expect(first.getState().images[0]?.study).toEqual(BLUR_VALUES)
   })
 
   it('sanitizes the default', async () => {
