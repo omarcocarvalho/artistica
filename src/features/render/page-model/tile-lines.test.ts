@@ -70,6 +70,21 @@ describe('tileLinesFor', () => {
     })
   })
 
+  it('carries the colour, width and opacity of any settings (property)', () => {
+    fc.assert(
+      fc.property(arbLineSettings, fc.nat({ max: 50 }), (lines, tileIndex) => {
+        const tl = tileLinesFor(patchLines(lines, { thirds: true }), trim, false, tileIndex)
+        const { colour, widthMm, opacityPct } = lines.style
+        expect(tl && [tl.tileIndex, tl.colour, tl.widthMm, tl.opacity]).toEqual([
+          tileIndex,
+          colour,
+          widthMm,
+          opacityPct / 100,
+        ])
+      }),
+    )
+  })
+
   it('lists only the types that drew something, in canonical order', () => {
     const lines = patchLines(DEFAULT_LINES, {
       centre: true,

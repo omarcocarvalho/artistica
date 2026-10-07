@@ -1,13 +1,18 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import type { ImageDescriptor, Rotation } from '../../../shared/model/image'
-import { DEFAULT_LINES, type LinesPatch } from '../../../shared/model/lines'
+import {
+  DEFAULT_LINES,
+  type LinesPatch,
+  SPIRAL_CORNERS,
+  type SpiralCorner,
+} from '../../../shared/model/lines'
 import { outerReserveMm } from '../../../shared/model/page-setup'
 import { DEFAULT_STUDY, type StudyVersion } from '../../../shared/model/study'
 import { compositionPaths } from '../../lines/composition'
 import type { PathCmd } from '../../lines/types'
 import type { Placement, RectMm } from '../../layout/types'
-import { tileRenderKey } from '../pixels/tile-plan'
+import { applyMatrix, orientMatrix, tileRenderKey } from '../pixels/tile-plan'
 import {
   arbLineSettings,
   descriptor,
@@ -412,6 +417,14 @@ const firstMove = (page: PageModel | undefined): PathCmd | undefined =>
 
 const withoutLines = (pages: readonly PageModel[]) => pages.map((p) => ({ ...p, lines: [] }))
 
+const styleOf = (l: TileLines) => ({
+  colour: l.colour,
+  opacity: l.opacity,
+  widthMm: l.widthMm,
+  types: l.types,
+  dashes: l.strokes.map((s) => s.dashMm),
+})
+
 describe('composition lines in the page model', () => {
   const three = studyDescriptor('a', ['original', 'blurred', 'values'])
   const row = placement('a', [R(20, 20), R(66, 20), R(112, 20)], { block: R(20, 20, 132, 60) })
@@ -430,9 +443,10 @@ describe('composition lines in the page model', () => {
     })
     const [first, ...rest] = lines
     rest.forEach((l) => {
+      expect(styleOf(l)).toEqual(first ? styleOf(first) : undefined)
       expectClose(relative(l), first ? relative(first) : [])
     })
-    expect(page).toMatchSnapshot()
+    expect(page ? { ...page, lines: page.lines.slice(0, 1) } : page).toMatchSnapshot()
   })
 
   it('emits no lines, whatever the grid size and style, when no type is on', () => {
@@ -453,6 +467,58 @@ describe('composition lines in the page model', () => {
       [linesDescriptor('a', { spiral: { on: true, corner: 'topLeft' } })],
     )
     expect(firstMove(page)).toEqual({ op: 'M', x: trim.x + trim.w, y: trim.y })
+  })
+
+  it('starts the spiral on the tile pixel that shows the chosen corner of the picture as edited (Q4, property)', () => {
+    const cornerAt: Record<SpiralCorner, readonly [number, number]> = {
+      topLeft: [0, 0],
+      topRight: [1, 0],
+      bottomLeft: [0, 1],
+      bottomRight: [1, 1],
+    }
+    const sourceCorners = Object.values(cornerAt)
+    fc.assert(
+      fc.property(
+        fc.constantFrom<Rotation>(0, 90, 180, 270),
+        fc.boolean(),
+        fc.boolean(),
+        fc.boolean(),
+        fc.constantFrom(...SPIRAL_CORNERS),
+        (rotation, flipH, flipV, turned, corner) => {
+          const img = linesDescriptor(
+            'a',
+            { spiral: { on: true, corner } },
+            descriptor('a', 3000, 2000, { rotation, flipH, flipV }),
+          )
+          const [ew, eh] = rotation % 180 === 0 ? [60, 40] : [40, 60]
+          const trim = turned ? R(20, 20, eh, ew) : R(20, 20, ew, eh)
+          const [page] = buildPageModels(
+            layoutOf([[placement('a', [trim], { turned })]]),
+            setupWith(),
+            [img],
+          )
+          const tile = page?.tiles[0]
+          if (!tile) throw new Error('no tile')
+          const asEdited = orientMatrix(rotation, flipH, flipV, 1, 1, 1, 1, 0)
+          const [cu, cv] = cornerAt[corner]
+          const source = sourceCorners.find(([s, r]) => {
+            const p = applyMatrix(asEdited, s, r)
+            return Math.abs(p.x - cu) < 1e-9 && Math.abs(p.y - cv) < 1e-9
+          })
+          if (!source) throw new Error('no source corner')
+          const onTile = applyMatrix(
+            orientMatrix(tile.rotation, tile.flipH, tile.flipV, 1, 1, trim.w, trim.h, 0),
+            source[0],
+            source[1],
+          )
+          const start = firstMove(page)
+          expect(start?.op).toBe('M')
+          if (start?.op !== 'M') return
+          expect(Math.abs(start.x - (trim.x + onTile.x))).toBeLessThan(1e-9)
+          expect(Math.abs(start.y - (trim.y + onTile.y))).toBeLessThan(1e-9)
+        },
+      ),
+    )
   })
 
   it.each<[string, Partial<ImageDescriptor['edits']>]>([
@@ -541,14 +607,20 @@ describe('composition lines in the page model', () => {
     })
     const [page] = buildPageModels(layoutOf([[p]]), setup, [img])
 
-    it('matches the snapshot', () => {
-      expect(page).toMatchSnapshot()
+    it("matches the snapshot (the first tile's lines; tiles and marks are pinned by the M2 snapshot)", () => {
+      expect(page?.lines[0]).toMatchSnapshot()
     })
 
-    it("starts each tile's spiral at its own trim's top right", () => {
-      expect(page?.lines).toHaveLength(3)
+    it("starts each tile's spiral at its own trim's top right, with the same lines on every tile", () => {
+      expect(page?.lines.map((l) => l.clip)).toEqual(page?.tiles.map((t) => t.trim))
+      const [first, ...rest] = page?.lines ?? []
       page?.lines.forEach((l) => {
         expect(l.strokes[0]?.cmds[8]).toEqual({ op: 'M', x: l.clip.x + l.clip.w, y: l.clip.y })
+      })
+      expect(rest).toHaveLength(2)
+      rest.forEach((l) => {
+        expect(styleOf(l)).toEqual(first ? styleOf(first) : undefined)
+        expectClose(relative(l), first ? relative(first) : [])
       })
     })
   })
