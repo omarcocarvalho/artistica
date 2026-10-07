@@ -9,6 +9,34 @@ interface ElementLike {
   outerHTML: string
 }
 declare const document: { elementFromPoint(x: number, y: number): ElementLike | null }
+declare function getComputedStyle(
+  el: ElementLike,
+  pseudo?: string,
+): { backgroundColor: string; color: string; fontSize: string }
+
+export interface PaintStyle {
+  bg: string
+  color: string
+  fontSizePx: number
+}
+
+/** The element's (or its pseudo-element's) computed background, text colour and font size. */
+export async function paintStyle(target: Locator, pseudo?: string): Promise<PaintStyle> {
+  return target.evaluate((el: ElementLike, p) => {
+    const cs = getComputedStyle(el, p)
+    return { bg: cs.backgroundColor, color: cs.color, fontSizePx: Number.parseFloat(cs.fontSize) }
+  }, pseudo)
+}
+
+/** iOS Safari zooms the page when it focuses a text control whose font is smaller than 16 px. */
+export const MIN_INPUT_FONT_PX = 16
+
+export async function expectNoFocusZoom(targets: readonly Locator[]): Promise<void> {
+  for (const target of targets) {
+    const html = await target.evaluate((el: ElementLike) => el.outerHTML.slice(0, 100))
+    expect((await paintStyle(target)).fontSizePx, html).toBeGreaterThanOrEqual(MIN_INPUT_FONT_PX)
+  }
+}
 
 export const MIN_TOUCH_TARGET_PX = 44
 // WebKit snaps each hit-test edge to its 1/64 px layout unit.

@@ -4,7 +4,7 @@ import { expectNoAxeViolations } from './support/axe.ts'
 import { FIXTURES } from './support/fixtures.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { runOnly } from './support/projects.ts'
-import { centre, MIN_TOUCH_TARGET_PX, settled, targetSize } from './support/targets.ts'
+import { centre, MIN_TOUCH_TARGET_PX, paintStyle, settled, targetSize } from './support/targets.ts'
 
 // The e2e tsconfig has no DOM lib; these are the few browser globals used inside page.evaluate.
 interface DataTransferLike {
@@ -238,6 +238,7 @@ test.describe('desktop control density (chromium)', () => {
     const { box } = await measure(target)
     return [box.width, box.height].map(Math.round)
   }
+  const fontSize = async (target: Locator) => (await paintStyle(target)).fontSizePx
   const heights = async (targets: readonly Locator[]) =>
     Promise.all(targets.map(async (t) => (await box(t))[1]))
 
@@ -289,5 +290,18 @@ test.describe('desktop control density (chromium)', () => {
         sheet.getByRole('spinbutton', { name: 'Width' }),
       ]),
     ).toEqual([40, 35])
+  })
+
+  test('desktop text controls keep their 14 px text and the link field its 40 px height', async ({
+    page,
+  }) => {
+    const app = startApp(page)
+    await app.goto()
+    await app.upload([FIXTURES.quadrantsJpg])
+    await app.expectImages(1)
+    const link = await app.openLinkField()
+    expect((await box(link))[1]).toBe(40)
+    const fields = ['Paper size', 'Safe area'].map((f) => page.getByLabel(f, { exact: true }))
+    expect(await Promise.all(fields.map(fontSize))).toEqual([14, 14])
   })
 })

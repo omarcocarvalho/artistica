@@ -8,7 +8,7 @@ import { inspectPdf } from '../src/features/render/pdf/inspect.ts'
 import { runOnly } from './support/projects.ts'
 import { sampleBrowserMemory } from './support/memory.ts'
 import { syntheticJpegs } from './support/synthetic.ts'
-import { expectTouchTargets, settled } from './support/targets.ts'
+import { expectNoFocusZoom, expectTouchTargets, settled } from './support/targets.ts'
 
 runOnly('mobile-chromium', 'mobile-webkit')
 
@@ -213,11 +213,9 @@ test('H1 phone: every Page-step form control is at least 44 x 44 px', async ({ p
   const fields = ['Width', 'Height', 'Safe area', 'Gutter size', 'Bleed amount'].map((name) =>
     step.getByRole('spinbutton', { name, exact: true }),
   )
-  await expectTouchTargets([
-    step.getByRole('combobox', { name: 'Paper size' }),
-    ...radios,
-    ...fields,
-  ])
+  const paper = step.getByRole('combobox', { name: 'Paper size' })
+  await expectTouchTargets([paper, ...radios, ...fields])
+  await expectNoFocusZoom([paper, ...fields])
   const switches = await step.getByRole('switch').all()
   expect(switches).toHaveLength(3)
   await expectTouchTargets(switches)
@@ -237,12 +235,29 @@ test('H1 phone: every edit-sheet control is at least 44 x 44 px', async ({ page 
   expect(radios).toHaveLength(6 + 2 + 2)
   const buttons = await sheet.getByRole('button').all()
   expect(buttons.length).toBeGreaterThanOrEqual(9)
-  await expectTouchTargets([
-    ...radios,
-    ...buttons,
+  const fields = [
     sheet.getByRole('spinbutton', { name: 'Copies' }),
     sheet.getByRole('spinbutton', { name: 'Width' }),
-  ])
+  ]
+  await expectTouchTargets([...radios, ...buttons, ...fields])
+  await expectNoFocusZoom(fields)
+})
+
+test('H1 phone: the link field and the export file name are 44 px tall with 16 px text', async ({
+  page,
+}) => {
+  const app = startApp(page)
+  await app.goto()
+  await app.upload([FIXTURES.quadrantsJpg])
+  await app.expectImages(1)
+  const link = await app.openLinkField()
+  await expectTouchTargets([link])
+  await expectNoFocusZoom([link])
+  await app.goToStep('Export')
+  await page.getByRole('button', { name: 'Create PDF' }).first().click()
+  const fileName = page.getByRole('dialog').getByRole('textbox', { name: 'File name' })
+  await expectTouchTargets([fileName])
+  await expectNoFocusZoom([fileName])
 })
 
 test('S-P1 phone: Studies step, a 3-version group in the preview, export parses back', async ({

@@ -281,6 +281,11 @@
     .ds-switch-row {
       min-height: var(--size-target);
     }
+    /* iOS Safari zooms the page when it focuses a text control whose font is smaller than 16 px. */
+    .ds-input,
+    .ds-select {
+      font-size: var(--text-base);
+    }
     .ds-seg__item {
       min-height: var(--size-target);
       min-width: var(--size-target);
