@@ -19,7 +19,7 @@ import {
   setStrokingRgbColor,
   stroke,
   type PDFImage,
-  type PDFName,
+  PDFName,
   type PDFOperator,
 } from '@pdfme/pdf-lib'
 import { PT_PER_MM } from '../../../shared/model/units'
@@ -142,10 +142,8 @@ export async function createPdfComposer(): Promise<PdfComposer> {
         if (opacity >= 1) return null
         let name = extGStates.get(opacity)
         if (!name) {
-          name = pdfPage.node.newExtGState(
-            'GS',
-            doc.context.obj({ Type: 'ExtGState', CA: opacity }),
-          )
+          name = PDFName.of(`GS${String(extGStates.size)}`)
+          pdfPage.node.setExtGState(name, doc.context.obj({ Type: 'ExtGState', CA: opacity }))
           extGStates.set(opacity, name)
         }
         return name

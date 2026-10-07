@@ -179,7 +179,7 @@ describe('composePdf lines (M3-R6–R8)', () => {
       1.4173228346456694 w
       0 J
       0 j
-      /GS-9742682568 gs
+      /GS0 gs
       [] 0 d
       28.34645669291339 226.7716535433071 m
       141.73228346456693 141.73228346456693 l
@@ -301,8 +301,36 @@ describe('composePdf lines (M3-R6–R8)', () => {
     expect(offImages).toHaveLength(3)
     expect(await imageStreams(onBytes)).toEqual(offImages)
     const draws = async (b: Uint8Array) =>
-      (await inspectPdf(b)).pages.map((p) => p.draws.map((d) => [d.filter, d.widthPx, d.heightPx]))
+      (await inspectPdf(b)).pages.map((p) =>
+        p.draws.map((d) => [d.name, d.filter, d.widthPx, d.heightPx]),
+      )
     expect(await draws(onBytes)).toEqual(await draws(offBytes))
+  })
+
+  it('leaves every image draw unchanged when an earlier page has translucent lines', async () => {
+    const off = noLinesPages()
+    const on = withLines(off, { thirds: true, style: { ...BLUE, opacityPct: 50 } })
+    const imageDraws = async (pages: PageModel[]) =>
+      (await inspectPdf(await composePdf(pages, encodedFor(pages)))).pages.map((p) =>
+        p.content.slice(0, p.content.lastIndexOf(' Do')),
+      )
+    expect(await imageDraws(on)).toEqual(await imageDraws(off))
+  })
+
+  it('names a page’s ExtGStates GS0, GS1… in order of first use', async () => {
+    const pages = [
+      pageModel([drawTile({ trim }), drawTile({ trim: { ...trim, y: 110 } })], {
+        lines: [
+          linesFor({ thirds: true, style: { ...BLUE, opacityPct: 40 } }, trim, 0),
+          linesFor({ thirds: true, style: { ...BLUE, opacityPct: 90 } }, { ...trim, y: 110 }, 1),
+        ],
+      }),
+    ]
+    const content = at(
+      (await inspectPdf(await composePdf(pages, encodedFor(pages)))).pages,
+      0,
+    ).content
+    expect([...content.matchAll(/^\/(\S+) gs$/gm)].map((m) => m[1])).toEqual(['GS0', 'GS1'])
   })
 
   it('keeps the crop-mark count with lines on', async () => {
