@@ -115,6 +115,49 @@ describe('tileHitAreas with study groups', () => {
       [2, false],
     ])
   })
+
+  it('keeps two side-by-side copies of the same image as separate groups', () => {
+    const tile = (x: number, version: 'original' | 'blurred') =>
+      drawTile({
+        imageId: id('a'),
+        trim: { x, y: 10, w: 40, h: 60 },
+        ...(version === 'blurred' ? { version, study: blur } : {}),
+      })
+    const sideBySide = pageModel(
+      [tile(10, 'original'), tile(52, 'blurred'), tile(100, 'original'), tile(142, 'blurred')],
+      {
+        groups: [
+          { imageId: id('a'), block: { x: 10, y: 10, w: 82, h: 60 } },
+          { imageId: id('a'), block: { x: 100, y: 10, w: 82, h: 60 } },
+        ],
+      },
+    )
+    expect(tileHitAreas(sideBySide).map((a) => [a.groupSize, a.firstInGroup])).toEqual([
+      [2, true],
+      [2, false],
+      [2, true],
+      [2, false],
+    ])
+  })
+
+  it('counts a tile whose trim overshoots its block by float error as a member', () => {
+    const drift = pageModel(
+      [
+        drawTile({ imageId: id('a'), trim: { x: 10 - 1e-9, y: 10 - 1e-9, w: 50, h: 70 } }),
+        drawTile({
+          imageId: id('a'),
+          trim: { x: 66, y: 10, w: 50 + 1e-9, h: 70 + 1e-9 },
+          version: 'blurred',
+          study: blur,
+        }),
+      ],
+      { groups: [{ imageId: id('a'), block: { x: 10, y: 10, w: 106, h: 70 } }] },
+    )
+    expect(tileHitAreas(drift).map((a) => [a.groupSize, a.firstInGroup])).toEqual([
+      [2, true],
+      [2, false],
+    ])
+  })
 })
 
 const css = (v: unknown): string => (typeof v === 'string' ? v : '[paint]')

@@ -52,7 +52,7 @@ export interface TileHitArea {
   readonly version: StudyVersion
   /** Tiles in this tile's study group (1 when it is in none). */
   readonly groupSize: number
-  /** First tile of its group in reading order; warning chips show here only (M2-R13). */
+  /** First tile of its group in reading order (true when it is in none). */
   readonly firstInGroup: boolean
 }
 

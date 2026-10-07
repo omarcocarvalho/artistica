@@ -93,7 +93,6 @@ export function PagePreview({
       consumer,
       studies.map((s) => s.request),
     )
-    // Set on the DOM, not through state: pending only changes inside the provider.
     if (studyTiles && studyTiles.pending(consumer) > 0)
       sheetRef.current?.setAttribute('aria-busy', 'true')
     else sheetRef.current?.removeAttribute('aria-busy')

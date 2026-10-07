@@ -1,4 +1,5 @@
 import { act, render, screen } from '@testing-library/react'
+import { StrictMode } from 'react'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initI18n } from '../../../shared/i18n'
 import type { PageModel } from '../types'
@@ -14,6 +15,18 @@ vi.mock('../preview/draw-page', async (orig) => {
     drawPage: (...a: Parameters<typeof actual.drawPage>) => {
       drawSpy(...a)
       actual.drawPage(...a)
+    },
+  }
+})
+
+const renderSpy = vi.hoisted(() => vi.fn())
+vi.mock('../pixels/render-tile', async (orig) => {
+  const actual = await orig<typeof import('../pixels/render-tile')>()
+  return {
+    ...actual,
+    renderTile: (...a: Parameters<typeof actual.renderTile>) => {
+      renderSpy(...a)
+      return actual.renderTile(...a)
     },
   }
 })
@@ -63,6 +76,7 @@ function fakeCtx() {
 
 beforeEach(() => {
   drawSpy.mockClear()
+  renderSpy.mockClear()
   vi.restoreAllMocks()
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
     fakeCtx() as unknown as RenderingContext,
@@ -113,6 +127,34 @@ describe('PagePreview study tiles', () => {
     expect(lastTileImage(0)).not.toBeNull()
     expect(lastTileImage(1)).toBeNull()
     expect(lastTileImage(2)).toBeNull()
+  })
+
+  it('renders only the original tiles on the main thread; study tiles never enter the tile cache', () => {
+    const { f } = show()
+    expect(renderSpy).toHaveBeenCalledTimes(1)
+    act(() => {
+      for (const r of f.wanted()) f.resolve(r.key, image())
+    })
+    expect(renderSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('wants study tiles and reports busy before the sheet is measured', () => {
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(0)
+    const { f } = show()
+    expect(drawSpy).not.toHaveBeenCalled()
+    expect(f.wanted()).toHaveLength(2)
+    expect(screen.getByRole('group', { name: 'Page 1' })).toHaveAttribute('aria-busy', 'true')
+  })
+
+  it('keeps its wants and one subscription after a StrictMode remount', () => {
+    const f = fakeStudyTiles()
+    render(
+      <StrictMode>
+        <PagePreview {...props(f, group)} />
+      </StrictMode>,
+    )
+    expect(f.wanted()).toHaveLength(2)
+    expect(f.listenerCount()).toBe(1)
   })
 
   it('draws a study tile from the provider and redraws when it becomes ready', () => {
@@ -205,6 +247,12 @@ describe('PagePreview study tiles', () => {
     for (const name of ['pears.heic', 'pears.heic, Blurred', 'pears.heic, Values'])
       expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getAllByText('pears.heic')).toHaveLength(1)
+  })
+
+  it('names the image, without a version, on the tag of a group that has no original', () => {
+    const studiesOnly = pageModel(group.tiles.slice(1), { groups: group.groups })
+    render(<PagePreview {...props(fakeStudyTiles(), studiesOnly, { selectedId: id('a') })} />)
+    expect(screen.getByText('pears.heic')).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('shows no version chip on a tile that is not in a group', () => {
