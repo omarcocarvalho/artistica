@@ -67,7 +67,7 @@ describe('StudiesSlot', () => {
     const { container } = render(<StudiesSlot variant="phone" />)
     const { details, summary } = linesSection(container)
     expect(details).not.toHaveAttribute('open')
-    expect(summary).toHaveTextContent(/^Lines$/)
+    expect(summary).toHaveAccessibleName('Lines')
     expect(within(details).getByRole('switch', { name: 'Grid' })).not.toBeVisible()
     const studiesApply = screen.getByRole('button', { name: 'Apply to all images' })
     expect(
@@ -92,18 +92,18 @@ describe('StudiesSlot', () => {
     act(() => {
       useImages.getState().updateLines('a' as ImageId, { thirds: true, centre: true })
     })
-    expect(summary).toHaveTextContent(/^Lines, 2 on$/)
+    expect(summary).toHaveAccessibleName('Lines, 2 on')
     expect(within(summary).getByText('2 on')).toBeVisible()
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Image' })).getByRole('radio', {
         name: 'b.jpg',
       }),
     )
-    expect(summary).toHaveTextContent(/^Lines$/)
+    expect(summary).toHaveAccessibleName('Lines')
     act(() => {
       useImages.getState().updateLines('b' as ImageId, { grid: { on: true } })
     })
-    expect(summary).toHaveTextContent(/^Lines, 1 on$/)
+    expect(summary).toHaveAccessibleName('Lines, 1 on')
   })
   it('phone: each panel keeps its own import wait hint', () => {
     useImages.setState({ importing: 1 })
