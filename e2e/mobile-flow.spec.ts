@@ -82,14 +82,6 @@ test('M1 phone flow: Images, edit sheet, Page, Preview, Export, parse the PDF', 
   expect(sum(info.pages.map((p) => p.imagePlacements))).toBe(2)
 })
 
-/** Interior points of a tile; a drawn value study puts most of them exactly on a ramp colour. */
-const SAMPLES = [
-  [0.3, 0.3],
-  [0.7, 0.3],
-  [0.5, 0.5],
-  [0.3, 0.7],
-  [0.7, 0.7],
-] as const
 const MEMORY_LINES = patchLines(DEFAULT_LINES, {
   grid: { on: true, cols: 20, rows: 20 },
   thirds: true,
@@ -102,10 +94,11 @@ const MIN_CLEARANCE_PX = 2
 const PHOTO = { w: 5712, h: 4284 }
 
 /**
- * SAMPLES moved, each to the nearest centre of a 20 x 20 cell of the tile that lies at least
- * MIN_CLEARANCE_PX from every MEMORY_LINES path, on a w x h px tile; as tile fractions.
+ * Centres of the 20 x 20 cells of a w x h px tile that lie at least MIN_CLEARANCE_PX from every
+ * MEMORY_LINES path, as tile fractions. A drawn value study puts most of them exactly on a ramp
+ * colour.
  */
-function samplesClearOfLines(w: number, h: number, pictureLandscape: boolean): number[][] {
+function pointsClearOfLines(w: number, h: number, pictureLandscape: boolean): [number, number][] {
   const turned = w >= h !== pictureLandscape
   const frame = turned ? { w: h, h: w } : { w, h }
   const onPaths: [number, number][] = []
@@ -139,14 +132,7 @@ function samplesClearOfLines(w: number, h: number, pictureLandscape: boolean): n
       if (onPaths.every(([px, py]) => Math.hypot(px - u, py - v) >= MIN_CLEARANCE_PX))
         clear.push([fx, fy])
     }
-  return SAMPLES.map(([sx, sy]) => {
-    const near = clear
-      .map(([fx, fy]) => ({ at: [fx, fy], d: Math.hypot(fx - sx, fy - sy) }))
-      .sort((a, b) => a.d - b.d)
-      .at(0)
-    if (!near) throw new Error('no sample point is clear of the lines')
-    return near.at
-  })
+  return clear
 }
 
 /** Total RSS of the browser's process tree, in MB. */
@@ -173,6 +159,7 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line on import, p
   let previewTiles: number
   let previewTilesWithLines: number
   let ramp: number[][]
+  const clearPoints: number[] = []
   const valuesOnRamp: number[] = []
   let settledBreakdown: Record<string, number>
   try {
@@ -210,13 +197,10 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line on import, p
     for (const tile of await app.pageFigures.getByRole('button', { name: /, Values$/ }).all()) {
       const box = await tile.boundingBox()
       if (!box) throw new Error('tile not laid out')
-      const samples = samplesClearOfLines(box.width, box.height, PHOTO.w > PHOTO.h)
-      const off = await Promise.all(
-        samples.map(async ([fx = NaN, fy = NaN]) =>
-          colourDistance(await app.tilePixel(tile, fx, fy), ramp),
-        ),
-      )
-      valuesOnRamp.push(off.filter((d) => d <= 3).length)
+      const points = pointsClearOfLines(box.width, box.height, PHOTO.w > PHOTO.h)
+      const off = (await app.tilePixels(tile, points)).map((px) => colourDistance(px, ramp))
+      clearPoints.push(points.length)
+      valuesOnRamp.push(Math.round((100 * off.filter((d) => d <= 3).length) / off.length))
     }
     previewPages = await app.pageCanvases.count()
     await page.waitForTimeout(2000)
@@ -239,7 +223,8 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line on import, p
     previewPages,
     previewTiles,
     previewTilesWithLines,
-    valuesOnRamp,
+    clearPoints,
+    valuesOnRampPct: valuesOnRamp,
     ramp,
     peaksMb: peaks,
     settledBreakdown,
@@ -252,7 +237,8 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line on import, p
   expect(previewTiles).toBe(66)
   expect(ramp).toHaveLength(5)
   expect(valuesOnRamp).toHaveLength(22)
-  expect(Math.min(...valuesOnRamp)).toBeGreaterThanOrEqual(2)
+  expect(Math.min(...clearPoints)).toBeGreaterThanOrEqual(50)
+  expect(Math.min(...valuesOnRamp)).toBeGreaterThanOrEqual(50)
   expect(sum(info.pages.map((p) => p.imagePlacements))).toBe(66)
   expect((await pdfDraws(pdf)).filter((d) => d.filter === 'FlateDecode')).toHaveLength(22)
   expect(previewTilesWithLines).toBe(66)
@@ -443,8 +429,7 @@ test('L-P1 phone: the Lines section in the Studies step, lines in the preview an
   await expect(page.getByText('Lines for quadrants.jpg')).toBeVisible()
   await app.phoneLineSwitch('Rule of thirds').click()
   await app.phoneLineSwitch('Centre lines').click()
-  // The visually hidden ", " is out of flow, so name-from-content puts a space before it.
-  await expect(app.linesSummary).toHaveAccessibleName('Lines , 2 on')
+  await expect(app.linesSummary).toHaveAccessibleName('Lines, 2 on')
   if (testInfo.project.name === 'mobile-chromium') {
     const cdp = await page.context().newCDPSession(page)
     const { nodes } = (await cdp.send('Accessibility.getFullAXTree')) as {
@@ -453,7 +438,7 @@ test('L-P1 phone: the Lines section in the Studies step, lines in the preview an
     await cdp.detach()
     expect(
       nodes.filter((n) => n.role?.value === 'DisclosureTriangle').map((n) => n.name?.value),
-    ).toEqual(['Lines , 2 on'])
+    ).toEqual(['Lines, 2 on'])
   }
 
   const applyButtons = page.getByRole('button', { name: /apply/i })
@@ -571,7 +556,7 @@ test('L-P3 phone: the Lines section opens and its controls work from the keyboar
   await expect(corners.getByRole('radio', { name: 'Top left', exact: true })).toBeFocused()
   await page.keyboard.press('ArrowRight', { delay: 50 })
   await expect(corners.getByRole('radio', { name: 'Top right', exact: true })).toBeChecked()
-  await expect(app.linesSummary).toHaveAccessibleName('Lines , 2 on')
+  await expect(app.linesSummary).toHaveAccessibleName('Lines, 2 on')
   await app.linesSummary.focus()
   await page.keyboard.press('Enter')
   await expect(app.linesSection).not.toHaveAttribute('open')

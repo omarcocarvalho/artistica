@@ -287,6 +287,40 @@ export class AppPage {
     )
   }
 
+  /** Pixels at tile fractions [fx, fy] of a tile, as [r,g,b,a] each, read in one call. */
+  async tilePixels(
+    tile: Locator,
+    points: readonly (readonly [number, number])[],
+  ): Promise<number[][]> {
+    const box = await tile.boundingBox()
+    const canvas = tile.locator('xpath=ancestor::figure').locator('canvas')
+    const cbox = await canvas.boundingBox()
+    if (!box || !cbox) throw new Error('tile or canvas not laid out')
+    const at = points.map(([fx, fy]): [number, number] => [
+      (box.x + fx * box.width - cbox.x) / cbox.width,
+      (box.y + fy * box.height - cbox.y) / cbox.height,
+    ])
+    return canvas.evaluate(
+      (
+        c: {
+          width: number
+          height: number
+          getContext(id: '2d'): {
+            getImageData(x: number, y: number, w: number, h: number): { data: ArrayLike<number> }
+          } | null
+        },
+        fractions: [number, number][],
+      ) => {
+        const g = c.getContext('2d')
+        if (!g) throw new Error('canvas is not 2d')
+        return fractions.map(([x, y]) =>
+          Array.from(g.getImageData(Math.floor(c.width * x), Math.floor(c.height * y), 1, 1).data),
+        )
+      },
+      at,
+    )
+  }
+
   // --- Lines, phone (D4) ---
   /** The Studies step's collapsible Lines card: a <details>, whose summary has no ARIA role. */
   get linesSection(): Locator {

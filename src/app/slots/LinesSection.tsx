@@ -15,12 +15,20 @@ export function LinesSection() {
   return (
     <details className="ds-card app-lines-section">
       <summary className="app-lines-section__summary">
-        {t('mobile.lines.title')}
-        {count > 0 && (
+        {count > 0 ? (
           <>
-            <VisuallyHidden>{t('mobile.lines.separator')}</VisuallyHidden>
-            <Badge className="app-lines-section__badge">{t('mobile.lines.on', { count })}</Badge>
+            <VisuallyHidden>
+              {t('mobile.lines.title')}
+              {t('mobile.lines.separator')}
+              {t('mobile.lines.on', { count })}
+            </VisuallyHidden>
+            <span aria-hidden="true">
+              {t('mobile.lines.title')}
+              <Badge className="app-lines-section__badge">{t('mobile.lines.on', { count })}</Badge>
+            </span>
           </>
+        ) : (
+          t('mobile.lines.title')
         )}
       </summary>
       <LinesPanel imageId={selectedId} announceWait={false} />
