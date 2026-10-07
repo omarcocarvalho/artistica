@@ -5,7 +5,7 @@ import {
   type ImageDescriptor,
   type ImageId,
 } from '../../shared/model/image'
-import { DEFAULT_LINES } from '../../shared/model/lines'
+import { DEFAULT_LINES, patchLines } from '../../shared/model/lines'
 import { DEFAULT_PAGE_SETUP } from '../../shared/model/page-setup'
 import { DEFAULT_STUDY, type StudyVersion } from '../../shared/model/study'
 import { buildLayoutItems } from './build-items'
@@ -173,6 +173,48 @@ describe('buildLayoutItems study groups', () => {
       ['x', 'same~0#0'],
       ['y', 'same~1#0'],
     ])
+  })
+
+  it('numbers images with the same bytes by their lines, whatever order they were added in (M3-R17)', () => {
+    const plain = img('a', 3000, 2000, {}, 'same')
+    const lined = {
+      ...img('b', 3000, 2000, {}, 'same'),
+      lines: patchLines(DEFAULT_LINES, { thirds: true }),
+    }
+    const keyOf = (images: ImageDescriptor[]) =>
+      Object.fromEntries(buildLayoutItems(images).map((i) => [i.imageId, i.key]))
+    expect(keyOf([lined, plain])).toEqual(keyOf([plain, lined]))
+    expect(keyOf([lined, plain])).toEqual({ a: 'same~0#0', b: 'same~1#0' })
+  })
+
+  it('numbers same-bytes images apart by line style when their line types match', () => {
+    const lined = (id: string, colour: string): ImageDescriptor => ({
+      ...img(id, 3000, 2000, {}, 'same'),
+      lines: patchLines(DEFAULT_LINES, { centre: true, style: { colour } }),
+    })
+    const keyOf = (images: ImageDescriptor[]) =>
+      Object.fromEntries(buildLayoutItems(images).map((i) => [i.imageId, i.key]))
+    const pink = lined('pink', '#e0457b')
+    const blue = lined('blue', '#1f3fbf')
+    expect(keyOf([pink, blue])).toEqual(keyOf([blue, pink]))
+  })
+
+  it('keeps input-order numbering for same-bytes images whose lines are all off', () => {
+    const off = (id: string, colour: string, cols: number): ImageDescriptor => ({
+      ...img(id, 3000, 2000, {}, 'same'),
+      lines: patchLines(DEFAULT_LINES, { grid: { cols }, style: { colour } }),
+    })
+    const items = buildLayoutItems([off('x', '#ffffff', 9), off('y', '#000000', 2)])
+    expect(items.map((i) => [i.imageId, i.key])).toEqual([
+      ['x', 'same~0#0'],
+      ['y', 'same~1#0'],
+    ])
+  })
+
+  it('lines alone never change the items of a photo without a twin', () => {
+    const one = img('a', 3000, 2000, { copies: 2 }, 'x')
+    const lined = { ...one, lines: patchLines(DEFAULT_LINES, { grid: { on: true } }) }
+    expect(buildLayoutItems([lined])).toEqual(buildLayoutItems([one]))
   })
 
   it('prints one tile for an unsanitized empty version list', () => {
