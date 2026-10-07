@@ -10,6 +10,7 @@ const model = {
   size: { w: 210, h: 297 },
   safeArea: { x: 5, y: 5, w: 200, h: 287 },
   cropMarks: [],
+  lines: [],
   tiles: [
     { imageId: a, version: 'original', trim: { x: 10, y: 10, w: 100.04, h: 60.06 } },
     { imageId: b, version: 'blurred', trim: { x: 10, y: 80, w: 50, h: 50 } },

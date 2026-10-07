@@ -32,6 +32,11 @@ export interface PageCtx {
   fillStyle: string | CanvasGradient | CanvasPattern
   strokeStyle: string | CanvasGradient | CanvasPattern
   lineWidth: number
+  globalAlpha: number
+  lineCap: CanvasLineCap
+  lineJoin: CanvasLineJoin
+  miterLimit: number
+  lineDashOffset: number
   imageSmoothingEnabled: boolean
   imageSmoothingQuality: ImageSmoothingQuality
   fillRect(x: number, y: number, w: number, h: number): void
@@ -40,6 +45,11 @@ export interface PageCtx {
   beginPath(): void
   moveTo(x: number, y: number): void
   lineTo(x: number, y: number): void
+  bezierCurveTo(x1: number, y1: number, x2: number, y2: number, x: number, y: number): void
+  rect(x: number, y: number, w: number, h: number): void
+  clip(): void
+  save(): void
+  restore(): void
   stroke(): void
   drawImage(image: CanvasImageSource, dx: number, dy: number, dw: number, dh: number): void
 }
@@ -54,8 +64,9 @@ export interface DrawPageOptions {
 }
 
 /**
- * Draw a PageModel exactly as the PDF composes it: tiles at trim+bleed, crop marks from page.cropMarks.
- * Guides (safe area, trim, bleed) are screen-only and drawn last.
+ * Draw a PageModel exactly as the PDF composes it: tiles at trim+bleed, then page.lines clipped to
+ * each trim, then crop marks from page.cropMarks. Guides (safe area, trim, bleed) are screen-only
+ * and drawn last.
  */
 export function drawPage(
   ctx: PageCtx,
@@ -82,6 +93,31 @@ export function drawPage(
       ctx.fillRect(...box)
     }
   })
+
+  for (const tl of page.lines) {
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(...px(tl.clip))
+    ctx.clip()
+    ctx.strokeStyle = tl.colour
+    ctx.globalAlpha = tl.opacity
+    ctx.lineWidth = Math.max(1, tl.widthMm * k) // M3-R9
+    ctx.lineCap = 'butt'
+    ctx.lineJoin = 'miter'
+    ctx.miterLimit = 10
+    ctx.lineDashOffset = 0
+    for (const s of tl.strokes) {
+      ctx.setLineDash(s.dashMm.map((d) => d * k))
+      ctx.beginPath()
+      for (const c of s.cmds) {
+        if (c.op === 'M') ctx.moveTo(c.x * k, c.y * k)
+        else if (c.op === 'L') ctx.lineTo(c.x * k, c.y * k)
+        else ctx.bezierCurveTo(c.x1 * k, c.y1 * k, c.x2 * k, c.y2 * k, c.x * k, c.y * k)
+      }
+      ctx.stroke()
+    }
+    ctx.restore()
+  }
 
   ctx.setLineDash([])
   ctx.strokeStyle = opts.colors.mark
