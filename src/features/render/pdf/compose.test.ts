@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_STUDY, tileStudyFor } from '../../../shared/model/study'
 import { PT_PER_MM } from '../../../shared/model/units'
 import { tileRenderKey } from '../pixels/tile-plan'
 import { drawTile, pageModel } from '../test-support/fixtures'
-import { TINY_JPEG, TINY_PNG, TINY_PNG_ALPHA } from '../test-support/image-bytes'
-import type { EncodedTileImage, PageModel } from '../types'
+import { TINY_JPEG, TINY_PNG, TINY_PNG_ALPHA, stripePng } from '../test-support/image-bytes'
+import type { DrawTile, EncodedTileImage, PageModel } from '../types'
 import {
   EmptyPdfError,
   MissingTileImageError,
@@ -12,7 +13,13 @@ import {
   composePdf,
   toPdfRect,
 } from './compose'
-import { countImageDraws, countStrokedLines, inspectPdf } from './inspect'
+import {
+  colourCountLimitPx,
+  countImageDraws,
+  countStrokedLines,
+  distinctRgbColours,
+  inspectPdf,
+} from './inspect'
 
 const jpeg: EncodedTileImage = { format: 'jpeg', bytes: TINY_JPEG, pxW: 2, pxH: 2 }
 const png: EncodedTileImage = { format: 'png', bytes: TINY_PNG, pxW: 2, pxH: 2 }
@@ -153,5 +160,101 @@ describe('composePdf', () => {
     await expect(composePdf([pageModel([drawTile()])], new Map())).rejects.toBeInstanceOf(
       MissingTileImageError,
     )
+  })
+})
+
+const FIVE: [number, number, number][] = [
+  [40, 30, 20],
+  [90, 70, 50],
+  [140, 115, 90],
+  [190, 170, 145],
+  [240, 232, 220],
+]
+
+describe('studies in the PDF (M2-R9)', () => {
+  const at = (x: number) => ({ x, y: 20, w: 40, h: 60 })
+  const original = drawTile({ trim: at(20) })
+  const blurred = drawTile({
+    trim: at(66),
+    version: 'blurred',
+    study: tileStudyFor('blurred', DEFAULT_STUDY),
+  })
+  const values = drawTile({
+    trim: at(112),
+    version: 'values',
+    study: tileStudyFor('values', DEFAULT_STUDY),
+  })
+  const fivePng: EncodedTileImage = { format: 'png', bytes: stripePng(FIVE), pxW: 10, pxH: 2 }
+  const studyImages = (order: readonly DrawTile[]): Map<string, EncodedTileImage> =>
+    new Map(order.map((t) => [tileRenderKey(t), t === values ? fivePng : jpeg] as const))
+
+  it('embeds the photo and the blur as JPEG and the 5-value study as a 5-colour PNG', async () => {
+    const report = await inspectPdf(
+      await composePdf(
+        [pageModel([original, blurred, values])],
+        studyImages([original, blurred, values]),
+      ),
+    )
+    expect(report.imageCount).toBe(3)
+    expect(report.images.map((i) => i.filter).sort()).toEqual([
+      'DCTDecode',
+      'DCTDecode',
+      'FlateDecode',
+    ])
+    expect(report.images.find((i) => i.filter === 'FlateDecode')).toMatchObject({
+      widthPx: 10,
+      heightPx: 2,
+      colours: 5,
+    })
+    expect(
+      report.images.filter((i) => i.filter === 'DCTDecode').every((i) => i.colours === null),
+    ).toBe(true)
+    expect(countImageDraws(report.pages[0]?.content ?? '')).toBe(3)
+  })
+
+  it("lists each page's draws in content-stream order with their filters (D-CR2)", async () => {
+    // The PNG is embedded first, so object order differs from draw order.
+    const report = await inspectPdf(
+      await composePdf(
+        [pageModel([original, blurred, values])],
+        studyImages([values, original, blurred]),
+      ),
+    )
+    const draws = report.pages[0]?.draws ?? []
+    expect(draws.map((d) => d.filter)).toEqual(['DCTDecode', 'DCTDecode', 'FlateDecode'])
+    expect(draws[2]).toMatchObject({ widthPx: 10, heightPx: 2, colours: 5 })
+    for (const d of draws) expect(report.pages[0]?.content).toContain(`/${d.name} Do`)
+    expect(new Set(draws.map((d) => d.name)).size).toBe(3)
+  })
+
+  it('repeats a draw entry when one embedded image is drawn twice (copies)', async () => {
+    const copy = { ...original, trim: { ...original.trim, y: 150 } }
+    const report = await inspectPdf(
+      await composePdf([pageModel([original, copy])], studyImages([original])),
+    )
+    const draws = report.pages[0]?.draws ?? []
+    expect(draws).toHaveLength(2)
+    expect(draws.map((d) => d.filter)).toEqual(['DCTDecode', 'DCTDecode'])
+    expect(report.images).toHaveLength(1)
+  })
+
+  it('counts distinct colours per pixel, RGB and grey, up to 4 MP', () => {
+    expect(distinctRgbColours(new Uint8Array(3 * 4), 4, 3)).toBe(1)
+    expect(distinctRgbColours(new Uint8Array([1, 2, 3, 1, 2, 4]), 2, 3)).toBe(2)
+    expect(distinctRgbColours(new Uint8Array([1, 2, 3, 1, 2, 3, 3, 2, 1]), 3, 3)).toBe(2)
+    expect(distinctRgbColours(new Uint8Array([7, 7, 9]), 3, 1)).toBe(2)
+    expect(colourCountLimitPx()).toBe(4_000_000)
+  })
+
+  it('does not count an alpha PNG soft mask in images[] or draws', async () => {
+    const t = drawTile()
+    const report = await inspectPdf(
+      await composePdf(
+        [pageModel([t])],
+        new Map([[tileRenderKey(t), { format: 'png', bytes: TINY_PNG_ALPHA, pxW: 2, pxH: 2 }]]),
+      ),
+    )
+    expect(report.images).toHaveLength(1)
+    expect(report.pages[0]?.draws).toHaveLength(1)
   })
 })

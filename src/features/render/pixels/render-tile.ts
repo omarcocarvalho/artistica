@@ -1,3 +1,5 @@
+import type { TileStudy } from '../../../shared/model/study'
+import { applyStudyToContext } from '../../studies/apply-study'
 import { extendEdges, type PixelCtx } from './bleed'
 import { MAX_CANVAS_AREA_PX, downscaleSteps, type TilePixelPlan } from './tile-plan'
 
@@ -51,14 +53,15 @@ export function releaseCanvas(canvas: TileCanvas): void {
 }
 
 /**
- * Render one tile (crop → resample → rotate/flip → bleed by edge extension) into a new canvas of
- * plan.canvasW × plan.canvasH. Shared by the preview (main thread) and the PDF export (worker), so
- * both produce the same pixels. `source` must contain plan.src.
+ * Render one tile (crop → resample → rotate/flip → study → bleed by edge extension) into a new
+ * canvas of plan.canvasW × plan.canvasH. Shared by the preview and the PDF export, so both produce
+ * the same pixels. `source` must contain plan.src.
  */
 export function renderTile<C extends TileCanvas & CanvasImageSource>(
   source: CanvasImageSource,
   plan: TilePixelPlan,
   createCanvas: CanvasFactory<C>,
+  study: TileStudy | null = null,
 ): C {
   const temps: C[] = []
   let out: C | undefined
@@ -90,7 +93,10 @@ export function renderTile<C extends TileCanvas & CanvasImageSource>(
     ctx.drawImage(from, rect.x, rect.y, rect.w, rect.h, 0, 0, plan.scaledW, plan.scaledH)
     ctx.resetTransform()
 
-    // 3. Bleed.
+    // 3. Study on the image area only, so the bleed replicates studied pixels (M2-R5).
+    if (study !== null) applyStudyToContext(ctx, plan, study)
+
+    // 4. Bleed.
     extendEdges(ctx, plan.bleedPx, plan.outW, plan.outH)
     return out
   } catch (error) {

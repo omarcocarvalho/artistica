@@ -1,3 +1,4 @@
+import type { TileStudy } from '../../../shared/model/study'
 import { createPdfComposer, type PdfComposer } from '../pdf/compose'
 import { releaseCanvas, renderTile, type TileCanvas } from '../pixels/render-tile'
 import type { TilePixelPlan } from '../pixels/tile-plan'
@@ -9,6 +10,8 @@ export interface WorkerEnv<C extends TileCanvas & CanvasImageSource> {
   readonly createCanvas: (w: number, h: number) => C
   /** `canvas.convertToBlob({ type: 'image/jpeg', quality: JPEG_QUALITY })` → bytes. */
   readonly encodeJpeg: (canvas: C) => Promise<Uint8Array>
+  /** `canvas.convertToBlob({ type: 'image/png' })` → bytes (value studies, M2-R9). */
+  readonly encodePng: (canvas: C) => Promise<Uint8Array>
 }
 
 /** The export worker's logic, independent of Comlink and of real canvases (unit-tested in node). */
@@ -27,13 +30,19 @@ export function createExportWorkerApi<C extends TileCanvas & CanvasImageSource>(
       composer = await createPdfComposer()
     },
 
-    async encodeTile(key: string, plan: TilePixelPlan, bitmap: ImageBitmap) {
+    async encodeTile(
+      key: string,
+      plan: TilePixelPlan,
+      bitmap: ImageBitmap,
+      study: TileStudy | null,
+      format: 'jpeg' | 'png',
+    ) {
       let canvas: C | undefined
       try {
         const c = need()
-        canvas = renderTile(bitmap, plan, env.createCanvas)
-        const bytes = await env.encodeJpeg(canvas)
-        await c.embed(key, { format: 'jpeg', bytes, pxW: plan.canvasW, pxH: plan.canvasH })
+        canvas = renderTile(bitmap, plan, env.createCanvas, study)
+        const bytes = format === 'png' ? await env.encodePng(canvas) : await env.encodeJpeg(canvas)
+        await c.embed(key, { format, bytes, pxW: plan.canvasW, pxH: plan.canvasH })
       } finally {
         bitmap.close()
         if (canvas) releaseCanvas(canvas)
