@@ -233,3 +233,39 @@ describe('computeLayout: setup handling', () => {
     expect(blocks[1]?.x).toBe(85)
   })
 })
+
+describe('study groups (owner Q15)', () => {
+  it('prints a fixed width per tile: three 60 mm tiles side by side', () => {
+    const r = run(A4, [item('a', 2 / 3, 1000, { kind: 'fixed', axis: 'width', mm: 60 }, 3)])
+    const [p] = r.pages[0]?.placements ?? []
+    expect(p?.tiles).toHaveLength(3)
+    for (const t of p?.tiles ?? []) expect(p?.turned ? t.h : t.w).toBeCloseTo(60, 9)
+    expect(p?.warnings).not.toContain('scaled-to-fit')
+  })
+
+  it('scales a group that does not fit as a whole, every tile the same size, and flags it', () => {
+    const r = run(A4, [item('a', 2 / 3, 1000, { kind: 'fixed', axis: 'width', mm: 150 }, 4)])
+    const [p] = r.pages[0]?.placements ?? []
+    expect(p?.warnings).toContain('scaled-to-fit')
+    const widths = (p?.tiles ?? []).map((t) => (p?.turned ? t.h : t.w))
+    expect(widths).toHaveLength(4)
+    expect(new Set(widths.map((w) => w.toFixed(9))).size).toBe(1)
+    expect(widths[0]).toBeLessThan(150)
+  })
+
+  it('keeps a 4-tile group on one page with exactly the gutter between its tiles', () => {
+    const g = A4.gutter.mm
+    const r = run(A4, [item('a', 2 / 3, 1000, { kind: 'auto' }, 4)])
+    expect(r.pages).toHaveLength(1)
+    const tiles = r.pages[0]?.placements[0]?.tiles ?? []
+    expect(tiles).toHaveLength(4)
+    const sorted = [...tiles].sort((s, t) => s.y - t.y || s.x - t.x)
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = nth(sorted, i - 1)
+      const cur = nth(sorted, i)
+      const gap =
+        Math.abs(cur.y - prev.y) < TOL ? cur.x - (prev.x + prev.w) : cur.y - (prev.y + prev.h)
+      expect(gap).toBeCloseTo(g, 9)
+    }
+  })
+})

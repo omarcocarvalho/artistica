@@ -6,7 +6,7 @@ import {
   type ImageId,
 } from '../../shared/model/image'
 import { DEFAULT_PAGE_SETUP } from '../../shared/model/page-setup'
-import { DEFAULT_STUDY } from '../../shared/model/study'
+import { DEFAULT_STUDY, type StudyVersion } from '../../shared/model/study'
 import { buildLayoutItems } from './build-items'
 import { computeLayout } from './compute-layout'
 
@@ -23,6 +23,11 @@ const img = (
   pxH,
   edits: { ...DEFAULT_EDITS, ...edits },
   study: DEFAULT_STUDY,
+})
+
+const withVersions = (d: ImageDescriptor, versions: readonly StudyVersion[]): ImageDescriptor => ({
+  ...d,
+  study: { ...DEFAULT_STUDY, versions },
 })
 
 /** Placements as (content hash, page, block), so sessions with different random ids compare equal. */
@@ -99,6 +104,78 @@ describe('buildLayoutItems', () => {
 
   it('skips images without pixels', () => {
     expect(buildLayoutItems([img('a', 0, 10), img('b', 10, Number.NaN)])).toEqual([])
+  })
+})
+
+describe('buildLayoutItems study groups', () => {
+  it('makes one tile per selected version', () => {
+    const items = buildLayoutItems([
+      withVersions(img('a', 3000, 2000), ['original']),
+      withVersions(img('b', 3000, 2000), ['original', 'blurred', 'values']),
+      withVersions(img('c', 3000, 2000), ['original', 'blurred', 'values', 'blurValues']),
+    ])
+    expect(items.map((i) => i.tiles)).toEqual([1, 3, 4])
+  })
+
+  it('keeps the key, aspect and cap of a one-tile item (versions change only tiles)', () => {
+    const [one] = buildLayoutItems([img('a', 3000, 2000)])
+    const [three] = buildLayoutItems([
+      withVersions(img('a', 3000, 2000), ['original', 'blurred', 'values']),
+    ])
+    expect(three).toEqual({ ...one, tiles: 3 })
+  })
+
+  it('repeats the whole group per copy (owner Q16)', () => {
+    const items = buildLayoutItems([
+      withVersions(img('a', 3000, 2000, { copies: 2 }), ['original', 'values']),
+    ])
+    expect(items.map((i) => [i.key, i.tiles])).toEqual([
+      ['h-a~0#0', 2],
+      ['h-a~0#1', 2],
+    ])
+  })
+
+  it('counts a version that is not the original (values only → 1 tile)', () => {
+    const [item] = buildLayoutItems([withVersions(img('a', 3000, 2000), ['values'])])
+    expect(item?.tiles).toBe(1)
+  })
+
+  it('numbers images with the same bytes by their studies, whatever order they were added in', () => {
+    const plain = withVersions(img('p', 3000, 2000, {}, 'same'), ['original'])
+    const studied = withVersions(img('s', 3000, 2000, {}, 'same'), ['original', 'values'])
+    const keyOf = (images: ImageDescriptor[]) =>
+      Object.fromEntries(buildLayoutItems(images).map((i) => [i.imageId, i.key]))
+    expect(keyOf([studied, plain])).toEqual({ p: 'same~0#0', s: 'same~1#0' })
+    expect(keyOf([plain, studied])).toEqual({ p: 'same~0#0', s: 'same~1#0' })
+  })
+
+  it('numbers same-bytes images apart by study settings when their versions match', () => {
+    const values = (id: string, count: number): ImageDescriptor => ({
+      ...img(id, 3000, 2000, {}, 'same'),
+      study: { ...DEFAULT_STUDY, versions: ['values'], values: { ...DEFAULT_STUDY.values, count } },
+    })
+    const keyOf = (images: ImageDescriptor[]) =>
+      Object.fromEntries(buildLayoutItems(images).map((i) => [i.imageId, i.key]))
+    const three = values('three', 3)
+    const five = values('five', 5)
+    expect(keyOf([five, three])).toEqual(keyOf([three, five]))
+  })
+
+  it('keeps input-order numbering for same-bytes Original-only images with other study settings', () => {
+    const original = (id: string, blurPct: number, count: number): ImageDescriptor => ({
+      ...img(id, 3000, 2000, {}, 'same'),
+      study: { ...DEFAULT_STUDY, blurPct, values: { ...DEFAULT_STUDY.values, count } },
+    })
+    const items = buildLayoutItems([original('x', 90, 12), original('y', 10, 3)])
+    expect(items.map((i) => [i.imageId, i.key])).toEqual([
+      ['x', 'same~0#0'],
+      ['y', 'same~1#0'],
+    ])
+  })
+
+  it('prints one tile for an unsanitized empty version list', () => {
+    const [item] = buildLayoutItems([withVersions(img('a', 3000, 2000), [])])
+    expect(item?.tiles).toBe(1)
   })
 })
 

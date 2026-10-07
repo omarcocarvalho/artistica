@@ -35,11 +35,26 @@ function denseFixedItems(nAuto: number, seed: number): LayoutItemInput[] {
   )
 }
 
-/** Dense worst case: 50 random-aspect groups (1–3 tiles) on one large page; the full ladder runs (56 targets). */
-function denseGroupItems(seed: number): LayoutItemInput[] {
+/** Dense worst case: 50 random-aspect groups (1–`maxTiles` tiles) on one large page; the full ladder runs. */
+function denseGroupItems(seed: number, maxTiles = 3): LayoutItemInput[] {
   const rnd = mulberry32(seed)
   return Array.from({ length: 50 }, (_, i) =>
-    item(key(i), 0.3 + rnd() * 3, 1200, { kind: 'auto' }, 1 + Math.floor(rnd() * 3)),
+    item(key(i), 0.3 + rnd() * 3, 1200, { kind: 'auto' }, 1 + Math.floor(rnd() * maxTiles)),
+  )
+}
+
+/** 50 photos, each printing all four study versions (the largest groups the UI can make). */
+function fourVersionItems(seed: number): LayoutItemInput[] {
+  const rnd = mulberry32(seed)
+  const aspects = [1.5, 2 / 3, 1, 4 / 3, 3 / 4]
+  return Array.from({ length: 50 }, (_, i) =>
+    item(
+      key(i),
+      aspects[Math.floor(rnd() * aspects.length)] ?? 1,
+      300 + rnd() * 700,
+      { kind: 'auto' },
+      4,
+    ),
   )
 }
 
@@ -71,6 +86,17 @@ describe('computeLayout performance (50 items)', () => {
       'Custom 1000 mm auto, dense: 50 random groups on one page',
       { ...DEFAULT_PAGE_SETUP, paper: 'Custom', customSize: { w: 1000, h: 1000 } },
       denseGroupItems(2),
+    ],
+    [
+      'Custom 1000 mm auto, dense: 50 random groups of 1–4 tiles on one page',
+      { ...DEFAULT_PAGE_SETUP, paper: 'Custom', customSize: { w: 1000, h: 1000 } },
+      denseGroupItems(22, 4),
+    ],
+    ['A4 auto, 50 photos × 4 versions', DEFAULT_PAGE_SETUP, fourVersionItems(7)],
+    [
+      'A3 auto, 50 photos × 4 versions',
+      { ...DEFAULT_PAGE_SETUP, paper: 'A3' },
+      fourVersionItems(8),
     ],
   ]
   for (const [name, setup, items] of cases) {
