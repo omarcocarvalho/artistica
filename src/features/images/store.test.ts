@@ -979,6 +979,17 @@ describe('updateLines', () => {
     expect(b2).toBe(b)
   })
 
+  it('keeps the selection and records no apply', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    expect(store.getState().selectedId).toBe('id-1')
+    store.getState().updateLines('id-2' as ImageId, LINED)
+    expect(store.getState().images[1]?.lines).toEqual(LINED)
+    expect(store.getState().selectedId).toBe('id-1')
+    expect(store.getState().appliedLines).toBeNull()
+    expect(store.getState().appliedStudy).toBeNull()
+  })
+
   it('sanitizes through patchLines', async () => {
     const { store } = setup()
     await store.getState().addFiles([file('a.jpg')])
@@ -1095,6 +1106,17 @@ describe('applyLinesToAll (owner Q8: everything on the Lines tab)', () => {
     expect(store.getState().appliedLines).toBe(appliedLines)
   })
 
+  it('keeps the recorded appliedStudy', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    store.getState().applyStudyToAll('id-1' as ImageId)
+    const appliedStudy = store.getState().appliedStudy
+    expect(appliedStudy).not.toBeNull()
+    store.getState().updateLines('id-1' as ImageId, LINED)
+    expect(store.getState().applyLinesToAll('id-1' as ImageId)).toBe(1)
+    expect(store.getState().appliedStudy).toBe(appliedStudy)
+  })
+
   it('keeps appliedLines across clear(), as appliedStudy', async () => {
     const { store } = setup()
     await store.getState().addFiles([file('a.jpg')])
@@ -1188,10 +1210,15 @@ describe('setDefaultLines', () => {
     expect(listener).not.toHaveBeenCalled()
   })
 
-  it('is independent of the default study, both ways', async () => {
+  it.each([
+    ['lines first', ['lines', 'study']],
+    ['study first', ['study', 'lines']],
+  ] as const)('is independent of the default study (%s)', async (_, order) => {
     const { store } = setup()
-    store.getState().setDefaultLines(STYLED)
-    store.getState().setDefaultStudy(BLUR_VALUES)
+    for (const which of order) {
+      if (which === 'lines') store.getState().setDefaultLines(STYLED)
+      else store.getState().setDefaultStudy(BLUR_VALUES)
+    }
     await store.getState().addFiles([file('a.jpg')])
     expect(store.getState().images[0]?.lines).toEqual(STYLED)
     expect(store.getState().images[0]?.study).toEqual(BLUR_VALUES)
