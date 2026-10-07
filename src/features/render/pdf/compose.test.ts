@@ -235,6 +235,7 @@ describe('studies in the PDF (M2-R9)', () => {
     const draws = report.pages[0]?.draws ?? []
     expect(draws).toHaveLength(2)
     expect(draws.map((d) => d.filter)).toEqual(['DCTDecode', 'DCTDecode'])
+    expect(new Set(draws.map((d) => d.name)).size).toBe(2)
     expect(report.images).toHaveLength(1)
   })
 
