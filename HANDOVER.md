@@ -35,7 +35,7 @@ Later milestones add AI lines (in the browser), polish, and translations.
 
 **Release:** M2 is released as [`v0.2.0`](https://github.com/omarcocarvalho/artistica/releases/tag/v0.2.0): release PR [#80](https://github.com/omarcocarvalho/artistica/pull/80) merged as `296f15d` on 2026-10-07. The M2 sign-off and the owner's answers are recorded on #80 and in the M2 ledger.
 
-**M3 ("composition lines") is built and in final review, waiting for the owner's real-iPhone sign-off.** Plan: [`2026-10-07-m3-overview.md`](docs/superpowers/plans/2026-10-07-m3-overview.md) and sub-plans A–D, approved by the owner on 2026-10-07 with every recommended default (PR #102). All 13 tasks are merged (#103, #105–#117), then the milestone-wide final review in three parts; its fixes are in #118 (keyboard access to the line colour in WebKit, drafts kept with their image, apply-to-all guarded in the store while importing). The full record — per-task review findings, rulings, deferred items and the owner questions — is in [`docs/superpowers/ledgers/m3.md`](docs/superpowers/ledgers/m3.md).
+**M3 ("composition lines") is built and reviewed, waiting for the owner's real-iPhone sign-off.** Plan: [`2026-10-07-m3-overview.md`](docs/superpowers/plans/2026-10-07-m3-overview.md) and sub-plans A–D, approved by the owner on 2026-10-07 with every recommended default (PR #102). All 13 tasks are merged (#103, #105–#117), then the milestone-wide final review in three parts; its fixes are in #118 (keyboard access to the line colour in WebKit, drafts kept with their image, apply-to-all guarded in the store while importing), merged as `bd3b0b2`. The always-open phone Lines section (owner ruling D1-R1) is #120. The full record — per-task review findings, rulings, deferred items and the owner questions — is in [`docs/superpowers/ledgers/m3.md`](docs/superpowers/ledgers/m3.md).
 
 - **Exit criterion** ("the lines in the PDF match the preview exactly and stay sharp when zoomed"): pinned by E2E test L-X1 in `e2e/lines.spec.ts` on chromium, firefox and webkit — every line a stroked vector path whose geometry equals the pure geometry within 0.01 mm, image XObjects byte-identical with lines on and off, and the preview showing the line colour along every PDF path.
 - **Phone memory** (M3 in `e2e/mobile-flow.spec.ts`, every line on, CI): import 1013 MB, studies 1296 MB, settled 1158 MB, export 1292 MB, against the unchanged budgets of 1500 / 1500 / 1700 MB.
@@ -50,7 +50,7 @@ Later milestones add AI lines (in the browser), polish, and translations.
 
 ## Next steps (in order)
 
-1. **Owner signs off M3** on the iPhone, with the checklist in the M3 overview ("M3 sign-off checklist"), after #118 merges. Record the device, OS version, export time and page count on #104.
+1. **Owner signs off M3** on the iPhone, with the checklist in the M3 overview ("M3 sign-off checklist"), once #120 (the always-open phone Lines section, ruling D1-R1) is merged. Record the device, OS version, export time and page count on #104.
 2. **Release v0.3.0** from release PR #104 (steps for any milestone):
    1. Run `gh pr view 104 --json mergeable` until it isn't `UNKNOWN`.
    2. Close and reopen #104 and wait for the checks to pass.
@@ -67,16 +67,20 @@ The owner answered the questions raised in M2 (details in the M2 ledger). Three 
 
 Kept as built: **M2-3** the one-photo hint copy; **M2-5** the mockup differences; **M2-6** no minimum lightness span for value studies. **M2-7** and **M2-8** were not answered, so their defaults stand: ship v0.2.0 with phone memory growing with page count (gated by the real-phone run) and defer "visible pages only" to M5; keep plan labels in code comments.
 
+## Owner answers from M3 (2026-10-08)
+
+The owner tested M3 on the iPhone and accepted all four recommendations for the questions raised in M3 (details in the [M3 ledger](docs/superpowers/ledgers/m3.md)):
+
+- **M3-1 Spiral wording, answered: keep the spiral and correct the plan wording.** The stretched spiral passes near, not through, the golden-ratio lines' crossing: its eye sits at about 72% of each side (0.724, 0.724), against 61.8% for the crossing. The code is the classic construction and matches the mockup; the M3 overview's Q2 now says so.
+- **M3-2 Thick centre-line dashes, answered: M5 polish.** At 2 mm the centre dash is [12, 8] mm, so on tiles under about 12 mm the centre lines look solid; scaling the dash with tile size is M5 work.
+- **PQ1 Editable hex field, answered: kept.** The line colour's hex stays an editable text field (#118), because keyboard-only users in WebKit can't reach the colour swatch.
+- **PQ2 Up/Down arrows on segmented controls, answered: M5** accessibility polish (app-wide since M1; ours move only on Left/Right).
+
+The owner also ruled, from the same iPhone run, that **the phone Lines section is always open** (ruling D1-R1 in the M3 overview, "Contract change requests → Ruled"): a normal card below the Studies panel with an h3 "Lines" and the "N on" badge, no expand or collapse. The desktop Lines tab is unchanged.
+
 ## Owner questions (open)
 
 The spec doesn't answer these. Nothing was changed for them.
-
-**Raised in M3** (details in the [M3 ledger](docs/superpowers/ledgers/m3.md)):
-
-- **M3-1 Spiral wording:** the plan's Q2 said the stretched spiral passes through the golden-ratio crossings. Its eye sits at about (0.724, 0.724), not on the 0.618 crossing; the code is the classic construction and matches the mockup. Correct the docs, or move the eye?
-- **M3-2 Thick centre-line dashes:** at 2 mm the centre dash is [12, 8] mm, so on tiles under about 12 mm the centre lines look solid. Scale the dash with tile size (M5), or keep it?
-- **PQ1 Editable hex field:** the line colour's hex is an editable text field (#118), not read-only text as in the mockup, because keyboard-only users in WebKit can't reach the colour swatch. Accept the change from the mockup?
-- **PQ2 Up/Down arrows on segmented controls:** the ARIA radio pattern moves on all four arrows; ours only on Left/Right. This is app-wide since M1; the recommendation is M5 accessibility polish.
 
 **Left open from M1** (Q1 was answered in M2 as H1: phone controls are now 44 px; for Q5 and Q6 the owner accepted the M3 defaults H1 and H2 — unchanged in M3, cancelling to be decided in M5 — so both stay open):
 

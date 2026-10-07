@@ -1,37 +1,28 @@
+import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useImages } from '../../features/images'
 import { LinesPanel } from '../../features/lines'
 import { activeLineTypes } from '../../shared/model/lines'
-import { Badge, VisuallyHidden } from '../../shared/ui'
+import { Badge } from '../../shared/ui'
 
-/** The phone Studies step's collapsible Lines card (design/mobile-flow.html, design answer D1). */
+/** The phone Studies step's Lines card: always open, named by its h3; the panel's headings are h4. */
 export function LinesSection() {
   const { t } = useTranslation('app')
+  const headingId = useId()
   const selectedId = useImages((s) => s.selectedId)
   const count = useImages((s) => {
     const img = s.images.find((i) => i.id === s.selectedId)
     return img ? activeLineTypes(img.lines).length : 0
   })
   return (
-    <details className="ds-card app-lines-section">
-      <summary className="app-lines-section__summary">
-        {count > 0 ? (
-          <>
-            <VisuallyHidden>
-              {t('mobile.lines.title')}
-              {t('mobile.lines.separator')}
-              {t('mobile.lines.on', { count })}
-            </VisuallyHidden>
-            <span aria-hidden="true">
-              {t('mobile.lines.title')}
-              <Badge className="app-lines-section__badge">{t('mobile.lines.on', { count })}</Badge>
-            </span>
-          </>
-        ) : (
-          t('mobile.lines.title')
-        )}
-      </summary>
-      <LinesPanel imageId={selectedId} announceWait={false} />
-    </details>
+    <section className="ds-card app-lines-section" aria-labelledby={headingId}>
+      <div className="app-lines-section__head">
+        <h3 id={headingId} className="font-display text-lg">
+          {t('mobile.lines.title')}
+        </h3>
+        {count > 0 && <Badge>{t('mobile.lines.on', { count })}</Badge>}
+      </div>
+      <LinesPanel imageId={selectedId} announceWait={false} headingLevel={4} />
+    </section>
   )
 }

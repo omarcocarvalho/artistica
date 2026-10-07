@@ -8,12 +8,11 @@ import type { ImageId } from '../../shared/model/image'
 import { StudiesSlot } from './StudiesSlot'
 
 const ids = ['a', 'b'] as ImageId[]
-function linesSection(container: HTMLElement) {
-  const details = container.querySelector('details')
-  const summary = details?.querySelector('summary')
-  if (!details || !summary) throw new Error('no Lines section')
-  return { details, summary }
-}
+const linesSection = () => screen.getByRole('region', { name: 'Lines' })
+const linesHeading = () => screen.getByRole('heading', { level: 3, name: 'Lines' })
+/** The "N on" badge beside the Lines heading, or null when no line type is on. */
+const linesCount = () =>
+  within(linesHeading().parentElement ?? document.body).queryByText(/^\d+ on$/)
 beforeAll(async () => {
   await initI18n()
 })
@@ -63,53 +62,65 @@ describe('StudiesSlot', () => {
     expect(screen.getByText('b.jpg', { selector: 'strong' })).toBeVisible()
   })
 
-  it('phone: a collapsed Lines section follows the Studies panel', () => {
+  it('phone: an always-open Lines section, named by its h3, follows the Studies panel', () => {
     const { container } = render(<StudiesSlot variant="phone" />)
-    const { details, summary } = linesSection(container)
-    expect(details).not.toHaveAttribute('open')
-    expect(summary).toHaveAccessibleName('Lines')
-    expect(within(details).getByRole('switch', { name: 'Grid' })).not.toBeVisible()
+    const section = linesSection()
+    expect(section.tagName).toBe('SECTION')
+    expect(section).toHaveAttribute('aria-labelledby', linesHeading().id)
+    expect(within(section).getByRole('switch', { name: 'Grid' })).toBeVisible()
+    expect(within(section).getByRole('button', { name: 'Apply lines to all images' })).toBeVisible()
+    expect(container.querySelector('details, summary, [aria-expanded]')).toBeNull()
     const studiesApply = screen.getByRole('button', { name: 'Apply to all images' })
     expect(
-      studiesApply.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING,
+      studiesApply.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
   })
-  it('phone: opening the section shows the lines panel for the selected image, and both apply buttons have distinct names (owner Q12)', async () => {
-    const user = userEvent.setup()
-    const { container } = render(<StudiesSlot variant="phone" />)
-    const { details, summary } = linesSection(container)
-    await user.click(summary)
-    expect(details).toHaveAttribute('open')
-    expect(within(details).getByText('a.jpg', { selector: 'strong' })).toBeVisible()
-    expect(within(details).getByRole('switch', { name: 'Golden spiral' })).toBeVisible()
+  it('phone: the panel’s section headings sit under the Lines h3, as h4', () => {
+    render(<StudiesSlot variant="phone" />)
+    expect(
+      within(linesSection())
+        .getAllByRole('heading')
+        .map((h) => [h.tagName, h.textContent]),
+    ).toEqual([
+      ['H3', 'Lines'],
+      ['H4', 'Composition'],
+      ['H4', 'Line style'],
+    ])
+  })
+  it('phone: the section shows the lines panel for the selected image, and both apply buttons have distinct names (owner Q12)', () => {
+    render(<StudiesSlot variant="phone" />)
+    const section = linesSection()
+    expect(within(section).getByText('a.jpg', { selector: 'strong' })).toBeVisible()
+    expect(within(section).getByRole('switch', { name: 'Golden spiral' })).toBeVisible()
     expect(screen.getAllByRole('button', { name: 'Apply to all images' })).toHaveLength(1)
     expect(screen.getAllByRole('button', { name: 'Apply lines to all images' })).toHaveLength(1)
   })
-  it('phone: the summary counts the selected image’s line types that are on', async () => {
+  it('phone: beside the heading, a count of the selected image’s line types that are on', async () => {
     const user = userEvent.setup()
-    const { container } = render(<StudiesSlot variant="phone" />)
-    const { summary } = linesSection(container)
+    render(<StudiesSlot variant="phone" />)
+    expect(linesCount()).toBeNull()
     act(() => {
       useImages.getState().updateLines('a' as ImageId, { thirds: true, centre: true })
     })
-    expect(summary).toHaveAccessibleName('Lines, 2 on')
-    expect(within(summary).getByText('2 on')).toBeVisible()
+    expect(linesCount()).toHaveTextContent('2 on')
+    expect(linesCount()).toBeVisible()
+    expect(linesHeading()).toHaveTextContent(/^Lines$/)
+    expect(linesSection()).toHaveAccessibleName('Lines')
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Image' })).getByRole('radio', {
         name: 'b.jpg',
       }),
     )
-    expect(summary).toHaveAccessibleName('Lines')
+    expect(linesCount()).toBeNull()
     act(() => {
       useImages.getState().updateLines('b' as ImageId, { grid: { on: true } })
     })
-    expect(summary).toHaveAccessibleName('Lines, 1 on')
+    expect(linesCount()).toHaveTextContent('1 on')
   })
   it('phone: each panel keeps its own import wait hint', () => {
     useImages.setState({ importing: 1 })
-    const { container } = render(<StudiesSlot variant="phone" />)
-    const { details } = linesSection(container)
-    details.open = true
+    render(<StudiesSlot variant="phone" />)
+    const section = linesSection()
     const studiesApply = screen.getByRole('button', { name: 'Apply to all images' })
     const linesApply = screen.getByRole('button', { name: 'Apply lines to all images' })
     expect(studiesApply).toBeDisabled()
@@ -120,12 +131,12 @@ describe('StudiesSlot', () => {
     const studiesHint = hintOf(studiesApply)
     expect(linesHint).toHaveTextContent('Waiting for photos to finish importing…')
     expect(studiesHint).toHaveTextContent('Waiting for photos to finish importing…')
-    expect(details).toContainElement(linesHint)
-    expect(details).not.toContainElement(studiesHint)
+    expect(linesHint).toBeVisible()
+    expect(section).toContainElement(linesHint)
+    expect(section).not.toContainElement(studiesHint)
   })
-  it('phone: one live region announces the wait for the whole step, even with the Lines section open', () => {
+  it('phone: one live region announces the wait for the whole step', () => {
     const { container } = render(<StudiesSlot variant="phone" />)
-    linesSection(container).details.open = true
     act(() => {
       useImages.setState({ importing: 1 })
     })
@@ -142,8 +153,9 @@ describe('StudiesSlot', () => {
     )
   })
   it('desktop: no Lines section (the Lines tab holds the panel)', () => {
-    const { container } = render(<StudiesSlot variant="desktop" />)
-    expect(container.querySelector('details')).toBeNull()
+    render(<StudiesSlot variant="desktop" />)
+    expect(screen.queryByRole('region', { name: 'Lines' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Lines' })).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: 'Apply lines to all images' }),
     ).not.toBeInTheDocument()
