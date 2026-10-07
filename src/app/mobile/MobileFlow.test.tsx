@@ -1,7 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { useImages } from '../../features/images'
+import { makeLoadedImage } from '../../features/images/test-utils'
 import type { LayoutResult } from '../../features/layout'
+import type { ImageId } from '../../shared/model/image'
 import { initI18n } from '../../shared/i18n'
 import { usePages } from '../pages-store'
 import { useAppUi } from '../state/useAppUi'
@@ -19,28 +22,63 @@ beforeAll(async () => {
 beforeEach(() => {
   imageCount.value = 0
   useAppUi.setState(useAppUi.getInitialState())
+  useImages.setState({ images: [], selectedId: null })
   usePages.setState({ status: 'idle', layout, pages: [{ index: 0 }] as never })
 })
 
 describe('MobileFlow', () => {
   it('starts on Images with Back disabled and a labelled step region', () => {
     render(<MobileFlow />)
-    expect(screen.getByRole('region', { name: 'Step 1 of 4: Images' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Step 1 of 5: Images' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Images' })).toHaveAttribute('aria-current', 'step')
   })
-  it('walks Images, Page, Preview, Export with Next and Back', async () => {
+  it('walks Images, Page, Studies, Preview, Export with Next and Back', async () => {
     const user = userEvent.setup()
     render(<MobileFlow />)
-    await user.click(screen.getByRole('button', { name: 'Next' }))
-    expect(screen.getByRole('region', { name: 'Step 2 of 4: Page' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Next' }))
-    expect(screen.getByRole('region', { name: 'Step 3 of 4: Preview' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Next' }))
-    expect(screen.getByRole('region', { name: 'Step 4 of 4: Export' })).toBeInTheDocument()
+    for (const [n, name] of [
+      [2, 'Page'],
+      [3, 'Studies'],
+      [4, 'Preview'],
+      [5, 'Export'],
+    ] as const) {
+      await user.click(screen.getByRole('button', { name: 'Next' }))
+      expect(
+        screen.getByRole('region', { name: `Step ${String(n)} of 5: ${name}` }),
+      ).toBeInTheDocument()
+    }
     expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Back' }))
-    expect(screen.getByRole('region', { name: 'Step 3 of 4: Preview' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Step 4 of 5: Preview' })).toBeInTheDocument()
+  })
+  it('the step bar has five equal columns', () => {
+    render(<MobileFlow />)
+    const nav = screen.getByRole('navigation', { name: 'Steps' })
+    expect(
+      within(nav)
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['Images', 'Page', 'Studies', 'Preview', 'Export'])
+    expect(nav.querySelector('ol')).toHaveClass('grid-cols-5')
+  })
+  it('studies step: the empty state without images, the image picker and studies panel with them', () => {
+    useAppUi.getState().setStep('studies')
+    const { rerender } = render(<MobileFlow />)
+    expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument()
+    imageCount.value = 1
+    useImages.setState({
+      images: [makeLoadedImage({ id: 'a' as ImageId, name: 'a.jpg' })],
+      selectedId: 'a' as ImageId,
+    })
+    rerender(<MobileFlow />)
+    expect(screen.getByRole('radiogroup', { name: 'Image' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Print these versions' })).toBeInTheDocument()
+  })
+  it('page step: the page setup only, with no settings tabs', () => {
+    useAppUi.getState().setStep('page')
+    render(<MobileFlow />)
+    expect(screen.getByLabelText('Paper size')).toBeInTheDocument()
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
   })
   it('jumps with the step bar and moves focus to the step heading', async () => {
     const user = userEvent.setup()

@@ -111,9 +111,11 @@ test.describe('phone layout', () => {
     await page.goto('app/')
     await expect(page.getByRole('complementary')).toHaveCount(0)
     await expect(page.getByRole('navigation', { name: 'Steps' })).toBeVisible()
-    await expect(page.getByRole('region', { name: 'Step 1 of 4: Images' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Step 1 of 5: Images' })).toBeVisible()
     await page.getByRole('button', { name: 'Next' }).click()
     await expect(page.getByLabel('Paper size')).toBeVisible()
+    await page.getByRole('button', { name: 'Next' }).click()
+    await expect(page.getByRole('region', { name: 'Step 3 of 5: Studies' })).toBeVisible()
     await page.getByRole('button', { name: 'Next' }).click()
     await page.getByRole('button', { name: 'Next' }).click()
     await expect(page.getByRole('button', { name: 'Create PDF' })).toHaveAttribute(
@@ -121,7 +123,7 @@ test.describe('phone layout', () => {
       'true',
     )
     await page.getByRole('button', { name: 'Back' }).click()
-    await expect(page.getByRole('region', { name: 'Step 3 of 4: Preview' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Step 4 of 5: Preview' })).toBeVisible()
   })
 
   test('has no horizontal scroll and 44px targets in the footer and step bar', async ({ page }) => {
@@ -132,7 +134,7 @@ test.describe('phone layout', () => {
         (el: { scrollWidth: number; clientWidth: number }) => el.scrollWidth - el.clientWidth,
       )
     expect(overflow).toBeLessThanOrEqual(0)
-    for (const name of ['Next', 'Images', 'Page', 'Preview', 'Export']) {
+    for (const name of ['Next', 'Images', 'Page', 'Studies', 'Preview', 'Export']) {
       const b = await page.getByRole('button', { name, exact: true }).first().boundingBox()
       expect(b?.height ?? 0).toBeGreaterThanOrEqual(44)
     }
@@ -151,9 +153,9 @@ test.describe('phone layout', () => {
     test(`each step is axe-clean (${colorScheme})`, async ({ page }) => {
       await page.emulateMedia({ colorScheme })
       await page.goto('app/')
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 5; i++) {
         await expectNoAxeViolations(page)
-        if (i < 3) await page.getByRole('button', { name: 'Next' }).click()
+        if (i < 4) await page.getByRole('button', { name: 'Next' }).click()
       }
     })
   }

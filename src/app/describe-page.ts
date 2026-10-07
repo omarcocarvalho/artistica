@@ -1,9 +1,11 @@
 import type { PageModel } from '../features/render'
 import type { ImageId } from '../shared/model/image'
+import type { StudyVersion } from '../shared/model/study'
 
 export interface TileDescription {
   imageId: ImageId
   name: string
+  version: StudyVersion
   widthMm: number
   heightMm: number
 }
@@ -18,6 +20,7 @@ export function describePage(
   return model.tiles.map((t) => ({
     imageId: t.imageId,
     name: names.get(t.imageId) ?? t.imageId,
+    version: t.version,
     widthMm: round1(t.trim.w),
     heightMm: round1(t.trim.h),
   }))

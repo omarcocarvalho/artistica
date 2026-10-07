@@ -35,7 +35,7 @@ export function App() {
           emptyActions={<EmptyActionsSlot />}
           preview={<PreviewSlot />}
           previewToolbar={<PreviewToolbar />}
-          settings={<SettingsSlot />}
+          settings={<SettingsSlot variant="desktop" />}
         />
       ) : (
         <MobileFlow />

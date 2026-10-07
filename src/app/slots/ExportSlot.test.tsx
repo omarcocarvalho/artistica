@@ -8,7 +8,9 @@ const h = vi.hoisted(() => ({
   images: [] as { id: string; pxW: number; pxH: number }[],
   getSource: undefined as GetSource | undefined,
   decodeFull: vi.fn((image: unknown) => Promise.resolve({ image })),
+  provider: { pause: vi.fn(), resume: vi.fn() },
 }))
+vi.mock('../study-provider', () => ({ appStudyProvider: h.provider }))
 vi.mock('../state/hasImages', () => ({ useImageCount: () => h.count }))
 vi.mock('../../features/render', () => ({
   ExportDialog: (p: { open: boolean; getSource: GetSource }) => {
@@ -37,6 +39,8 @@ const page = { index: 0, tiles: [] } as never
 beforeEach(() => {
   h.count = 1
   h.images = []
+  h.provider.pause.mockClear()
+  h.provider.resume.mockClear()
   useAppUi.setState(useAppUi.getInitialState())
   usePages.setState({ status: 'idle', layout: null, pages: [] })
 })
@@ -90,5 +94,36 @@ describe('ExportSlot', () => {
     expect(h.decodeFull).not.toHaveBeenCalled()
     await expect(source?.decode()).resolves.toEqual({ image })
     expect(h.decodeFull).toHaveBeenCalledWith(image)
+  })
+  it('pauses the study provider while the dialog is open, and resumes after (M2-R16, D-CR3)', () => {
+    usePages.setState({ pages: [page] })
+    render(<ExportSlot />)
+    expect(h.provider.pause).not.toHaveBeenCalled()
+    act(() => {
+      useAppUi.getState().openExport()
+    })
+    expect(h.provider.pause).toHaveBeenCalledTimes(1)
+    expect(h.provider.resume).not.toHaveBeenCalled()
+    act(() => {
+      useAppUi.getState().closeExport()
+    })
+    expect(h.provider.resume).toHaveBeenCalledTimes(1)
+    expect(h.provider.pause).toHaveBeenCalledTimes(1)
+  })
+  it('does not pause for an export request that cannot open (no pages)', () => {
+    render(<ExportSlot />)
+    act(() => {
+      useAppUi.getState().openExport()
+    })
+    expect(h.provider.pause).not.toHaveBeenCalled()
+  })
+  it('resumes the provider when unmounted while open, and never disposes it', () => {
+    usePages.setState({ pages: [page] })
+    useAppUi.setState({ exportOpen: true })
+    const { unmount } = render(<ExportSlot />)
+    expect(h.provider.pause).toHaveBeenCalledTimes(1)
+    unmount()
+    expect(h.provider.resume).toHaveBeenCalledTimes(1)
+    expect('dispose' in h.provider).toBe(false)
   })
 })

@@ -5,6 +5,7 @@ import { useSettings } from '../../features/settings'
 import { usePages } from '../pages-store'
 import { useImageCount } from '../state/hasImages'
 import { useAppUi } from '../state/useAppUi'
+import { appStudyProvider } from '../study-provider'
 
 const getSource: GetSource = (id) => {
   const image = useImages.getState().images.find((i) => i.id === id)
@@ -18,13 +19,23 @@ export function ExportSlot() {
   const imageCount = useImageCount()
   const paper = useSettings((s) => s.pageSetup.paper)
 
+  const dialogOpen = open && pages.length > 0 && imageCount > 0
+
   useEffect(() => {
     if (open && (pages.length === 0 || imageCount === 0)) useAppUi.getState().closeExport()
   }, [open, pages.length, imageCount])
 
+  useEffect(() => {
+    if (!dialogOpen) return
+    appStudyProvider.pause()
+    return () => {
+      appStudyProvider.resume()
+    }
+  }, [dialogOpen])
+
   return (
     <ExportDialog
-      open={open && pages.length > 0 && imageCount > 0}
+      open={dialogOpen}
       onOpenChange={(next) => {
         if (!next) useAppUi.getState().closeExport()
       }}

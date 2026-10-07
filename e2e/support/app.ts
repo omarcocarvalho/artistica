@@ -72,10 +72,10 @@ export class AppPage {
   get stepBar(): Locator {
     return this.page.getByRole('navigation', { name: 'Steps' })
   }
-  stepTab(name: 'Images' | 'Page' | 'Preview' | 'Export'): Locator {
+  stepTab(name: 'Images' | 'Page' | 'Studies' | 'Preview' | 'Export'): Locator {
     return this.stepBar.getByRole('button', { name, exact: true })
   }
-  async goToStep(name: 'Images' | 'Page' | 'Preview' | 'Export'): Promise<void> {
+  async goToStep(name: 'Images' | 'Page' | 'Studies' | 'Preview' | 'Export'): Promise<void> {
     await this.stepTab(name).click()
     await expect(this.stepTab(name)).toHaveAttribute('aria-current', 'step')
   }

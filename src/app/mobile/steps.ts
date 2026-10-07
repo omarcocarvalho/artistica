@@ -1,6 +1,6 @@
 import type { StepId } from '../state/useAppUi'
 
-export const STEPS: readonly StepId[] = ['images', 'page', 'preview', 'export']
+export const STEPS: readonly StepId[] = ['images', 'page', 'studies', 'preview', 'export']
 
 export function stepIndex(step: StepId): number {
   return STEPS.indexOf(step)

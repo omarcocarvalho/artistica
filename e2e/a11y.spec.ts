@@ -149,7 +149,7 @@ test.describe('phone steps (mobile-chromium)', () => {
       await expectNoAxeViolations(page)
       await sheet.getByRole('button', { name: 'Done' }).click()
       await expect(sheet).toHaveCount(0)
-      for (const step of ['Page', 'Preview', 'Export'] as const) {
+      for (const step of ['Page', 'Studies', 'Preview', 'Export'] as const) {
         await app.goToStep(step)
         await expect(page.getByRole('heading', { level: 2, name: step, exact: true })).toBeVisible()
         if (step === 'Preview') await app.expectPreviewPages(1)

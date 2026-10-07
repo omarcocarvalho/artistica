@@ -56,8 +56,8 @@ test('phone step flow walks to Export, keeps 44px icon targets and does not over
 }) => {
   await page.setViewportSize({ width: 320, height: 640 })
   await page.goto('app/')
-  await expect(page.getByRole('region', { name: 'Step 1 of 4: Images' })).toBeVisible()
-  for (const step of ['Page', 'Preview', 'Export']) {
+  await expect(page.getByRole('region', { name: 'Step 1 of 5: Images' })).toBeVisible()
+  for (const step of ['Page', 'Studies', 'Preview', 'Export']) {
     await page.getByRole('button', { name: 'Next' }).click()
     await expect(page.getByRole('heading', { name: step, level: 2 })).toBeVisible()
     await expect(page.locator('html')).toHaveJSProperty('scrollWidth', 320)
