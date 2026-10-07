@@ -352,6 +352,20 @@ describe('study defaults (schema v2)', () => {
     expect(s.studyDefaults).toEqual(D)
   })
 
+  it.each([
+    [{ blurPct: 250, values: { count: 7, hue: 420, neutral: false } }],
+    [{ blurPct: -5, values: { count: 99, hue: -30, neutral: true } }],
+    [{ blurPct: 33.6, values: { count: 1, hue: 360, neutral: false } }],
+  ])('loads stored study defaults %j the same as setStudyDefaults sets them', (input) => {
+    const set = createSettingsStore(memoryStorage())
+    set.getState().setStudyDefaults(input)
+    const state = { ...DEFAULT_SETTINGS, unit: 'in', studyDefaults: input }
+    const loaded = createSettingsStore(memoryStorage(JSON.stringify({ version: 2, state })))
+    expect(loaded.getState().unit).toBe('in')
+    expect(loaded.getState().studyDefaults).toEqual(set.getState().studyDefaults)
+    expect(loaded.getState().studyDefaults).not.toEqual(DEFAULT_SETTINGS.studyDefaults)
+  })
+
   it('setStudyDefaults persists blur and values, sanitized, under version 2', () => {
     const storage = memoryStorage()
     const store = createSettingsStore(storage)
@@ -408,6 +422,19 @@ describe('study defaults (schema v2)', () => {
     store.getState().setStudyDefaults({ blurPct: 15, values: DEFAULT_STUDY.values })
     store.getState().reset()
     expect(store.getState().studyDefaults).toEqual(DEFAULT_SETTINGS.studyDefaults)
+  })
+
+  it.each([
+    ['blurPct', { blurPct: 41, values: DEFAULT_STUDY.values }],
+    ['count', { blurPct: 40, values: { ...DEFAULT_STUDY.values, count: 6 } }],
+    ['hue', { blurPct: 40, values: { ...DEFAULT_STUDY.values, hue: 56 } }],
+    ['neutral', { blurPct: 40, values: { ...DEFAULT_STUDY.values, neutral: true } }],
+  ])('setStudyDefaults stores a change to %s alone', (_name, next) => {
+    const storage = memoryStorage()
+    const store = createSettingsStore(storage)
+    store.getState().setStudyDefaults(next)
+    expect(store.getState().studyDefaults).toEqual(next)
+    expect(saved(storage).state.studyDefaults).toEqual(next)
   })
 
   it('keeps the same state when setStudyDefaults gets equal values (no storage write churn)', () => {

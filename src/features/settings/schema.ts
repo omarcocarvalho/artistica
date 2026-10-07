@@ -7,15 +7,7 @@ import {
   type Orientation,
   type PageSetup,
 } from '../../shared/model/page-setup'
-import {
-  DEFAULT_STUDY,
-  MAX_BLUR_PCT,
-  MAX_VALUES,
-  MIN_BLUR_PCT,
-  MIN_VALUES,
-  sanitizeStudy,
-  type StudySettings,
-} from '../../shared/model/study'
+import { DEFAULT_STUDY, sanitizeStudy, type StudySettings } from '../../shared/model/study'
 import type { Unit } from '../../shared/model/units'
 
 export const THEMES = ['auto', 'light', 'dark'] as const
@@ -72,19 +64,23 @@ const pageSetupSchema = z.object({
     .catch(D.bleed),
 })
 
-/** Total, like pageSetupSchema. Unknown keys (e.g. a stored `versions`) are stripped. */
+/**
+ * Total, like pageSetupSchema, but it checks types only: ranges belong to `sanitizeStudy`, so a
+ * stored value is clamped or wrapped exactly as `setStudyDefaults` would. Unknown keys (e.g. a
+ * stored `versions`) are stripped.
+ */
 const studyDefaultsSchema = z.object({
-  blurPct: z.number().min(MIN_BLUR_PCT).max(MAX_BLUR_PCT).catch(DS.blurPct),
+  blurPct: z.number().catch(DS.blurPct),
   values: z
     .object({
-      count: z.number().min(MIN_VALUES).max(MAX_VALUES).catch(DS.values.count),
-      hue: z.number().min(0).max(360).catch(DS.values.hue),
+      count: z.number().catch(DS.values.count),
+      hue: z.number().catch(DS.values.hue),
       neutral: z.boolean().catch(DS.values.neutral),
     })
     .catch(DS.values),
 })
 
-/** Rounds and wraps exactly like the image store (`sanitizeStudy`), and drops `versions`. */
+/** The one normalisation for study defaults, on load and in `setStudyDefaults`. Drops `versions`. */
 export function normalizeStudyDefaults(defaults: StudyDefaults): StudyDefaults {
   const study = sanitizeStudy({ ...defaults, versions: DEFAULT_STUDY.versions })
   return { blurPct: study.blurPct, values: study.values }
