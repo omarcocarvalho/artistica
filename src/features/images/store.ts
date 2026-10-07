@@ -11,7 +11,14 @@ import { createLimiter } from './limiter'
 import type { ImportOutcome, ImportWarning, LoadedImage } from './types'
 import { fetchImageBlob } from './url'
 import { DEFAULT_EDITS } from '../../shared/model/image'
-import { DEFAULT_LINES } from '../../shared/model/lines'
+import {
+  DEFAULT_LINES,
+  linesEqual,
+  patchLines,
+  sanitizeLines,
+  type LineSettings,
+  type LinesPatch,
+} from '../../shared/model/lines'
 import {
   DEFAULT_STUDY,
   patchStudy,
@@ -27,6 +34,8 @@ export interface ImagesState {
   importing: number
   /** The study the last "Apply to all" copied, in a new object on every apply. */
   appliedStudy: { readonly study: StudySettings } | null
+  /** The lines the last "Apply lines to all" copied, in a new object on every apply. */
+  appliedLines: { readonly lines: LineSettings } | null
   /** The import methods resolve to null when clear() discarded the batch before it finished. */
   addFiles(files: File[]): Promise<ImportOutcome[] | null>
   addFromClipboard(data: DataTransfer): Promise<ImportOutcome[] | null>
@@ -42,6 +51,12 @@ export interface ImagesState {
   applyStudyToAll(fromId: ImageId): number
   /** The study settings images created from now on start with. Not persisted here. */
   setDefaultStudy(study: StudySettings): void
+  /** Patch one image's line settings (sanitized). Keeps the same state when nothing changes. */
+  updateLines(id: ImageId, patch: LinesPatch): void
+  /** Copies `fromId`'s whole LineSettings (types and style, owner Q8) to every image. Returns how many changed. */
+  applyLinesToAll(fromId: ImageId): number
+  /** The line settings images created from now on start with. Not persisted here. */
+  setDefaultLines(lines: LineSettings): void
 }
 
 export interface ImagesDeps {
@@ -62,6 +77,7 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
   let autoSelectedId: ImageId | null = null
   let generation = 0
   let defaultStudy: StudySettings = DEFAULT_STUDY
+  let defaultLines: LineSettings = DEFAULT_LINES
   let nextSeq = 0
   let nextPaste = 1
 
@@ -113,7 +129,7 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
           pxH: d.pxH,
           edits: DEFAULT_EDITS,
           study: defaultStudy,
-          lines: DEFAULT_LINES,
+          lines: defaultLines,
           preview: d.preview,
           source: d.source,
           thumbUrl: d.thumbUrl,
@@ -184,6 +200,7 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
       selectedId: null,
       importing: 0,
       appliedStudy: null,
+      appliedLines: null,
 
       addFiles: (files) =>
         run(files.map((file) => ({ kind: 'blob', blob: file, name: file.name }))),
@@ -270,6 +287,38 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
 
       setDefaultStudy: (study) => {
         defaultStudy = sanitizeStudy(study)
+      },
+
+      updateLines: (id, patch) => {
+        set((s) => {
+          let changed = false as boolean
+          const images = s.images.map((img) => {
+            if (img.id !== id) return img
+            const lines = patchLines(img.lines, patch)
+            if (linesEqual(lines, img.lines)) return img
+            changed = true
+            return { ...img, lines }
+          })
+          return changed ? { images } : s
+        })
+      },
+
+      applyLinesToAll: (fromId) => {
+        const { images } = get()
+        const lines = images.find((i) => i.id === fromId)?.lines
+        if (lines === undefined) return 0
+        let count = 0
+        const next = images.map((img) => {
+          if (linesEqual(img.lines, lines)) return img
+          count += 1
+          return { ...img, lines }
+        })
+        set(count > 0 ? { images: next, appliedLines: { lines } } : { appliedLines: { lines } })
+        return count
+      },
+
+      setDefaultLines: (lines) => {
+        defaultLines = sanitizeLines(lines)
       },
     }
   })
