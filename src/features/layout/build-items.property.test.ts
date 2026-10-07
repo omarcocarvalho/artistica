@@ -6,7 +6,14 @@ import {
   type ImageId,
   type SizeMode,
 } from '../../shared/model/image'
-import { DEFAULT_LINES } from '../../shared/model/lines'
+import {
+  DEFAULT_LINES,
+  linesKey,
+  patchLines,
+  SPIRAL_CORNERS,
+  withoutLineTypes,
+  type LineSettings,
+} from '../../shared/model/lines'
 import { gutterMm, normalizePageSetup, type PageSetup } from '../../shared/model/page-setup'
 import { DEFAULT_STUDY, STUDY_VERSIONS, studyKey, tileStudyFor } from '../../shared/model/study'
 import { buildLayoutItems } from './build-items'
@@ -24,6 +31,7 @@ interface Photo {
   readonly size: SizeMode
   readonly versions: readonly (typeof STUDY_VERSIONS)[number][]
   readonly valueCount?: number
+  readonly lines?: LineSettings
 }
 
 const sizeArb: fc.Arbitrary<SizeMode> = fc.oneof(
@@ -66,18 +74,76 @@ function descriptors(photos: readonly Photo[], idPrefix: string): ImageDescripto
       versions: p.versions,
       values: { ...DEFAULT_STUDY.values, count: p.valueCount ?? DEFAULT_STUDY.values.count },
     },
-    lines: DEFAULT_LINES,
+    lines: p.lines ?? DEFAULT_LINES,
   }))
 }
 
 const printedStudies = (image: ImageDescriptor): string =>
   image.study.versions.map((v) => v + studyKey(tileStudyFor(v, image.study))).join(',')
 
+const printed = (image: ImageDescriptor): string =>
+  `${image.contentHash}|${printedStudies(image)}|${linesKey(image.lines)}`
+
+const linesArb: fc.Arbitrary<LineSettings> = fc.oneof(
+  { weight: 1, arbitrary: fc.constant(DEFAULT_LINES) },
+  {
+    weight: 3,
+    arbitrary: fc
+      .record({
+        grid: fc.record({
+          on: fc.boolean(),
+          cols: fc.integer({ min: 1, max: 4 }),
+          rows: fc.integer({ min: 1, max: 4 }),
+        }),
+        thirds: fc.boolean(),
+        centre: fc.boolean(),
+        spiral: fc.record({ on: fc.boolean(), corner: fc.constantFrom(...SPIRAL_CORNERS) }),
+        style: fc.record({
+          colour: fc.constantFrom('#e0457b', '#1f3fbf'),
+          opacityPct: fc.constantFrom(50, 90),
+        }),
+      })
+      .map((patch) => patchLines(DEFAULT_LINES, patch)),
+  },
+)
+
+/** Two or three photos with the same bytes, each printing something different (studies or lines). */
+const duplicatesArb = (hash: string): fc.Arbitrary<Photo[]> =>
+  fc
+    .record({
+      pxW: fc.integer({ min: 200, max: 6000 }),
+      pxH: fc.integer({ min: 200, max: 6000 }),
+      variants: fc.uniqueArray(
+        fc.record({
+          copies: fc.constantFrom(1, 2),
+          versions: fc.subarray([...STUDY_VERSIONS], { minLength: 1 }),
+          valueCount: fc.constantFrom(3, 5),
+          lines: linesArb,
+        }),
+        {
+          minLength: 2,
+          maxLength: 3,
+          selector: (v) =>
+            v.versions
+              .map((x) => (x === 'values' || x === 'blurValues' ? x + String(v.valueCount) : x))
+              .join() + linesKey(v.lines),
+        },
+      ),
+    })
+    .map(({ pxW, pxH, variants }): Photo[] =>
+      variants.map((v) => ({ ...v, hash, pxW, pxH, size: { kind: 'auto' } })),
+    )
+
+const byString = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
+
+const shuffledPair = (photos: fc.Arbitrary<Photo[]>) =>
+  photos.chain((list) =>
+    fc.tuple(fc.constant(list), fc.shuffledSubarray(list, { minLength: list.length })),
+  )
+
 /** Placements keyed by what prints (bytes, studies, copy), so sessions with different ids compare equal. */
 function arrangement(images: readonly ImageDescriptor[], result: LayoutResult) {
-  const printOf = new Map(
-    images.map((i) => [i.id as string, `${i.contentHash}|${printedStudies(i)}`]),
-  )
+  const printOf = new Map(images.map((i) => [i.id as string, printed(i)]))
   return result.pages.flatMap((page, pageIndex) =>
     page.placements.map((p) => ({
       print: printOf.get(p.imageId),
@@ -165,42 +231,15 @@ describe('study groups from loaded images (properties)', () => {
     )
   })
 
-  it('is the same for duplicate photos with different study settings in any order', HEAVY, () => {
-    const duplicatesArb = fc
-      .record({
-        pxW: fc.integer({ min: 200, max: 6000 }),
-        pxH: fc.integer({ min: 200, max: 6000 }),
-        variants: fc.uniqueArray(
-          fc.record({
-            copies: fc.constantFrom(1, 2),
-            versions: fc.subarray([...STUDY_VERSIONS], { minLength: 1 }),
-            valueCount: fc.constantFrom(3, 5),
-          }),
-          {
-            minLength: 2,
-            maxLength: 3,
-            selector: (v) =>
-              v.versions
-                .map((x) => (x === 'values' || x === 'blurValues' ? x + String(v.valueCount) : x))
-                .join(),
-          },
-        ),
-      })
-      .map(({ pxW, pxH, variants }): Photo[] =>
-        variants.map((v) => ({ ...v, hash: 'same-bytes', pxW, pxH, size: { kind: 'auto' } })),
-      )
+  it('is the same for duplicate photos with different studies or lines in any order', HEAVY, () => {
     fc.assert(
       fc.property(
         pageSetupArb,
-        fc
-          .tuple(duplicatesArb, photosArb)
-          .map(([duplicates, others]) => [...duplicates, ...others])
-          .chain((photos) =>
-            fc.tuple(
-              fc.constant(photos),
-              fc.shuffledSubarray(photos, { minLength: photos.length }),
-            ),
-          ),
+        shuffledPair(
+          fc
+            .tuple(duplicatesArb('same-bytes'), photosArb)
+            .map(([duplicates, others]) => [...duplicates, ...others]),
+        ),
         (setup, [photos, shuffled]) => {
           const first = descriptors(photos, 'aaa')
           const other = descriptors(shuffled, 'zzz')
@@ -210,6 +249,69 @@ describe('study groups from loaded images (properties)', () => {
         },
       ),
       { numRuns: 150 },
+    )
+  })
+
+  it('keys each duplicate photo by what it prints, in any input order', () => {
+    const keyed = (images: readonly ImageDescriptor[]) => {
+      const printOf = new Map(images.map((i) => [i.id as string, printed(i)]))
+      return buildLayoutItems(images)
+        .map((it) => `${it.key} ${printOf.get(it.imageId) ?? ''}`)
+        .sort(byString)
+    }
+    fc.assert(
+      fc.property(
+        shuffledPair(
+          fc
+            .tuple(duplicatesArb('twin-a'), duplicatesArb('twin-b'), photosArb)
+            .map(([a, b, others]) => [...a, ...b, ...others]),
+        ),
+        ([photos, shuffled]) => {
+          expect(keyed(descriptors(shuffled, 'zzz'))).toEqual(keyed(descriptors(photos, 'aaa')))
+        },
+      ),
+      { numRuns: 300 },
+    )
+  })
+
+  it('changes nothing for photos without a twin when their lines change', () => {
+    fc.assert(
+      fc.property(
+        photosArb.chain((photos) =>
+          fc.tuple(
+            fc.constant(photos),
+            fc.array(linesArb, { minLength: photos.length, maxLength: photos.length }),
+          ),
+        ),
+        ([photos, lines]) => {
+          const lined = photos.map((p, i) => ({ ...p, lines: nth(lines, i) }))
+          expect(buildLayoutItems(descriptors(lined, 'id'))).toEqual(
+            buildLayoutItems(descriptors(photos, 'id')),
+          )
+        },
+      ),
+      { numRuns: 200 },
+    )
+  })
+
+  it('keys duplicate photos exactly as without lines when every line type is off', () => {
+    fc.assert(
+      fc.property(
+        fc
+          .tuple(duplicatesArb('same-bytes'), photosArb)
+          .map(([duplicates, others]) => [...duplicates, ...others]),
+        (photos) => {
+          const off = photos.map((p) => ({
+            ...p,
+            lines: withoutLineTypes(p.lines ?? DEFAULT_LINES),
+          }))
+          const none = photos.map((p) => ({ ...p, lines: DEFAULT_LINES }))
+          expect(buildLayoutItems(descriptors(off, 'id'))).toEqual(
+            buildLayoutItems(descriptors(none, 'id')),
+          )
+        },
+      ),
+      { numRuns: 200 },
     )
   })
 

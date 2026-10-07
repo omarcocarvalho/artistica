@@ -1,4 +1,5 @@
 import { MAX_COPIES, printedPixelSize, type ImageDescriptor } from '../../shared/model/image'
+import { linesKey } from '../../shared/model/lines'
 import { studyKey, tileStudyFor, type StudySettings } from '../../shared/model/study'
 import { maxPrintMm } from '../../shared/model/units'
 import type { LayoutItemInput } from './types'
@@ -14,12 +15,21 @@ function printedStudies(study: StudySettings): string {
 
 const byString = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
 
-/** Rank of each image among those with the same bytes: by what its studies print, then by input order. */
+/**
+ * Rank of each image among those with the same bytes: by what its studies print, then by what its
+ * lines print, then by input order.
+ */
 function occurrences(images: readonly ImageDescriptor[]): number[] {
   const studies = images.map((image) => printedStudies(image.study))
+  const lines = images.map((image) => linesKey(image.lines))
   const order = images
     .map((_, index) => index)
-    .sort((a, b) => byString(studies[a] ?? '', studies[b] ?? '') || a - b)
+    .sort(
+      (a, b) =>
+        byString(studies[a] ?? '', studies[b] ?? '') ||
+        byString(lines[a] ?? '', lines[b] ?? '') ||
+        a - b,
+    )
   const seen = new Map<string, number>()
   const result = new Array<number>(images.length).fill(0)
   for (const index of order) {
