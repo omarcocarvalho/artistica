@@ -101,6 +101,38 @@ describe('Slider', () => {
     fireEvent.change(range, { target: { value: '5' } })
     expect(onValueChange).toHaveBeenCalledWith(5)
   })
+
+  it('emits a 0 but ignores an empty or non-numeric value', () => {
+    const onValueChange = vi.fn()
+    render(<Slider label="Hue" value={55} min={0} max={359} onValueChange={onValueChange} />)
+    const range = screen.getByRole('slider', { name: 'Hue' })
+    const sendRaw = (raw: string) => {
+      Object.defineProperty(range, 'value', { configurable: true, get: () => raw })
+      fireEvent.change(range)
+    }
+    for (const raw of ['', ' ', 'abc', 'NaN', 'Infinity']) sendRaw(raw)
+    expect(onValueChange).not.toHaveBeenCalled()
+    sendRaw('0')
+    expect(onValueChange).toHaveBeenCalledExactlyOnceWith(0)
+  })
+
+  it('shows its value without a second live region; the range carries the value text', () => {
+    render(
+      <Slider
+        label="Blur"
+        value={4}
+        min={0}
+        max={10}
+        onValueChange={vi.fn()}
+        formatValue={(n) => `${String(n)} px`}
+      />,
+    )
+    const output = screen.getByText('4 px')
+    expect(output).toBeVisible()
+    expect(output).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Blur' })).toHaveAttribute('aria-valuetext', '4 px')
+  })
 })
 
 describe('Select', () => {

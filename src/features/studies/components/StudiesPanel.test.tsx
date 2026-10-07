@@ -27,14 +27,9 @@ function slide(slider: HTMLElement, value: number) {
   fireEvent.change(slider, { target: { value: String(value) } })
 }
 
-// Each Slider's <output> also has the implicit role "status"; the announcement region is the polite one.
 function liveRegion(): HTMLElement {
-  const regions = screen
-    .getAllByRole('status')
-    .filter((el) => el.getAttribute('aria-live') === 'polite')
-  expect(regions).toHaveLength(1)
-  const region = regions[0]
-  if (region === undefined) throw new Error('no polite live region')
+  const region = screen.getByRole('status')
+  expect(region).toHaveAttribute('aria-live', 'polite')
   return region
 }
 
@@ -168,6 +163,7 @@ describe('StudiesPanel', () => {
     sendRaw('Amount', '101')
     sendRaw('Number of values', '')
     sendRaw('Number of values', '21')
+    sendRaw('Custom hue', '')
     sendRaw('Custom hue', '360')
     expect(study(A)).toEqual({
       versions: ['original'],
