@@ -172,6 +172,26 @@ describe('StudiesPanel', () => {
     })
   })
 
+  it.each([['original'], ['blurred'], ['values']] as const)(
+    'Q14 keeps every control enabled when the versions are %j, with the "Used by" hints',
+    (version) => {
+      seed({ a: { ...DEFAULT_STUDY, versions: [version] }, b: DEFAULT_STUDY })
+      render(<StudiesPanel imageId={A} />)
+      for (const slider of screen.getAllByRole('slider')) expect(slider).toBeEnabled()
+      expect(screen.getAllByRole('slider')).toHaveLength(3)
+      const hue = screen.getByRole('group', { name: 'Hue' })
+      for (const swatch of within(hue).getAllByRole('button')) expect(swatch).toBeEnabled()
+      expect(screen.getByText('Used by Blurred and Blur + Values.')).toBeVisible()
+      expect(screen.getByText('Used by Values and Blur + Values.')).toBeVisible()
+      expect(
+        screen.getByText('Each version is a tile. They print together, side by side.'),
+      ).toBeVisible()
+      expect(
+        screen.getByText('Blur + Values blurs first, then splits into values.'),
+      ).toBeVisible()
+    },
+  )
+
   it('P5 values count: 2–20 with notan end label', () => {
     render(<StudiesPanel imageId={A} />)
     const count = screen.getByRole('slider', { name: 'Number of values' })
