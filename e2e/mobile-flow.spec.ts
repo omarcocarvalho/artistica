@@ -83,7 +83,7 @@ const SAMPLES = [
   [0.7, 0.7],
 ] as const
 /** Total RSS of the browser's process tree, in MB. */
-const SETTLED_AFTER_IMPORT_BUDGET_MB = 1500
+const AFTER_IMPORT_BUDGET_MB = 1500
 const EXPORT_PEAK_BUDGET_MB = 1700
 
 test('M3 @slow 22 x 24 MP photos x 3 study versions import, preview and export on a phone within a memory budget', async ({
@@ -140,7 +140,7 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions import, preview and export o
     await cdp.send('HeapProfiler.collectGarbage')
     await cdp.detach()
     await page.waitForTimeout(1000)
-    memory.phase('settled after import')
+    memory.phase('settled after studies')
     await page.waitForTimeout(2000)
     settledBreakdown = await memory.breakdown()
     await page.getByRole('button', { name: 'Next' }).click()
@@ -172,7 +172,8 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions import, preview and export o
   expect((await pdfDraws(pdf)).filter((d) => d.filter === 'FlateDecode')).toHaveLength(22)
   await expect(page.getByRole('alert')).toHaveCount(0)
   expect(crashed).toEqual([])
-  expect(peaks['settled after import']).toBeLessThan(SETTLED_AFTER_IMPORT_BUDGET_MB)
+  expect(peaks.studies).toBeLessThan(AFTER_IMPORT_BUDGET_MB)
+  expect(peaks['settled after studies']).toBeLessThan(AFTER_IMPORT_BUDGET_MB)
   expect(peaks.export).toBeLessThan(EXPORT_PEAK_BUDGET_MB)
 })
 

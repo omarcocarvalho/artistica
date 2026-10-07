@@ -114,6 +114,7 @@ export class AppPage {
   async setField(label: string, value: string): Promise<void> {
     const f = this.page.getByLabel(label, { exact: true })
     await f.fill(value)
+    await f.press('Enter')
     await f.blur()
   }
 
