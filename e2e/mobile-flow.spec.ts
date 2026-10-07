@@ -8,6 +8,7 @@ import { inspectPdf } from '../src/features/render/pdf/inspect.ts'
 import { runOnly } from './support/projects.ts'
 import { sampleBrowserMemory } from './support/memory.ts'
 import { syntheticJpegs } from './support/synthetic.ts'
+import { expectTouchTargets, settled } from './support/targets.ts'
 
 runOnly('mobile-chromium', 'mobile-webkit')
 
@@ -191,6 +192,56 @@ test('M2 touch targets in the step bar and footer are at least 44px tall', async
     const b = await target.boundingBox()
     expect(b?.height ?? 0).toBeGreaterThanOrEqual(44)
   }
+})
+
+test('H1 phone: every Page-step form control is at least 44 x 44 px', async ({ page }) => {
+  const app = startApp(page)
+  await app.goto()
+  await app.upload([FIXTURES.quadrantsJpg])
+  await app.expectImages(1)
+  await app.goToStep('Page')
+  await app.setPaper('Custom…')
+  await app.setSwitch('Gutter between images', true)
+  await app.setSwitch('Bleed', true)
+  const step = page.getByRole('region', { name: 'Step 2 of 5: Page' })
+  const radios = [
+    ...(await step.getByRole('radiogroup', { name: 'Units' }).getByRole('radio').all()),
+    ...(await step.getByRole('radiogroup', { name: 'Orientation' }).getByRole('radio').all()),
+  ]
+  expect(radios).toHaveLength(2 + 3)
+  const fields = ['Width', 'Height', 'Safe area', 'Gutter size', 'Bleed amount'].map((name) =>
+    step.getByRole('spinbutton', { name, exact: true }),
+  )
+  await expectTouchTargets([
+    step.getByRole('combobox', { name: 'Paper size' }),
+    ...radios,
+    ...fields,
+  ])
+  const switches = await step.getByRole('switch').all()
+  expect(switches).toHaveLength(3)
+  await expectTouchTargets(switches)
+})
+
+test('H1 phone: every edit-sheet control is at least 44 x 44 px', async ({ page }) => {
+  const app = startApp(page)
+  await app.goto()
+  await app.upload([FIXTURES.quadrantsJpg])
+  await app.expectImages(1)
+  await app.editButton('quadrants.jpg').click()
+  const sheet = page.getByRole('dialog')
+  await expect(sheet).toBeVisible()
+  await settled(sheet)
+  await sheet.getByRole('radio', { name: 'Fixed' }).click()
+  const radios = await sheet.getByRole('radio').all()
+  expect(radios).toHaveLength(6 + 2 + 2)
+  const buttons = await sheet.getByRole('button').all()
+  expect(buttons.length).toBeGreaterThanOrEqual(9)
+  await expectTouchTargets([
+    ...radios,
+    ...buttons,
+    sheet.getByRole('spinbutton', { name: 'Copies' }),
+    sheet.getByRole('spinbutton', { name: 'Width' }),
+  ])
 })
 
 test('S-P1 phone: Studies step, a 3-version group in the preview, export parses back', async ({

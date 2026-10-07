@@ -153,7 +153,7 @@ export function ImageEditSheet({ imageId }: ImageEditSheetProps) {
                     />
                     <label
                       htmlFor={id}
-                      className="border-line-strong bg-surface text-ink peer-checked:border-accent peer-checked:bg-accent-soft peer-checked:text-on-accent-soft peer-focus-visible:outline-secondary inline-flex min-h-9 items-center rounded-full border px-3 text-sm peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2"
+                      className="border-line-strong bg-surface text-ink peer-checked:border-accent peer-checked:bg-accent-soft peer-checked:text-on-accent-soft peer-focus-visible:outline-secondary touch:min-h-(--size-target) touch:min-w-(--size-target) inline-flex min-h-9 items-center justify-center rounded-full border px-3 text-sm peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2"
                     >
                       {t(`editSheet.aspect.${portrait && portraitKey ? portraitKey : key}`)}
                     </label>
@@ -177,7 +177,7 @@ export function ImageEditSheet({ imageId }: ImageEditSheetProps) {
                 onClick={() => {
                   commit(setCopies(e, d, e.copies - 1))
                 }}
-                className="size-10 text-lg disabled:opacity-40"
+                className="touch:size-(--size-target) size-10 text-lg disabled:opacity-40"
               >
                 {t('editSheet.copies.lessGlyph')}
               </button>
@@ -191,7 +191,7 @@ export function ImageEditSheet({ imageId }: ImageEditSheetProps) {
                   const n = ev.target.valueAsNumber
                   if (Number.isFinite(n)) commit(setCopies(e, d, n))
                 }}
-                className="border-line-strong bg-surface text-ink h-10 w-14 border-x text-center text-base"
+                className="border-line-strong bg-surface text-ink touch:h-(--size-target) h-10 w-14 border-x text-center text-base"
               />
               <button
                 type="button"
@@ -200,7 +200,7 @@ export function ImageEditSheet({ imageId }: ImageEditSheetProps) {
                 onClick={() => {
                   commit(setCopies(e, d, e.copies + 1))
                 }}
-                className="size-10 text-lg disabled:opacity-40"
+                className="touch:size-(--size-target) size-10 text-lg disabled:opacity-40"
               >
                 {t('editSheet.copies.moreGlyph')}
               </button>

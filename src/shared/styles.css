@@ -7,5 +7,12 @@
 @import './ui/css/basics.css';
 @import './ui/css/forms.css';
 @import './ui/css/overlays.css';
+
+/* Coarse pointers and the phone layout (< 960 px): the query of the shared 44 px touch-target rules. */
+@custom-variant touch {
+  @media (pointer: coarse), (max-width: 959.98px) {
+    @slot;
+  }
+}
 @source not '../../design';
 @source not '../../docs';
