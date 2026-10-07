@@ -12,5 +12,39 @@
     "topRight": "Top right",
     "bottomLeft": "Bottom left",
     "bottomRight": "Bottom right"
+  },
+  "panel": {
+    "forImage": "Lines for <name/>",
+    "everyVersion": "Drawn on top of every printed version of this image.",
+    "noImage": "Add a photo, or select one, to draw lines on it.",
+    "composition": "Composition",
+    "style": "Line style",
+    "waiting": "Waiting for photos to finish importing…"
+  },
+  "grid": {
+    "columns": "Columns",
+    "rows": "Rows",
+    "times": "×",
+    "range": "{{min}} to {{max}}"
+  },
+  "spiral": {
+    "startsAt": "Spiral starts at",
+    "arrow": {
+      "topLeft": "↖",
+      "topRight": "↗",
+      "bottomLeft": "↙",
+      "bottomRight": "↘"
+    }
+  },
+  "colour": { "label": "Colour" },
+  "thickness": { "label": "Thickness", "value": "{{mm}} mm" },
+  "opacity": { "label": "Opacity", "value": "{{pct}}%" },
+  "applyAll": {
+    "button": "Apply lines to all images",
+    "hint_one": "Add another photo to copy these settings to it.",
+    "hint_other": "Copies these line settings to all {{count}} images.",
+    "done_one": "Line settings copied to {{count}} image.",
+    "done_other": "Line settings copied to {{count}} images.",
+    "nothingChanged": "All images already use these line settings."
   }
 }
