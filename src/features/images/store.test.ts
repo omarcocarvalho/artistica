@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_EDITS, type ImageId } from '../../shared/model/image'
-import { DEFAULT_STUDY, patchStudy } from '../../shared/model/study'
+import {
+  DEFAULT_STUDY,
+  patchStudy,
+  withVersion,
+  type StudySettings,
+} from '../../shared/model/study'
 import type { DecodedImage } from './decode'
 import { sha256Hex } from './content-hash'
 import { ImportFailure } from './errors'
@@ -599,5 +604,221 @@ describe('selectImageDescriptors', () => {
     })
     const [d] = selectImageDescriptors({ images: [makeLoadedImage({ study })] })
     expect(d?.study).toBe(study)
+  })
+})
+
+const BLUR_VALUES: StudySettings = {
+  versions: ['original', 'blurred', 'values'],
+  blurPct: 70,
+  values: { count: 3, hue: 200, neutral: false },
+}
+
+function must<T>(v: T | undefined): T {
+  if (v === undefined) throw new Error('expected a value')
+  return v
+}
+
+describe('updateStudy', () => {
+  it('patches one image and leaves its edits and the others alone', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    const [a, b] = store.getState().images
+    store
+      .getState()
+      .updateStudy(must(a).id, { versions: ['original', 'blurred'], values: { count: 7 } })
+    const [a2, b2] = store.getState().images
+    expect(a2?.study).toEqual({
+      versions: ['original', 'blurred'],
+      blurPct: DEFAULT_STUDY.blurPct,
+      values: { ...DEFAULT_STUDY.values, count: 7 },
+    })
+    expect(a2?.edits).toBe(a?.edits)
+    expect(b2).toBe(b)
+  })
+
+  it('sanitizes through patchStudy (canonical order, clamps)', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    store
+      .getState()
+      .updateStudy('id-1' as ImageId, { versions: ['values', 'original'], blurPct: 400 })
+    expect(store.getState().images[0]?.study.versions).toEqual(['original', 'values'])
+    expect(store.getState().images[0]?.study.blurPct).toBe(100)
+  })
+
+  it('keeps the same state object when nothing changes, so descriptors stay memoised', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    const before = store.getState().images
+    const descriptors = selectImageDescriptors(store.getState())
+    const listener = vi.fn()
+    store.subscribe(listener)
+    store.getState().updateStudy('id-1' as ImageId, { blurPct: DEFAULT_STUDY.blurPct })
+    expect(store.getState().images).toBe(before)
+    expect(selectImageDescriptors(store.getState())).toBe(descriptors)
+    expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('treats turning on a version that is already on as no change', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    const img = must(store.getState().images[0])
+    const same = withVersion(img.study, 'original', true)
+    expect(same).not.toBe(img.study)
+    const before = store.getState().images
+    const listener = vi.fn()
+    store.subscribe(listener)
+    store.getState().updateStudy(img.id, { versions: same.versions })
+    store.getState().updateStudy(img.id, same)
+    expect(store.getState().images).toBe(before)
+    expect(store.getState().images[0]?.study).toBe(img.study)
+    expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('ignores an unknown id', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    const before = store.getState().images
+    store.getState().updateStudy('nope' as ImageId, { blurPct: 10 })
+    expect(store.getState().images).toBe(before)
+  })
+
+  it('merges a partial values patch over the image’s own values', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    store.getState().updateStudy('id-1' as ImageId, {
+      blurPct: 70,
+      values: { count: 3, hue: 200, neutral: true },
+    })
+    store.getState().updateStudy('id-1' as ImageId, { values: { count: 7 } })
+    expect(store.getState().images[0]?.study).toEqual({
+      versions: ['original'],
+      blurPct: 70,
+      values: { count: 7, hue: 200, neutral: true },
+    })
+  })
+
+  it('descriptors carry the new study', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    store.getState().updateStudy('id-1' as ImageId, { versions: ['original', 'values'] })
+    expect(selectImageDescriptors(store.getState())[0]?.study.versions).toEqual([
+      'original',
+      'values',
+    ])
+  })
+})
+
+describe('applyStudyToAll (owner Q6: versions included)', () => {
+  it('copies the whole study, versions included, to every image and returns how many changed', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg'), file('b.jpg'), file('c.jpg')])
+    const [a, , c] = store.getState().images
+    store.getState().updateStudy(must(a).id, BLUR_VALUES)
+    store.getState().updateStudy(must(c).id, BLUR_VALUES)
+    const cBefore = store.getState().images[2]
+    const changed = store.getState().applyStudyToAll(must(a).id)
+    expect(changed).toBe(1)
+    for (const img of store.getState().images) expect(img.study).toEqual(BLUR_VALUES)
+    expect(store.getState().images[2]).toBe(cBefore)
+  })
+
+  it('never touches edits', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    const [a, b] = store.getState().images
+    store.getState().updateEdits(must(b).id, { copies: 3, rotation: 90 })
+    const edits = store.getState().images[1]?.edits
+    store.getState().updateStudy(must(a).id, BLUR_VALUES)
+    store.getState().applyStudyToAll(must(a).id)
+    expect(store.getState().images[1]?.edits).toBe(edits)
+    expect(store.getState().images[1]?.edits.copies).toBe(3)
+    expect(store.getState().images[1]?.edits.rotation).toBe(90)
+  })
+
+  it('returns 0 and keeps the state object when nothing changes or the source is unknown', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    const before = store.getState().images
+    const listener = vi.fn()
+    store.subscribe(listener)
+    expect(store.getState().applyStudyToAll(must(before[0]).id)).toBe(0)
+    expect(store.getState().applyStudyToAll('nope' as ImageId)).toBe(0)
+    expect(store.getState().images).toBe(before)
+    expect(listener).not.toHaveBeenCalled()
+  })
+})
+
+describe('setDefaultStudy', () => {
+  it('gives the default to images imported afterwards, not to existing ones', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    store.getState().setDefaultStudy(BLUR_VALUES)
+    await store.getState().addFiles([file('b.jpg')])
+    const [a, b] = store.getState().images
+    expect(a?.study).toEqual(DEFAULT_STUDY)
+    expect(b?.study).toEqual(BLUR_VALUES)
+  })
+
+  it('applies to an import that was already decoding when the default changed', async () => {
+    const gate = deferred<DecodedImage>()
+    const decode = vi.fn(() => gate.promise)
+    const { store } = setup({ decode })
+    const p = store.getState().addFiles([file('slow.jpg')])
+    await vi.waitFor(() => {
+      expect(decode).toHaveBeenCalled()
+    })
+    store.getState().setDefaultStudy(BLUR_VALUES)
+    gate.resolve(decoded())
+    await p
+    expect(store.getState().images[0]?.study).toEqual(BLUR_VALUES)
+  })
+
+  it('reads the default when the image is created, after its hash, not when its decode ends', async () => {
+    const gate = deferred<string>()
+    const hash = vi.fn(() => gate.promise)
+    const { store } = setup({ hash })
+    const p = store.getState().addFiles([file('slow.jpg')])
+    await vi.waitFor(() => {
+      expect(hash).toHaveBeenCalled()
+    })
+    store.getState().setDefaultStudy(BLUR_VALUES)
+    gate.resolve('h')
+    await p
+    expect(store.getState().images[0]?.study).toEqual(BLUR_VALUES)
+  })
+
+  it('keeps the default across clear()', async () => {
+    const { store } = setup()
+    store.getState().setDefaultStudy(BLUR_VALUES)
+    store.getState().clear()
+    await store.getState().addFiles([file('a.jpg')])
+    expect(store.getState().images[0]?.study).toEqual(BLUR_VALUES)
+  })
+
+  it('belongs to one store: another store keeps its own default', async () => {
+    const first = setup().store
+    const second = setup().store
+    first.getState().setDefaultStudy(BLUR_VALUES)
+    await second.getState().addFiles([file('a.jpg')])
+    await first.getState().addFiles([file('b.jpg')])
+    expect(second.getState().images[0]?.study).toEqual(DEFAULT_STUDY)
+    expect(first.getState().images[0]?.study).toEqual(BLUR_VALUES)
+  })
+
+  it('sanitizes the default', async () => {
+    const { store } = setup()
+    store.getState().setDefaultStudy({ ...BLUR_VALUES, versions: [], blurPct: 0 })
+    await store.getState().addFiles([file('a.jpg')])
+    expect(store.getState().images[0]?.study.versions).toEqual(['original'])
+    expect(store.getState().images[0]?.study.blurPct).toBe(1)
+  })
+
+  it('does not notify subscribers', () => {
+    const { store } = setup()
+    const listener = vi.fn()
+    store.subscribe(listener)
+    store.getState().setDefaultStudy(BLUR_VALUES)
+    expect(listener).not.toHaveBeenCalled()
   })
 })

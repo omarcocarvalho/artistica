@@ -11,7 +11,14 @@ import { createLimiter } from './limiter'
 import type { ImportOutcome, ImportWarning, LoadedImage } from './types'
 import { fetchImageBlob } from './url'
 import { DEFAULT_EDITS } from '../../shared/model/image'
-import { DEFAULT_STUDY } from '../../shared/model/study'
+import {
+  DEFAULT_STUDY,
+  patchStudy,
+  sanitizeStudy,
+  studyEqual,
+  type StudyPatch,
+  type StudySettings,
+} from '../../shared/model/study'
 
 export interface ImagesState {
   images: LoadedImage[]
@@ -26,6 +33,12 @@ export interface ImagesState {
   clear(): void
   select(id: ImageId | null): void
   updateEdits(id: ImageId, patch: Partial<ImageEdits>): void
+  /** Patch one image's study settings (sanitized). Keeps the same state when nothing changes. */
+  updateStudy(id: ImageId, patch: StudyPatch): void
+  /** Copies `fromId`'s whole StudySettings (versions included) to every image. Returns how many changed. */
+  applyStudyToAll(fromId: ImageId): number
+  /** The study settings images created from now on start with. Not persisted here. */
+  setDefaultStudy(study: StudySettings): void
 }
 
 export interface ImagesDeps {
@@ -45,6 +58,7 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
   const order = new Map<ImageId, number>()
   let autoSelectedId: ImageId | null = null
   let generation = 0
+  let defaultStudy: StudySettings = DEFAULT_STUDY
   let nextSeq = 0
   let nextPaste = 1
 
@@ -95,7 +109,7 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
           pxW: d.pxW,
           pxH: d.pxH,
           edits: DEFAULT_EDITS,
-          study: DEFAULT_STUDY,
+          study: defaultStudy,
           preview: d.preview,
           source: d.source,
           thumbUrl: d.thumbUrl,
@@ -215,6 +229,38 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
           })
           return changed ? { images } : s
         })
+      },
+
+      updateStudy: (id, patch) => {
+        set((s) => {
+          let changed = false as boolean
+          const images = s.images.map((img) => {
+            if (img.id !== id) return img
+            const study = patchStudy(img.study, patch)
+            if (studyEqual(study, img.study)) return img
+            changed = true
+            return { ...img, study }
+          })
+          return changed ? { images } : s
+        })
+      },
+
+      applyStudyToAll: (fromId) => {
+        const { images } = get()
+        const study = images.find((i) => i.id === fromId)?.study
+        if (study === undefined) return 0
+        let count = 0
+        const next = images.map((img) => {
+          if (studyEqual(img.study, study)) return img
+          count += 1
+          return { ...img, study }
+        })
+        if (count > 0) set({ images: next })
+        return count
+      },
+
+      setDefaultStudy: (study) => {
+        defaultStudy = sanitizeStudy(study)
       },
     }
   })
