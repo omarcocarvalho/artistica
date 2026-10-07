@@ -1,5 +1,5 @@
-import type { Mm } from '../../shared/model/units'
-import type { FrameSize, PathCmd } from './types'
+import type { Mm } from '../../shared/model/units.ts'
+import type { FrameSize, PathCmd } from './types.ts'
 
 export const PHI = (1 + Math.sqrt(5)) / 2
 /** M3-R11: 1/φ² ≈ 0.382 and 1/φ ≈ 0.618 of each side. */

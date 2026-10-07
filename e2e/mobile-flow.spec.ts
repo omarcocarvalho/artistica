@@ -4,7 +4,9 @@ import { AppPage, colourDistance } from './support/app.ts'
 import { FIXTURES } from './support/fixtures.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { summarizePdf } from './support/pdf.ts'
-import { inspectPdf } from '../src/features/render/pdf/inspect.ts'
+import { inspectPdf, isRegistrationStroke } from '../src/features/render/pdf/inspect.ts'
+import { compositionPaths } from '../src/features/lines/composition.ts'
+import { DEFAULT_LINES, patchLines } from '../src/shared/model/lines.ts'
 import { runOnly } from './support/projects.ts'
 import { sampleBrowserMemory } from './support/memory.ts'
 import { syntheticJpegs } from './support/synthetic.ts'
@@ -28,6 +30,11 @@ test.afterEach(() => {
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0)
 const pdfDraws = async (bytes: Uint8Array) =>
   (await inspectPdf(bytes)).pages.flatMap((p) => p.draws)
+/** Every stroke that is not a crop mark, per page, in content order. */
+const pdfLineStrokes = async (bytes: Uint8Array) =>
+  (await inspectPdf(bytes)).pages.map((p) => p.strokes.filter((s) => !isRegistrationStroke(s)))
+const EVERY_LINE_TYPE =
+  /, lines: Grid, Rule of thirds, Diagonals & armature, Golden ratio, Golden spiral, and Centre lines$/
 
 test('M1 phone flow: Images, edit sheet, Page, Preview, Export, parse the PDF', async ({
   page,
@@ -83,11 +90,70 @@ const SAMPLES = [
   [0.3, 0.7],
   [0.7, 0.7],
 ] as const
+const MEMORY_LINES = patchLines(DEFAULT_LINES, {
+  grid: { on: true, cols: 20, rows: 20 },
+  thirds: true,
+  armature: true,
+  golden: true,
+  spiral: { on: true, corner: 'topRight' },
+  centre: true,
+})
+const MIN_CLEARANCE_PX = 2
+const PHOTO = { w: 5712, h: 4284 }
+
+/**
+ * SAMPLES moved, each to the nearest centre of a 20 x 20 cell of the tile that lies at least
+ * MIN_CLEARANCE_PX from every MEMORY_LINES path, on a w x h px tile; as tile fractions.
+ */
+function samplesClearOfLines(w: number, h: number, pictureLandscape: boolean): number[][] {
+  const turned = w >= h !== pictureLandscape
+  const frame = turned ? { w: h, h: w } : { w, h }
+  const onPaths: [number, number][] = []
+  for (const path of compositionPaths(MEMORY_LINES, frame)) {
+    let x = 0
+    let y = 0
+    for (const c of path.cmds) {
+      const steps = 400
+      for (let i = 1; c.op !== 'M' && i <= steps; i++) {
+        const t = i / steps
+        const u = 1 - t
+        onPaths.push(
+          c.op === 'L'
+            ? [x + (c.x - x) * t, y + (c.y - y) * t]
+            : [
+                u ** 3 * x + 3 * u * u * t * c.x1 + 3 * u * t * t * c.x2 + t ** 3 * c.x,
+                u ** 3 * y + 3 * u * u * t * c.y1 + 3 * u * t * t * c.y2 + t ** 3 * c.y,
+              ],
+        )
+      }
+      x = c.x
+      y = c.y
+    }
+  }
+  const clear: [number, number][] = []
+  for (let i = 0; i < 20; i++)
+    for (let j = 0; j < 20; j++) {
+      const fx = (i + 0.5) / 20
+      const fy = (j + 0.5) / 20
+      const [u, v] = turned ? [fy * frame.w, (1 - fx) * frame.h] : [fx * frame.w, fy * frame.h]
+      if (onPaths.every(([px, py]) => Math.hypot(px - u, py - v) >= MIN_CLEARANCE_PX))
+        clear.push([fx, fy])
+    }
+  return SAMPLES.map(([sx, sy]) => {
+    const near = clear
+      .map(([fx, fy]) => ({ at: [fx, fy], d: Math.hypot(fx - sx, fy - sy) }))
+      .sort((a, b) => a.d - b.d)
+      .at(0)
+    if (!near) throw new Error('no sample point is clear of the lines')
+    return near.at
+  })
+}
+
 /** Total RSS of the browser's process tree, in MB. */
 const AFTER_IMPORT_BUDGET_MB = 1500
 const EXPORT_PEAK_BUDGET_MB = 1700
 
-test('M3 @slow 22 x 24 MP photos x 3 study versions import, preview and export on a phone within a memory budget', async ({
+test('M3 @slow 22 x 24 MP photos x 3 study versions with every line on import, preview and export on a phone within a memory budget', async ({
   page,
   browser,
 }, testInfo) => {
@@ -100,11 +166,12 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions import, preview and export o
   page.on('crash', () => crashed.push('page crashed'))
   const app = startApp(page)
   await app.goto()
-  const photos = await syntheticJpegs(page, 22, 5712, 4284, { noisy: true })
+  const photos = await syntheticJpegs(page, 22, PHOTO.w, PHOTO.h, { noisy: true })
   const memory = sampleBrowserMemory(browser)
   let pdf: Buffer
   let previewPages: number
   let previewTiles: number
+  let previewTilesWithLines: number
   let ramp: number[][]
   const valuesOnRamp: number[] = []
   let settledBreakdown: Record<string, number>
@@ -124,14 +191,30 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions import, preview and export o
     await expect(
       page.getByRole('status').filter({ hasText: 'Study settings copied to 21 images.' }),
     ).toBeAttached()
+    await app.openLinesSection()
+    await app.everyLineOn(app.linesSection, { cols: 20, rows: 20 }, 'Top right')
+    await app.linesApplyButton.click()
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Line settings copied to 21 images.' }),
+    ).toBeAttached()
     await page.getByRole('button', { name: 'Next' }).click()
     await app.expectPreviewPages(3)
     await expect(app.studyTile('synthetic-22.jpg', 'Values')).toBeAttached({ timeout: 60_000 })
     await app.expectPreviewSettled(300_000)
     previewTiles = await app.pageFigures.getByRole('button').count()
+    previewTilesWithLines = await page
+      .getByRole('list', { name: /^Page \d+ contents$/ })
+      .getByRole('listitem')
+      .filter({ hasText: EVERY_LINE_TYPE })
+      .count()
     for (const tile of await app.pageFigures.getByRole('button', { name: /, Values$/ }).all()) {
+      const box = await tile.boundingBox()
+      if (!box) throw new Error('tile not laid out')
+      const samples = samplesClearOfLines(box.width, box.height, PHOTO.w > PHOTO.h)
       const off = await Promise.all(
-        SAMPLES.map(async ([fx, fy]) => colourDistance(await app.tilePixel(tile, fx, fy), ramp)),
+        samples.map(async ([fx = NaN, fy = NaN]) =>
+          colourDistance(await app.tilePixel(tile, fx, fy), ramp),
+        ),
       )
       valuesOnRamp.push(off.filter((d) => d <= 3).length)
     }
@@ -155,6 +238,7 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions import, preview and export o
   const report = JSON.stringify({
     previewPages,
     previewTiles,
+    previewTilesWithLines,
     valuesOnRamp,
     ramp,
     peaksMb: peaks,
@@ -171,6 +255,10 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions import, preview and export o
   expect(Math.min(...valuesOnRamp)).toBeGreaterThanOrEqual(2)
   expect(sum(info.pages.map((p) => p.imagePlacements))).toBe(66)
   expect((await pdfDraws(pdf)).filter((d) => d.filter === 'FlateDecode')).toHaveLength(22)
+  expect(previewTilesWithLines).toBe(66)
+  const lineStrokes = (await pdfLineStrokes(pdf)).flat()
+  expect(lineStrokes).toHaveLength(66 * 2)
+  expect(lineStrokes.filter((s) => s.dashPt.length === 0)).toHaveLength(66)
   await expect(page.getByRole('alert')).toHaveCount(0)
   expect(crashed).toEqual([])
   expect(peaks.studies).toBeLessThan(AFTER_IMPORT_BUDGET_MB)
@@ -333,4 +421,158 @@ test('S-P2 phone: every Studies-step control is at least 44 px tall', async ({ p
     ).toBeGreaterThanOrEqual(44)
     expect(b?.width ?? 0).toBeGreaterThanOrEqual(44)
   }
+})
+
+const LINE_COLOUR = [0x1f, 0x3f, 0xbf]
+
+test('L-P1 phone: the Lines section in the Studies step, lines in the preview and in the PDF', async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(180_000)
+  const app = startApp(page)
+  await app.goto()
+  await app.upload([FIXTURES.quadrantsJpg, FIXTURES.quadrantsPng])
+  await app.expectImages(2)
+  await app.goToStep('Studies')
+  await app.pickStudiesImage('quadrants.jpg')
+  await expect(app.linesSection).not.toHaveAttribute('open')
+  await expect(app.linesSummary).toHaveAccessibleName('Lines')
+  await expect(app.phoneLineSwitch('Rule of thirds')).toBeHidden()
+
+  await app.openLinesSection()
+  await expect(page.getByText('Lines for quadrants.jpg')).toBeVisible()
+  await app.phoneLineSwitch('Rule of thirds').click()
+  await app.phoneLineSwitch('Centre lines').click()
+  // The visually hidden ", " is out of flow, so name-from-content puts a space before it.
+  await expect(app.linesSummary).toHaveAccessibleName('Lines , 2 on')
+  if (testInfo.project.name === 'mobile-chromium') {
+    const cdp = await page.context().newCDPSession(page)
+    const { nodes } = (await cdp.send('Accessibility.getFullAXTree')) as {
+      nodes: { role?: { value?: string }; name?: { value?: string } }[]
+    }
+    await cdp.detach()
+    expect(
+      nodes.filter((n) => n.role?.value === 'DisclosureTriangle').map((n) => n.name?.value),
+    ).toEqual(['Lines , 2 on'])
+  }
+
+  const applyButtons = page.getByRole('button', { name: /apply/i })
+  await expect(applyButtons).toHaveCount(2)
+  await expect(applyButtons.nth(0)).toHaveAccessibleName('Apply to all images')
+  await expect(applyButtons.nth(1)).toHaveAccessibleName('Apply lines to all images')
+  await expect(applyButtons.nth(0)).toBeVisible()
+  await expect(applyButtons.nth(1)).toBeVisible()
+
+  await app.linesSection.getByLabel('Colour', { exact: true }).fill('#1f3fbf')
+  await expect(app.linesSection.getByText('#1f3fbf', { exact: true })).toBeVisible()
+  await app.linesSection.getByRole('slider', { name: 'Thickness' }).fill('2')
+  await app.linesSection.getByRole('slider', { name: 'Opacity' }).fill('100')
+  await expect(app.linesSection.getByRole('slider', { name: 'Opacity' })).toHaveAttribute(
+    'aria-valuetext',
+    '100%',
+  )
+
+  await page.getByRole('button', { name: 'Next' }).click()
+  await expect(page.getByRole('region', { name: 'Step 4 of 5: Preview' })).toBeVisible()
+  await app.expectPreviewPages(1)
+  await app.expectPreviewSettled()
+  const lined = app.tile('quadrants.jpg')
+  const plain = app.tile('quadrants.png')
+  expect(colourDistance(await app.tilePixel(lined, 1 / 3, 0.1), [LINE_COLOUR])).toBeLessThan(40)
+  expect(colourDistance(await app.tilePixel(lined, 0.2, 0.1), [LINE_COLOUR])).toBeGreaterThan(100)
+  expect(colourDistance(await app.tilePixel(plain, 1 / 3, 0.1), [LINE_COLOUR])).toBeGreaterThan(100)
+
+  await page.getByRole('button', { name: 'Next' }).click()
+  const { bytes } = await app.exportPdf('step')
+  const strokes = (await pdfLineStrokes(bytes)).flat()
+  expect(strokes.map((s) => s.dashPt.length > 0)).toEqual([false, true])
+  for (const s of strokes) {
+    expect(s.colour.space).toBe('rgb')
+    s.colour.values.forEach((v, i) => {
+      expect(v).toBeCloseTo((LINE_COLOUR[i] ?? NaN) / 255, 2)
+    })
+    expect(s.opacity).toBe(1)
+  }
+})
+
+test('L-P2 phone: every Lines control is at least 44 x 44 px, with 16 px text in the count fields', async ({
+  page,
+}) => {
+  const app = startApp(page)
+  await app.goto()
+  await app.upload([FIXTURES.quadrantsJpg, FIXTURES.quadrantsPng])
+  await app.expectImages(2)
+  await app.goToStep('Studies')
+  await expectTouchTargets([app.linesSummary])
+  await app.openLinesSection()
+  await app.setSwitch('Grid', true)
+  await app.setSwitch('Golden spiral', true)
+  const section = app.linesSection
+  const switches = await section.getByRole('switch').all()
+  const fields = [
+    section.getByRole('textbox', { name: 'Columns', exact: true }),
+    section.getByRole('textbox', { name: 'Rows', exact: true }),
+  ]
+  const radios = await section
+    .getByRole('radiogroup', { name: 'Spiral starts at' })
+    .getByRole('radio')
+    .all()
+  const sliders = await section.getByRole('slider').all()
+  const targets = [
+    app.linesSummary,
+    ...switches,
+    ...fields,
+    ...radios,
+    section.getByLabel('Colour', { exact: true }),
+    ...sliders,
+    app.linesApplyButton,
+  ]
+  expect([switches.length, radios.length, sliders.length, targets.length]).toEqual([
+    6,
+    4,
+    2,
+    1 + 6 + 2 + 4 + 1 + 2 + 1,
+  ])
+  await expectTouchTargets(targets)
+  await expectNoFocusZoom(fields)
+})
+
+test('L-P3 phone: the Lines section opens and its controls work from the keyboard', async ({
+  page,
+}, testInfo) => {
+  // WebKit on macOS moves Tab focus to buttons only with Alt held (no "full keyboard access").
+  const tab = testInfo.project.name === 'mobile-webkit' ? 'Alt+Tab' : 'Tab'
+  const app = startApp(page)
+  await app.goto()
+  await app.upload([FIXTURES.quadrantsJpg, FIXTURES.quadrantsPng])
+  await app.expectImages(2)
+  await app.goToStep('Studies')
+  await page.getByRole('button', { name: 'Apply to all images', exact: true }).focus()
+  await page.keyboard.press(tab)
+  await expect(app.linesSummary).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(app.linesSection).toHaveAttribute('open', '')
+  await page.keyboard.press(tab)
+  const grid = app.phoneLineSwitch('Grid')
+  await expect(grid).toBeFocused()
+  await page.keyboard.press('Space')
+  await expect(grid).toHaveAttribute('aria-checked', 'true')
+  await page.keyboard.press(tab)
+  const cols = app.linesSection.getByRole('textbox', { name: 'Columns', exact: true })
+  await expect(cols).toBeFocused()
+  await page.keyboard.press('ArrowUp')
+  await expect(cols).toHaveValue('5')
+  const spiral = app.phoneLineSwitch('Golden spiral')
+  await spiral.focus()
+  await page.keyboard.press('Space')
+  await expect(spiral).toHaveAttribute('aria-checked', 'true')
+  await page.keyboard.press(tab)
+  const corners = app.linesSection.getByRole('radiogroup', { name: 'Spiral starts at' })
+  await expect(corners.getByRole('radio', { name: 'Top left', exact: true })).toBeFocused()
+  await page.keyboard.press('ArrowRight', { delay: 50 })
+  await expect(corners.getByRole('radio', { name: 'Top right', exact: true })).toBeChecked()
+  await expect(app.linesSummary).toHaveAccessibleName('Lines , 2 on')
+  await app.linesSummary.focus()
+  await page.keyboard.press('Enter')
+  await expect(app.linesSection).not.toHaveAttribute('open')
 })

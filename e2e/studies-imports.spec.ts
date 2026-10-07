@@ -147,4 +147,56 @@ test.describe('studies wait for imports in progress (phone)', () => {
     await expect(step.getByText(WAITING)).toHaveCount(0)
     await expectStudyControls(step, true)
   })
+
+  test('L-W2 phone: with the Lines section open, one live region announces the wait and the Lines hint describes its controls', async ({
+    page,
+  }) => {
+    const app = startApp(page)
+    const step = page.getByRole('region', { name: 'Step 3 of 5: Studies' })
+    await app.goto()
+    await app.upload([FIXTURES.valueRamp, FIXTURES.quadrantsPng])
+    await app.expectImages(2)
+    await app.goToStep('Studies')
+    await app.openLinesSection()
+    await app.setSwitch('Grid', true)
+    const release = await holdUrlImport(page)
+    await app.goToStep('Images')
+    await app.submitLink(SLOW_URL)
+    await app.goToStep('Studies')
+    await app.openLinesSection()
+
+    const waiting = step.getByText(WAITING)
+    await expect(waiting).toHaveCount(2)
+    await expect(waiting.nth(1)).toBeVisible()
+    const live = await waiting.evaluateAll(
+      (els: { closest(selector: string): unknown }[]) =>
+        els.filter(
+          (e) =>
+            e.closest(
+              '[aria-live]:not([aria-live="off"]), [role="status"], [role="alert"], [role="log"]',
+            ) !== null,
+        ).length,
+    )
+    expect(live).toBe(1)
+    await expect(app.linesSection.getByText(WAITING)).not.toHaveAttribute('aria-live')
+    const linesControls = [
+      ...(await app.linesSection.getByRole('switch').all()),
+      ...(await app.linesSection.getByRole('textbox').all()),
+      ...(await app.linesSection.getByRole('slider').all()),
+      app.linesApplyButton,
+    ]
+    expect(linesControls).toHaveLength(6 + 3 + 2 + 1)
+    for (const c of linesControls) {
+      await expect(c).toBeDisabled()
+      await expect(c).toHaveAccessibleDescription(new RegExp(WAITING))
+    }
+    await expectNoAxeViolations(page)
+    release()
+    await app.goToStep('Images')
+    await app.expectImages(3)
+    await app.goToStep('Studies')
+    await app.openLinesSection()
+    await expect(step.getByText(WAITING)).toHaveCount(0)
+    await expect(app.phoneLineSwitch('Grid')).toBeEnabled()
+  })
 })

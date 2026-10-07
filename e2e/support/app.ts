@@ -6,6 +6,17 @@ type Upload = string | string[] | UploadFile | UploadFile[]
 const STUDY_VERSION_NAMES = ['Original', 'Blurred', 'Values', 'Blur + Values'] as const
 export type StudyVersionName = (typeof STUDY_VERSION_NAMES)[number]
 
+export const LINE_TYPE_NAMES = [
+  'Grid',
+  'Rule of thirds',
+  'Diagonals & armature',
+  'Golden ratio',
+  'Golden spiral',
+  'Centre lines',
+] as const
+export type LineTypeName = (typeof LINE_TYPE_NAMES)[number]
+export type SpiralCornerName = 'Top left' | 'Top right' | 'Bottom left' | 'Bottom right'
+
 declare const requestAnimationFrame: (callback: () => void) => number
 
 /**
@@ -274,6 +285,51 @@ export class AppPage {
       (box.x + fx * box.width - cbox.x) / cbox.width,
       (box.y + fy * box.height - cbox.y) / cbox.height,
     )
+  }
+
+  // --- Lines, phone (D4) ---
+  /** The Studies step's collapsible Lines card: a <details>, whose summary has no ARIA role. */
+  get linesSection(): Locator {
+    return this.page.locator('details').filter({ has: this.page.locator('summary') })
+  }
+  get linesSummary(): Locator {
+    return this.linesSection.locator('summary')
+  }
+  async openLinesSection(): Promise<void> {
+    if ((await this.linesSection.getAttribute('open')) === null) await this.linesSummary.click()
+    await expect(this.linesSection).toHaveAttribute('open', '')
+  }
+  phoneLineSwitch(name: LineTypeName): Locator {
+    return this.linesSection.getByRole('switch', { name, exact: true })
+  }
+  get linesApplyButton(): Locator {
+    return this.page.getByRole('button', { name: 'Apply lines to all images', exact: true })
+  }
+  /** Every composition type on, with the given grid and spiral corner, in the Lines controls inside `scope`. */
+  async everyLineOn(
+    scope: Locator,
+    grid: { cols: number; rows: number },
+    corner: SpiralCornerName,
+  ): Promise<void> {
+    for (const name of LINE_TYPE_NAMES) {
+      const sw = scope.getByRole('switch', { name, exact: true })
+      if ((await sw.getAttribute('aria-checked')) !== 'true') await sw.click()
+      await expect(sw).toHaveAttribute('aria-checked', 'true')
+    }
+    for (const [label, n] of [
+      ['Columns', grid.cols],
+      ['Rows', grid.rows],
+    ] as const) {
+      const field = scope.getByRole('textbox', { name: label, exact: true })
+      await field.fill(String(n))
+      await field.press('Enter')
+      await expect(field).toHaveValue(String(n))
+    }
+    const radio = scope
+      .getByRole('radiogroup', { name: 'Spiral starts at' })
+      .getByRole('radio', { name: corner, exact: true })
+    await radio.click()
+    await expect(radio).toBeChecked()
   }
 
   /** Pixel (fx, fy in 0..1) of a page canvas as [r,g,b,a]. */

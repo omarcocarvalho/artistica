@@ -356,6 +356,124 @@ async function layoutMs(page: Page, timeout: number): Promise<number> {
   return Math.round((await read()) ?? NaN)
 }
 
+interface LineProbe {
+  start: number
+  paints: number[]
+  frames: number[]
+  canvases: number
+  posts: Record<string, number>
+}
+interface ProbeWindow {
+  __lineProbe: LineProbe
+  performance: { now(): number }
+  requestAnimationFrame(cb: () => void): void
+  document: {
+    addEventListener(type: string, cb: () => void, opts: { capture: boolean; once: boolean }): void
+  }
+}
+type Method = (this: unknown, ...args: unknown[]) => unknown
+
+/**
+ * Records, in the page, every full repaint of a sheet canvas (and the frame after it), every
+ * canvas created, and every message posted to the layout, study and PDF workers.
+ */
+async function installLineProbe(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const w = globalThis as unknown as ProbeWindow & {
+      Worker: { new (url: unknown, opts?: unknown): object; prototype: { postMessage: unknown } }
+      Document: { prototype: { createElement: unknown } }
+      CanvasRenderingContext2D: { prototype: { fillRect: unknown } }
+    }
+    const probe: LineProbe = { start: 0, paints: [], frames: [], canvases: 0, posts: {} }
+    w.__lineProbe = probe
+    const urls = new WeakMap<object, string>()
+    const NativeWorker = w.Worker
+    w.Worker = new Proxy(NativeWorker, {
+      construct(target, args: unknown[]) {
+        const worker = Reflect.construct(target, args) as object
+        urls.set(worker, String(args[0]))
+        return worker
+      },
+    })
+    const post = NativeWorker.prototype.postMessage as Method
+    NativeWorker.prototype.postMessage = function (this: object, ...args: unknown[]) {
+      const kind = /(layout|study|pdf)\.worker/.exec(urls.get(this) ?? '')?.[1] ?? 'other'
+      probe.posts[kind] = (probe.posts[kind] ?? 0) + 1
+      return post.apply(this, args)
+    }
+    const createElement = w.Document.prototype.createElement as Method
+    w.Document.prototype.createElement = function (this: unknown, ...args: unknown[]) {
+      if (String(args[0]).toLowerCase() === 'canvas') probe.canvases++
+      return createElement.apply(this, args)
+    }
+    const fillRect = w.CanvasRenderingContext2D.prototype.fillRect as Method
+    w.CanvasRenderingContext2D.prototype.fillRect = function (
+      this: { canvas: { width: number; height: number; isConnected: boolean } },
+      ...args: unknown[]
+    ) {
+      const c = this.canvas
+      if (c.isConnected && args.join() === [0, 0, c.width, c.height].join()) {
+        probe.paints.push(w.performance.now())
+        w.requestAnimationFrame(() => {
+          probe.frames.push(w.performance.now())
+        })
+      }
+      return fillRect.apply(this, args)
+    }
+  })
+}
+
+/** Clears the probe and starts its clock at the next `event`. */
+async function armLineProbe(page: Page, event: 'click' | 'input'): Promise<void> {
+  await page.evaluate((type) => {
+    const w = globalThis as unknown as ProbeWindow
+    const p = w.__lineProbe
+    Object.assign(p, { start: 0, paints: [], frames: [], canvases: 0, posts: {} })
+    w.document.addEventListener(
+      type,
+      () => {
+        p.start = w.performance.now()
+      },
+      { capture: true, once: true },
+    )
+  }, event)
+}
+
+/**
+ * Waits until every sheet has repainted after the armed event and nothing changed for 500 ms, then
+ * returns the time to the frame after the last repaint, with what else ran meanwhile.
+ */
+async function lineRedraw(
+  page: Page,
+  sheets: number,
+): Promise<{ ms: number; paints: number; canvases: number; posts: Record<string, number> }> {
+  const read = () =>
+    page.evaluate(() => {
+      const p = (globalThis as unknown as ProbeWindow).__lineProbe
+      return { ...p, posts: { ...p.posts } }
+    })
+  await expect
+    .poll(async () => {
+      const p = await read()
+      return p.start > 0 && p.frames.length >= sheets
+    })
+    .toBe(true)
+  let before = JSON.stringify(await read())
+  for (;;) {
+    await page.waitForTimeout(500)
+    const now = JSON.stringify(await read())
+    if (now === before) break
+    before = now
+  }
+  const p = await read()
+  return {
+    ms: Math.round(Math.max(...p.frames) - p.start),
+    paints: p.paints.length,
+    canvases: p.canvases,
+    posts: p.posts,
+  }
+}
+
 const INTERIOR = [
   [0.25, 0.25],
   [0.75, 0.25],
@@ -483,6 +601,60 @@ test.describe('study preview timing and races (chromium)', () => {
       ),
     )
     expect(Math.max(...originalOffRamp)).toBeGreaterThan(20)
+  })
+
+  test('X13-L line changes with 20 images x 3 versions and every line on redraw only the sheets (recorded; CI bound 1000 ms)', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(150_000)
+    const app = startApp(page)
+    await installLineProbe(page)
+    await app.goto()
+    await app.upload(TWENTY)
+    await app.expectImages(20)
+    await app.expectPreviewPages(1)
+    await app.openStudiesTab()
+    await app.selectButton('quadrants.png').click()
+    await expect(page.getByText('Studies for quadrants.png')).toBeVisible()
+    await app.setVersions(['Original', 'Blurred', 'Values'])
+    await app.applyStudiesToAll()
+    await expect(app.pageFigures.getByRole('button')).toHaveCount(60)
+    await page.getByRole('tab', { name: 'Lines' }).click()
+    const panel = page.getByRole('tabpanel', { name: 'Lines' })
+    await expect(panel.getByText('Lines for quadrants.png')).toBeVisible()
+    await app.everyLineOn(panel, { cols: 20, rows: 20 }, 'Top right')
+    await app.expectPreviewSettled(60_000)
+    const sheets = await app.pageCanvases.count()
+    const tileItems = page.getByRole('list', { name: /^Page \d+ contents$/ }).getByRole('listitem')
+    const withCentre = tileItems.filter({ hasText: /Centre lines$/ })
+    await expect(withCentre).toHaveCount(3)
+
+    await armLineProbe(page, 'click')
+    await app.linesApplyButton.click()
+    const applyAll = await lineRedraw(page, sheets)
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Line settings copied to 19 images.' }),
+    ).toBeAttached()
+    await expect(withCentre).toHaveCount(60)
+
+    await armLineProbe(page, 'click')
+    await panel.getByRole('switch', { name: 'Centre lines', exact: true }).click()
+    const toggle = await lineRedraw(page, sheets)
+    await expect(withCentre).toHaveCount(57)
+
+    await armLineProbe(page, 'input')
+    await panel.getByRole('slider', { name: 'Thickness' }).fill('1')
+    const thickness = await lineRedraw(page, sheets)
+
+    const runs = { applyAll, toggle, thickness }
+    for (const [type, r] of Object.entries(runs))
+      testInfo.annotations.push({ type: `line-${type}-ms`, description: String(r.ms) })
+    console.log(`line timing: ${JSON.stringify({ sheets, ...runs })}`)
+    for (const r of Object.values(runs)) {
+      expect(r.paints).toBe(sheets)
+      expect({ posts: r.posts, canvases: r.canvases }).toEqual({ posts: {}, canvases: 0 })
+      expect(r.ms).toBeLessThan(1000) // spec §3: 200 ms on a desktop; CI bound 1000 ms
+    }
   })
 })
 

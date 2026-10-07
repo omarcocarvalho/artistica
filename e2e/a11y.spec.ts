@@ -224,6 +224,27 @@ test.describe('phone steps (mobile-chromium)', () => {
       await expect(sheet).toBeVisible()
       await expectNoAxeViolations(page)
     })
+
+    test(`Studies step with the Lines section open, every line on, applied to all (${scheme})`, async ({
+      page,
+    }) => {
+      test.setTimeout(60_000)
+      await page.emulateMedia({ colorScheme: scheme })
+      const app = startApp(page)
+      await app.goto()
+      await app.upload(FILES)
+      await app.expectImages(2)
+      await app.goToStep('Studies')
+      await app.openLinesSection()
+      await expectNoAxeViolations(page)
+      await app.everyLineOn(app.linesSection, { cols: 3, rows: 3 }, 'Bottom right')
+      await expect(app.linesSummary).toHaveAccessibleName('Lines , 6 on')
+      await app.linesApplyButton.click()
+      await expect(
+        page.getByRole('status').filter({ hasText: 'Line settings copied to 1 image.' }),
+      ).toBeAttached()
+      await expectNoAxeViolations(page)
+    })
   }
 })
 

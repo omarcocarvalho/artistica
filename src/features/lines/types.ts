@@ -1,5 +1,5 @@
-import type { CompositionLineType } from '../../shared/model/lines'
-import type { Mm } from '../../shared/model/units'
+import type { CompositionLineType } from '../../shared/model/lines.ts'
+import type { Mm } from '../../shared/model/units.ts'
 
 export type PathCmd =
   | { readonly op: 'M'; readonly x: Mm; readonly y: Mm }

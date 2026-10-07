@@ -1,7 +1,7 @@
-import { activeLineTypes, type LineSettings } from '../../shared/model/lines'
-import { armaturePaths, centrePaths, goldenPaths, gridPaths, thirdsPaths } from './geometry'
-import { goldenSpiral } from './spiral'
-import type { FramePath, FrameSize, PathCmd } from './types'
+import { activeLineTypes, type LineSettings } from '../../shared/model/lines.ts'
+import { armaturePaths, centrePaths, goldenPaths, gridPaths, thirdsPaths } from './geometry.ts'
+import { goldenSpiral } from './spiral.ts'
+import type { FramePath, FrameSize, PathCmd } from './types.ts'
 
 /** Every active type's paths in canonical order (M3-R15); a type that draws nothing is left out. Centre lines are the only dashed type (M3-R14). */
 export function compositionPaths(lines: LineSettings, frame: FrameSize): FramePath[] {
