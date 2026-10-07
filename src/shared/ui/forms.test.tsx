@@ -496,6 +496,12 @@ describe('CountField', () => {
     expect(field()).toHaveValue('18')
   })
 
+  it.each(['ArrowUp', 'ArrowDown'])('keeps the caret where it is on %s', (key) => {
+    render(<Harness />)
+    expect(fireEvent.keyDown(field(), { key })).toBe(false)
+    expect(fireEvent.keyDown(field(), { key: 'ArrowLeft' })).toBe(true)
+  })
+
   it('steps from what was typed, and clamps at the minimum', async () => {
     const user = userEvent.setup()
     const onValueChange = vi.fn()
@@ -543,6 +549,21 @@ describe('ColourField', () => {
     fireEvent.input(input, { target: { value: '#00ff00' } })
     expect(onValueChange).toHaveBeenLastCalledWith('#00ff00')
     expect(onValueChange).toHaveBeenCalledTimes(2)
+  })
+
+  it('sends only a lowercase #rrggbb whatever the engine reports', () => {
+    const onValueChange = vi.fn()
+    render(<ColourField label="Colour" value="#e0457b" onValueChange={onValueChange} />)
+    const input = screen.getByLabelText('Colour')
+    const report = (raw: string) => {
+      Object.defineProperty(input, 'value', { configurable: true, get: () => raw })
+      fireEvent.change(input)
+    }
+    report('#1F3FBF')
+    expect(onValueChange).toHaveBeenLastCalledWith('#1f3fbf')
+    onValueChange.mockClear()
+    for (const bad of ['', 'red', '#fff', '#1f3fbf80', ' #1f3fbf', 'rgb(0, 0, 0)']) report(bad)
+    expect(onValueChange).not.toHaveBeenCalled()
   })
 
   it('shows the hex of the value it is given, lowercased', () => {
