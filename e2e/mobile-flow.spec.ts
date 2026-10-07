@@ -1,8 +1,10 @@
+import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
-import { AppPage } from './support/app.ts'
+import { AppPage, colourDistance } from './support/app.ts'
 import { FIXTURES } from './support/fixtures.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { summarizePdf } from './support/pdf.ts'
+import { inspectPdf } from '../src/features/render/pdf/inspect.ts'
 import { runOnly } from './support/projects.ts'
 import { sampleBrowserMemory } from './support/memory.ts'
 import { syntheticJpegs } from './support/synthetic.ts'
@@ -23,6 +25,8 @@ test.afterEach(() => {
 })
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0)
+const pdfDraws = async (bytes: Uint8Array) =>
+  (await inspectPdf(bytes)).pages.flatMap((p) => p.draws)
 
 test('M1 phone flow: Images, edit sheet, Page, Preview, Export, parse the PDF', async ({
   page,
@@ -71,10 +75,18 @@ test('M1 phone flow: Images, edit sheet, Page, Preview, Export, parse the PDF', 
 })
 
 /** Total RSS of the browser's process tree, in MB. */
+/** Interior points of a tile; a drawn value study puts most of them exactly on a ramp colour. */
+const SAMPLES = [
+  [0.3, 0.3],
+  [0.7, 0.3],
+  [0.5, 0.5],
+  [0.3, 0.7],
+  [0.7, 0.7],
+] as const
 const SETTLED_AFTER_IMPORT_BUDGET_MB = 1500
 const EXPORT_PEAK_BUDGET_MB = 1700
 
-test('M3 @slow 22 x 24 MP photos import and export on a phone within a memory budget', async ({
+test('M3 @slow 22 x 24 MP photos x 3 study versions import, preview and export on a phone within a memory budget', async ({
   page,
   browser,
 }, testInfo) => {
@@ -91,6 +103,9 @@ test('M3 @slow 22 x 24 MP photos import and export on a phone within a memory bu
   const memory = sampleBrowserMemory(browser)
   let pdf: Buffer
   let previewPages: number
+  let previewTiles: number
+  let ramp: number[][]
+  const valuesOnRamp: number[] = []
   let settledBreakdown: Record<string, number>
   try {
     await page.waitForTimeout(1000)
@@ -100,9 +115,25 @@ test('M3 @slow 22 x 24 MP photos import and export on a phone within a memory bu
     await page.getByRole('button', { name: 'Next' }).click()
     await app.setPaper('A5')
     await page.getByRole('button', { name: 'Next' }).click()
+    memory.phase('studies')
+    await app.pickStudiesImage('synthetic-01.jpg')
+    await app.setVersions(['Original', 'Blurred', 'Values'])
+    await app.applyStudiesToAll()
+    ramp = await app.rampColours()
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Study settings copied to 21 images.' }),
+    ).toBeAttached()
     await page.getByRole('button', { name: 'Next' }).click()
     await app.expectPreviewPages(3)
-    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0)
+    await expect(app.studyTile('synthetic-22.jpg', 'Values')).toBeAttached({ timeout: 60_000 })
+    await app.expectPreviewSettled(300_000)
+    previewTiles = await app.pageFigures.getByRole('button').count()
+    for (const tile of await app.pageFigures.getByRole('button', { name: /, Values$/ }).all()) {
+      const off = await Promise.all(
+        SAMPLES.map(async ([fx, fy]) => colourDistance(await app.tilePixel(tile, fx, fy), ramp)),
+      )
+      valuesOnRamp.push(off.filter((d) => d <= 3).length)
+    }
     previewPages = await app.pageCanvases.count()
     await page.waitForTimeout(2000)
     const cdp = await page.context().newCDPSession(page)
@@ -120,13 +151,25 @@ test('M3 @slow 22 x 24 MP photos import and export on a phone within a memory bu
     await memory.stop()
   }
   const peaks = memory.peaks()
-  const report = JSON.stringify({ previewPages, peaksMb: peaks, settledBreakdown })
+  const report = JSON.stringify({
+    previewPages,
+    previewTiles,
+    valuesOnRamp,
+    ramp,
+    peaksMb: peaks,
+    settledBreakdown,
+  })
   console.log(`memory: ${report}`)
   testInfo.annotations.push({ type: 'memory', description: report })
 
   const info = await summarizePdf(pdf)
   expect(info.pageCount).toBe(previewPages)
-  expect(sum(info.pages.map((p) => p.imagePlacements))).toBe(22)
+  expect(previewTiles).toBe(66)
+  expect(ramp).toHaveLength(5)
+  expect(valuesOnRamp).toHaveLength(22)
+  expect(Math.min(...valuesOnRamp)).toBeGreaterThanOrEqual(2)
+  expect(sum(info.pages.map((p) => p.imagePlacements))).toBe(66)
+  expect((await pdfDraws(pdf)).filter((d) => d.filter === 'FlateDecode')).toHaveLength(22)
   await expect(page.getByRole('alert')).toHaveCount(0)
   expect(crashed).toEqual([])
   expect(peaks['settled after import']).toBeLessThan(SETTLED_AFTER_IMPORT_BUDGET_MB)
@@ -147,5 +190,80 @@ test('M2 touch targets in the step bar and footer are at least 44px tall', async
     await expect(target).toBeVisible()
     const b = await target.boundingBox()
     expect(b?.height ?? 0).toBeGreaterThanOrEqual(44)
+  }
+})
+
+test('S-P1 phone: Studies step, a 3-version group in the preview, export parses back', async ({
+  page,
+}) => {
+  test.setTimeout(180_000)
+  const app = startApp(page)
+  await app.goto()
+  const [gradient] = await syntheticJpegs(page, 1, 1200, 800)
+  await app.upload([
+    { ...gradient, name: 'gradient.jpg' },
+    { name: 'quadrants.jpg', mimeType: 'image/jpeg', buffer: readFileSync(FIXTURES.quadrantsJpg) },
+  ])
+  await app.expectImages(2)
+  await app.goToStep('Studies')
+  await expect(page.getByRole('region', { name: 'Step 3 of 5: Studies' })).toBeVisible()
+  await app.pickStudiesImage('quadrants.jpg')
+  await expect(page.getByText('Studies for quadrants.jpg')).toBeVisible()
+  await app.pickStudiesImage('gradient.jpg')
+  await expect(page.getByText('Studies for gradient.jpg')).toBeVisible()
+  await app.setVersions(['Original', 'Blurred', 'Values'])
+  await app.setSlider('Number of values', 5)
+  await app.swatch('Sepia').click()
+  const ramp = await app.rampColours()
+  expect(ramp).toHaveLength(5)
+  await page.getByRole('button', { name: 'Next' }).click()
+  await expect(page.getByRole('region', { name: 'Step 4 of 5: Preview' })).toBeVisible()
+  await expect(app.studyTile('gradient.jpg', 'Blurred')).toBeAttached()
+  await expect(app.studyTile('gradient.jpg', 'Values')).toBeAttached()
+  await expect(app.studyTile('quadrants.jpg', 'Values')).toHaveCount(0)
+  await app.expectPreviewSettled(60_000)
+  for (const [fx, fy] of [
+    [0.1, 0.5],
+    [0.5, 0.5],
+    [0.9, 0.5],
+  ] as const) {
+    expect(
+      colourDistance(await app.tilePixel(app.studyTile('gradient.jpg', 'Values'), fx, fy), ramp),
+    ).toBeLessThanOrEqual(3)
+  }
+  const previewPages = await app.pageCanvases.count()
+  await page.getByRole('button', { name: 'Next' }).click()
+  const { bytes } = await app.exportPdf('step')
+  expect((await summarizePdf(bytes)).pageCount).toBe(previewPages)
+  const draws = await pdfDraws(bytes)
+  expect(draws).toHaveLength(4)
+  expect(draws.filter((d) => d.filter === 'DCTDecode')).toHaveLength(3)
+  expect(draws.filter((d) => d.filter === 'FlateDecode').map((d) => d.colours)).toEqual([5])
+})
+
+test('S-P2 phone: every Studies-step control is at least 44 px tall', async ({ page }) => {
+  const app = startApp(page)
+  await app.goto()
+  await app.upload([FIXTURES.quadrantsJpg, FIXTURES.quadrantsPng])
+  await app.expectImages(2)
+  await app.goToStep('Studies')
+  const radios = await app.studiesPicker.getByRole('radio').all()
+  expect(radios).toHaveLength(2)
+  const targets = [
+    ...radios.map((r) => r.locator('xpath=ancestor::label')),
+    ...(await page.getByRole('group', { name: 'Print these versions' }).getByRole('button').all()),
+    ...(await page.getByRole('group', { name: 'Hue' }).getByRole('button').all()),
+    ...(await page.getByRole('slider').all()),
+    page.getByRole('button', { name: 'Apply to all images' }),
+  ]
+  expect(targets).toHaveLength(2 + 4 + 8 + 3 + 1)
+  for (const t of targets) {
+    await t.scrollIntoViewIfNeeded()
+    const b = await t.boundingBox()
+    expect(
+      b?.height ?? 0,
+      await t.evaluate((el: { outerHTML: string }) => el.outerHTML.slice(0, 80)),
+    ).toBeGreaterThanOrEqual(44)
+    expect(b?.width ?? 0).toBeGreaterThanOrEqual(44)
   }
 })
