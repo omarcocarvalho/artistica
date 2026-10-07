@@ -1,0 +1,22 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`study outputs > match the golden hashes 1`] = `
+{
+  "checker/blurValues": "dc4fe0e1",
+  "checker/blurred": "e7284fe1",
+  "checker/original": "01e95dc5",
+  "checker/values": "f0f3c5c5",
+  "lightness/blurValues": "0772e4c5",
+  "lightness/blurred": "6e0209c5",
+  "lightness/original": "ab701dc5",
+  "lightness/values": "0772e4c5",
+  "noise/blurValues": "80b71462",
+  "noise/blurred": "15abfe37",
+  "noise/original": "53157645",
+  "noise/values": "3e62eafd",
+  "radial/blurValues": "0881c9c1",
+  "radial/blurred": "58da5cfc",
+  "radial/original": "317aceb5",
+  "radial/values": "99cfa4de",
+}
+`;

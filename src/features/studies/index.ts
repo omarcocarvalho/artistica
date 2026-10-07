@@ -29,6 +29,7 @@ export { blurSigmaPx, boxRadiiForGauss, gaussianBlurRGBA } from './blur'
 export { RAMP_L_DARK, RAMP_L_LIGHT, rampChroma, valueRamp } from './ramp'
 export { LIGHTNESS_BINS, VALUE_CLIP, lightnessRange, posterizeRGBA, valueIndex } from './posterize'
 export type { LightnessRange } from './posterize'
+export { applyStudy, applyStudyToContext } from './apply-study'
 // --- preview (C1, C2) ---
 export {
   createStudyPreviewProvider,
