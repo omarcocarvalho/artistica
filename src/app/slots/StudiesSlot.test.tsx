@@ -123,6 +123,24 @@ describe('StudiesSlot', () => {
     expect(details).toContainElement(linesHint)
     expect(details).not.toContainElement(studiesHint)
   })
+  it('phone: one live region announces the wait for the whole step, even with the Lines section open', () => {
+    const { container } = render(<StudiesSlot variant="phone" />)
+    linesSection(container).details.open = true
+    act(() => {
+      useImages.setState({ importing: 1 })
+    })
+    const live = Array.from(container.querySelectorAll('[aria-live]')).filter(
+      (region) => region.textContent === 'Waiting for photos to finish importing…',
+    )
+    expect(live).toHaveLength(1)
+    expect(live[0]).toBe(
+      document.getElementById(
+        screen
+          .getByRole('button', { name: 'Apply to all images' })
+          .getAttribute('aria-describedby') ?? '',
+      ),
+    )
+  })
   it('desktop: no Lines section (the Lines tab holds the panel)', () => {
     const { container } = render(<StudiesSlot variant="desktop" />)
     expect(container.querySelector('details')).toBeNull()

@@ -23,7 +23,7 @@ export function LinesSection() {
           </>
         )}
       </summary>
-      <LinesPanel imageId={selectedId} />
+      <LinesPanel imageId={selectedId} announceWait={false} />
     </details>
   )
 }
