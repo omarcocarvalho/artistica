@@ -1,10 +1,17 @@
 import fc from 'fast-check'
 import { describe, expect, it, vi } from 'vitest'
 import { lightness8, type Rgb8 } from '../../shared/colour/oklch'
-import { LIGHTNESS_BINS, VALUE_CLIP, lightnessRange, posterizeRGBA, valueIndex } from './posterize'
+import {
+  LIGHTNESS_BINS,
+  VALUE_CLIP,
+  lightnessRange,
+  posterizeOwnRangeRGBA,
+  posterizeRGBA,
+  valueIndex,
+} from './posterize'
 import { valueRamp } from './ramp'
 import { distinctColours, key, lightnessRampImage } from './test-support/lightness'
-import { noise, solid } from './test-support/pixels'
+import { mulberry32, noise, solid } from './test-support/pixels'
 
 const SEPIA = (count: number) => valueRamp({ count, hue: 55, neutral: false })
 
@@ -205,5 +212,68 @@ describe('posterizeRGBA', () => {
     expect(made.every((n) => n <= LIGHTNESS_BINS)).toBe(true)
     expect(copyCalls).toBe(0)
     expect(distinctColours(d).size).toBe(5)
+  })
+})
+
+describe('posterizeOwnRangeRGBA', () => {
+  const oracle = (d: Uint8ClampedArray, w: number, h: number, ramp: readonly Rgb8[]) => {
+    posterizeRGBA(d, w, h, ramp, lightnessRange(d, w, h))
+  }
+
+  /** Pixels within `spread` levels of one grey, plus optional black and white specks. */
+  const narrow = fc
+    .record({
+      w: fc.integer({ min: 1, max: 24 }),
+      h: fc.integer({ min: 1, max: 24 }),
+      grey: fc.integer({ min: 0, max: 255 }),
+      spread: fc.integer({ min: 0, max: 12 }),
+      specks: fc.boolean(),
+      seed: fc.integer({ min: 0, max: 1e6 }),
+      count: fc.integer({ min: 2, max: 20 }),
+    })
+    .map(({ w, h, grey, spread, specks, seed, count }) => {
+      const rnd = mulberry32(seed)
+      const d = new Uint8ClampedArray(w * h * 4)
+      for (let i = 0; i < w * h; i++) {
+        for (let c = 0; c < 3; c++) d[i * 4 + c] = grey + Math.floor(rnd() * (spread + 1))
+        d[i * 4 + 3] = Math.floor(rnd() * 256)
+        if (specks && i % 37 === 0) d.fill(i % 2 === 0 ? 0 : 255, i * 4, i * 4 + 3)
+      }
+      return { w, h, d, count }
+    })
+
+  it('matches lightnessRange + posterizeRGBA exactly on narrow-range tiles (property)', () => {
+    fc.assert(
+      fc.property(narrow, ({ w, h, d, count }) => {
+        const want = d.slice()
+        oracle(want, w, h, SEPIA(count))
+        posterizeOwnRangeRGBA(d, w, h, SEPIA(count))
+        expect(d).toEqual(want)
+      }),
+      { numRuns: 300 },
+    )
+  })
+
+  it('matches lightnessRange + posterizeRGBA exactly on noise and gradients', () => {
+    for (const count of [2, 5, 20]) {
+      for (const [w, h, make] of [
+        [64, 48, () => noise(64, 48, count)],
+        [2000, 1, () => lightnessRampImage(2000, 1)],
+        [300, 3, () => lightnessRampImage(300, 3, 0.45, 0.47)],
+        [5, 5, () => solid(5, 5, [90, 120, 60])],
+      ] as const) {
+        const d = make()
+        const want = make()
+        oracle(want, w, h, SEPIA(count))
+        posterizeOwnRangeRGBA(d, w, h, SEPIA(count))
+        expect(d).toEqual(want)
+      }
+    }
+  })
+
+  it('leaves an empty image alone', () => {
+    expect(() => {
+      posterizeOwnRangeRGBA(new Uint8ClampedArray(0), 0, 0, SEPIA(5))
+    }).not.toThrow()
   })
 })
