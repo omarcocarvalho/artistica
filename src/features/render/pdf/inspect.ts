@@ -174,7 +174,7 @@ export interface PdfStroke {
   readonly dashPt: readonly number[]
   /** ExtGState /CA in effect, 1 when none. */
   readonly opacity: number
-  /** The last `re … W` rect in effect, in the user space it was written in (no CTM applied). */
+  /** The innermost clip's rect, in the user space it was written in (no CTM applied); null when there is no clip or that clip path is not one `re`. */
   readonly clip: {
     readonly x: number
     readonly y: number
@@ -208,12 +208,12 @@ export function isRegistrationStroke(s: PdfStroke): boolean {
   )
 }
 
-function strokeOpacity(doc: PDFDocument, page: PDFPage, name: string): number {
+function strokeOpacity(doc: PDFDocument, page: PDFPage, name: string): number | undefined {
   const states = page.node.Resources()?.lookupMaybe(PDFName.of('ExtGState'), PDFDict)
   const ref = states?.get(PDFName.of(name))
   const state = ref ? doc.context.lookup(ref) : undefined
   const ca = state instanceof PDFDict ? state.get(PDFName.of('CA')) : undefined
-  return ca instanceof PDFNumber ? ca.asNumber() : 1
+  return ca instanceof PDFNumber ? ca.asNumber() : undefined
 }
 
 type Operand = number | string | number[]
@@ -317,7 +317,7 @@ interface GState {
  */
 export function strokesOf(
   content: string,
-  extGStateOpacity: (name: string) => number,
+  extGStateOpacity: (name: string) => number | undefined,
 ): PdfStroke[] {
   const stack: GState[] = []
   let gs: GState = {
@@ -339,6 +339,7 @@ export function strokesOf(
     return { x: a * x + c * y + e, y: b * x + d * y + f }
   }
   const moveTo = (x: number, y: number): void => {
+    rect = null
     start = point(x, y)
     path.push({ op: 'm', ...start })
   }
@@ -394,17 +395,18 @@ export function strokesOf(
         break
       case 'gs': {
         const name = args[0]
-        gs.opacity = typeof name === 'string' ? extGStateOpacity(name) : 1
+        gs.opacity = (typeof name === 'string' ? extGStateOpacity(name) : undefined) ?? gs.opacity
         break
       }
       case 're': {
         const [x = 0, y = 0, w = 0, h = 0] = v
+        const alone = path.length === 0
         moveTo(x, y)
         path.push({ op: 'l', ...point(x + w, y) })
         path.push({ op: 'l', ...point(x + w, y + h) })
         path.push({ op: 'l', ...point(x, y + h) })
         close()
-        rect = { x, y, w, h }
+        rect = alone ? { x, y, w, h } : null
         break
       }
       case 'W':
@@ -415,9 +417,11 @@ export function strokesOf(
         moveTo(v[0] ?? 0, v[1] ?? 0)
         break
       case 'l':
+        rect = null
         path.push({ op: 'l', ...point(v[0] ?? 0, v[1] ?? 0) })
         break
       case 'c': {
+        rect = null
         const [x1 = 0, y1 = 0, x2 = 0, y2 = 0, x = 0, y = 0] = v
         const p1 = point(x1, y1)
         const p2 = point(x2, y2)

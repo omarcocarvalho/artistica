@@ -125,8 +125,55 @@ describe('inspectPdf strokes', () => {
     ])
   })
 
-  it('reads opacity 1 for an ExtGState without /CA or a name that is not a resource', () => {
-    expect(strokesOf('/GS-1 gs\n0 0 m\n1 1 l\nS', () => 1).map((s) => s.opacity)).toEqual([1])
+  it('keeps the opacity in effect across an ExtGState without /CA or a missing one', async () => {
+    const { strokes } = await strokesDrawnBy((doc, page) => {
+      const half = page.node.newExtGState('GS', doc.context.obj({ Type: 'ExtGState', CA: 0.5 }))
+      const width = page.node.newExtGState('GS', doc.context.obj({ Type: 'ExtGState', LW: 3 }))
+      const path = [moveTo(0, 0), lineTo(1, 1), stroke()]
+      return [
+        ...path,
+        setGraphicsState(width),
+        ...path,
+        setGraphicsState(half),
+        setGraphicsState(width),
+        ...path,
+        setGraphicsState('Missing'),
+        ...path,
+      ]
+    })
+    expect(strokes.map((s) => s.opacity)).toEqual([1, 1, 0.5, 0.5])
+  })
+
+  it('strokes an re path as a closed rectangle', () => {
+    expect(strokesOf('1 2 3 4 re S', () => undefined).map((s) => s.path)).toEqual([
+      [
+        { op: 'm', x: 1, y: 2 },
+        { op: 'l', x: 4, y: 2 },
+        { op: 'l', x: 4, y: 6 },
+        { op: 'l', x: 1, y: 6 },
+        { op: 'l', x: 1, y: 2 },
+      ],
+    ])
+  })
+
+  it('reports no clip rect for a clip path that is not one re', () => {
+    const clips = [
+      '1 2 3 4 re 0 0 m W n',
+      '1 2 3 4 re 5 5 l W n',
+      '1 2 3 4 re 5 5 6 6 7 7 c W n',
+      '0 0 m 5 5 l 1 2 3 4 re W n',
+      '1 2 3 4 re 5 6 7 8 re W n',
+      '0 0 m 9 0 l 9 9 l h W n',
+    ].map((clip) => strokesOf(`q ${clip} 0 0 m 1 1 l S Q`, () => undefined)[0]?.clip)
+    expect(clips).toEqual([null, null, null, null, null, null])
+  })
+
+  it('keeps the outer clip after the inner one is popped', () => {
+    const content = 'q 1 2 3 4 re W n q 5 6 7 8 re W n 0 0 m 1 1 l S Q 0 0 m 1 1 l S Q'
+    expect(strokesOf(content, () => undefined).map((s) => s.clip)).toEqual([
+      { x: 5, y: 6, w: 7, h: 8 },
+      { x: 1, y: 2, w: 3, h: 4 },
+    ])
   })
 
   it('applies the CTM to path points', async () => {
