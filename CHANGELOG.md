@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.2.0](https://github.com/omarcocarvalho/artistica/compare/v0.1.0...v0.2.0) (2026-10-07)
+
+
+### Features
+
+* **app:** wire studies into the desktop tabs and the phone flow ([#93](https://github.com/omarcocarvalho/artistica/issues/93)) ([18b02ef](https://github.com/omarcocarvalho/artistica/commit/18b02efd4319ac9a5a3d3715a54de42fe8943873))
+* **images:** keep study settings per image, with apply to all ([#82](https://github.com/omarcocarvalho/artistica/issues/82)) ([3da9018](https://github.com/omarcocarvalho/artistica/commit/3da90180c79addd074fc9d88afa623ed84d0904f))
+* **layout:** pack the study versions of an image as one group ([#85](https://github.com/omarcocarvalho/artistica/issues/85)) ([1990a81](https://github.com/omarcocarvalho/artistica/commit/1990a811956bd757bd14dbbb3011cd6d1bf60071))
+* **render:** carry study versions in the page model ([#83](https://github.com/omarcocarvalho/artistica/issues/83)) ([ef95200](https://github.com/omarcocarvalho/artistica/commit/ef95200a38d1cc4f75dc3cd9a3b256de9ff5aa72))
+* **render:** draw study tiles, version chips and group outlines in the preview ([#88](https://github.com/omarcocarvalho/artistica/issues/88)) ([ceb9524](https://github.com/omarcocarvalho/artistica/commit/ceb9524cfa851250f4551979b8071197650a09f2))
+* **render:** render studies in the PDF, value studies as PNG ([#91](https://github.com/omarcocarvalho/artistica/issues/91)) ([c1d6266](https://github.com/omarcocarvalho/artistica/commit/c1d6266f7d9dc7c0267407c2b59fd0d027159aba))
+* **settings:** persist study defaults (schema v2) ([#81](https://github.com/omarcocarvalho/artistica/issues/81)) ([cf0b1c3](https://github.com/omarcocarvalho/artistica/commit/cf0b1c30cba55a485ef3d5b8323973fc37df4055))
+* **shared:** add OKLCH colour maths ([#78](https://github.com/omarcocarvalho/artistica/issues/78)) ([aad0291](https://github.com/omarcocarvalho/artistica/commit/aad02910a6aa59e549848a3d5835402ee117dc2c))
+* **studies:** add the single-hue value ramp and posterisation ([#86](https://github.com/omarcocarvalho/artistica/issues/86)) ([8c0604f](https://github.com/omarcocarvalho/artistica/commit/8c0604f671504476dba14a69190e6287fa20925f))
+* **studies:** add the studies panel ([#90](https://github.com/omarcocarvalho/artistica/issues/90)) ([861612a](https://github.com/omarcocarvalho/artistica/commit/861612a6a0449dbd8cef34155c941dd3ad78bb1b))
+* **studies:** add the study settings model ([#79](https://github.com/omarcocarvalho/artistica/issues/79)) ([c0465b6](https://github.com/omarcocarvalho/artistica/commit/c0465b67ad98b0f7965091f6c6efe72b3e28556b))
+* **studies:** apply owner answers for defaults, imports in progress and selection after removal ([#101](https://github.com/omarcocarvalho/artistica/issues/101)) ([c807205](https://github.com/omarcocarvalho/artistica/commit/c8072058219a949cf87081d2df5325471508e08e))
+* **studies:** render preview study tiles in a worker ([#92](https://github.com/omarcocarvalho/artistica/issues/92)) ([3afd343](https://github.com/omarcocarvalho/artistica/commit/3afd3432cf9069f4096d8764fcaf5aa32838f416))
+
+
+### Bug Fixes
+
+* **a11y:** make phone form controls 44 px tall ([#97](https://github.com/omarcocarvalho/artistica/issues/97)) ([e1f2e9e](https://github.com/omarcocarvalho/artistica/commit/e1f2e9e91b7c8691dadfb16743d1fa1bec51e616))
+* **studies:** draw failed study tiles as missing and budget the studies memory peak ([#98](https://github.com/omarcocarvalho/artistica/issues/98)) ([dd053f9](https://github.com/omarcocarvalho/artistica/commit/dd053f9a98654c8766f6978051b4ce6c678c9ef9))
+* **studies:** keep swatches and the ramp visible in forced colors and clear stale announcements ([#96](https://github.com/omarcocarvalho/artistica/issues/96)) ([5ba2abe](https://github.com/omarcocarvalho/artistica/commit/5ba2abe354449b0fd689f886833ef5e3bb033876))
+
 ## [0.1.0](https://github.com/omarcocarvalho/artistica/compare/v0.0.1...v0.1.0) (2026-10-06)
 
 
