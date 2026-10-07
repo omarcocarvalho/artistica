@@ -187,6 +187,18 @@ describe('buildLayoutItems study groups', () => {
     expect(keyOf([lined, plain])).toEqual({ a: 'same~0#0', b: 'same~1#0' })
   })
 
+  it('ranks same-bytes images by their studies before their lines', () => {
+    const lined = {
+      ...withVersions(img('lined', 3000, 2000, {}, 'same'), ['original']),
+      lines: patchLines(DEFAULT_LINES, { thirds: true }),
+    }
+    const studied = withVersions(img('studied', 3000, 2000, {}, 'same'), ['original', 'values'])
+    const keyOf = (images: ImageDescriptor[]) =>
+      Object.fromEntries(buildLayoutItems(images).map((i) => [i.imageId, i.key]))
+    expect(keyOf([studied, lined])).toEqual({ lined: 'same~0#0', studied: 'same~1#0' })
+    expect(keyOf([lined, studied])).toEqual({ lined: 'same~0#0', studied: 'same~1#0' })
+  })
+
   it('numbers same-bytes images apart by line style when their line types match', () => {
     const lined = (id: string, colour: string): ImageDescriptor => ({
       ...img(id, 3000, 2000, {}, 'same'),
