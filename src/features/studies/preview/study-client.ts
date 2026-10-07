@@ -68,7 +68,8 @@ export function createStudyRenderer(
         worker = spawned
         await spawned.init()
         return spawned
-      } catch {
+      } catch (e) {
+        if (isDisposed()) throw e
         return switchToMain()
       }
     })())

@@ -213,6 +213,30 @@ describe('createStudyRenderer', () => {
     expect(clone.closed).toBe(1)
     expect(worker.renders + main.renders).toBe(0)
   })
+
+  it('dispose while the worker is starting makes no fallback when stopping the worker fails its init', async () => {
+    let failInit: (e: Error) => void = () => undefined
+    const worker = engine({
+      init: vi.fn(
+        () =>
+          new Promise<void>((_, reject) => {
+            failInit = reject
+          }),
+      ),
+      dispose: () => {
+        failInit(new Error('Study worker stopped'))
+      },
+    })
+    const fallback = vi.fn(() => engine())
+    const render = createStudyRenderer(() => worker, fallback)
+    const clone = bmp()
+    const pending = render(plan, clone, study)
+    await Promise.resolve()
+    render.dispose()
+    await expect(pending).rejects.toThrow()
+    expect(fallback).not.toHaveBeenCalled()
+    expect(clone.closed).toBe(1)
+  })
 })
 
 describe('createAppStudyProvider', () => {
