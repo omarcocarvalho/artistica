@@ -1,10 +1,31 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
-import { blurSigmaPx, boxRadiiForGauss, gaussianBlurRGBA } from './blur'
+import {
+  blurSigmaPx,
+  boxRadiiForGauss,
+  EXACT_GAUSSIAN_BELOW_SIGMA,
+  gaussianBlurRGBA,
+  gaussianTaps,
+  MIN_SIGMA_PX,
+} from './blur'
 import { channelMean, channelRange, noise, rgba, solid } from './test-support/pixels'
 
 const variance = (radii: readonly number[]) =>
   radii.reduce((s, r) => s + ((2 * r + 1) ** 2 - 1) / 12, 0)
+
+const tapsSum = (t: Float64Array) => t.reduce((s, v, k) => s + (k === 0 ? v : 2 * v), 0)
+const tapsVariance = (t: Float64Array) => t.reduce((s, v, k) => s + 2 * k * k * v, 0)
+
+/** Variance of the kernel a blur applies, read off the slope of a blurred hard edge in one row. */
+function edgeSpread(sigma: number, w = 160): { mass: number; spread: number; maxStep: number } {
+  const d = rgba(w, 1, (x) => (x < w / 2 ? [0, 0, 0] : [255, 255, 255]))
+  gaussianBlurRGBA(d, w, 1, sigma)
+  const slope = Array.from({ length: w - 1 }, (_, x) => (d[(x + 1) * 4] ?? 0) - (d[x * 4] ?? 0))
+  const mass = slope.reduce((a, b) => a + b, 0)
+  const mean = slope.reduce((a, s, x) => a + s * x, 0) / mass
+  const spread = slope.reduce((a, s, x) => a + s * (x - mean) ** 2, 0) / mass
+  return { mass, spread, maxStep: Math.max(...slope) }
+}
 
 describe('blurSigmaPx (M2-R6)', () => {
   it('scales with the short side, linearly in percent', () => {
@@ -50,28 +71,87 @@ describe('gaussianBlurRGBA', () => {
     expect(d).toEqual(solid(37, 23, [120, 30, 200]))
   })
 
-  it('is a no-op below 0.25 px', () => {
+  it('is a no-op below the floor, where a hard edge would move by less than half a level', () => {
     const d = noise(20, 20, 1)
     const before = d.slice()
-    gaussianBlurRGBA(d, 20, 20, 0.2)
+    gaussianBlurRGBA(d, 20, 20, MIN_SIGMA_PX * 0.99)
     expect(d).toEqual(before)
+    expect(edgeSpread(MIN_SIGMA_PX * 0.99).maxStep).toBe(255)
+    expect(edgeSpread(0.07).maxStep).toBeLessThan(255)
   })
 
-  it('starts blurring once σ passes 1/√3, where the first box gets a radius of 1', () => {
-    expect(boxRadiiForGauss(0.57)).toEqual([0, 0, 0])
-    expect(boxRadiiForGauss(0.58)).toEqual([0, 0, 1])
-    const still = noise(20, 20, 4)
-    const before = still.slice()
-    gaussianBlurRGBA(still, 20, 20, 0.57)
-    expect(still).toEqual(before)
-    const soft = before.slice()
-    gaussianBlurRGBA(soft, 20, 20, 0.58)
-    expect(soft).not.toEqual(before)
+  it('softens a hard edge at every σ above the floor', () => {
+    for (let sigma = 0.07; sigma < 5; sigma += 0.01) {
+      const { mass, maxStep } = edgeSpread(sigma)
+      expect(mass).toBe(255)
+      expect(maxStep).toBeLessThan(255)
+    }
   })
 
-  it('applies all three boxes: a hard edge spreads by the variance of the composed kernel', () => {
+  it('softens a hard edge visibly at 1% on a 90 × 60 mm print tile (709 px short side)', () => {
+    const w = 1063
+    const h = 709
+    const sigma = blurSigmaPx(1, w, h)
+    const d = rgba(w, h, (x) => (x < w / 2 ? [0, 0, 0] : [255, 255, 255]))
+    gaussianBlurRGBA(d, w, h, sigma)
+    const row = Math.floor(h / 2) * w * 4
+    let maxStep = 0
+    for (let x = 0; x + 1 < w; x++) {
+      maxStep = Math.max(maxStep, (d[row + (x + 1) * 4] ?? 0) - (d[row + x * 4] ?? 0))
+    }
+    expect(maxStep).toBeLessThan(235)
+    expect(maxStep).toBeGreaterThan(150)
+  })
+
+  it('small σ: the kernel is a normalised Gaussian whose variance is exactly σ²', () => {
+    for (let sigma = MIN_SIGMA_PX; sigma < EXACT_GAUSSIAN_BELOW_SIGMA; sigma += 0.013) {
+      const t = gaussianTaps(sigma)
+      expect(t.length).toBe(Math.max(1, Math.ceil(3 * sigma)) + 1)
+      expect(tapsSum(t)).toBeCloseTo(1, 12)
+      expect(Math.abs(tapsVariance(t) - sigma ** 2) / sigma ** 2).toBeLessThan(1e-9)
+      for (let k = 1; k < t.length; k++) {
+        expect(t[k]).toBeGreaterThan(0)
+        expect(t[k]).toBeLessThan(t[k - 1] ?? 0)
+      }
+    }
+  })
+
+  it('small σ: a blurred edge spreads by σ², within 8-bit rounding', () => {
+    for (const sigma of [0.3, 0.45, 0.6, 0.8, 1, 1.3, 1.7, 2.2, 2.8, 3.4, 3.8]) {
+      const { mass, spread } = edgeSpread(sigma)
+      expect(mass).toBe(255)
+      expect(Math.abs(spread - sigma ** 2)).toBeLessThan(0.03 * sigma ** 2 + 0.01)
+    }
+  })
+
+  it('has no jump in effective σ where the exact Gaussian hands over to the boxes', () => {
+    const c = EXACT_GAUSSIAN_BELOW_SIGMA
+    expect(variance(boxRadiiForGauss(c))).toBeCloseTo(c ** 2, 9)
+    const below = edgeSpread(c - 1e-6).spread
+    const above = edgeSpread(c).spread
+    expect(Math.abs(Math.sqrt(below) - Math.sqrt(above)) / c).toBeLessThan(0.01)
+    for (let sigma = c; sigma < 60; sigma += 0.01) {
+      expect(Math.abs(Math.sqrt(variance(boxRadiiForGauss(sigma))) / sigma - 1)).toBeLessThan(0.05)
+    }
+  })
+
+  it('small σ: keeps a constant image constant and leaves alpha alone, in place', () => {
+    for (const sigma of [0.1, 0.5, 1.5, 3.5]) {
+      const d = solid(29, 17, [255, 0, 131])
+      for (let i = 3; i < d.length; i += 4) d[i] = (i * 13) % 256
+      const alpha = d.filter((_, i) => i % 4 === 3)
+      const same = d
+      gaussianBlurRGBA(d, 29, 17, sigma)
+      expect(d).toBe(same)
+      for (let i = 0; i < d.length; i += 4)
+        expect([d[i], d[i + 1], d[i + 2]]).toEqual([255, 0, 131])
+      expect(d.filter((_, i) => i % 4 === 3)).toEqual(alpha)
+    }
+  })
+
+  it('large σ: applies all three boxes, so a hard edge spreads by the composed kernel', () => {
     // One row: the vertical passes are the identity, and the edge's slope is the composed kernel.
-    for (const sigma of [2.5, 6, 13]) {
+    for (const sigma of [EXACT_GAUSSIAN_BELOW_SIGMA, 6, 13]) {
       const w = 240
       const d = rgba(w, 1, (x) => (x < w / 2 ? [0, 0, 0] : [255, 255, 255]))
       gaussianBlurRGBA(d, w, 1, sigma)
@@ -120,7 +200,7 @@ describe('gaussianBlurRGBA', () => {
         fc.integer({ min: 1, max: 40 }),
         fc.integer({ min: 1, max: 40 }),
         fc.integer({ min: 0, max: 1e6 }),
-        fc.double({ min: 0.3, max: 20, noNaN: true }),
+        fc.double({ min: 0.05, max: 20, noNaN: true }),
         (w, h, seed, sigma) => {
           const d = noise(w, h, seed)
           const before = [0, 1, 2].map((c) => channelRange(d, c))
@@ -156,15 +236,19 @@ describe('gaussianBlurRGBA', () => {
 
   it('moves the average only through the edges, for any image (property)', () => {
     // Clamp-to-edge re-weights at most `reach` pixels at each end of every line, so the mean can
-    // move by at most 255 · 2 · reach / n per axis, plus rounding (0.5 per pass, 6 passes).
+    // move by at most 255 · 2 · reach / n per axis, plus rounding (0.5 per pass, at most 6 passes).
+    const reachOf = (sigma: number) =>
+      sigma < EXACT_GAUSSIAN_BELOW_SIGMA
+        ? gaussianTaps(sigma).length - 1
+        : boxRadiiForGauss(sigma).reduce((a, b) => a + b, 0)
     fc.assert(
       fc.property(
         fc.integer({ min: 24, max: 64 }),
         fc.integer({ min: 24, max: 64 }),
         fc.integer({ min: 0, max: 1e6 }),
-        fc.double({ min: 0.3, max: 3, noNaN: true }),
+        fc.double({ min: 0.1, max: 6, noNaN: true }),
         (w, h, seed, sigma) => {
-          const reach = boxRadiiForGauss(sigma).reduce((a, b) => a + b, 0)
+          const reach = reachOf(sigma)
           const bound = 255 * 2 * reach * (1 / w + 1 / h) + 3
           const d = noise(w, h, seed)
           const before = channelMean(d, 0)
