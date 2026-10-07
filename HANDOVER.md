@@ -1,4 +1,4 @@
-# Handover: Artistica (state as of 2026-10-06)
+# Handover: Artistica (state as of 2026-10-07)
 
 This is for the next developer and their AI agent. Read it first, then [CLAUDE.md](CLAUDE.md) for conventions. The default branch is **`master`**. There is no `main` branch.
 
@@ -16,13 +16,13 @@ Later milestones add blur and value studies, composition lines (some AI, in the 
 - **Everything runs in the browser.** Photos are never uploaded or persisted.
 - **Hosting:** GitHub Pages. The landing page is at `/artistica/` and the tool at `/artistica/app/`.
 - **Product spec:** [docs/spec.md](docs/spec.md). It is the source of truth.
-- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (awaiting owner sign-off), M2–M5 → `v0.2.0`–`v0.5.0`, M6 → `v1.0.0`.
+- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2–M5 → `v0.2.0`–`v0.5.0`, M6 → `v1.0.0`.
 
 ## Current status
 
 **M0 is done** and released as `v0.0.1`.
 
-**M1 ("print-ready PDF from photos") is implemented, reviewed and merged. It is waiting for the owner's sign-off.** The plans are in [docs/superpowers/plans/](docs/superpowers/plans/) (overview: `2026-10-03-m1-overview.md`). Every task of sub-plans A–E is merged, including the E2E suites:
+**M1 ("print-ready PDF from photos") is done** and released as [`v0.1.0`](https://github.com/omarcocarvalho/artistica/releases/tag/v0.1.0). The plans are in [docs/superpowers/plans/](docs/superpowers/plans/) (overview: `2026-10-03-m1-overview.md`). Every task of sub-plans A–E is merged, including the E2E suites:
 
 - E11, import: PR #64.
 - E12, layout and export: PR #63.
@@ -40,29 +40,26 @@ Later milestones add blur and value studies, composition lines (some AI, in the 
 | #72 | `setPageSetup` ignores `undefined` patch values. Tests pin crop-mark end points and several render edge cases. |
 | #73 | **Accessibility:** focus returns to the opener when any dialog closes, and moves to a sensible target after removing images and during export. The crop handles are no longer clipped. A PDF object-URL leak is fixed. |
 
-**Release:** the release-please PR [#18](https://github.com/omarcocarvalho/artistica/pull/18) (`chore(master): release 0.1.0`) is the only open PR. It must **not** be merged until the owner signs off.
+**Phone memory fix (#75).** The owner's real-phone check found a crash: on an iPhone 15 Pro Max (iOS, WebKit), exporting 22 × 24 MP HEIC photos killed the tab. #75 fixed it. Each image now keeps its compressed source plus a preview bitmap (2048 px on the long side), and export decodes full resolution one image at a time. A CI memory-budget test (M3 in `e2e/mobile-flow.spec.ts`) guards it.
+
+**Sign-off and release:** the owner signed off on 2026-10-07 after a 40-photo import and export plus a 100% print, recorded on [PR #18](https://github.com/omarcocarvalho/artistica/pull/18). PR #18 merged as the v0.1.0 release and deployed to Pages.
 
 ## Branch map
 
 | Branch | Use |
 |---|---|
 | `master` | all M1 work; base for new work |
-| `release-please--branches--master--components--artistica` | bot-managed release PR #18 for v0.1.0. Don't touch it; merge only after owner sign-off |
+| `release-please--branches--master--components--artistica` | bot-managed; release-please opens the next release PR here. Don't touch it; merge only after the owner signs off a milestone |
 
 ## Next steps (in order)
 
-1. **Owner sign-off for v0.1.0.**
-   - **Real-phone checklist:** the "M1 sign-off checklist (owner, on a real phone)" section of `docs/superpowers/plans/2026-10-03-m1-e-shell.md`. Record the device, OS version and export time in the release PR.
-   - **Test over HTTPS:** use the deployed site (`gh workflow run deploy-pages.yml --ref master` for a demo deploy) or an HTTPS tunnel. Over plain `http://<LAN-IP>`, `crypto.subtle` and `crypto.randomUUID` are missing and every import fails.
-   - **Memory:** the checklist's "20 photos at full resolution" export is the key memory check (see "Known issues").
-   - Also bring the owner questions below.
-2. **Release v0.1.0 after approval.**
-   1. Run `gh pr view 18 --json mergeable` until it isn't `UNKNOWN`.
-   2. Close and reopen PR #18 and wait for the checks to pass.
-   3. Run `gh pr merge 18 --squash`. This creates the release and deploys to Pages.
-3. **Start M2.** Write the M2 implementation plan in `docs/superpowers/plans/` and get owner approval **before** coding. Fold in the owner's answers to the questions below.
+1. **Start M2.** Write the M2 implementation plan in `docs/superpowers/plans/` and get owner approval **before** coding. Fold in the owner's answers to the questions below.
+2. **Release steps at the end of each milestone** (after owner sign-off, including a real-phone check over HTTPS):
+   1. Run `gh pr view <n> --json mergeable` on the release PR until it isn't `UNKNOWN`.
+   2. Close and reopen the PR and wait for the checks to pass.
+   3. Run `gh pr merge <n> --squash` from the main checkout. This creates the release and deploys to Pages.
 
-## Owner questions (for M1 sign-off)
+## Owner questions (open, for the M2 plan)
 
 The spec doesn't answer these. Nothing was changed for them.
 
@@ -184,7 +181,7 @@ Only English ships until M6, so these don't show yet:
 
 - Repo: https://github.com/omarcocarvalho/artistica
 - Live site: https://omarcocarvalho.github.io/artistica/
-- Release PR: [#18 release 0.1.0](https://github.com/omarcocarvalho/artistica/pull/18)
+- Releases: https://github.com/omarcocarvalho/artistica/releases
 - Spec: [docs/spec.md](docs/spec.md)
 - M1 plans: [docs/superpowers/plans/](docs/superpowers/plans/), starting with `2026-10-03-m1-overview.md`
 - Execution ledgers (progress, rulings, deferred minors per task): [docs/superpowers/ledgers/](docs/superpowers/ledgers/)
