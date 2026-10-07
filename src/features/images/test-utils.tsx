@@ -6,6 +6,7 @@ import common from '../../locales/en/common.json'
 import errors from '../../locales/en/errors.json'
 import images from '../../locales/en/images.json'
 import { DEFAULT_EDITS, type ImageEdits, type ImageId } from '../../shared/model/image'
+import { DEFAULT_STUDY } from '../../shared/model/study'
 import type { LoadedImage } from './types'
 
 export function createTestI18n() {
@@ -47,6 +48,7 @@ export function makeLoadedImage(
     thumbUrl: `blob:thumb-${String(counter)}`,
     preview: { width: pxW, height: pxH, close: () => undefined },
     source: new Blob(),
+    study: DEFAULT_STUDY,
     ...rest,
     edits: { ...DEFAULT_EDITS, ...edits },
   }

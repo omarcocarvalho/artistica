@@ -11,6 +11,7 @@ import {
   DEFAULT_PAGE_SETUP,
   type PageSetup,
 } from '../../../shared/model/page-setup'
+import { DEFAULT_STUDY, type StudySettings } from '../../../shared/model/study'
 import type { LayoutResult, Placement, RectMm } from '../../layout/types'
 import type { DrawTile, PageModel } from '../types'
 
@@ -23,6 +24,7 @@ export function descriptor(
   pxW = 3000,
   pxH = 2000,
   edits: Partial<ImageEdits> = {},
+  study: StudySettings = DEFAULT_STUDY,
 ): ImageDescriptor {
   return {
     id: id(name),
@@ -30,6 +32,7 @@ export function descriptor(
     pxW,
     pxH,
     edits: { ...DEFAULT_EDITS, ...edits },
+    study,
   }
 }
 

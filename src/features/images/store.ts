@@ -11,6 +11,7 @@ import { createLimiter } from './limiter'
 import type { ImportOutcome, ImportWarning, LoadedImage } from './types'
 import { fetchImageBlob } from './url'
 import { DEFAULT_EDITS } from '../../shared/model/image'
+import { DEFAULT_STUDY } from '../../shared/model/study'
 
 export interface ImagesState {
   images: LoadedImage[]
@@ -94,6 +95,7 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
           pxW: d.pxW,
           pxH: d.pxH,
           edits: DEFAULT_EDITS,
+          study: DEFAULT_STUDY,
           preview: d.preview,
           source: d.source,
           thumbUrl: d.thumbUrl,
@@ -243,7 +245,7 @@ const descriptorCache = new WeakMap<LoadedImage, ImageDescriptor>()
 let lastImages: readonly LoadedImage[] | null = null
 let lastResult: ImageDescriptor[] = []
 
-/** Plain `{ id, contentHash, pxW, pxH, edits }` objects (no bitmap), memoised so `useImages(selectImageDescriptors)` is safe. */
+/** Plain `{ id, contentHash, pxW, pxH, edits, study }` objects (no bitmap), memoised so `useImages(selectImageDescriptors)` is safe. */
 export function selectImageDescriptors(state: Pick<ImagesState, 'images'>): ImageDescriptor[] {
   if (state.images === lastImages) return lastResult
   lastResult = state.images.map((img) => {
@@ -255,6 +257,7 @@ export function selectImageDescriptors(state: Pick<ImagesState, 'images'>): Imag
         pxW: img.pxW,
         pxH: img.pxH,
         edits: img.edits,
+        study: img.study,
       }
       descriptorCache.set(img, d)
     }

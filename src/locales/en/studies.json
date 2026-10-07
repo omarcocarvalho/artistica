@@ -1,0 +1,8 @@
+{
+  "version": {
+    "original": "Original",
+    "blurred": "Blurred",
+    "values": "Values",
+    "blurValues": "Blur + Values"
+  }
+}

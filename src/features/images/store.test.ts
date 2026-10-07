@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_EDITS, type ImageId } from '../../shared/model/image'
+import { DEFAULT_STUDY } from '../../shared/model/study'
 import type { DecodedImage } from './decode'
 import { sha256Hex } from './content-hash'
 import { ImportFailure } from './errors'
@@ -62,6 +63,12 @@ describe('addFiles', () => {
     expect(s.images.map((i) => i.name)).toEqual(['a.jpg', 'b.jpg'])
     expect(s.selectedId).toBe('id-1')
     expect(s.importing).toBe(0)
+  })
+
+  it('gives every new image the default study (Original only)', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    expect(store.getState().images[0]?.study).toEqual(DEFAULT_STUDY)
   })
 
   it('keeps input order even when a later file finishes first', async () => {
@@ -568,7 +575,14 @@ describe('selectImageDescriptors', () => {
     await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
     const a = selectImageDescriptors(store.getState())
     expect(selectImageDescriptors(store.getState())).toBe(a)
-    expect(Object.keys(a[0] ?? {}).sort()).toEqual(['contentHash', 'edits', 'id', 'pxH', 'pxW'])
+    expect(Object.keys(a[0] ?? {}).sort()).toEqual([
+      'contentHash',
+      'edits',
+      'id',
+      'pxH',
+      'pxW',
+      'study',
+    ])
     store.getState().updateEdits('id-2' as ImageId, { copies: 3 })
     const b = selectImageDescriptors(store.getState())
     expect(b).not.toBe(a)
