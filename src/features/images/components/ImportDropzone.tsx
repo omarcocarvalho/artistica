@@ -323,7 +323,7 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
               placeholder={t('dropzone.url.placeholder')}
               aria-invalid={urlError ? true : undefined}
               aria-describedby={urlError ? urlErrId : undefined}
-              className="border-line-strong bg-surface text-ink touch:min-h-(--size-target) min-h-10 grow rounded-md border px-3 text-base"
+              className="border-line-strong bg-surface text-ink min-h-10 grow rounded-md border px-3 text-base"
             />
             <Button type="submit" variant="primary" disabled={urlBusy}>
               {t('dropzone.url.submit')}

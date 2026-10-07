@@ -320,7 +320,6 @@ test.describe('forced colors (chromium)', () => {
     const off = page.getByRole('switch', { name: 'Bleed' })
     const units = page.getByRole('radiogroup', { name: 'Units' })
     const checked = units.locator('[data-state="checked"]')
-    const unchecked = units.locator('[data-state="unchecked"]')
 
     for (const colorScheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ forcedColors: 'active', colorScheme })
@@ -331,9 +330,11 @@ test.describe('forced colors (chromium)', () => {
       expect(thumbOn.bg).not.toBe(trackOn.bg)
       expect(thumbOff.bg).not.toBe(trackOff.bg)
       expect(trackOn.bg).not.toBe(trackOff.bg)
+      // An unchecked item is transparent over the group, so the checked one must differ from it.
       const segOn = await paintStyle(checked)
-      const segOff = await paintStyle(unchecked)
-      expect(segOn.bg).not.toBe(segOff.bg)
+      const group = await paintStyle(units)
+      expect(segOn.bg).not.toBe('rgba(0, 0, 0, 0)')
+      expect(segOn.bg).not.toBe(group.bg)
       expect(segOn.color).not.toBe(segOn.bg)
     }
   })
