@@ -186,9 +186,7 @@ describe('StudiesPanel', () => {
       expect(
         screen.getByText('Each version is a tile. They print together, side by side.'),
       ).toBeVisible()
-      expect(
-        screen.getByText('Blur + Values blurs first, then splits into values.'),
-      ).toBeVisible()
+      expect(screen.getByText('Blur + Values blurs first, then splits into values.')).toBeVisible()
     },
   )
 
