@@ -124,6 +124,17 @@ describe('LinesPanel', () => {
     expect(screen.getByRole('region', { name: 'Line style' })).toBeInTheDocument()
   })
 
+  it('heads its sections with h4 when the shell gives it headingLevel 4', () => {
+    render(<LinesPanel imageId={A} headingLevel={4} />)
+    expect(screen.queryAllByRole('heading', { level: 3 })).toHaveLength(0)
+    expect(screen.getAllByRole('heading', { level: 4 }).map((h) => h.textContent)).toEqual([
+      'Composition',
+      'Line style',
+    ])
+    expect(screen.getByRole('region', { name: 'Composition' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Line style' })).toBeInTheDocument()
+  })
+
   it('lists the six switches in spec order, all off by default', () => {
     render(<LinesPanel imageId={A} />)
     const switches = screen.getAllByRole('switch')

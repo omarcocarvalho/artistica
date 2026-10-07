@@ -175,7 +175,6 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line on import, p
     await expect(
       page.getByRole('status').filter({ hasText: 'Study settings copied to 21 images.' }),
     ).toBeAttached()
-    await app.openLinesSection()
     await app.setAllLineSwitches(true)
     await app.setGrid(20, 20)
     await app.setSpiralCorner('Top right')
@@ -410,9 +409,9 @@ test('S-P2 phone: every Studies-step control is at least 44 px tall', async ({ p
 
 const LINE_COLOUR = [0x1f, 0x3f, 0xbf]
 
-test('L-P1 phone: the Lines section in the Studies step, lines in the preview and in the PDF', async ({
+test('L-P1 phone: the always-open Lines section in the Studies step, lines in the preview and in the PDF', async ({
   page,
-}, testInfo) => {
+}) => {
   test.setTimeout(180_000)
   const app = startApp(page)
   await app.goto()
@@ -420,25 +419,24 @@ test('L-P1 phone: the Lines section in the Studies step, lines in the preview an
   await app.expectImages(2)
   await app.goToStep('Studies')
   await app.pickStudiesImage('quadrants.jpg')
-  await expect(app.linesSection).not.toHaveAttribute('open')
-  await expect(app.linesSummary).toHaveAccessibleName('Lines')
-  await expect(app.lineSwitch('Rule of thirds')).toBeHidden()
-
-  await app.openLinesSection()
+  const step = page.getByRole('region', { name: 'Step 3 of 5: Studies' })
+  await expect(step.locator('details, summary, [aria-expanded]')).toHaveCount(0)
+  await expect(app.linesHeading).toBeVisible()
+  await expect(app.linesCount).toHaveCount(0)
   await expect(page.getByText('Lines for quadrants.jpg')).toBeVisible()
+  await expect(app.linesSection.getByRole('switch')).toHaveCount(6)
+  for (const s of await app.linesSection.getByRole('switch').all()) await expect(s).toBeVisible()
+  await expect(app.linesSection.getByLabel('Colour', { exact: true })).toBeVisible()
+  await expect(app.lineHex).toBeVisible()
+  await expect(app.linesSection.getByRole('slider')).toHaveCount(2)
+  for (const s of await app.linesSection.getByRole('slider').all()) await expect(s).toBeVisible()
+  await expect(app.linesApplyButton).toBeVisible()
+
   await app.lineSwitch('Rule of thirds').click()
   await app.lineSwitch('Centre lines').click()
-  await expect(app.linesSummary).toHaveAccessibleName('Lines, 2 on')
-  if (testInfo.project.name === 'mobile-chromium') {
-    const cdp = await page.context().newCDPSession(page)
-    const { nodes } = (await cdp.send('Accessibility.getFullAXTree')) as {
-      nodes: { role?: { value?: string }; name?: { value?: string } }[]
-    }
-    await cdp.detach()
-    expect(
-      nodes.filter((n) => n.role?.value === 'DisclosureTriangle').map((n) => n.name?.value),
-    ).toEqual(['Lines, 2 on'])
-  }
+  await expect(app.linesCount).toHaveText('2 on')
+  await expect(app.linesCount).toBeVisible()
+  await expect(app.linesSection).toHaveAccessibleName('Lines')
 
   const applyButtons = page.getByRole('button', { name: /apply/i })
   await expect(applyButtons).toHaveCount(2)
@@ -487,8 +485,6 @@ test('L-P2 phone: every Lines control is at least 44 x 44 px, with 16 px text in
   await app.upload([FIXTURES.quadrantsJpg, FIXTURES.quadrantsPng])
   await app.expectImages(2)
   await app.goToStep('Studies')
-  await expectTouchTargets([app.linesSummary])
-  await app.openLinesSection()
   await app.setLineSwitch('Grid', true)
   await app.setLineSwitch('Golden spiral', true)
   const section = app.linesSection
@@ -504,7 +500,6 @@ test('L-P2 phone: every Lines control is at least 44 x 44 px, with 16 px text in
     .all()
   const sliders = await section.getByRole('slider').all()
   const targets = [
-    app.linesSummary,
     ...switches,
     ...fields,
     ...radios,
@@ -516,27 +511,24 @@ test('L-P2 phone: every Lines control is at least 44 x 44 px, with 16 px text in
     6,
     4,
     2,
-    1 + 6 + 3 + 4 + 1 + 2 + 1,
+    6 + 3 + 4 + 1 + 2 + 1,
   ])
   await expectTouchTargets(targets)
   await expectNoFocusZoom(fields)
 })
 
-test('L-P3 phone: the Lines section opens and its controls work from the keyboard', async ({
+test('L-P3 phone: every Lines control is reached and works from the keyboard, with no disclosure to open', async ({
   page,
 }, testInfo) => {
   // WebKit on macOS moves Tab focus to buttons only with Alt held (no "full keyboard access").
-  const tab = testInfo.project.name === 'mobile-webkit' ? 'Alt+Tab' : 'Tab'
+  const webkit = testInfo.project.name === 'mobile-webkit'
+  const tab = webkit ? 'Alt+Tab' : 'Tab'
   const app = startApp(page)
   await app.goto()
   await app.upload([FIXTURES.quadrantsJpg, FIXTURES.quadrantsPng])
   await app.expectImages(2)
   await app.goToStep('Studies')
   await page.getByRole('button', { name: 'Apply to all images', exact: true }).focus()
-  await page.keyboard.press(tab)
-  await expect(app.linesSummary).toBeFocused()
-  await page.keyboard.press('Enter')
-  await expect(app.linesSection).toHaveAttribute('open', '')
   await page.keyboard.press(tab)
   const grid = app.lineSwitch('Grid')
   await expect(grid).toBeFocused()
@@ -547,8 +539,15 @@ test('L-P3 phone: the Lines section opens and its controls work from the keyboar
   await expect(cols).toBeFocused()
   await page.keyboard.press('ArrowUp')
   await expect(cols).toHaveValue('5')
+  await page.keyboard.press(tab)
+  await expect(app.linesSection.getByRole('textbox', { name: 'Rows', exact: true })).toBeFocused()
+  for (const name of ['Rule of thirds', 'Diagonals & armature', 'Golden ratio'] as const) {
+    await page.keyboard.press(tab)
+    await expect(app.lineSwitch(name)).toBeFocused()
+  }
+  await page.keyboard.press(tab)
   const spiral = app.lineSwitch('Golden spiral')
-  await spiral.focus()
+  await expect(spiral).toBeFocused()
   await page.keyboard.press('Space')
   await expect(spiral).toHaveAttribute('aria-checked', 'true')
   await page.keyboard.press(tab)
@@ -565,8 +564,26 @@ test('L-P3 phone: the Lines section opens and its controls work from the keyboar
   await page.keyboard.press('Enter')
   await expect(app.lineHex).toHaveValue('#1f3fbf')
   await expect(app.linesSection.getByLabel('Colour', { exact: true })).toHaveValue('#1f3fbf')
-  await expect(app.linesSummary).toHaveAccessibleName('Lines, 2 on')
-  await app.linesSummary.focus()
+  await expect(app.linesCount).toHaveText('2 on')
+  // WebKit leaves <input type=color> out of the Tab order; the hex box above covers it.
+  if (!webkit) {
+    await page.keyboard.press(tab)
+    await expect(app.linesSection.getByLabel('Colour', { exact: true })).toBeFocused()
+  }
+  await page.keyboard.press(tab)
+  const thickness = app.linesSection.getByRole('slider', { name: 'Thickness' })
+  await expect(thickness).toBeFocused()
+  await page.keyboard.press('ArrowRight')
+  await expect(thickness).toHaveAttribute('aria-valuetext', /^0\.40? mm$/)
+  await page.keyboard.press(tab)
+  const opacity = app.linesSection.getByRole('slider', { name: 'Opacity' })
+  await expect(opacity).toBeFocused()
+  await page.keyboard.press('ArrowRight')
+  await expect(opacity).toHaveAttribute('aria-valuetext', '91%')
+  await page.keyboard.press(tab)
+  await expect(app.linesApplyButton).toBeFocused()
   await page.keyboard.press('Enter')
-  await expect(app.linesSection).not.toHaveAttribute('open')
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Line settings copied to 1 image.' }),
+  ).toBeAttached()
 })

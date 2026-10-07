@@ -68,7 +68,6 @@
     },
     "lines": {
       "title": "Lines",
-      "separator": ", ",
       "on": "{{count}} on"
     }
   },

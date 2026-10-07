@@ -148,7 +148,7 @@ test.describe('studies wait for imports in progress (phone)', () => {
     await expectStudyControls(step, true)
   })
 
-  test('L-W2 phone: with the Lines section open, one live region announces the wait and the Lines hint describes its controls', async ({
+  test('L-W2 phone: one live region announces the wait for the step, and the Lines hint describes the Lines controls', async ({
     page,
   }) => {
     const app = startApp(page)
@@ -157,13 +157,11 @@ test.describe('studies wait for imports in progress (phone)', () => {
     await app.upload([FIXTURES.valueRamp, FIXTURES.quadrantsPng])
     await app.expectImages(2)
     await app.goToStep('Studies')
-    await app.openLinesSection()
     await app.setLineSwitch('Grid', true)
     const release = await holdUrlImport(page)
     await app.goToStep('Images')
     await app.submitLink(SLOW_URL)
     await app.goToStep('Studies')
-    await app.openLinesSection()
 
     const waiting = step.getByText(WAITING)
     await expect(waiting).toHaveCount(2)
@@ -195,7 +193,6 @@ test.describe('studies wait for imports in progress (phone)', () => {
     await app.goToStep('Images')
     await app.expectImages(3)
     await app.goToStep('Studies')
-    await app.openLinesSection()
     await expect(step.getByText(WAITING)).toHaveCount(0)
     await expect(app.lineSwitch('Grid')).toBeEnabled()
   })

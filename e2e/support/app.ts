@@ -345,16 +345,16 @@ export class AppPage {
   }
 
   // --- Lines, phone (D4) ---
-  /** The Studies step's collapsible Lines card: a <details>, whose summary has no ARIA role. */
+  /** The Studies step's always-open Lines card, a region named by its h3. */
   get linesSection(): Locator {
-    return this.page.locator('details').filter({ has: this.page.locator('summary') })
+    return this.page.getByRole('region', { name: 'Lines', exact: true })
   }
-  get linesSummary(): Locator {
-    return this.linesSection.locator('summary')
+  get linesHeading(): Locator {
+    return this.linesSection.getByRole('heading', { name: 'Lines', exact: true, level: 3 })
   }
-  async openLinesSection(): Promise<void> {
-    if ((await this.linesSection.getAttribute('open')) === null) await this.linesSummary.click()
-    await expect(this.linesSection).toHaveAttribute('open', '')
+  /** The "N on" badge beside the heading; absent while no line type is on. */
+  get linesCount(): Locator {
+    return this.linesHeading.locator('..').getByText(/^\d+ on$/)
   }
   get linesApplyButton(): Locator {
     return this.page.getByRole('button', { name: 'Apply lines to all images', exact: true })

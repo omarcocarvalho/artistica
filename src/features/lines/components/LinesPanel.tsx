@@ -31,6 +31,8 @@ export interface LinesPanelProps {
   readonly imageId: ImageId | null
   /** False where another panel on the same screen already announces the same wait: the hint stays visible and describes the controls, but is not a live region. */
   readonly announceWait?: boolean
+  /** Level of the section headings: 4 where the shell heads the panel with its own h3. */
+  readonly headingLevel?: 3 | 4
 }
 
 const SECTION = 'border-line flex flex-col gap-3 border-b py-4'
@@ -42,8 +44,9 @@ const PLAIN_TYPES = [
 ] as const satisfies readonly CompositionLineType[]
 
 /** The Lines controls for one image (design/lines.html). Content only: the shell adds chrome. */
-export function LinesPanel({ imageId, announceWait = true }: LinesPanelProps) {
+export function LinesPanel({ imageId, announceWait = true, headingLevel = 3 }: LinesPanelProps) {
   const { t } = useTranslation('lines')
+  const Heading = headingLevel === 4 ? 'h4' : 'h3'
   const image = useImages((s) => s.images.find((i) => i.id === imageId))
   const imageCount = useImages((s) => s.images.length)
   const { waiting, hintId, hintRef, panelRef } = useImportWait(useImages((s) => s.importing > 0))
@@ -83,9 +86,9 @@ export function LinesPanel({ imageId, announceWait = true }: LinesPanelProps) {
         </section>
 
         <section className={SECTION} aria-labelledby={compositionId}>
-          <h3 id={compositionId} className="font-display text-base">
+          <Heading id={compositionId} className="font-display text-base">
             {t('panel.composition')}
-          </h3>
+          </Heading>
           <Switch
             label={t('type.grid')}
             checked={lines.grid.on}
@@ -189,9 +192,9 @@ export function LinesPanel({ imageId, announceWait = true }: LinesPanelProps) {
         </section>
 
         <section className={SECTION} aria-labelledby={styleId}>
-          <h3 id={styleId} className="font-display text-base">
+          <Heading id={styleId} className="font-display text-base">
             {t('panel.style')}
-          </h3>
+          </Heading>
           <ColourField
             key={id}
             label={t('colour.label')}

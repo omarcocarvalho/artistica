@@ -328,7 +328,7 @@ test.describe('phone steps (mobile-chromium)', () => {
       await expectNoAxeViolations(page)
     })
 
-    test(`Studies step with the Lines section open, every line on, applied to all (${scheme})`, async ({
+    test(`Studies step with the Lines section, every line on, applied to all (${scheme})`, async ({
       page,
     }) => {
       test.setTimeout(60_000)
@@ -338,12 +338,11 @@ test.describe('phone steps (mobile-chromium)', () => {
       await app.upload(FILES)
       await app.expectImages(2)
       await app.goToStep('Studies')
-      await app.openLinesSection()
       await expectNoAxeViolations(page)
       await app.setAllLineSwitches(true)
       await app.setGrid(3, 3)
       await app.setSpiralCorner('Bottom right')
-      await expect(app.linesSummary).toHaveAccessibleName('Lines, 6 on')
+      await expect(app.linesCount).toHaveText('6 on')
       await app.applyLinesToAll()
       await expect(
         page.getByRole('status').filter({ hasText: 'Line settings copied to 1 image.' }),
