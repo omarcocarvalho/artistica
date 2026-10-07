@@ -29,6 +29,8 @@ import './lines.css'
 
 export interface LinesPanelProps {
   readonly imageId: ImageId | null
+  /** False where another panel on the same screen already announces the same wait: the hint stays visible and describes the controls, but is not a live region. */
+  readonly announceWait?: boolean
 }
 
 const SECTION = 'border-line flex flex-col gap-3 border-b py-4'
@@ -40,7 +42,7 @@ const PLAIN_TYPES = [
 ] as const satisfies readonly CompositionLineType[]
 
 /** The Lines controls for one image (design/lines.html). Content only: the shell adds chrome. */
-export function LinesPanel({ imageId }: LinesPanelProps) {
+export function LinesPanel({ imageId, announceWait = true }: LinesPanelProps) {
   const { t } = useTranslation('lines')
   const image = useImages((s) => s.images.find((i) => i.id === imageId))
   const imageCount = useImages((s) => s.images.length)
@@ -258,7 +260,7 @@ export function LinesPanel({ imageId }: LinesPanelProps) {
         ref={hintRef}
         id={hintId}
         tabIndex={-1}
-        aria-live="polite"
+        aria-live={announceWait ? 'polite' : undefined}
         className={waiting ? `${HINT} pb-3` : HINT}
       >
         {waiting ? t('panel.waiting') : null}

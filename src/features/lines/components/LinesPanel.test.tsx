@@ -454,5 +454,23 @@ describe('LinesPanel', () => {
       expect(document.activeElement).toBe(outside)
       outside.remove()
     })
+
+    it('with announceWait off, the hint still shows and describes every control but is not live', () => {
+      seed({ a: everyType, b: DEFAULT_LINES })
+      render(<LinesPanel imageId={A} announceWait={false} />)
+      const sw = screen.getByRole('switch', { name: 'Golden ratio' })
+      sw.focus()
+      setImporting(1)
+      const hint = screen.getByText(WAITING)
+      expect(hint).toBeVisible()
+      expect(hint).not.toHaveAttribute('aria-live')
+      expect(document.activeElement).toBe(hint)
+      for (const control of controls()) {
+        expect(control).toBeDisabled()
+        expect(control).toHaveAccessibleDescription(expect.stringContaining(WAITING))
+      }
+      setImporting(0)
+      expect(document.activeElement).toBe(sw)
+    })
   })
 })

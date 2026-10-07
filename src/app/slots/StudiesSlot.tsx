@@ -2,6 +2,7 @@ import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useImages } from '../../features/images'
 import { StudiesPanel } from '../../features/studies'
+import { LinesSection } from './LinesSection'
 import './studies-slot.css'
 
 export function StudiesSlot({ variant }: { readonly variant: 'desktop' | 'phone' }) {
@@ -37,6 +38,7 @@ export function StudiesSlot({ variant }: { readonly variant: 'desktop' | 'phone'
         </div>
       )}
       <StudiesPanel imageId={selectedId} />
+      {variant === 'phone' && <LinesSection />}
     </div>
   )
 }

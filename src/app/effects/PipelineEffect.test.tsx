@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { StrictMode } from 'react'
+import { tileRenderKey } from '../../features/render/pixels/tile-plan'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useImages } from '../../features/images'
 import { computeLayout } from '../../features/layout'
@@ -119,6 +120,43 @@ describe('PipelineEffect layout memo (M2-R15)', () => {
       expect(usePages.getState().pages[0]?.tiles[1]?.study?.blurPct).toBe(12)
     })
     expect(layoutAsync).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('PipelineEffect with a line change (M3-R5)', () => {
+  it('skips the layout worker and keeps every tile render key: only the page model’s lines change', async () => {
+    layoutAsync.mockImplementation((setup, items) => Promise.resolve(computeLayout(setup, items)))
+    act(() => {
+      useImages
+        .getState()
+        .updateStudy('a' as ImageId, { versions: ['original', 'blurred', 'values'] })
+    })
+    render(<PipelineEffect />)
+    await waitFor(() => {
+      expect(usePages.getState().pages[0]?.tiles).toHaveLength(3)
+    })
+    expect(layoutAsync).toHaveBeenCalledTimes(1)
+    const before = usePages.getState().pages[0]
+    const keys = before?.tiles.map((t) => tileRenderKey(t))
+    expect(before?.lines).toEqual([])
+    act(() => {
+      useImages.getState().updateLines('a' as ImageId, {
+        thirds: true,
+        spiral: { on: true },
+        style: { colour: '#1f3fbf', widthMm: 1, opacityPct: 50 },
+      })
+    })
+    await waitFor(() => {
+      expect(usePages.getState().pages[0]?.lines).toHaveLength(3)
+    })
+    const after = usePages.getState().pages[0]
+    expect(layoutAsync).toHaveBeenCalledTimes(1)
+    expect(after?.tiles.map((t) => tileRenderKey(t))).toEqual(keys)
+    expect(after?.lines.map((l) => l.types)).toEqual([
+      ['thirds', 'spiral'],
+      ['thirds', 'spiral'],
+      ['thirds', 'spiral'],
+    ])
   })
 })
 

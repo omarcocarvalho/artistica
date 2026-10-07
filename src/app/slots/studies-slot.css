@@ -29,4 +29,27 @@
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: 3px;
   }
+
+  .app-lines-section {
+    padding: var(--space-3) var(--space-4);
+  }
+  .app-lines-section__summary {
+    display: list-item;
+    min-height: 32px;
+    font-weight: var(--weight-bold);
+    cursor: pointer;
+  }
+  .app-lines-section__badge {
+    margin-inline-start: var(--space-2);
+  }
+  .app-lines-section[open] > .app-lines-section__summary {
+    margin-bottom: var(--space-1);
+  }
+
+  @media (pointer: coarse), (max-width: 959.98px) {
+    .app-lines-section__summary {
+      min-height: var(--size-target);
+      line-height: var(--size-target);
+    }
+  }
 }

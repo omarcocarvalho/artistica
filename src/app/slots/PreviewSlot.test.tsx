@@ -149,6 +149,38 @@ describe('PreviewSlot', () => {
       'anna.jpg, Blur + Values, 60 × 40 mm',
     ])
   })
+  it('names the line types a tile prints, as a list in the current language (M3-R20)', () => {
+    act(() => {
+      usePages.setState({
+        pages: [
+          {
+            index: 0,
+            size: { w: 210, h: 297 },
+            safeArea: { x: 5, y: 5, w: 200, h: 287 },
+            cropMarks: [],
+            lines: [
+              { tileIndex: 0, types: ['thirds', 'golden', 'centre'] },
+              { tileIndex: 1, types: ['spiral'] },
+            ],
+            tiles: [
+              { imageId: 'a', version: 'original', trim: { x: 10, y: 10, w: 60, h: 40 } },
+              { imageId: 'a', version: 'blurred', trim: { x: 76, y: 10, w: 60, h: 40 } },
+              { imageId: 'a', version: 'values', trim: { x: 10, y: 56, w: 60, h: 40 } },
+            ],
+          },
+        ] as never,
+      })
+    })
+    render(<PreviewSlot />)
+    const items = within(screen.getByRole('list', { name: 'Page 1 contents' })).getAllByRole(
+      'listitem',
+    )
+    expect(items.map((i) => i.textContent)).toEqual([
+      'anna.jpg, 60 × 40 mm, lines: Rule of thirds, Golden ratio, and Centre lines',
+      'anna.jpg, Blurred, 60 × 40 mm, lines: Golden spiral',
+      'anna.jpg, Values, 60 × 40 mm',
+    ])
+  })
   it('renders no figure or caption of its own (PagePreview owns them)', () => {
     const { container } = render(<PreviewSlot />)
     expect(container.querySelector('figure')).toBeNull()
