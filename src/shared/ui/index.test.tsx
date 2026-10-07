@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import * as ui from './index'
 
 describe('ui barrel', () => {
-  it('exports exactly the M1 runtime surface', () => {
+  it('exports exactly the shared runtime surface', () => {
     expect(Object.keys(ui).sort()).toEqual(
       [
         'Badge',
@@ -27,6 +27,7 @@ describe('ui barrel', () => {
         'buttonClasses',
         'cx',
         'parseDecimal',
+        'useImportWait',
       ].sort(),
     )
   })
