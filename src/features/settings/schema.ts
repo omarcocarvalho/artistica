@@ -3,6 +3,7 @@ import { LANGUAGES, type LanguageCode } from '../../shared/i18n/languages'
 import {
   DEFAULT_LINES,
   sanitizeLines,
+  SPIRAL_CORNERS,
   withoutLineTypes,
   type LineSettings,
 } from '../../shared/model/lines'
@@ -97,7 +98,10 @@ export function normalizeStudyDefaults(defaults: StudyDefaults): StudyDefaults {
 
 const L = DEFAULT_LINES
 
-/** Total and types-only, like studyDefaultsSchema: ranges, hex and corner names belong to `sanitizeLines` (M3-R16). */
+/**
+ * Total and types-only, like studyDefaultsSchema: ranges and hex belong to `sanitizeLines` (M3-R16).
+ * The corner is a type (a name union) with the same fallback as `sanitizeLines`. Unknown keys are stripped.
+ */
 const lineDefaultsSchema = z.object({
   grid: z
     .object({
@@ -112,7 +116,7 @@ const lineDefaultsSchema = z.object({
   spiral: z
     .object({
       on: z.boolean().catch(L.spiral.on),
-      corner: z.string().catch(L.spiral.corner),
+      corner: z.enum(SPIRAL_CORNERS).catch(L.spiral.corner),
     })
     .catch(L.spiral),
   centre: z.boolean().catch(L.centre),
@@ -165,8 +169,7 @@ export function parseSettings(input: unknown): SettingsData {
       ...parsed,
       pageSetup,
       studyDefaults: normalizeStudyDefaults(parsed.studyDefaults),
-      // The corner is any string until sanitizeLines, which is total, narrows it.
-      lineDefaults: normalizeLineDefaults(parsed.lineDefaults as LineSettings),
+      lineDefaults: normalizeLineDefaults(parsed.lineDefaults),
     }
   } catch (error) {
     warnOnce(error)
