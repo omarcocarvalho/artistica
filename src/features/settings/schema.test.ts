@@ -1,6 +1,7 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import { MIN_SAFE_AREA_MM, normalizePageSetup } from '../../shared/model/page-setup'
+import { DEFAULT_STUDY } from '../../shared/model/study'
 import { DEFAULT_SETTINGS, parseSettings, settingsSchema } from './schema'
 
 describe('parseSettings', () => {
@@ -24,6 +25,7 @@ describe('parseSettings', () => {
       unit: 'in',
       language: 'en',
       theme: 'dark',
+      studyDefaults: { blurPct: 20, values: { count: 6, hue: 135, neutral: false } },
     }
     expect(parseSettings(valid)).toEqual(valid)
   })
@@ -105,6 +107,107 @@ describe('parseSettings', () => {
           expect(() => parseSettings(obj)).not.toThrow()
         },
       ),
+    )
+  })
+})
+
+describe('studyDefaults', () => {
+  const D = { blurPct: DEFAULT_STUDY.blurPct, values: DEFAULT_STUDY.values }
+
+  it('defaults to DEFAULT_STUDY without versions (owner Q5, default)', () => {
+    expect(DEFAULT_SETTINGS.studyDefaults).toEqual(D)
+    expect('versions' in DEFAULT_SETTINGS.studyDefaults).toBe(false)
+  })
+
+  it('fills in the defaults when the field is missing (a v1 object)', () => {
+    const v1 = { pageSetup: DEFAULT_SETTINGS.pageSetup, unit: 'in', language: 'en', theme: 'dark' }
+    expect(parseSettings(v1)).toEqual({ ...v1, studyDefaults: D })
+  })
+
+  it('accepts valid study defaults unchanged', () => {
+    const studyDefaults = { blurPct: 12, values: { count: 9, hue: 265, neutral: true } }
+    expect(parseSettings({ ...DEFAULT_SETTINGS, studyDefaults }).studyDefaults).toEqual(
+      studyDefaults,
+    )
+  })
+
+  it('keeps the other fields when one study default is invalid', () => {
+    const parsed = parseSettings({
+      ...DEFAULT_SETTINGS,
+      unit: 'in',
+      studyDefaults: { blurPct: 'lots', values: { count: 9, hue: 265, neutral: false } },
+    })
+    expect(parsed.unit).toBe('in')
+    expect(parsed.studyDefaults).toEqual({
+      blurPct: DEFAULT_STUDY.blurPct,
+      values: { count: 9, hue: 265, neutral: false },
+    })
+  })
+
+  it('falls back field by field inside values', () => {
+    const parsed = parseSettings({
+      ...DEFAULT_SETTINGS,
+      studyDefaults: { blurPct: 30, values: { count: 99, hue: 'teal', neutral: 'yes' } },
+    })
+    expect(parsed.studyDefaults).toEqual({ blurPct: 30, values: DEFAULT_STUDY.values })
+  })
+
+  it.each([
+    ['values is null', { blurPct: 30, values: null }],
+    ['values is a string', { blurPct: 30, values: 'x' }],
+    ['values is an array', { blurPct: 30, values: [5, 55] }],
+    ['values is missing', { blurPct: 30 }],
+  ])('defaults only the values when %s, keeping blur and every other field', (_name, sd) => {
+    const parsed = parseSettings({
+      ...DEFAULT_SETTINGS,
+      unit: 'in',
+      theme: 'dark',
+      studyDefaults: sd,
+    })
+    expect(parsed).toEqual({
+      ...DEFAULT_SETTINGS,
+      unit: 'in',
+      theme: 'dark',
+      studyDefaults: { blurPct: 30, values: DEFAULT_STUDY.values },
+    })
+  })
+
+  it.each([
+    ['null', null],
+    ['a string', 'x'],
+    ['a number', 7],
+    ['an array', [1, 2]],
+  ])('defaults the study defaults when they are %s, keeping every other field', (_name, sd) => {
+    const parsed = parseSettings({ ...DEFAULT_SETTINGS, unit: 'in', studyDefaults: sd })
+    expect(parsed).toEqual({ ...DEFAULT_SETTINGS, unit: 'in', studyDefaults: D })
+  })
+
+  it('normalises like the image store (hue mod 360, rounding)', () => {
+    const parsed = parseSettings({
+      ...DEFAULT_SETTINGS,
+      studyDefaults: { blurPct: 33.6, values: { count: 4.4, hue: 360, neutral: false } },
+    })
+    expect(parsed.studyDefaults).toEqual({
+      blurPct: 34,
+      values: { count: 4, hue: 0, neutral: false },
+    })
+  })
+
+  it('drops a stored versions field (not persisted, owner Q5)', () => {
+    const parsed = parseSettings({
+      ...DEFAULT_SETTINGS,
+      studyDefaults: { ...D, versions: ['original', 'values'] },
+    })
+    expect(parsed.studyDefaults).toEqual(D)
+  })
+
+  it('never throws on any study defaults value (property)', () => {
+    fc.assert(
+      fc.property(fc.anything(), (studyDefaults) => {
+        const parsed = parseSettings({ ...DEFAULT_SETTINGS, studyDefaults })
+        expect(parsed.studyDefaults.values.count).toBeGreaterThanOrEqual(2)
+        expect(parsed.pageSetup).toEqual(DEFAULT_SETTINGS.pageSetup)
+      }),
     )
   })
 })
