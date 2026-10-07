@@ -113,6 +113,26 @@ describe('Chip', () => {
     )
     expect(chip).toHaveAttribute('aria-pressed', 'true')
   })
+
+  it('shows a check mark only when pressed, hidden from the accessible name', () => {
+    const { rerender } = render(
+      <Chip checked={false} onCheckedChange={vi.fn()}>
+        Blur
+      </Chip>,
+    )
+    const chip = screen.getByRole('button', { name: 'Blur' })
+    const box = chip.querySelector('.ds-chip__box')
+    expect(box).toHaveAttribute('aria-hidden', 'true')
+    expect(box?.querySelector('svg')).toBeNull()
+    rerender(
+      <Chip checked onCheckedChange={vi.fn()}>
+        Blur
+      </Chip>,
+    )
+    expect(chip.querySelector('.ds-chip__box svg')).not.toBeNull()
+    expect(chip).toHaveAccessibleName('Blur')
+    expect(chip).toHaveTextContent(/^Blur$/)
+  })
 })
 
 describe('Callout', () => {
