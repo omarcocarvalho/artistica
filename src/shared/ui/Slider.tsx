@@ -14,6 +14,8 @@ export interface SliderProps {
   minLabel?: string
   maxLabel?: string
   disabled?: boolean
+  /** Id(s) of text that describes the range, e.g. why it is disabled. */
+  describedBy?: string
   className?: string
 }
 
@@ -29,6 +31,7 @@ export function Slider({
   minLabel,
   maxLabel,
   disabled,
+  describedBy,
   className,
 }: SliderProps) {
   const id = useId()
@@ -49,6 +52,7 @@ export function Slider({
         step={step}
         value={value}
         disabled={disabled}
+        aria-describedby={describedBy}
         aria-valuetext={text}
         style={{ '--fill': `${String(fill)}%` } as CSSProperties}
         onChange={(e) => {

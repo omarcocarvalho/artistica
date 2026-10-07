@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useLayoutEffect, useRef, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useImages } from '../../images'
 import type { ImageId } from '../../../shared/model/image'
@@ -24,11 +24,18 @@ const SECTION = 'border-line flex flex-col gap-3 border-b py-4'
 const HINT = 'text-ink-muted text-xs'
 const MAX_HUE = 359
 
+const idList = (...ids: (string | false | undefined)[]) =>
+  ids.filter(Boolean).join(' ') || undefined
+
 /** The Studies controls for one image (design/studies.html). Content only: the shell adds chrome. */
 export function StudiesPanel({ imageId }: StudiesPanelProps) {
   const { t } = useTranslation('studies')
   const image = useImages((s) => s.images.find((i) => i.id === imageId))
   const imageCount = useImages((s) => s.images.length)
+  const importing = useImages((s) => s.importing > 0)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const waitingRef = useRef<HTMLParagraphElement>(null)
+  const focusAfterImport = useRef<HTMLElement | null>(null)
   const [announcement, setAnnouncement] = useState<{ text: string; seq: number } | null>(null)
   const [announcedFor, setAnnouncedFor] = useState(imageId)
   if (announcedFor !== imageId) {
@@ -39,6 +46,28 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
   const lastOneId = `${baseId}-last`
   const blurHeadingId = `${baseId}-blur`
   const valuesHeadingId = `${baseId}-values`
+  const waitingId = `${baseId}-waiting`
+  const busy = importing ? waitingId : undefined
+
+  useLayoutEffect(() => {
+    const waiting = waitingRef.current
+    const active = document.activeElement
+    if (!waiting) return
+    if (importing) {
+      if (
+        active instanceof HTMLElement &&
+        active !== waiting &&
+        panelRef.current?.contains(active)
+      ) {
+        focusAfterImport.current = active
+        waiting.focus()
+      }
+      return
+    }
+    const back = focusAfterImport.current
+    focusAfterImport.current = null
+    if (back?.isConnected && active === waiting) back.focus()
+  }, [importing])
 
   let content
   if (!image) {
@@ -74,8 +103,9 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
                   <Chip
                     key={v}
                     checked={on}
+                    disabled={importing}
                     aria-disabled={locked || undefined}
-                    aria-describedby={locked ? lastOneId : undefined}
+                    aria-describedby={idList(locked && lastOneId, busy)}
                     onCheckedChange={(next) => {
                       patch({ versions: withVersion(study, v, next).versions })
                     }}
@@ -106,6 +136,8 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
             value={study.blurPct}
             min={MIN_BLUR_PCT}
             max={MAX_BLUR_PCT}
+            disabled={importing}
+            describedBy={busy}
             onValueChange={within(MIN_BLUR_PCT, MAX_BLUR_PCT, (blurPct) => {
               patch({ blurPct })
             })}
@@ -126,6 +158,8 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
             value={study.values.count}
             min={MIN_VALUES}
             max={MAX_VALUES}
+            disabled={importing}
+            describedBy={busy}
             onValueChange={within(MIN_VALUES, MAX_VALUES, (count) => {
               patch({ values: { count } })
             })}
@@ -136,6 +170,8 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
           <HueSwatches
             legend={t('values.hue')}
             values={study.values}
+            disabled={importing}
+            describedBy={busy}
             onChange={(values) => {
               patch({ values })
             }}
@@ -145,6 +181,8 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
             value={study.values.hue}
             min={0}
             max={MAX_HUE}
+            disabled={importing}
+            describedBy={busy}
             onValueChange={within(0, MAX_HUE, (hue) => {
               patch({ values: { hue, neutral: false } })
             })}
@@ -159,7 +197,8 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
           <Button
             block
             icon="copy"
-            disabled={imageCount < 2}
+            disabled={imageCount < 2 || importing}
+            aria-describedby={busy}
             onClick={() => {
               const n = useImages.getState().applyStudyToAll(id)
               setAnnouncement((prev) => ({
@@ -177,7 +216,16 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
   }
 
   return (
-    <div className="studies-panel flex flex-col">
+    <div ref={panelRef} className="studies-panel flex flex-col">
+      <p
+        ref={waitingRef}
+        id={waitingId}
+        tabIndex={-1}
+        aria-live="polite"
+        className={importing ? `${HINT} pb-3` : HINT}
+      >
+        {importing ? t('panel.importing') : null}
+      </p>
       {content}
       <VisuallyHidden role="status" aria-live="polite">
         {announcement !== null ? <span key={announcement.seq}>{announcement.text}</span> : null}

@@ -3,7 +3,7 @@ import { useImages } from '../../features/images'
 import { useSettings } from '../../features/settings'
 import { DEFAULT_STUDY, studyEqual } from '../../shared/model/study'
 
-/** Owner Q5: the selected image's last-used blur and values become the defaults; versions never do (Q1). */
+/** Owner Q5/M2-1: the last-used blur and values (an edit to the selected image, or "Apply to all") become the defaults; versions never do (Q1). */
 export function StudyDefaultsEffect(): null {
   const defaults = useSettings((s) => s.studyDefaults)
 
@@ -14,6 +14,11 @@ export function StudyDefaultsEffect(): null {
   useEffect(
     () =>
       useImages.subscribe((s, prev) => {
+        if (s.appliedStudy !== prev.appliedStudy && s.appliedStudy !== null) {
+          const { blurPct, values } = s.appliedStudy.study
+          useSettings.getState().setStudyDefaults({ blurPct, values })
+          return
+        }
         if (s.images === prev.images || s.selectedId === null) return
         const now = s.images.find((i) => i.id === s.selectedId)?.study
         const before = prev.images.find((i) => i.id === s.selectedId)?.study

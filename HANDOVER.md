@@ -18,7 +18,7 @@ Later milestones add composition lines (some AI, in the browser), polish, and tr
 - **Everything runs in the browser.** Photos are never uploaded or persisted.
 - **Hosting:** GitHub Pages. The landing page is at `/artistica/` and the tool at `/artistica/app/`.
 - **Product spec:** [docs/spec.md](docs/spec.md). It is the source of truth.
-- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (built; awaiting owner sign-off), M3–M5 → `v0.3.0`–`v0.5.0`, M6 → `v1.0.0`.
+- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (signed off; release next), M3–M5 → `v0.3.0`–`v0.5.0`, M6 → `v1.0.0`.
 
 ## Current status
 
@@ -26,13 +26,13 @@ Later milestones add composition lines (some AI, in the browser), polish, and tr
 
 **M1 ("print-ready PDF from photos") is done** and released as [`v0.1.0`](https://github.com/omarcocarvalho/artistica/releases/tag/v0.1.0). Its plans are `docs/superpowers/plans/2026-10-03-m1-*.md` and its ledgers `docs/superpowers/ledgers/m1-*.md`. The owner's real-phone check found an export crash on an iPhone (22 × 24 MP HEIC); #75 fixed it by keeping compressed sources and 2048 px preview bitmaps, and decoding full resolution one image at a time at export.
 
-**M2 ("image studies") is built, reviewed and merged. It waits for the owner's sign-off.** Plan: [`2026-10-07-m2-overview.md`](docs/superpowers/plans/2026-10-07-m2-overview.md) and sub-plans A–D, approved by the owner on 2026-10-07 with every recommended default (PR #77). All 18 tasks are merged (#78, #79, #81–#95 and #97), then the milestone-wide final review in three parts and its fixes (#96, #98, #99). The full record — per-task review findings, rulings, deferred items and the owner questions — is in [`docs/superpowers/ledgers/m2.md`](docs/superpowers/ledgers/m2.md).
+**M2 ("image studies") is built, reviewed and merged, and the owner signed it off after the real-iPhone run.** The owner's answers to the M2 questions (#101) merged after that run. Plan: [`2026-10-07-m2-overview.md`](docs/superpowers/plans/2026-10-07-m2-overview.md) and sub-plans A–D, approved by the owner on 2026-10-07 with every recommended default (PR #77). All 18 tasks are merged (#78, #79, #81–#95 and #97), then the milestone-wide final review in three parts and its fixes (#96, #98, #99). The full record — per-task review findings, rulings, deferred items and the owner questions — is in [`docs/superpowers/ledgers/m2.md`](docs/superpowers/ledgers/m2.md).
 
 - **Exit criterion** ("an image next to its blurred version and its 5-value version prints correctly"): pinned by E2E test S-X1 in `e2e/studies.spec.ts` on chromium, firefox and webkit — three equal tiles, two JPEGs and one PNG with exactly 5 colours, the Blurred tile measurably blurred.
 - **Phone memory** (M3 in `e2e/mobile-flow.spec.ts`, 22 × 24 MP photos × 3 versions, CI): import 1169 MB, studies 1327 MB, settled 1150 MB, export 1285 MB, against budgets of 1500 / 1500 / 1700 MB.
 - **Phone controls** are 44 px on touch screens, and phone inputs use 16 px text so iOS doesn't zoom on focus (#97, owner answer H1).
 
-**Release:** the release-please PR [#80](https://github.com/omarcocarvalho/artistica/pull/80) (`chore(master): release 0.2.0`) is open. Don't merge it before the owner signs off.
+**Release:** the release-please PR [#80](https://github.com/omarcocarvalho/artistica/pull/80) (`chore(master): release 0.2.0`) is open and ready to merge.
 
 ## Branch map
 
@@ -43,34 +43,32 @@ Later milestones add composition lines (some AI, in the browser), polish, and tr
 
 ## Next steps (in order)
 
-1. **Owner sign-off for v0.2.0:** deploy `master` to Pages (`gh workflow run deploy-pages.yml --ref master`) and run the "M2 sign-off checklist (owner, on a real phone)" in the M2 overview on the owner's iPhone over HTTPS, including printing the exit-criterion sheet. Bring the owner questions below.
-2. **Release v0.2.0 after approval** (steps for any milestone):
+1. **Release v0.2.0** (signed off; steps for any milestone):
    1. Run `gh pr view <n> --json mergeable` on the release PR until it isn't `UNKNOWN`.
    2. Close and reopen the PR and wait for the checks to pass.
    3. Run `gh pr merge <n> --squash` from the main checkout. This creates the release and deploys to Pages.
-3. **Start M3** (composition lines): write the M3 plan in `docs/superpowers/plans/` and get owner approval **before** coding. Fold in the owner's answers below.
+2. **Start M3** (composition lines): write the M3 plan in `docs/superpowers/plans/` and get owner approval **before** coding. Bring the open owner questions below.
+
+## Owner answers from M2 (2026-10-07)
+
+The owner answered the questions raised in M2 (details in the M2 ledger). Three changed the app, in PR #101:
+
+- **M2-1, yes:** "Apply to all" counts as "last used". The applied study's blur %, value count, hue and neutral become the remembered defaults; versions still don't (new photos start Original only).
+- **M2-2, wait for imports:** while any photo is importing, the Studies controls and "Apply to all images" are disabled, with a visible "Waiting for photos to finish importing…" hint (desktop tab and phone step). So "Apply to all" can't run while a photo is still importing.
+- **M2-4, yes:** removing the selected image selects the next one, or the previous one if it was last; nothing only when the list is empty.
+
+Kept as built: **M2-3** the one-photo hint copy; **M2-5** the mockup differences; **M2-6** no minimum lightness span for value studies. **M2-7** and **M2-8** were not answered, so their defaults stand: ship v0.2.0 with phone memory growing with page count (gated by the real-phone run) and defer "visible pages only" to M5; keep plan labels in code comments.
 
 ## Owner questions (open)
 
 The spec doesn't answer these. Nothing was changed for them.
-
-**Raised in M2** (details in the M2 ledger):
-
-- **M2-1.** Should "Apply to all" count as "last used" for the remembered study defaults?
-- **M2-2.** A photo whose import finishes after "Apply to all" gets the default study, not the applied one. Change?
-- **M2-3.** Copy for the single-image "Apply to all" hint ("Add another photo to copy these settings to it.").
-- **M2-4.** Removing the selected image on desktop leaves nothing selected. Move the selection to the next image?
-- **M2-5.** Mockup differences: tab icons, a bare "5" readout, an image-name label under each group outline — adopt or accept as built?
-- **M2-6.** Value studies of low-contrast photos stretch noise into full-contrast speckle. Add a minimum lightness span?
-- **M2-7.** Ship with phone memory growing with page count (gated by the real-phone run), and defer "visible pages only" to M5?
-- **M2-8.** Plan-label shortcodes in code comments (`M2-R5`, `Q11`, …): keep, or remove in M5?
 
 **Left open from M1** (Q1 was answered in M2 as H1: phone controls are now 44 px):
 
 2. **Phone export:** export opens the same centred dialog as on desktop (ruling Q10). `design/mobile-flow.html` shows it inline in the Export step, and the user currently meets two "Create PDF" buttons in a row. Keep it, make it a bottom sheet, or put it inline?
 3. **Disabled Export button:** should the reason it is disabled be visible? Today it is only announced to screen readers.
 4. **Export file name:** `artistica-A4-…` (as in the spec's D10 example) or `artistica-a4-…` (as in the mockup)?
-5. **Cancelling imports:** should the user be able to cancel a pending import, such as a slow link? "Remove all" is hidden while no image has loaded yet.
+5. **Cancelling imports:** should the user be able to cancel a pending import, such as a slow link? "Remove all" is hidden while no image has loaded yet. Since M2-2, a pending import also keeps the Studies controls disabled until it ends (a link stalls out after 30 s without progress).
 6. **Duplicate photos:** the same file added twice is kept as two images. Keep that, merge them, or flag them?
 7. **Phone image limit:** decoding up to 200 MP is allowed and will likely crash a phone tab. Should phones get a lower limit?
 8. **Custom paper vs the 5100 px downscale cap:** custom paper goes up to 1200 mm, but 5100 px covers only about 432 mm at 300 DPI. Large custom pages show early low-DPI warnings. Raise the cap for Custom, or accept the limit?
@@ -159,7 +157,7 @@ The final review triaged every "minor (deferred)" line in `docs/superpowers/ledg
 **Memory (M5)**
 
 - **Per-image memory:** each image keeps its compressed source Blob and a preview ImageBitmap of at most `PREVIEW_LONG_SIDE_PX` (2048 px, about 12.6 MB). Export decodes one image at a time at full size from the source. The M3 E2E test guards the browser's RSS with 22 × 24 MP photos and three study versions. Export is slower than holding full-size bitmaps, because every image is decoded again.
-- **Pages:** every mounted page keeps its canvases and its wanted study tiles, so phone memory grows with the page count. Wanting study tiles only for pages near the viewport is the planned fix (owner question M2-7).
+- **Pages:** every mounted page keeps its canvases and its wanted study tiles, so phone memory grows with the page count. Wanting study tiles only for pages near the viewport is the planned fix, deferred to M5 (M2-7 default).
 - **Study worker:** a worker killed without an `error` event leaves the preview study queue busy (no job timeout). Export is unaffected.
 - **Downloads waiting to decode:** finished URL downloads wait for a decode slot without holding a download slot. Memory is bounded only by how fast links download compared with how fast images decode.
 - **CORS probe:** the probe request after a failed fetch keeps its own 8 s timeout and is not cancelled by "Remove all". Its result is discarded.

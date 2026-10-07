@@ -82,6 +82,12 @@
   .studies-panel .ds-chip[aria-disabled='true'] {
     cursor: not-allowed;
   }
+  .studies-panel .ds-chip:disabled,
+  .studies-panel .studies-swatch:disabled,
+  .studies-panel .ds-slider input[type='range']:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
 
   @media (pointer: coarse), (max-width: 959.98px) {
     .studies-panel .ds-chip,

@@ -424,7 +424,7 @@ test.describe('import (chromium only)', () => {
       .toBeGreaterThan(1000)
   })
 
-  test('I14 removing images: one at a time, then Remove all (confirmed with 2+, immediate with 1); selection clears', async ({
+  test('I14 removing images: one at a time, then Remove all (confirmed with 2+, immediate with 1); the selection moves to the next image', async ({
     page,
   }) => {
     const app = startApp(page)
@@ -437,7 +437,8 @@ test.describe('import (chromium only)', () => {
     await expect(page.getByRole('button', { name: 'Edit selected image' })).toBeEnabled()
     await app.removeButton('quadrants.jpg').click()
     await app.expectImages(2)
-    await expect(page.getByRole('button', { name: 'Edit selected image' })).toBeDisabled()
+    await expect(app.tile('transparent.png')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('button', { name: 'Edit selected image' })).toBeEnabled()
     await removeAll.click()
     await confirm.getByRole('button', { name: 'Cancel' }).click()
     await expect(confirm).toBeHidden()
