@@ -27,6 +27,19 @@ function memoryStorage(initial?: string): StateStorage & { data: Map<string, str
   }
 }
 
+function countingStorage(): StateStorage & { data: Map<string, string>; writes: () => number } {
+  const inner = memoryStorage()
+  let writes = 0
+  return {
+    ...inner,
+    setItem: (k, v) => {
+      writes++
+      inner.setItem(k, v)
+    },
+    writes: () => writes,
+  }
+}
+
 const saved = (storage: { data: Map<string, string> }) =>
   JSON.parse(storage.data.get(SETTINGS_STORAGE_KEY) ?? 'null') as {
     version: number
@@ -437,11 +450,23 @@ describe('study defaults (schema v2)', () => {
     expect(saved(storage).state.studyDefaults).toEqual(next)
   })
 
-  it('keeps the same state when setStudyDefaults gets equal values (no storage write churn)', () => {
+  it('keeps the same state when setStudyDefaults gets equal values', () => {
     const store = createSettingsStore(memoryStorage())
     const before = store.getState().studyDefaults
     store.getState().setStudyDefaults({ ...before, values: { ...before.values } })
     expect(store.getState().studyDefaults).toBe(before)
+  })
+
+  it('writes nothing to storage when setStudyDefaults gets equal values', () => {
+    const storage = countingStorage()
+    const store = createSettingsStore(storage)
+    store.getState().setStudyDefaults({ blurPct: 10, values: DEFAULT_STUDY.values })
+    const writes = storage.writes()
+    const listened: unknown[] = []
+    store.subscribe((s) => listened.push(s))
+    store.getState().setStudyDefaults({ blurPct: 10.2, values: { ...DEFAULT_STUDY.values } })
+    expect(storage.writes()).toBe(writes)
+    expect(listened).toEqual([])
   })
 })
 
@@ -547,12 +572,27 @@ describe('line defaults (schema v3)', () => {
     expect(store.getState().lineDefaults).toEqual(DEFAULT_LINES)
   })
 
-  it('keeps the same state when setLineDefaults gets equal values (no storage write churn)', () => {
+  it('keeps the same state when setLineDefaults gets equal values', () => {
     const store = createSettingsStore(memoryStorage())
     store.getState().setLineDefaults(allOn)
     const before = store.getState().lineDefaults
     store.getState().setLineDefaults({ ...allOn, thirds: false })
     expect(store.getState().lineDefaults).toBe(before)
+  })
+
+  it('writes nothing to storage when setLineDefaults gets values equal after normalising', () => {
+    const storage = countingStorage()
+    const store = createSettingsStore(storage)
+    store.getState().setLineDefaults(allOn)
+    const writes = storage.writes()
+    expect(writes).toBeGreaterThan(0)
+    const listened: unknown[] = []
+    store.subscribe((s) => listened.push(s))
+    store
+      .getState()
+      .setLineDefaults({ ...allOn, golden: false, style: { ...allOn.style, widthMm: 1.36 } })
+    expect(storage.writes()).toBe(writes)
+    expect(listened).toEqual([])
   })
 
   const anyValue = fc.oneof(

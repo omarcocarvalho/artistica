@@ -40,9 +40,9 @@ export interface SettingsState extends SettingsData {
   setUnit(unit: Unit): void
   setLanguage(language: LanguageCode | null): void
   setTheme(theme: Theme): void
-  /** Remember the last-used study settings (owner Q5, default). Normalised; same state when equal. */
+  /** Remember the last-used study settings (owner Q5, default). Normalised; no state change or storage write when equal. */
   setStudyDefaults(defaults: StudyDefaults): void
-  /** Remember the last-used line settings, every type off (owner Q7, default). Normalised; same state when equal. */
+  /** Remember the last-used line settings, every type off (owner Q7, default). Normalised; no state change or storage write when equal. */
   setLineDefaults(lines: LineSettings): void
   reset(): void
 }
@@ -123,7 +123,7 @@ export function createSettingsStore(
 ) {
   return create<SettingsState>()(
     persist(
-      (set) => ({
+      (set, get) => ({
         ...DEFAULT_SETTINGS,
         unit: initialUnit,
         pageSetupNotes: [],
@@ -142,23 +142,20 @@ export function createSettingsStore(
         setTheme: (theme) => {
           set({ theme })
         },
+        // Equal values skip `set`: persist writes storage on every `set`, even one that keeps the state.
         setStudyDefaults: (defaults) => {
-          set((state) => {
-            const next = normalizeStudyDefaults(defaults)
-            const cur = state.studyDefaults
-            const equal =
-              next.blurPct === cur.blurPct &&
-              next.values.count === cur.values.count &&
-              next.values.hue === cur.values.hue &&
-              next.values.neutral === cur.values.neutral
-            return equal ? state : { studyDefaults: next }
-          })
+          const next = normalizeStudyDefaults(defaults)
+          const cur = get().studyDefaults
+          const equal =
+            next.blurPct === cur.blurPct &&
+            next.values.count === cur.values.count &&
+            next.values.hue === cur.values.hue &&
+            next.values.neutral === cur.values.neutral
+          if (!equal) set({ studyDefaults: next })
         },
         setLineDefaults: (lines) => {
-          set((state) => {
-            const next = normalizeLineDefaults(lines)
-            return linesEqual(next, state.lineDefaults) ? state : { lineDefaults: next }
-          })
+          const next = normalizeLineDefaults(lines)
+          if (!linesEqual(next, get().lineDefaults)) set({ lineDefaults: next })
         },
         reset: () => {
           set({ ...DEFAULT_SETTINGS, unit: initialUnit, pageSetupNotes: [] })
