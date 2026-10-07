@@ -54,6 +54,14 @@ describe('readDrawColors', () => {
     expect(c.bleed).toBe(DEFAULT_PAGE_DRAW_COLORS.bleed)
     expect(readDrawColors(el).paper).toBe(DEFAULT_PAGE_DRAW_COLORS.paper)
   })
+
+  it('keeps the group outline colour the same in both themes (it sits on the white sheet)', () => {
+    const el = document.createElement('div')
+    const dark = readDrawColors(el, () => ({
+      getPropertyValue: (n: string) => (n === '--color-accent' ? '#ee8a63' : ''),
+    }))
+    expect(dark.group).toBe('#b0432a')
+  })
 })
 
 describe('useElementWidth', () => {

@@ -7,6 +7,8 @@ import { forScaledSource, planTilePixels, tileRenderKey } from '../pixels/tile-p
 import { readDrawColors } from '../preview/draw-colors'
 import { drawPage } from '../preview/draw-page'
 import { previewDpi, previewScale, tileHitAreas } from '../preview/preview-geometry'
+import { indexedStudyRequests } from '../preview/study-requests'
+import type { StudyTileProvider } from '../preview/study-tiles'
 import { releaseAllTileCanvases, syncTileCanvasCache } from '../preview/tile-cache'
 import { useDevicePixelRatio, useElementWidth } from '../preview/use-element-width'
 import type { PageModel } from '../types'
@@ -31,6 +33,8 @@ export interface PagePreviewProps {
   readonly label: string
   /** Image name for tile labels; falls back to preview:tile.fallbackName ("Image N"). */
   readonly getName?: (id: ImageId) => string
+  /** Renders study tiles off the main thread. Without it, study tiles draw as missing. */
+  readonly studyTiles?: StudyTileProvider
 }
 
 const createDomCanvas = (w: number, h: number): HTMLCanvasElement => {
@@ -53,9 +57,12 @@ export function PagePreview({
   guides,
   label,
   getName,
+  studyTiles,
 }: PagePreviewProps) {
-  const { t } = useTranslation('preview')
+  const { t } = useTranslation(['preview', 'studies'])
   const captionId = useId()
+  const consumer = useId()
+  const [studyTick, setStudyTick] = useState(0)
   const sheetRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [cache] = useState(() => new Map<string, HTMLCanvasElement>())
@@ -69,13 +76,35 @@ export function PagePreview({
   const areas = useMemo(() => tileHitAreas(model), [model])
 
   useEffect(() => {
+    if (!studyTiles) return
+    const unsubscribe = studyTiles.subscribe(() => {
+      setStudyTick((n) => n + 1)
+    })
+    return () => {
+      unsubscribe()
+      studyTiles.release(consumer)
+    }
+  }, [studyTiles, consumer])
+
+  useEffect(() => {
+    const dpi = previewDpi(scale)
+    const studies = indexedStudyRequests(model, dpi)
+    studyTiles?.want(
+      consumer,
+      studies.map((s) => s.request),
+    )
+    // Set on the DOM, not through state: pending only changes inside the provider.
+    if (studyTiles && studyTiles.pending(consumer) > 0)
+      sheetRef.current?.setAttribute('aria-busy', 'true')
+    else sheetRef.current?.removeAttribute('aria-busy')
     const canvas = canvasRef.current
     const ctx = width > 0 ? canvas?.getContext('2d') : null
     if (!canvas || !ctx) return // not measured yet, or no 2D canvas (tests): the overlay still works
     if (canvas.width !== scale.deviceW) canvas.width = scale.deviceW
     if (canvas.height !== scale.deviceH) canvas.height = scale.deviceH
-    const dpi = previewDpi(scale)
+    const studyByTile = new Map(studies.map((s) => [s.tileIndex, s.request]))
     const jobs = model.tiles.map((tile) => {
+      if (tile.study !== null) return null
       const source = getSourceRef.current(tile.imageId)
       if (!source) return null
       const plan = planTilePixels(tile, { dpi })
@@ -99,9 +128,13 @@ export function PagePreview({
     drawPage(ctx, model, scale, {
       showGuides: guides,
       colors: readDrawColors(canvas),
-      tileImage: (i) => rendered[i] ?? null,
+      tileImage: (i) => {
+        const study = studyByTile.get(i)
+        if (study) return studyTiles?.get(study.key, study.slot) ?? null
+        return rendered[i] ?? null
+      },
     })
-  }, [model, scale, width, guides, cache])
+  }, [model, scale, width, guides, cache, studyTiles, consumer, studyTick])
 
   useEffect(
     () => () => {
@@ -129,7 +162,12 @@ export function PagePreview({
         />
         {areas.map((area, i) => {
           const selected = area.imageId === selectedId
-          const name = nameOf(area.imageId, i)
+          const imageName = nameOf(area.imageId, i)
+          const versionLabel = t(`studies:version.${area.version}`)
+          const name =
+            area.version === 'original'
+              ? imageName
+              : t('tile.versionName', { name: imageName, version: versionLabel })
           const dpiId = `${captionId}-dpi-${String(i)}`
           const fitId = `${captionId}-fit-${String(i)}`
           return (
@@ -154,24 +192,34 @@ export function PagePreview({
                 height: `${String(area.heightPct)}%`,
               }}
             >
-              {selected && (
+              {area.groupSize > 1 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-1 left-1 rounded-[3px] bg-white/85 px-1.5 text-[10px] font-bold tracking-wide text-[#2b2420] uppercase"
+                >
+                  {versionLabel}
+                </span>
+              )}
+              {selected && area.firstInGroup && (
                 <span
                   aria-hidden="true"
                   className="bg-selection text-ink-inverse absolute -top-[22px] left-0 rounded px-1.5 text-[10px] font-bold whitespace-nowrap"
                 >
-                  {name}
+                  {imageName}
                 </span>
               )}
               {area.lowDpi && (
                 <>
-                  <Badge
-                    tone="warning"
-                    icon="warning"
-                    aria-hidden="true"
-                    className="absolute right-1 bottom-1 text-[10px] shadow-xs"
-                  >
-                    {t('tile.lowDpi', { dpi: area.dpi })}
-                  </Badge>
+                  {area.firstInGroup && (
+                    <Badge
+                      tone="warning"
+                      icon="warning"
+                      aria-hidden="true"
+                      className="absolute right-1 bottom-1 text-[10px] shadow-xs"
+                    >
+                      {t('tile.lowDpi', { dpi: area.dpi })}
+                    </Badge>
+                  )}
                   <span id={dpiId} className="sr-only">
                     {t('tile.lowDpiLabel', { dpi: area.dpi })}
                   </span>
@@ -179,14 +227,16 @@ export function PagePreview({
               )}
               {area.scaledToFit && (
                 <>
-                  <Badge
-                    tone="warning"
-                    icon="warning"
-                    aria-hidden="true"
-                    className="absolute bottom-1 left-1 text-[10px] shadow-xs"
-                  >
-                    {t('tile.scaledToFit')}
-                  </Badge>
+                  {area.firstInGroup && (
+                    <Badge
+                      tone="warning"
+                      icon="warning"
+                      aria-hidden="true"
+                      className="absolute bottom-1 left-1 text-[10px] shadow-xs"
+                    >
+                      {t('tile.scaledToFit')}
+                    </Badge>
+                  )}
                   <span id={fitId} className="sr-only">
                     {t('tile.scaledToFitLabel')}
                   </span>

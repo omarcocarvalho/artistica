@@ -1,6 +1,7 @@
 {
   "tile": {
     "fallbackName": "Image {{n}}",
+    "versionName": "{{name}}, {{version}}",
     "lowDpi": "{{dpi}} DPI",
     "lowDpiLabel": "Low resolution: {{dpi}} DPI",
     "scaledToFit": "Scaled to fit",
