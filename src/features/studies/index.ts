@@ -37,3 +37,4 @@ export {
   type StudyPreviewProvider,
 } from './preview/provider'
 // --- components (D1) ---
+export { StudiesPanel, type StudiesPanelProps } from './components/StudiesPanel'
