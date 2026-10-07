@@ -1,5 +1,11 @@
-export { DEFAULT_SETTINGS, THEMES, parseSettings, settingsSchema } from './schema'
-export type { SettingsData, Theme } from './schema'
+export {
+  DEFAULT_SETTINGS,
+  THEMES,
+  normalizeStudyDefaults,
+  parseSettings,
+  settingsSchema,
+} from './schema'
+export type { SettingsData, StudyDefaults, Theme } from './schema'
 export {
   SETTINGS_STORAGE_KEY,
   SETTINGS_VERSION,

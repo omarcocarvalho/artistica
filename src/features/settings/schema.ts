@@ -7,23 +7,31 @@ import {
   type Orientation,
   type PageSetup,
 } from '../../shared/model/page-setup'
+import { DEFAULT_STUDY, sanitizeStudy, type StudySettings } from '../../shared/model/study'
 import type { Unit } from '../../shared/model/units'
 
 export const THEMES = ['auto', 'light', 'dark'] as const
 export type Theme = (typeof THEMES)[number]
+
+/** Owner Q5 (default): blur %, value count and hue are remembered; versions are not. */
+export type StudyDefaults = Omit<StudySettings, 'versions'>
 
 export interface SettingsData {
   readonly pageSetup: PageSetup
   readonly unit: Unit
   readonly language: LanguageCode | null
   readonly theme: Theme
+  readonly studyDefaults: StudyDefaults
 }
+
+const DS: StudyDefaults = { blurPct: DEFAULT_STUDY.blurPct, values: DEFAULT_STUDY.values }
 
 export const DEFAULT_SETTINGS: SettingsData = {
   pageSetup: DEFAULT_PAGE_SETUP,
   unit: 'mm',
   language: null,
   theme: 'auto',
+  studyDefaults: DS,
 }
 
 const D = DEFAULT_PAGE_SETUP
@@ -56,11 +64,34 @@ const pageSetupSchema = z.object({
     .catch(D.bleed),
 })
 
+/**
+ * Total, like pageSetupSchema, but it checks types only: ranges belong to `sanitizeStudy`, so a
+ * stored value is clamped or wrapped exactly as `setStudyDefaults` would. Unknown keys (e.g. a
+ * stored `versions`) are stripped.
+ */
+const studyDefaultsSchema = z.object({
+  blurPct: z.number().catch(DS.blurPct),
+  values: z
+    .object({
+      count: z.number().catch(DS.values.count),
+      hue: z.number().catch(DS.values.hue),
+      neutral: z.boolean().catch(DS.values.neutral),
+    })
+    .catch(DS.values),
+})
+
+/** The one normalisation for study defaults, on load and in `setStudyDefaults`. Drops `versions`. */
+export function normalizeStudyDefaults(defaults: StudyDefaults): StudyDefaults {
+  const study = sanitizeStudy({ ...defaults, versions: DEFAULT_STUDY.versions })
+  return { blurPct: study.blurPct, values: study.values }
+}
+
 export const settingsSchema = z.object({
   pageSetup: pageSetupSchema.catch(D),
   unit: z.enum(['mm', 'in']).catch(DEFAULT_SETTINGS.unit),
   language: z.enum(LANGUAGES).nullable().catch(null),
   theme: z.enum(THEMES).catch(DEFAULT_SETTINGS.theme),
+  studyDefaults: studyDefaultsSchema.catch(DS),
 })
 
 let warned = false
@@ -85,7 +116,7 @@ export function parseSettings(input: unknown): SettingsData {
     const { w, h } = parsed.pageSetup.customSize
     const customSize = w <= h ? { w, h } : { w: h, h: w }
     const pageSetup = normalizePageSetup({ ...parsed.pageSetup, customSize }).setup
-    return { ...parsed, pageSetup }
+    return { ...parsed, pageSetup, studyDefaults: normalizeStudyDefaults(parsed.studyDefaults) }
   } catch (error) {
     warnOnce(error)
     return DEFAULT_SETTINGS

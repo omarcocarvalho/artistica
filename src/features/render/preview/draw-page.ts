@@ -13,6 +13,8 @@ export interface PageDrawColors {
   readonly cut: string
   readonly mark: string
   readonly missing: string
+  /** Study group outline (screen-only, M2-R14). */
+  readonly group: string
 }
 
 /** Fallbacks mirror design/tokens.css (--color-paper, --color-guide-*, --color-crop-mark). */
@@ -23,6 +25,7 @@ export const DEFAULT_PAGE_DRAW_COLORS: PageDrawColors = {
   cut: 'rgba(0, 0, 0, 0.35)',
   mark: '#000000',
   missing: '#e8e2d9',
+  group: '#b0432a',
 }
 
 export interface PageCtx {
@@ -40,6 +43,8 @@ export interface PageCtx {
   stroke(): void
   drawImage(image: CanvasImageSource, dx: number, dy: number, dw: number, dh: number): void
 }
+
+const GROUP_OUTLINE_GAP_MM = 2
 
 export interface DrawPageOptions {
   readonly showGuides: boolean
@@ -103,5 +108,9 @@ export function drawPage(
     ctx.strokeStyle = opts.colors.cut
     ctx.strokeRect(...px(tile.trim))
   }
+  ctx.lineWidth = 1.5
+  ctx.setLineDash([6, 4])
+  ctx.strokeStyle = opts.colors.group
+  for (const g of page.groups) ctx.strokeRect(...px(expandRect(g.block, GROUP_OUTLINE_GAP_MM)))
   ctx.setLineDash([])
 }
