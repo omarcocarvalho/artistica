@@ -287,6 +287,21 @@ describe('StudiesPanel', () => {
     expect(status).toHaveTextContent('All images already use these study settings.')
   })
 
+  it('P9 announces a repeated result again, as new content in the region', async () => {
+    const user = userEvent.setup()
+    seed({ a: { ...DEFAULT_STUDY, blurPct: 70 }, b: DEFAULT_STUDY })
+    render(<StudiesPanel imageId={A} />)
+    const status = liveRegion()
+    await user.click(screen.getByRole('button', { name: 'Apply to all images' }))
+    const first = status.firstChild
+    expect(status).toHaveTextContent('Study settings copied to 1 image.')
+    slide(screen.getByRole('slider', { name: 'Amount' }), 60)
+    await user.click(screen.getByRole('button', { name: 'Apply to all images' }))
+    expect(study(B)?.blurPct).toBe(60)
+    expect(status).toHaveTextContent('Study settings copied to 1 image.')
+    expect(status.firstChild).not.toBe(first)
+  })
+
   it('P9 keeps the status region mounted and clears it when the image changes', async () => {
     const user = userEvent.setup()
     seed({ a: { ...DEFAULT_STUDY, blurPct: 70 }, b: DEFAULT_STUDY })
