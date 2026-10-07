@@ -47,7 +47,7 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
     const patch = (p: StudyPatch) => {
       useImages.getState().updateStudy(id, p)
     }
-    // The store resets NaN to the global default, not to this image's value.
+    // Ignores out-of-range input: the store would clamp it, and reset NaN to the global default.
     const within = (min: number, max: number, apply: (n: number) => void) => (n: number) => {
       if (Number.isFinite(n) && n >= min && n <= max) apply(n)
     }
