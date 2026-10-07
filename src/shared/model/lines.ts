@@ -90,7 +90,7 @@ const bool = (v: unknown): boolean => v === true
 const fieldsOf = (v: unknown): Readonly<Record<string, unknown>> =>
   typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {}
 
-/** Total and idempotent (M3-R16): any input, of any shape, becomes valid; each bad field takes its default alone. */
+/** Total and idempotent (M3-R16): plain data of any shape becomes valid; each bad field takes its default alone. */
 export function sanitizeLines(lines: LineSettings): LineSettings {
   const raw = fieldsOf(lines)
   const grid = fieldsOf(raw.grid)
