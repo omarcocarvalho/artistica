@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { AppPage } from './support/app.ts'
+import { AppPage, colourDistance } from './support/app.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { FIXTURES } from './support/fixtures.ts'
 import { mmToPt, summarizePdf } from './support/pdf.ts'
@@ -193,10 +193,12 @@ test.describe('page setup and export (chromium)', () => {
     await app.expectImages(20)
     await app.expectPreviewPages(1)
     await expect(page.getByText(/Page 1 of \d+ · A4/).first()).toBeVisible()
-    const start = Date.now()
+    await expect(page.locator('main [aria-busy="true"]')).toHaveCount(0)
+    // The caption reads the paper from the settings store, so it changes before the layout runs.
+    await armRedrawTimer(page, 'input')
     await app.setPaper('Letter')
-    await expect(page.getByText(/Page 1 of \d+ · Letter/).first()).toBeVisible({ timeout: 5_000 })
-    const ms = Date.now() - start
+    const ms = await layoutMs(page, 5_000)
+    await expect(page.getByText(/Page 1 of \d+ · Letter/).first()).toBeVisible()
     testInfo.annotations.push({ type: 'preview-update-ms', description: String(ms) })
     expect(ms).toBeLessThan(1000)
   })
@@ -249,6 +251,237 @@ test.describe('page setup and export (chromium)', () => {
     await expect(dialog).toHaveCount(0)
     const info = await summarizePdf((await app.exportPdf()).bytes)
     expect(info.pageCount).toBeGreaterThanOrEqual(4)
+  })
+})
+
+interface RedrawTimer {
+  start: number
+  slotBusySeen: boolean
+  layoutEnd: number
+  sheetBusySeen: boolean
+  end: number
+}
+interface TimerWindow {
+  __redraw?: RedrawTimer
+  performance: { now(): number }
+  requestAnimationFrame(cb: () => void): void
+  document: {
+    querySelector(sel: string): unknown
+    addEventListener(type: string, cb: () => void, opts: { capture: boolean; once: boolean }): void
+  }
+  MutationObserver: new (cb: () => void) => {
+    observe(node: unknown, opts: object): void
+    disconnect(): void
+  }
+}
+
+/**
+ * Times, in the page, from the next `event` to two moments: the frame after the layout finished
+ * (`layoutEnd`: pages and original tiles drawn), and the moment the preview is idle again after one
+ * of its sheets was busy with study tiles (`end`: a sheet clears aria-busy in the same task that
+ * draws them).
+ */
+async function armRedrawTimer(page: Page, event: 'input' | 'click'): Promise<void> {
+  await page.evaluate((type) => {
+    const w = globalThis as unknown as TimerWindow
+    const t: RedrawTimer = {
+      start: 0,
+      slotBusySeen: false,
+      layoutEnd: 0,
+      sheetBusySeen: false,
+      end: 0,
+    }
+    w.__redraw = t
+    w.document.addEventListener(
+      type,
+      () => {
+        t.start = w.performance.now()
+      },
+      { capture: true, once: true },
+    )
+    const observer = new w.MutationObserver(() => {
+      if (t.start === 0 || t.end !== 0) return
+      const slotBusy = w.document.querySelector('main [aria-busy="true"]:has(figure)') !== null
+      if (slotBusy) t.slotBusySeen = true
+      else if (t.slotBusySeen && t.layoutEnd === 0) {
+        t.layoutEnd = -1
+        w.requestAnimationFrame(() => {
+          t.layoutEnd = w.performance.now()
+        })
+      }
+      if (w.document.querySelector('main figure [aria-busy="true"]') !== null)
+        t.sheetBusySeen = true
+      else if (t.sheetBusySeen && w.document.querySelector('main [aria-busy="true"]') === null) {
+        t.end = w.performance.now()
+        observer.disconnect()
+      }
+    })
+    observer.observe(w.document.querySelector('main'), {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['aria-busy'],
+    })
+  }, event)
+}
+
+async function redrawMs(
+  page: Page,
+  timeout: number,
+): Promise<{ layoutMs: number | null; studiesMs: number }> {
+  const read = () =>
+    page.evaluate(() => {
+      const t = (globalThis as unknown as TimerWindow).__redraw
+      return t && t.end > 0
+        ? { layoutMs: t.layoutEnd > 0 ? t.layoutEnd - t.start : null, studiesMs: t.end - t.start }
+        : null
+    })
+  await expect.poll(read, { timeout }).not.toBeNull()
+  const r = await read()
+  if (!r) throw new Error('unreachable: polled until set')
+  return {
+    layoutMs: r.layoutMs === null ? null : Math.round(r.layoutMs),
+    studiesMs: Math.round(r.studiesMs),
+  }
+}
+
+/** Milliseconds from the armed event to the frame after the layout finished. */
+async function layoutMs(page: Page, timeout: number): Promise<number> {
+  const read = () =>
+    page.evaluate(() => {
+      const t = (globalThis as unknown as TimerWindow).__redraw
+      return t && t.layoutEnd > 0 ? t.layoutEnd - t.start : null
+    })
+  await expect.poll(read, { timeout }).not.toBeNull()
+  return Math.round((await read()) ?? NaN)
+}
+
+const INTERIOR = [
+  [0.25, 0.25],
+  [0.75, 0.25],
+  [0.25, 0.75],
+  [0.75, 0.75],
+] as const
+
+const TOGGLES = [
+  ['Blurred', 81],
+  ['Values', 82],
+  ['Blur + Values', 83],
+  ['Blurred', 81],
+  ['Original', 82],
+  ['Blur + Values', 83],
+  ['Original', 0],
+] as const
+
+const TWENTY = [FIXTURES.quadrantsPng, ...Array<string>(19).fill(FIXTURES.quadrantsJpg)]
+
+test.describe('study preview timing and races (chromium)', () => {
+  runOnly('chromium')
+
+  test('X13-S study changes with 20 images: selected image, apply to all, page setting (recorded; CI bounds 1000 / 8000 / 1000 ms)', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(150_000)
+    const app = await loaded(page, TWENTY)
+    await app.openStudiesTab()
+    await app.selectButton('quadrants.png').click()
+    await expect(page.getByText('Studies for quadrants.png')).toBeVisible()
+    await app.setVersions(['Original', 'Blurred', 'Values'])
+    await expect(app.studyTile('quadrants.png', 'Values')).toBeAttached()
+    await app.expectPreviewSettled()
+
+    await armRedrawTimer(page, 'click')
+    await app.applyStudiesToAll()
+    const all = await redrawMs(page, 30_000)
+    await expect(app.pageFigures.getByRole('button')).toHaveCount(60)
+    await expect(app.studyTile('quadrants.jpg', 'Values')).toHaveCount(19)
+
+    await armRedrawTimer(page, 'input')
+    await app.setSlider('Amount', 90)
+    const blur = await redrawMs(page, 5_000)
+
+    await page.getByRole('tab', { name: 'Page' }).click()
+    await armRedrawTimer(page, 'input')
+    await app.setPaper('Letter')
+    const paper = await redrawMs(page, 30_000)
+    await expect(page.getByText(/Page 1 of \d+ · Letter/).first()).toBeVisible()
+
+    const timings = {
+      applyAllStudiesMs: all.studiesMs,
+      blurStudiesMs: blur.studiesMs,
+      paperLayoutMs: paper.layoutMs,
+      paperStudiesMs: paper.studiesMs,
+    }
+    for (const [type, ms] of Object.entries(timings))
+      testInfo.annotations.push({ type, description: String(ms) })
+    console.log(`study timing: ${JSON.stringify(timings)}`)
+    expect(all.studiesMs).toBeLessThan(8000) // spec §3: 2 s on a desktop; CI bound 8 s
+    expect(blur.studiesMs).toBeLessThan(1000) // spec §3: 200 ms on a desktop; CI bound 1000 ms
+    expect(paper.layoutMs).not.toBeNull()
+    expect(paper.layoutMs ?? Infinity).toBeLessThan(1000) // spec §3: 200 ms on a desktop; CI bound 1000 ms
+  })
+
+  test('X13-V version toggles while layouts are in flight end with the right tiles and pixels', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(120_000)
+    const app = await loaded(page, TWENTY)
+    await app.openStudiesTab()
+    await app.selectButton('quadrants.png').click()
+    await expect(page.getByText('Studies for quadrants.png')).toBeVisible()
+    // Clicked in the page so the pauses are exact: each pause outlasts the pipeline's 80 ms
+    // debounce, so a click that finds the preview still computing lands while a layout runs.
+    const inFlight = await page.evaluate(async (steps) => {
+      interface El {
+        textContent: string | null
+        click(): void
+      }
+      const doc = (
+        globalThis as unknown as {
+          document: { querySelector(s: string): El | null; querySelectorAll(s: string): El[] }
+        }
+      ).document
+      const chip = (name: string) => {
+        const found = [...doc.querySelectorAll('fieldset button[aria-pressed]')].find(
+          (b) => b.textContent?.trim() === name,
+        )
+        if (!found) throw new Error(`no chip ${name}`)
+        return found
+      }
+      let n = 0
+      for (const [name, pause] of steps) {
+        if (doc.querySelector('main [aria-busy="true"]:has(figure)') !== null) n++
+        chip(name).click()
+        await new Promise((r) => setTimeout(r, pause))
+      }
+      return n
+    }, TOGGLES)
+    await expect(app.versionChip('Original')).toHaveAttribute('aria-pressed', 'true')
+    await expect(app.versionChip('Values')).toHaveAttribute('aria-pressed', 'true')
+    await expect(app.versionChip('Blurred')).toHaveAttribute('aria-pressed', 'false')
+    await expect(app.versionChip('Blur + Values')).toHaveAttribute('aria-pressed', 'false')
+    await app.expectPreviewSettled()
+    testInfo.annotations.push({ type: 'clicks-during-layout', description: String(inFlight) })
+    console.log(`clicks during a running layout: ${String(inFlight)} of ${String(TOGGLES.length)}`)
+    expect(inFlight).toBeGreaterThan(0)
+
+    await expect(app.pageFigures.getByRole('button')).toHaveCount(21)
+    await expect(app.tile('quadrants.png')).toHaveCount(1)
+    await expect(app.studyTile('quadrants.png', 'Values')).toHaveCount(1)
+    await expect(app.studyTile('quadrants.png', 'Blurred')).toHaveCount(0)
+    await expect(app.studyTile('quadrants.png', 'Blur + Values')).toHaveCount(0)
+    const ramp = await app.rampColours()
+    expect(ramp).toHaveLength(5)
+    for (const [fx, fy] of INTERIOR) {
+      expect(
+        colourDistance(await app.tilePixel(app.studyTile('quadrants.png', 'Values'), fx, fy), ramp),
+      ).toBeLessThanOrEqual(3)
+    }
+    const originalOffRamp = await Promise.all(
+      INTERIOR.map(async ([fx, fy]) =>
+        colourDistance(await app.tilePixel(app.tile('quadrants.png'), fx, fy), ramp),
+      ),
+    )
+    expect(Math.max(...originalOffRamp)).toBeGreaterThan(20)
   })
 })
 

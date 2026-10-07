@@ -106,6 +106,21 @@ describe('createPipeline', () => {
     expect(sink.failed).toHaveBeenCalledTimes(1)
   })
 
+  it('ignores a real failure of a superseded call: only the current call reports', async () => {
+    const { pipeline, sink, resolvers, rejecters } = setup()
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
+    await vi.advanceTimersByTimeAsync(80)
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('b')])
+    await vi.advanceTimersByTimeAsync(80)
+    rejecters[0]?.(new Error('worker crashed'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(sink.failed).not.toHaveBeenCalled()
+    resolvers[1]?.(layoutOf(2))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(sink.done).toHaveBeenCalledTimes(1)
+    expect(sink.failed).not.toHaveBeenCalled()
+  })
+
   it('with no images it still asks for the empty layout (the per-page suggestion shows on an empty workspace) and reports no pages', async () => {
     const { pipeline, deps, sink, resolvers } = setup()
     pipeline.schedule(DEFAULT_PAGE_SETUP, [])

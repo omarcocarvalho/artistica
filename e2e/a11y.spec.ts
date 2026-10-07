@@ -194,5 +194,34 @@ test.describe('phone steps (mobile-chromium)', () => {
         await expectNoAxeViolations(page)
       }
     })
+
+    test(`Studies step with a study group, its preview and the edit sheet (${scheme})`, async ({
+      page,
+    }) => {
+      test.setTimeout(90_000)
+      await page.emulateMedia({ colorScheme: scheme })
+      const app = startApp(page)
+      await app.goto()
+      await app.upload(FILES)
+      await app.expectImages(2)
+      await app.goToStep('Studies')
+      await app.pickStudiesImage('quadrants.jpg')
+      await app.setVersions(['Original', 'Values'])
+      await expect(app.versionChip('Values')).toHaveAttribute('aria-pressed', 'true')
+      await expectNoAxeViolations(page)
+      await app.setVersions(['Values'])
+      await expect(app.versionChip('Values')).toHaveAttribute('aria-disabled', 'true')
+      await expectNoAxeViolations(page)
+      await app.setVersions(['Original', 'Values'])
+      await app.goToStep('Preview')
+      await expect(app.studyTile('quadrants.jpg', 'Values')).toBeAttached()
+      await app.expectPreviewSettled()
+      await expectNoAxeViolations(page)
+      await app.goToStep('Images')
+      await app.editButton('quadrants.jpg').click()
+      const sheet = page.getByRole('dialog')
+      await expect(sheet).toBeVisible()
+      await expectNoAxeViolations(page)
+    })
   }
 })

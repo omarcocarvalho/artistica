@@ -194,6 +194,8 @@ test.describe('phone', () => {
 
     await app.goToStep('Export')
     const create = page.getByRole('main').getByRole('button', { name: 'Create PDF' })
+    // Create PDF is aria-disabled until the layout after the import is done; a press before that does nothing.
+    await expect(create).not.toHaveAttribute('aria-disabled')
     await press(create)
     const dialog = page.getByRole('dialog', { name: 'Export PDF' })
     await expect(dialog).toBeVisible()

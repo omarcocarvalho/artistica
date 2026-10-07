@@ -243,6 +243,38 @@ export class AppPage {
     )
   }
 
+  // --- Studies, phone (D4) ---
+  get studiesPicker(): Locator {
+    return this.page.getByRole('radiogroup', { name: 'Image' })
+  }
+  /** Taps the thumbnail: the radio itself is visually hidden inside its label. */
+  async pickStudiesImage(name: string): Promise<void> {
+    const radio = this.studiesPicker.getByRole('radio', { name, exact: true })
+    await radio.locator('xpath=ancestor::label').click()
+    await expect(radio).toBeChecked()
+  }
+  /** sRGB colours of the Studies panel's ramp strip, darkest first. */
+  async rampColours(): Promise<number[][]> {
+    return this.page
+      .getByRole('img', { name: /values, from darkest to lightest tint/ })
+      .locator('span')
+      .evaluateAll((spans: { style: { backgroundColor: string } }[]) =>
+        spans.map((s) => (s.style.backgroundColor.match(/\d+/g) ?? []).map(Number)),
+      )
+  }
+  /** Pixel of the preview canvas under a point of a tile button (fx, fy in 0..1 of the tile). */
+  async tilePixel(tile: Locator, fx: number, fy: number): Promise<number[]> {
+    const box = await tile.boundingBox()
+    const canvas = tile.locator('xpath=ancestor::figure').locator('canvas')
+    const cbox = await canvas.boundingBox()
+    if (!box || !cbox) throw new Error('tile or canvas not laid out')
+    return readCanvasPixel(
+      canvas,
+      (box.x + fx * box.width - cbox.x) / cbox.width,
+      (box.y + fy * box.height - cbox.y) / cbox.height,
+    )
+  }
+
   /** Pixel (fx, fy in 0..1) of a page canvas as [r,g,b,a]. */
   async canvasPixel(fx: number, fy: number, index = 0): Promise<number[]> {
     return this.pageCanvases.nth(index).evaluate(
@@ -265,4 +297,33 @@ export class AppPage {
       [fx, fy] as [number, number],
     )
   }
+}
+
+/** Largest channel difference between a pixel and the closest colour of a palette. */
+export function colourDistance(px: readonly number[], palette: readonly number[][]): number {
+  return Math.min(
+    ...palette.map((c) => Math.max(...c.map((ch, i) => Math.abs(ch - (px[i] ?? NaN))))),
+  )
+}
+
+function readCanvasPixel(canvas: Locator, fx: number, fy: number): Promise<number[]> {
+  return canvas.evaluate(
+    (
+      c: {
+        width: number
+        height: number
+        getContext(id: '2d'): {
+          getImageData(x: number, y: number, w: number, h: number): { data: ArrayLike<number> }
+        } | null
+      },
+      [x, y]: [number, number],
+    ) => {
+      const g = c.getContext('2d')
+      if (!g) throw new Error('canvas is not 2d')
+      return Array.from(
+        g.getImageData(Math.floor(c.width * x), Math.floor(c.height * y), 1, 1).data,
+      )
+    },
+    [fx, fy] as [number, number],
+  )
 }
