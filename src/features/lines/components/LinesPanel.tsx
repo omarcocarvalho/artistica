@@ -39,9 +39,6 @@ const PLAIN_TYPES = [
   'golden',
 ] as const satisfies readonly CompositionLineType[]
 
-const toStep = (mm: number) =>
-  Math.round(Math.round(mm / LINE_WIDTH_STEP_MM) * LINE_WIDTH_STEP_MM * 100) / 100
-
 /** The Lines controls for one image (design/lines.html). Content only: the shell adds chrome. */
 export function LinesPanel({ imageId }: LinesPanelProps) {
   const { t } = useTranslation('lines')
@@ -210,7 +207,7 @@ export function LinesPanel({ imageId }: LinesPanelProps) {
             describedBy={busy}
             onValueChange={(mm) => {
               if (mm < MIN_LINE_WIDTH_MM || mm > MAX_LINE_WIDTH_MM) return
-              patch({ style: { widthMm: toStep(mm) } })
+              patch({ style: { widthMm: mm } })
             }}
             formatValue={(mm) => t('thickness.value', { mm })}
             minLabel={t('thickness.value', { mm: MIN_LINE_WIDTH_MM })}
@@ -225,7 +222,7 @@ export function LinesPanel({ imageId }: LinesPanelProps) {
             describedBy={busy}
             onValueChange={(pct) => {
               if (pct < MIN_LINE_OPACITY_PCT || pct > MAX_LINE_OPACITY_PCT) return
-              patch({ style: { opacityPct: Math.round(pct) } })
+              patch({ style: { opacityPct: pct } })
             }}
             formatValue={(pct) => t('opacity.value', { pct })}
             minLabel={t('opacity.value', { pct: MIN_LINE_OPACITY_PCT })}

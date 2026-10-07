@@ -266,6 +266,8 @@ describe('LinesPanel', () => {
     slide(opacity, 45)
     expect(lines(A)?.style.opacityPct).toBe(45)
     expect(opacity).toHaveAttribute('aria-valuetext', '45%')
+    sendRaw(opacity, '45.6')
+    expect(lines(A)?.style.opacityPct).toBe(46)
     const before = useImages.getState().images
     for (const bad of ['', 'abc', '9', '101']) {
       sendRaw(opacity, bad)
