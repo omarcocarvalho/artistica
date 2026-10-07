@@ -4,5 +4,59 @@
     "blurred": "Blurred",
     "values": "Values",
     "blurValues": "Blur + Values"
+  },
+  "panel": {
+    "forImage": "Studies for <strong>{{name}}</strong>",
+    "noImage": "Add a photo, or select one, to set up its studies."
+  },
+  "versions": {
+    "legend": "Print these versions",
+    "hint": "Each version is a tile. They print together, side by side.",
+    "lastOne": "At least one version prints."
+  },
+  "blur": {
+    "heading": "Blur",
+    "accent": "squint!",
+    "amount": "Amount",
+    "valueText": "{{pct}}%",
+    "min": "1%",
+    "max": "100%",
+    "hint": "Scales with image size, so {{pct}}% looks alike on every photo.",
+    "usedBy": "Used by Blurred and Blur + Values."
+  },
+  "values": {
+    "heading": "Values",
+    "count": "Number of values",
+    "countText_one": "{{count}} value",
+    "countText_other": "{{count}} values",
+    "min": "2 · notan",
+    "max": "20",
+    "hue": "Hue",
+    "customHue": "Custom hue",
+    "hueText": "{{deg}}°",
+    "ramp": "Value ramp",
+    "rampLabel": "{{count}} values, from darkest to lightest tint",
+    "darkest": "Darkest",
+    "lightest": "Lightest tint",
+    "hint": "Blur + Values blurs first, then splits into values.",
+    "usedBy": "Used by Values and Blur + Values."
+  },
+  "swatch": {
+    "sepia": "Sepia",
+    "terracotta": "Terracotta",
+    "ochre": "Ochre",
+    "sapGreen": "Sap green",
+    "teal": "Teal",
+    "ultramarine": "Ultramarine",
+    "violet": "Violet",
+    "neutral": "Neutral grey"
+  },
+  "applyAll": {
+    "button": "Apply to all images",
+    "hint_one": "Copies these study settings to all {{count}} image.",
+    "hint_other": "Copies these study settings to all {{count}} images.",
+    "done_one": "Study settings copied to {{count}} image.",
+    "done_other": "Study settings copied to {{count}} images.",
+    "nothingChanged": "All images already use these study settings."
   }
 }

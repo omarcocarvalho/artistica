@@ -31,3 +31,4 @@ export { LIGHTNESS_BINS, VALUE_CLIP, lightnessRange, posterizeRGBA, valueIndex }
 export type { LightnessRange } from './posterize'
 // --- preview (C1, C2) ---
 // --- components (D1) ---
+export { StudiesPanel, type StudiesPanelProps } from './components/StudiesPanel'
