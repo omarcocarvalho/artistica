@@ -4,8 +4,9 @@ import type { SizeMm } from '../../../shared/model/paper'
 import { tileStudyFor } from '../../../shared/model/study'
 import type { Mm } from '../../../shared/model/units'
 import type { LayoutResult, Placement, RectMm } from '../../layout/types'
-import type { DrawTile, PageModel, StudyGroupOutline } from '../types'
+import type { DrawTile, PageModel, StudyGroupOutline, TileLines } from '../types'
 import { cropMarksForTiles } from './crop-marks'
+import { tileLinesFor } from './tile-lines'
 
 /** `null` → the full image; otherwise clamped to the image and at least 1 px each way. Fractional values are kept as is. */
 export function resolveCrop(img: Pick<ImageDescriptor, 'pxW' | 'pxH' | 'edits'>): CropRect {
@@ -96,10 +97,16 @@ export function buildPageModels(
   for (const page of layout.pages) {
     const tiles: DrawTile[] = []
     const groups: StudyGroupOutline[] = []
+    const lines: TileLines[] = []
     for (const placement of page.placements) {
       const img = byId.get(placement.imageId)
-      const drawn = img ? drawTilesFor(img, placement, bleedMm) : []
-      tiles.push(...drawn)
+      if (!img) continue
+      const drawn = drawTilesFor(img, placement, bleedMm)
+      for (const tile of drawn) {
+        const tl = tileLinesFor(img.lines, tile.trim, placement.turned, tiles.length)
+        if (tl) lines.push(tl)
+        tiles.push(tile)
+      }
       if (drawn.length >= 2) groups.push({ imageId: placement.imageId, block: placement.block })
     }
     if (tiles.length === 0) continue
@@ -110,6 +117,7 @@ export function buildPageModels(
       tiles,
       cropMarks: setup.cropMarks ? cropMarksForTiles(tiles, safeArea) : [],
       groups,
+      lines,
     })
   }
   return pages

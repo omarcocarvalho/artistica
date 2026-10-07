@@ -4,6 +4,8 @@ export { buildPageModels } from './page-model/build-page-models'
 export type { StudyGroupOutline } from './types'
 export { readingOrder } from './page-model/build-page-models'
 export { CROP_MARK_WIDTH_PT } from './page-model/crop-marks'
+export type { LineStroke, TileLines } from './types'
+export { MAX_LINE_CMDS_PER_TILE, tileLinesFor } from './page-model/tile-lines'
 // --- Preview (Task 5) ---
 export { PagePreview, type PagePreviewProps, type PreviewSource } from './components/PagePreview'
 export { GuidesToggle } from './components/GuidesToggle'
