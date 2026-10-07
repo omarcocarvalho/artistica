@@ -25,5 +25,6 @@ export type {
   TileStudy,
 } from '../../shared/model/study'
 // --- maths (A3–A5) ---
+export { blurSigmaPx, boxRadiiForGauss, gaussianBlurRGBA } from './blur'
 // --- preview (C1, C2) ---
 // --- components (D1) ---
