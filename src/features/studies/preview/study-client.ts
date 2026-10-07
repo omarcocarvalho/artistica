@@ -108,8 +108,6 @@ export function createStudyRenderer(
   })
 }
 
-/* v8 ignore start -- browser-only Worker and canvas wiring; the logic it drives (createStudyWorkerApi,
-   createStudyRenderer, createStudyPreviewProvider) is unit-tested, and D3/D4 drive this path in E2E. */
 function spawnWorkerEngine(): StudyEngine {
   const worker = new Worker(new URL('./study.worker.ts', import.meta.url), { type: 'module' })
   const remote = wrap<StudyWorkerApi>(worker)
@@ -162,7 +160,6 @@ function mainThreadEngine(): StudyEngine {
     ? createStudyWorkerApi(offscreenEnv())
     : createStudyWorkerApi(domCanvasEnv())
 }
-/* v8 ignore stop */
 
 let appProvider: StudyPreviewProvider<ImageBitmap> | null = null
 

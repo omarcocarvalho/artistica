@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { TilePixelPlan } from '../../render/pixels/tile-plan'
+import { FakeCanvas } from '../../render/test-support/fake-canvas'
 import { RENDERER_RESTARTED } from './provider'
 import { createAppStudyProvider, createStudyRenderer, type StudyEngine } from './study-client'
 import { request } from './test-support/fakes'
@@ -289,6 +290,200 @@ describe('createAppStudyProvider', () => {
       expect(clone.closed).toBe(1)
     })
     expect(preview.closed).toBe(0)
+  })
+
+  type WorkerReply = 'error' | 'messageerror' | { value: unknown }
+  interface WireMessage {
+    readonly id: string
+    readonly type: string
+    readonly path?: readonly string[]
+  }
+
+  /** A Worker that answers Comlink's APPLY calls by method name: a value, or an error event. */
+  function stubWorker(reply: (method: string) => WorkerReply) {
+    const made: FakeWorker[] = []
+    class FakeWorker {
+      readonly listeners = new Map<string, ((ev: unknown) => void)[]>()
+      readonly calls: { method: string; transfers: readonly unknown[] }[] = []
+      readonly messages: string[] = []
+      readonly terminate = vi.fn()
+      constructor() {
+        made.push(this)
+      }
+      addEventListener(type: string, listener: (ev: unknown) => void): void {
+        this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener])
+      }
+      readonly removeEventListener = vi.fn()
+      postMessage(msg: WireMessage, transfers: readonly unknown[] = []): void {
+        this.messages.push(msg.type)
+        if (msg.type !== 'APPLY') return
+        const method = msg.path?.[0] ?? ''
+        this.calls.push({ method, transfers })
+        const r = reply(method)
+        setTimeout(() => {
+          if (typeof r === 'string') this.emit(r, {})
+          else this.emit('message', { data: { id: msg.id, type: 'RAW', value: r.value } })
+        }, 0)
+      }
+      emit(type: string, ev: unknown): void {
+        for (const l of this.listeners.get(type) ?? []) l(ev)
+      }
+    }
+    vi.stubGlobal('Worker', FakeWorker)
+    return made
+  }
+
+  /** Main-thread OffscreenCanvas 2D, so the fallback renders in node; its bitmaps are recorded. */
+  function stubOffscreen() {
+    const outs: TestBitmap[] = []
+    class FakeOffscreen extends FakeCanvas {
+      transferToImageBitmap(): TestBitmap {
+        const out = Object.assign(bmp(this.width), { height: this.height })
+        outs.push(out)
+        return out
+      }
+    }
+    vi.stubGlobal('OffscreenCanvas', FakeOffscreen)
+    return outs
+  }
+
+  function stubPreview() {
+    const clones: TestBitmap[] = []
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn((_: unknown, _x: number, _y: number, w: number, h: number) => {
+        const clone = Object.assign(bmp(w), { height: h })
+        clones.push(clone)
+        return Promise.resolve(clone)
+      }),
+    )
+    vi.stubGlobal('requestAnimationFrame', vi.fn())
+    const preview = Object.assign(bmp(1000), { height: 667 })
+    return { clones, source: { bitmap: preview, pxW: 3000, pxH: 2000 } }
+  }
+
+  const SLOT = 'a|blurred|0:0'
+
+  it('transfers the clone to the worker and closes the worker’s result on dispose', async () => {
+    const out = bmp(100)
+    const workers = stubWorker((method) =>
+      method === 'init' ? { value: undefined } : { value: out },
+    )
+    const { clones, source } = stubPreview()
+    const p = createAppStudyProvider(() => source)
+    p.want('page0', [request('a', 'k1')])
+    await vi.waitFor(() => {
+      expect(p.get('k1', SLOT)).toBe(out)
+    })
+    const render = workers[0]?.calls.find((c) => c.method === 'renderStudyTile')
+    expect(render?.transfers).toEqual([clones[0]])
+    p.dispose()
+    expect(out.closed).toBe(1)
+    expect(workers[0]?.terminate).toHaveBeenCalledTimes(1)
+    expect(workers[0]?.messages.at(-1)).toBe('RELEASE')
+    expect(source.bitmap.closed).toBe(0)
+  })
+
+  it.each(['error', 'messageerror'] as const)(
+    'a worker %s during init: terminated once, the tile renders on the main thread',
+    async (event) => {
+      const workers = stubWorker((method) => (method === 'init' ? event : { value: bmp() }))
+      const outs = stubOffscreen()
+      const { clones, source } = stubPreview()
+      const p = createAppStudyProvider(() => source)
+      p.want('page0', [request('a', 'k1')])
+      await vi.waitFor(() => {
+        expect(p.get('k1', SLOT)).not.toBeNull()
+      })
+      expect(p.get('k1', SLOT)).toBe(outs.at(-1))
+      expect(workers).toHaveLength(1)
+      expect(workers[0]?.terminate).toHaveBeenCalledTimes(1)
+      expect(workers[0]?.calls.map((c) => c.method)).toEqual(['init'])
+      expect(clones.map((c) => c.closed)).toEqual([1])
+      p.dispose()
+    },
+  )
+
+  it.each(['error', 'messageerror'] as const)(
+    'a worker %s mid-job: that tile is re-cropped and rendered on the main thread, later tiles too',
+    async (event) => {
+      const workers = stubWorker((method) => (method === 'init' ? { value: undefined } : event))
+      const outs = stubOffscreen()
+      const { clones, source } = stubPreview()
+      const p = createAppStudyProvider(() => source)
+      p.want('page0', [request('a', 'k1'), request('a', 'k2', { slot: 'a|blurred|0:1' })])
+      await vi.waitFor(() => {
+        expect(p.get('k2', 'a|blurred|0:1')).not.toBeNull()
+      })
+      expect(p.get('k1', SLOT)).toBe(outs[0])
+      expect(p.get('k2', 'a|blurred|0:1')).toBe(outs[1])
+      expect(workers).toHaveLength(1)
+      expect(workers[0]?.terminate).toHaveBeenCalledTimes(1)
+      expect(workers[0]?.calls.map((c) => c.method)).toEqual(['init', 'renderStudyTile'])
+      expect(clones.map((c) => c.closed)).toEqual([1, 1, 1])
+      p.dispose()
+    },
+  )
+
+  it('without main-thread OffscreenCanvas 2D, the fallback renders on DOM canvases', async () => {
+    stubWorker((method) => (method === 'init' ? 'error' : { value: bmp() }))
+    vi.stubGlobal('OffscreenCanvas', undefined)
+    const made: { width: number; height: number }[] = []
+    vi.stubGlobal('document', {
+      createElement: (tag: string) => {
+        expect(tag).toBe('canvas')
+        let inner = new FakeCanvas(0, 0)
+        const canvas = {
+          get width() {
+            return inner.width
+          },
+          set width(w: number) {
+            inner = new FakeCanvas(w, inner.height)
+          },
+          get height() {
+            return inner.height
+          },
+          set height(h: number) {
+            inner = new FakeCanvas(inner.width, h)
+          },
+          getContext: (id: string) => inner.getContext(id),
+        }
+        made.push(canvas)
+        return canvas
+      },
+    })
+    const { clones, source } = stubPreview()
+    const encoded: TestBitmap[] = []
+    const crop = vi.mocked(createImageBitmap)
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn((src: unknown, ...box: number[]) => {
+        if (box.length > 0)
+          return crop(src as ImageBitmap, ...(box as [number, number, number, number]))
+        const out = bmp()
+        encoded.push(out)
+        return Promise.resolve(out)
+      }),
+    )
+    const p = createAppStudyProvider(() => source)
+    p.want('page0', [request('a', 'k1')])
+    await vi.waitFor(() => {
+      expect(p.get('k1', SLOT)).not.toBeNull()
+    })
+    expect(p.get('k1', SLOT)).toBe(encoded[0])
+    expect(made.length).toBeGreaterThan(0)
+    expect(made.every((c) => c.width === 0 && c.height === 0)).toBe(true)
+    expect(clones.map((c) => c.closed)).toEqual([1])
+    p.dispose()
+  })
+
+  it('a stale provider’s second dispose leaves the newer singleton in place', () => {
+    const p = createAppStudyProvider(() => undefined)
+    p.dispose()
+    const q = createAppStudyProvider(() => undefined)
+    p.dispose()
+    expect(createAppStudyProvider(() => undefined)).toBe(q)
+    q.dispose()
   })
 
   it('after dispose, the next call makes a fresh provider', () => {
