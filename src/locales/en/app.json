@@ -24,7 +24,8 @@
   "settingsTabs": {
     "label": "Settings",
     "page": "Page",
-    "studies": "Studies"
+    "studies": "Studies",
+    "lines": "Lines"
   },
   "empty": {
     "titleBefore": "Add some ",
@@ -64,6 +65,11 @@
     },
     "studies": {
       "picker": "Image"
+    },
+    "lines": {
+      "title": "Lines",
+      "separator": ", ",
+      "on": "{{count}} on"
     }
   },
   "import": {
@@ -82,6 +88,7 @@
       "portrait": "portrait",
       "landscape": "landscape"
     },
-    "itemVersion": "{{name}}, {{version}}, {{w}} × {{h}} mm"
+    "itemVersion": "{{name}}, {{version}}, {{w}} × {{h}} mm",
+    "itemLines": "{{item}}, lines: {{list}}"
   }
 }

@@ -20,6 +20,8 @@ describe('useAppUi', () => {
     expect(useAppUi.getState().settingsTab).toBe('page')
     useAppUi.getState().setSettingsTab('studies')
     expect(useAppUi.getState().settingsTab).toBe('studies')
+    useAppUi.getState().setSettingsTab('lines')
+    expect(useAppUi.getState().settingsTab).toBe('lines')
   })
   it('opens and closes the editor and the export dialog independently', () => {
     useAppUi.getState().openEdit(id)

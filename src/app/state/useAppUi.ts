@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { ImageId } from '../../shared/model/image'
 
 export type StepId = 'images' | 'page' | 'studies' | 'preview' | 'export'
-export type SettingsTab = 'page' | 'studies'
+export type SettingsTab = 'page' | 'studies' | 'lines'
 
 export interface AppUiState {
   step: StepId

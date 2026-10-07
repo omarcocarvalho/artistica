@@ -5,7 +5,7 @@ import { useImages } from '../../features/images'
 import { useSettings } from '../../features/settings'
 import type { ImageId } from '../../shared/model/image'
 import { Button, Callout, VisuallyHidden } from '../../shared/ui'
-import { describePage } from '../describe-page'
+import { describePage, type TileDescription } from '../describe-page'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import { usePages } from '../pages-store'
 import { useAppUi } from '../state/useAppUi'
@@ -16,7 +16,7 @@ const selectImage = (id: ImageId) => {
 }
 
 export function PreviewSlot() {
-  const { t } = useTranslation(['app', 'pageSetup', 'studies'])
+  const { t, i18n } = useTranslation(['app', 'pageSetup', 'studies', 'lines'])
   const pages = usePages((s) => s.pages)
   const layout = usePages((s) => s.layout)
   const status = usePages((s) => s.status)
@@ -29,6 +29,21 @@ export function PreviewSlot() {
   const getName = (id: ImageId) => names.get(id) ?? t('app:preview.unnamedImage')
   const paperLabel = paper === 'Custom' ? t('app:preview.customPaper') : paper
   const orientation = layout ? t(`app:preview.orientation.${layout.orientation}`) : ''
+  const listFormat = useMemo(() => new Intl.ListFormat(i18n.language), [i18n.language])
+  const describeTile = (d: TileDescription) => {
+    const item =
+      d.version === 'original'
+        ? t('app:preview.item', { name: d.name, w: d.widthMm, h: d.heightMm })
+        : t('app:preview.itemVersion', {
+            name: d.name,
+            version: t(`studies:version.${d.version}`),
+            w: d.widthMm,
+            h: d.heightMm,
+          })
+    if (d.lines.length === 0) return item
+    const list = listFormat.format(d.lines.map((type) => t(`lines:type.${type}`)))
+    return t('app:preview.itemLines', { item, list })
+  }
   const noRoom =
     layout !== null && images.length > 0 && layout.pages.length === 0 && status === 'idle'
 
@@ -74,16 +89,7 @@ export function PreviewSlot() {
           />
           <ul aria-label={t('app:preview.pageItems', { current: i + 1 })} className="sr-only">
             {describePage(model, names).map((d, k) => (
-              <li key={`${d.imageId}-${String(k)}`}>
-                {d.version === 'original'
-                  ? t('app:preview.item', { name: d.name, w: d.widthMm, h: d.heightMm })
-                  : t('app:preview.itemVersion', {
-                      name: d.name,
-                      version: t(`studies:version.${d.version}`),
-                      w: d.widthMm,
-                      h: d.heightMm,
-                    })}
-              </li>
+              <li key={`${d.imageId}-${String(k)}`}>{describeTile(d)}</li>
             ))}
           </ul>
         </div>

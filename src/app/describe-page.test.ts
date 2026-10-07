@@ -28,11 +28,36 @@ describe('describePage', () => {
         ]),
       ),
     ).toEqual([
-      { imageId: a, name: 'anna.jpg', version: 'original', widthMm: 100, heightMm: 60.1 },
-      { imageId: b, name: 'pears.heic', version: 'blurred', widthMm: 50, heightMm: 50 },
+      {
+        imageId: a,
+        name: 'anna.jpg',
+        version: 'original',
+        widthMm: 100,
+        heightMm: 60.1,
+        lines: [],
+      },
+      { imageId: b, name: 'pears.heic', version: 'blurred', widthMm: 50, heightMm: 50, lines: [] },
     ])
   })
   it('falls back to the id when a name is unknown', () => {
     expect(describePage(model, new Map())[0]?.name).toBe('a')
+  })
+  it('names the line types each tile prints, found by tile index (M3-R20)', () => {
+    const withLines = {
+      ...model,
+      tiles: [
+        ...model.tiles,
+        { imageId: a, version: 'values', trim: { x: 70, y: 80, w: 50, h: 50 } },
+      ],
+      lines: [
+        { tileIndex: 2, types: ['grid', 'centre'] },
+        { tileIndex: 0, types: ['thirds'] },
+      ],
+    } as unknown as PageModel
+    expect(describePage(withLines, new Map()).map((d) => d.lines)).toEqual([
+      ['thirds'],
+      [],
+      ['grid', 'centre'],
+    ])
   })
 })

@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useImages } from '../../features/images'
+import { LinesPanel } from '../../features/lines'
 import { PageSetupPanel } from '../../features/page-setup'
 import { Tabs } from '../../shared/ui'
 import { usePages } from '../pages-store'
@@ -18,16 +20,18 @@ function PageSetupSlot() {
   )
 }
 
-const SETTINGS_TABS: readonly SettingsTab[] = ['page', 'studies']
+const SETTINGS_TABS: readonly SettingsTab[] = ['page', 'studies', 'lines']
 const isSettingsTab = (id: string): id is SettingsTab => SETTINGS_TABS.some((tab) => tab === id)
 
 export function SettingsSlot({ variant }: { readonly variant: 'desktop' | 'phone' }) {
   const { t } = useTranslation('app')
   const tab = useAppUi((s) => s.settingsTab)
+  const selectedId = useImages((s) => s.selectedId)
   if (variant === 'phone') return <PageSetupSlot />
   const panels: Record<SettingsTab, ReactNode> = {
     page: <PageSetupSlot />,
     studies: <StudiesSlot variant="desktop" />,
+    lines: <LinesPanel imageId={selectedId} />,
   }
   return (
     <Tabs
