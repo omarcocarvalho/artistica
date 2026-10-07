@@ -116,8 +116,8 @@ function jobsByImage(pages: readonly PageModel[]): Map<ImageId, TileJob[]> {
 
 /**
  * Drives the export page by page. The first tile of an image decodes that image at full resolution
- * and encodes all of its tiles (every study version, on every page) before the bitmap is closed: each image is decoded
- * once and at most one full-resolution image is alive. Main-thread peak is that image plus one
+ * and encodes all of its tiles (every study version, on every page) before the bitmap is closed:
+ * each image is decoded once and at most one full-resolution image is alive. Main-thread peak is that image plus one
  * cropped clone; worker peak is one tile canvas. Identical tiles (same tileRenderKey) are encoded once.
  * On abort it rejects with an AbortError right away, even if a decode or worker call is in flight.
  */
