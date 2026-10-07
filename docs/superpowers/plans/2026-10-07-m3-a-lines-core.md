@@ -408,14 +408,13 @@ const seg = (x1: Mm, y1: Mm, x2: Mm, y2: Mm): PathCmd[] => [
 ]
 const verticals = (xs: readonly Mm[], h: Mm): PathCmd[] => xs.flatMap((x) => seg(x, 0, x, h))
 const horizontals = (ys: readonly Mm[], w: Mm): PathCmd[] => ys.flatMap((y) => seg(0, y, w, y))
-const interior = (n: number): number[] => Array.from({ length: Math.max(0, n - 1) }, (_, i) => (i + 1) / n)
+/** Multiply before dividing, so a 3-way split gives the same floats as `thirdsPaths`. */
+const interior = (n: number, side: Mm): Mm[] =>
+  Array.from({ length: Math.max(0, n - 1) }, (_, i) => ((i + 1) * side) / n)
 
 /** M3-R13. */
 export function gridPaths(cols: number, rows: number, { w, h }: FrameSize): PathCmd[] {
-  return [
-    ...verticals(interior(cols).map((f) => f * w), h),
-    ...horizontals(interior(rows).map((f) => f * h), w),
-  ]
+  return [...verticals(interior(cols, w), h), ...horizontals(interior(rows, h), w)]
 }
 export function thirdsPaths({ w, h }: FrameSize): PathCmd[] {
   return [...verticals([w / 3, (2 * w) / 3], h), ...horizontals([h / 3, (2 * h) / 3], w)]
