@@ -6,7 +6,7 @@ import {
   withVersion,
   type StudySettings,
 } from '../../shared/model/study'
-import { DEFAULT_LINES, linesKey, patchLines } from '../../shared/model/lines'
+import { DEFAULT_LINES, linesKey, patchLines, type LineSettings } from '../../shared/model/lines'
 import type { DecodedImage } from './decode'
 import { sha256Hex } from './content-hash'
 import { ImportFailure } from './errors'
@@ -952,5 +952,248 @@ describe('setDefaultStudy', () => {
     store.subscribe(listener)
     store.getState().setDefaultStudy(BLUR_VALUES)
     expect(listener).not.toHaveBeenCalled()
+  })
+})
+
+const STYLED: LineSettings = patchLines(DEFAULT_LINES, {
+  grid: { cols: 3, rows: 3 },
+  spiral: { corner: 'bottomRight' },
+  style: { colour: '#1f3fbf', widthMm: 1, opacityPct: 40 },
+})
+const LINED: LineSettings = patchLines(STYLED, { thirds: true, spiral: { on: true } })
+
+describe('updateLines', () => {
+  it('patches one image and leaves its study, its edits and the others alone', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    const [a, b] = store.getState().images
+    store.getState().updateLines(must(a).id, { thirds: true, grid: { on: true } })
+    const [a2, b2] = store.getState().images
+    expect(a2?.lines).toEqual({
+      ...DEFAULT_LINES,
+      thirds: true,
+      grid: { ...DEFAULT_LINES.grid, on: true },
+    })
+    expect(a2?.study).toBe(a?.study)
+    expect(a2?.edits).toBe(a?.edits)
+    expect(b2).toBe(b)
+  })
+
+  it('sanitizes through patchLines', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    store
+      .getState()
+      .updateLines('id-1' as ImageId, { grid: { cols: 99 }, style: { colour: '#ABCDEF' } })
+    expect(store.getState().images[0]?.lines.grid.cols).toBe(20)
+    expect(store.getState().images[0]?.lines.style.colour).toBe('#abcdef')
+  })
+
+  it('keeps the same state object when nothing changes, so descriptors stay memoised', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    store.getState().updateLines('id-1' as ImageId, { thirds: true })
+    const before = store.getState()
+    const descriptors = selectImageDescriptors(store.getState())
+    const listener = vi.fn()
+    store.subscribe(listener)
+    store.getState().updateLines('id-1' as ImageId, { thirds: true })
+    store.getState().updateLines('id-1' as ImageId, { style: { colour: '#E0457B' } })
+    store.getState().updateLines('id-1' as ImageId, {})
+    expect(store.getState()).toBe(before)
+    expect(selectImageDescriptors(store.getState())).toBe(descriptors)
+    expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('ignores an unknown id', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    const before = store.getState()
+    store.getState().updateLines('nope' as ImageId, { thirds: true })
+    expect(store.getState()).toBe(before)
+  })
+
+  it('descriptors carry the new lines', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    store.getState().updateLines('id-1' as ImageId, { centre: true })
+    const [d] = selectImageDescriptors(store.getState())
+    expect(d?.lines.centre).toBe(true)
+    expect(d?.lines).toBe(store.getState().images[0]?.lines)
+  })
+})
+
+describe('applyLinesToAll (owner Q8: everything on the Lines tab)', () => {
+  it('copies the whole LineSettings to every image and returns how many changed', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg'), file('b.jpg'), file('c.jpg')])
+    const [a, , c] = store.getState().images
+    store.getState().updateLines(must(a).id, LINED)
+    store.getState().updateLines(must(c).id, LINED)
+    const cBefore = store.getState().images[2]
+    expect(store.getState().applyLinesToAll(must(a).id)).toBe(1)
+    for (const img of store.getState().images) expect(img.lines).toEqual(LINED)
+    expect(store.getState().images[1]?.lines.spiral).toEqual({ on: true, corner: 'bottomRight' })
+    expect(store.getState().images[1]?.lines.grid).toEqual({ on: false, cols: 3, rows: 3 })
+    expect(store.getState().images[2]).toBe(cBefore)
+  })
+
+  it('copies the style even when no line type is on', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    store.getState().updateLines('id-1' as ImageId, STYLED)
+    expect(store.getState().applyLinesToAll('id-1' as ImageId)).toBe(1)
+    expect(store.getState().images[1]?.lines).toEqual(STYLED)
+  })
+
+  it('returns 0 and keeps the images when nothing changes or the source is unknown', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    const before = store.getState().images
+    expect(store.getState().applyLinesToAll('id-1' as ImageId)).toBe(0)
+    expect(store.getState().images).toBe(before)
+    const listener = vi.fn()
+    store.subscribe(listener)
+    expect(store.getState().applyLinesToAll('nope' as ImageId)).toBe(0)
+    expect(store.getState().images).toBe(before)
+    expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('records every apply as a new appliedLines, even one that changes nothing (owner Q7)', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    expect(store.getState().appliedLines).toBeNull()
+    store.getState().updateLines('id-2' as ImageId, LINED)
+    store.getState().applyLinesToAll('id-2' as ImageId)
+    const first = store.getState().appliedLines
+    expect(first?.lines).toEqual(LINED)
+    expect(store.getState().applyLinesToAll('id-1' as ImageId)).toBe(0)
+    const second = store.getState().appliedLines
+    expect(second?.lines).toEqual(LINED)
+    expect(second).not.toBe(first)
+  })
+
+  it('never touches study or edits, and applyStudyToAll never touches lines (D7)', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    const [a, b] = store.getState().images
+    store.getState().updateStudy(must(b).id, BLUR_VALUES)
+    store.getState().updateEdits(must(b).id, { copies: 3, rotation: 90 })
+    const { study, edits } = must(store.getState().images[1])
+    store.getState().updateLines(must(a).id, { centre: true })
+    expect(store.getState().applyLinesToAll(must(a).id)).toBe(1)
+    expect(store.getState().images[1]?.study).toBe(study)
+    expect(store.getState().images[1]?.edits).toBe(edits)
+    expect(store.getState().appliedStudy).toBeNull()
+
+    store.getState().updateLines(must(b).id, { golden: true })
+    const lines = store.getState().images[1]?.lines
+    const appliedLines = store.getState().appliedLines
+    expect(store.getState().applyStudyToAll(must(a).id)).toBe(1)
+    expect(store.getState().images[1]?.lines).toBe(lines)
+    expect(store.getState().images[1]?.lines.golden).toBe(true)
+    expect(store.getState().appliedLines).toBe(appliedLines)
+  })
+
+  it('keeps appliedLines across clear(), as appliedStudy', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    store.getState().applyStudyToAll('id-1' as ImageId)
+    store.getState().applyLinesToAll('id-1' as ImageId)
+    const { appliedStudy, appliedLines } = store.getState()
+    store.getState().clear()
+    expect(store.getState().appliedStudy).toBe(appliedStudy)
+    expect(store.getState().appliedLines).toBe(appliedLines)
+  })
+})
+
+describe('setDefaultLines', () => {
+  it('gives the default to images imported afterwards, not to existing ones', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    store.getState().setDefaultLines(STYLED)
+    await store.getState().addFiles([file('b.jpg')])
+    const [a, b] = store.getState().images
+    expect(a?.lines).toEqual(DEFAULT_LINES)
+    expect(b?.lines).toEqual(STYLED)
+  })
+
+  it('applies to an import that was already decoding when the default changed', async () => {
+    const gate = deferred<DecodedImage>()
+    const decode = vi.fn(() => gate.promise)
+    const { store } = setup({ decode })
+    const p = store.getState().addFiles([file('slow.jpg')])
+    await vi.waitFor(() => {
+      expect(decode).toHaveBeenCalled()
+    })
+    store.getState().setDefaultLines(STYLED)
+    gate.resolve(decoded())
+    await p
+    expect(store.getState().images[0]?.lines).toEqual(STYLED)
+  })
+
+  it('reads the default when the image is created, after its hash, not when its decode ends', async () => {
+    const gate = deferred<string>()
+    const hash = vi.fn(() => gate.promise)
+    const { store } = setup({ hash })
+    const p = store.getState().addFiles([file('slow.jpg')])
+    await vi.waitFor(() => {
+      expect(hash).toHaveBeenCalled()
+    })
+    store.getState().setDefaultLines(STYLED)
+    gate.resolve('h')
+    await p
+    expect(store.getState().images[0]?.lines).toEqual(STYLED)
+  })
+
+  it('keeps the default across clear()', async () => {
+    const { store } = setup()
+    store.getState().setDefaultLines(STYLED)
+    store.getState().clear()
+    await store.getState().addFiles([file('a.jpg')])
+    expect(store.getState().images[0]?.lines).toEqual(STYLED)
+  })
+
+  it('belongs to one store: another store keeps its own default', async () => {
+    const first = setup().store
+    const second = setup().store
+    first.getState().setDefaultLines(STYLED)
+    await second.getState().addFiles([file('a.jpg')])
+    await first.getState().addFiles([file('b.jpg')])
+    expect(second.getState().images[0]?.lines).toEqual(DEFAULT_LINES)
+    expect(first.getState().images[0]?.lines).toEqual(STYLED)
+  })
+
+  it('sanitizes the default', async () => {
+    const { store } = setup()
+    store.getState().setDefaultLines({
+      ...STYLED,
+      grid: { on: false, cols: 0, rows: 99 },
+      style: { colour: 'pink', widthMm: 0.33, opacityPct: 5 },
+    })
+    await store.getState().addFiles([file('a.jpg')])
+    expect(store.getState().images[0]?.lines.grid).toEqual({ on: false, cols: 1, rows: 20 })
+    expect(store.getState().images[0]?.lines.style).toEqual({
+      colour: DEFAULT_LINES.style.colour,
+      widthMm: 0.35,
+      opacityPct: 10,
+    })
+  })
+
+  it('does not notify subscribers', () => {
+    const { store } = setup()
+    const listener = vi.fn()
+    store.subscribe(listener)
+    store.getState().setDefaultLines(STYLED)
+    expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('is independent of the default study, both ways', async () => {
+    const { store } = setup()
+    store.getState().setDefaultLines(STYLED)
+    store.getState().setDefaultStudy(BLUR_VALUES)
+    await store.getState().addFiles([file('a.jpg')])
+    expect(store.getState().images[0]?.lines).toEqual(STYLED)
+    expect(store.getState().images[0]?.study).toEqual(BLUR_VALUES)
   })
 })
