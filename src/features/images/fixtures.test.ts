@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { readJpegInfo } from './exif'
 import { isAnimatedGif, sniffImage } from './sniff'
+import { valueRampPng } from './__fixtures__/value-ramp'
 
 const read = (name: string) =>
   new Uint8Array(readFileSync(join(import.meta.dirname, '__fixtures__', name)))
@@ -27,6 +28,7 @@ describe('image fixtures', () => {
       'animated.gif': 'gif',
       'photo.heic': 'heic',
       'mislabelled-heic.jpg': 'heic',
+      'value-ramp.png': 'png',
       'notes.pdf': null,
     }
     for (const [name, kind] of Object.entries(kinds))
@@ -35,5 +37,8 @@ describe('image fixtures', () => {
   it('only animated.gif is animated', () => {
     expect(isAnimatedGif(read('animated.gif'))).toBe(true)
     expect(isAnimatedGif(read('still.gif'))).toBe(false)
+  })
+  it('value-ramp.png is exactly what its generator writes', () => {
+    expect(Buffer.from(read('value-ramp.png')).equals(valueRampPng())).toBe(true)
   })
 })

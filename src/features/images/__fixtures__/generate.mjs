@@ -1,14 +1,22 @@
 // Run once on macOS:  node src/features/images/__fixtures__/generate.mjs
+// Pure node, any OS:  node src/features/images/__fixtures__/generate.mjs --only=value-ramp
 import { execFileSync } from 'node:child_process'
 import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from '@playwright/test'
 import { injectExifOrientation } from '../exif.ts'
+import { valueRampPng } from './value-ramp.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const out = (name) => join(here, name)
 mkdirSync(here, { recursive: true })
+
+writeFileSync(out('value-ramp.png'), valueRampPng())
+if (process.argv.includes('--only=value-ramp')) {
+  console.log('value-ramp.png written to', here)
+  process.exit(0)
+}
 
 const browser = await chromium.launch()
 const page = await browser.newPage()
