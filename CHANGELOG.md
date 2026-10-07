@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.3.0](https://github.com/omarcocarvalho/artistica/compare/v0.2.0...v0.3.0) (2026-10-07)
+
+
+### Features
+
+* **app:** wire lines into the desktop tabs and the phone Studies step ([#115](https://github.com/omarcocarvalho/artistica/issues/115)) ([02c6398](https://github.com/omarcocarvalho/artistica/commit/02c639854c182035abbeba9a846003e205cf6a7f))
+* **images:** keep line settings per image, with apply to all ([#105](https://github.com/omarcocarvalho/artistica/issues/105)) ([315a116](https://github.com/omarcocarvalho/artistica/commit/315a116601ad05b81c7eafa9f743891ff04a30c5))
+* **layout:** rank duplicate photos by their lines too ([#106](https://github.com/omarcocarvalho/artistica/issues/106)) ([b1c4db6](https://github.com/omarcocarvalho/artistica/commit/b1c4db63dd02dd9c05173058ac327c2b435889d5))
+* **lines:** add straight composition-line geometry and frame mapping ([#107](https://github.com/omarcocarvalho/artistica/issues/107)) ([35fc4f0](https://github.com/omarcocarvalho/artistica/commit/35fc4f099e297b9e080ae77af7eccd6399f1ac81))
+* **lines:** add the composition-line settings model ([#103](https://github.com/omarcocarvalho/artistica/issues/103)) ([1bcc321](https://github.com/omarcocarvalho/artistica/commit/1bcc3211f2213e2fbe3544d2e3efc05ea586617f))
+* **lines:** add the golden spiral ([#109](https://github.com/omarcocarvalho/artistica/issues/109)) ([1b9b3cf](https://github.com/omarcocarvalho/artistica/commit/1b9b3cf2ce8d7f951ed0467df0490448fdd0c8fd))
+* **lines:** add the lines panel ([#110](https://github.com/omarcocarvalho/artistica/issues/110)) ([b5882e8](https://github.com/omarcocarvalho/artistica/commit/b5882e8df00493508e4fba4f0a525e284bf17e74))
+* **render:** carry composition lines in the page model ([#111](https://github.com/omarcocarvalho/artistica/issues/111)) ([6add0dd](https://github.com/omarcocarvalho/artistica/commit/6add0dd2cf54b245c21a74767fe94aa56dcc2404))
+* **render:** draw composition lines as vector paths in the PDF ([#113](https://github.com/omarcocarvalho/artistica/issues/113)) ([ec00cf2](https://github.com/omarcocarvalho/artistica/commit/ec00cf24a46e3555172caccfd8b3e268a6d1ba72))
+* **render:** draw composition lines in the preview ([#112](https://github.com/omarcocarvalho/artistica/issues/112)) ([b71436c](https://github.com/omarcocarvalho/artistica/commit/b71436cdaf5d894b4a078d3b6c593017a732dfd2))
+* **settings:** persist line defaults (schema v3) ([#108](https://github.com/omarcocarvalho/artistica/issues/108)) ([1f5f5d9](https://github.com/omarcocarvalho/artistica/commit/1f5f5d9989e6dc05467f3c55da8ebb1833732778))
+
+
+### Bug Fixes
+
+* **app:** keep the phone Lines section open ([#120](https://github.com/omarcocarvalho/artistica/issues/120)) ([ec0b280](https://github.com/omarcocarvalho/artistica/commit/ec0b280ea346e147ae0dbf0dac1fab5677ddbf46))
+* **lines:** reach the line colour by keyboard in WebKit and harden apply-to-all ([#118](https://github.com/omarcocarvalho/artistica/issues/118)) ([bd3b0b2](https://github.com/omarcocarvalho/artistica/commit/bd3b0b2a7ea8312a3543617eff3c9378ed86b0e6))
+
 ## [0.2.0](https://github.com/omarcocarvalho/artistica/compare/v0.1.0...v0.2.0) (2026-10-07)
 
 
