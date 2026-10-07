@@ -528,6 +528,19 @@ describe('drawPage composition lines', () => {
     expect(thick.strokes.slice(0, 2).map((s) => s.width)).toEqual([3, 3])
   })
 
+  it('keeps dash lengths below 1 device px unfloored on a small sheet (M3-R9)', () => {
+    const small = previewScale({ w: 210, h: 297 }, 105, 1)
+    const tl = linesOf(patchLines(every, { style: { widthMm: 0.1 } }))
+    const rec = recordingCtx()
+    drawPage(rec.ctx, withLines([tl]), small, {
+      showGuides: false,
+      colors: DEFAULT_PAGE_DRAW_COLORS,
+      tileImage: () => img,
+    })
+    expect(small.pxPerMm).toBe(0.5)
+    expect(rec.strokes[1]).toMatchObject({ width: 1, dash: [0.75, 0.5] })
+  })
+
   it('draws the same lines whether guides are on or off (M3-R19)', () => {
     const tl = linesOf()
     const off = blocksOf(draw(withLines([tl]), false).calls)
