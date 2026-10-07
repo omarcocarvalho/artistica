@@ -57,6 +57,55 @@ describe('gaussianBlurRGBA', () => {
     expect(d).toEqual(before)
   })
 
+  it('starts blurring once σ passes 1/√3, where the first box gets a radius of 1', () => {
+    expect(boxRadiiForGauss(0.57)).toEqual([0, 0, 0])
+    expect(boxRadiiForGauss(0.58)).toEqual([0, 0, 1])
+    const still = noise(20, 20, 4)
+    const before = still.slice()
+    gaussianBlurRGBA(still, 20, 20, 0.57)
+    expect(still).toEqual(before)
+    const soft = before.slice()
+    gaussianBlurRGBA(soft, 20, 20, 0.58)
+    expect(soft).not.toEqual(before)
+  })
+
+  it('applies all three boxes: a hard edge spreads by the variance of the composed kernel', () => {
+    // One row: the vertical passes are the identity, and the edge's slope is the composed kernel.
+    for (const sigma of [2.5, 6, 13]) {
+      const w = 240
+      const d = rgba(w, 1, (x) => (x < w / 2 ? [0, 0, 0] : [255, 255, 255]))
+      gaussianBlurRGBA(d, w, 1, sigma)
+      const slope = Array.from({ length: w - 1 }, (_, x) => (d[(x + 1) * 4] ?? 0) - (d[x * 4] ?? 0))
+      const mass = slope.reduce((a, b) => a + b, 0)
+      const mean = slope.reduce((a, s, x) => a + s * x, 0) / mass
+      const spread = slope.reduce((a, s, x) => a + s * (x - mean) ** 2, 0) / mass
+      const expected = variance(boxRadiiForGauss(sigma))
+      expect(mass).toBe(255)
+      expect(Math.abs(spread - expected) / expected).toBeLessThan(0.05)
+    }
+  })
+
+  it('blurs R, G and B the same way', () => {
+    const w = 19
+    const h = 13
+    const d = noise(w, h, 6)
+    const rotated = rgba(w, h, (x, y) => {
+      const i = (y * w + x) * 4
+      return [d[i + 1] ?? 0, d[i + 2] ?? 0, d[i] ?? 0]
+    })
+    const before = d.slice()
+    gaussianBlurRGBA(d, w, h, 2)
+    gaussianBlurRGBA(rotated, w, h, 2)
+    for (let i = 0; i < d.length; i += 4) {
+      expect([rotated[i], rotated[i + 1], rotated[i + 2]]).toEqual([d[i + 1], d[i + 2], d[i]])
+    }
+    for (const c of [0, 1, 2]) {
+      expect(channelRange(d, c).max - channelRange(d, c).min).toBeLessThan(
+        channelRange(before, c).max - channelRange(before, c).min,
+      )
+    }
+  })
+
   it('never touches alpha', () => {
     const d = noise(16, 16, 2)
     for (let i = 3; i < d.length; i += 4) d[i] = i % 7 === 0 ? 10 : 255
