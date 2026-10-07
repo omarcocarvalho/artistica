@@ -1,7 +1,7 @@
 import type { SpiralCorner } from '../../shared/model/lines'
+import { PHI } from './geometry'
 import type { FrameSize, PathCmd } from './types'
 
-const PHI = (1 + Math.sqrt(5)) / 2
 export const KAPPA = (4 / 3) * (Math.SQRT2 - 1)
 export const SPIRAL_ARCS = 12
 

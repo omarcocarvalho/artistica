@@ -1,30 +1,17 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import { SPIRAL_CORNERS } from '../../shared/model/lines'
+import { PHI } from './geometry'
 import { goldenSpiral, KAPPA, SPIRAL_ARCS } from './spiral'
+import { points, type Pt } from './test-support/paths'
 import type { PathCmd } from './types'
 
 type Cubic = Extract<PathCmd, { op: 'C' }>
-interface Pt {
-  readonly x: number
-  readonly y: number
-}
 
-const PHI = (1 + Math.sqrt(5)) / 2
 const dim = fc.double({ min: 1, max: 1000, noNaN: true })
 const frames = fc.record({ w: dim, h: dim })
 
 const ends = (cmds: readonly PathCmd[]) => cmds.map((c) => [c.x, c.y])
-const points = (cmds: readonly PathCmd[]): Pt[] =>
-  cmds.flatMap((c) =>
-    c.op === 'C'
-      ? [
-          { x: c.x1, y: c.y1 },
-          { x: c.x2, y: c.y2 },
-          { x: c.x, y: c.y },
-        ]
-      : [{ x: c.x, y: c.y }],
-  )
 const arcs = (cmds: readonly PathCmd[]): Cubic[] => cmds.flatMap((c) => (c.op === 'C' ? [c] : []))
 const bezier = (p0: Pt, c: Cubic, t: number): Pt => {
   const s = 1 - t
@@ -40,8 +27,7 @@ const bezier = (p0: Pt, c: Cubic, t: number): Pt => {
 const mapPoints = (cmds: readonly PathCmd[], f: (p: Pt) => Pt): Pt[] => points(cmds).map(f)
 
 describe('goldenSpiral', () => {
-  it('reproduces the mockup spiral for a 300 × 400 frame starting top right', () => {
-    const e = ends(goldenSpiral('topRight', { w: 300, h: 400 })).slice(0, 6)
+  it('reproduces the mockup polyline end points for a 300 × 400 frame starting top right', () => {
     const want = [
       [300, 0],
       [0, 247.2],
@@ -49,11 +35,16 @@ describe('goldenSpiral', () => {
       [300, 305.6],
       [229.2, 247.2],
       [185.4, 283.3],
+      [212.5, 305.6],
+      [229.2, 291.8],
+      [218.8, 283.3],
+      [212.5, 288.5],
     ]
+    const e = ends(goldenSpiral('topRight', { w: 300, h: 400 })).slice(0, want.length)
     expect(e).toHaveLength(want.length)
     e.forEach(([x, y], i) => {
-      expect(x).toBeCloseTo(want[i]?.[0] ?? Number.NaN, 1)
-      expect(y).toBeCloseTo(want[i]?.[1] ?? Number.NaN, 1)
+      expect(Math.abs((x ?? Number.NaN) - (want[i]?.[0] ?? Number.NaN))).toBeLessThanOrEqual(0.05)
+      expect(Math.abs((y ?? Number.NaN) - (want[i]?.[1] ?? Number.NaN))).toBeLessThanOrEqual(0.05)
     })
   })
 
