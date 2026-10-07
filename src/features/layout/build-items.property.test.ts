@@ -7,7 +7,7 @@ import {
   type SizeMode,
 } from '../../shared/model/image'
 import { gutterMm, normalizePageSetup, type PageSetup } from '../../shared/model/page-setup'
-import { DEFAULT_STUDY, STUDY_VERSIONS } from '../../shared/model/study'
+import { DEFAULT_STUDY, STUDY_VERSIONS, studyKey, tileStudyFor } from '../../shared/model/study'
 import { buildLayoutItems } from './build-items'
 import { computeLayout } from './compute-layout'
 import { nth } from './nth'
@@ -22,6 +22,7 @@ interface Photo {
   readonly copies: number
   readonly size: SizeMode
   readonly versions: readonly (typeof STUDY_VERSIONS)[number][]
+  readonly valueCount?: number
 }
 
 const sizeArb: fc.Arbitrary<SizeMode> = fc.oneof(
@@ -59,16 +60,25 @@ function descriptors(photos: readonly Photo[], idPrefix: string): ImageDescripto
     pxW: p.pxW,
     pxH: p.pxH,
     edits: { ...DEFAULT_EDITS, copies: p.copies, size: p.size },
-    study: { ...DEFAULT_STUDY, versions: p.versions },
+    study: {
+      ...DEFAULT_STUDY,
+      versions: p.versions,
+      values: { ...DEFAULT_STUDY.values, count: p.valueCount ?? DEFAULT_STUDY.values.count },
+    },
   }))
 }
 
-/** Placements keyed by content (hash, copy), so sessions with different ids compare equal. */
+const printedStudies = (image: ImageDescriptor): string =>
+  image.study.versions.map((v) => v + studyKey(tileStudyFor(v, image.study))).join(',')
+
+/** Placements keyed by what prints (bytes, studies, copy), so sessions with different ids compare equal. */
 function arrangement(images: readonly ImageDescriptor[], result: LayoutResult) {
-  const hashOf = new Map(images.map((i) => [i.id as string, i.contentHash]))
+  const printOf = new Map(
+    images.map((i) => [i.id as string, `${i.contentHash}|${printedStudies(i)}`]),
+  )
   return result.pages.flatMap((page, pageIndex) =>
     page.placements.map((p) => ({
-      hash: hashOf.get(p.imageId),
+      print: printOf.get(p.imageId),
       copy: p.key.slice(p.key.indexOf('#')),
       page: pageIndex,
       block: p.block,
@@ -150,6 +160,54 @@ describe('study groups from loaded images (properties)', () => {
         },
       ),
       { numRuns: 80 },
+    )
+  })
+
+  it('is the same for duplicate photos with different study settings in any order', HEAVY, () => {
+    const duplicatesArb = fc
+      .record({
+        pxW: fc.integer({ min: 200, max: 6000 }),
+        pxH: fc.integer({ min: 200, max: 6000 }),
+        variants: fc.uniqueArray(
+          fc.record({
+            copies: fc.constantFrom(1, 2),
+            versions: fc.subarray([...STUDY_VERSIONS], { minLength: 1 }),
+            valueCount: fc.constantFrom(3, 5),
+          }),
+          {
+            minLength: 2,
+            maxLength: 3,
+            selector: (v) =>
+              v.versions
+                .map((x) => (x === 'values' || x === 'blurValues' ? x + String(v.valueCount) : x))
+                .join(),
+          },
+        ),
+      })
+      .map(({ pxW, pxH, variants }): Photo[] =>
+        variants.map((v) => ({ ...v, hash: 'same-bytes', pxW, pxH, size: { kind: 'auto' } })),
+      )
+    fc.assert(
+      fc.property(
+        pageSetupArb,
+        fc
+          .tuple(duplicatesArb, photosArb)
+          .map(([duplicates, others]) => [...duplicates, ...others])
+          .chain((photos) =>
+            fc.tuple(
+              fc.constant(photos),
+              fc.shuffledSubarray(photos, { minLength: photos.length }),
+            ),
+          ),
+        (setup, [photos, shuffled]) => {
+          const first = descriptors(photos, 'aaa')
+          const other = descriptors(shuffled, 'zzz')
+          expect(arrangement(other, computeLayout(setup, buildLayoutItems(other)))).toEqual(
+            arrangement(first, computeLayout(setup, buildLayoutItems(first))),
+          )
+        },
+      ),
+      { numRuns: 150 },
     )
   })
 

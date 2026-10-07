@@ -140,6 +140,39 @@ describe('buildLayoutItems study groups', () => {
     expect(item?.tiles).toBe(1)
   })
 
+  it('numbers images with the same bytes by their studies, whatever order they were added in', () => {
+    const plain = withVersions(img('p', 3000, 2000, {}, 'same'), ['original'])
+    const studied = withVersions(img('s', 3000, 2000, {}, 'same'), ['original', 'values'])
+    const keyOf = (images: ImageDescriptor[]) =>
+      Object.fromEntries(buildLayoutItems(images).map((i) => [i.imageId, i.key]))
+    expect(keyOf([studied, plain])).toEqual({ p: 'same~0#0', s: 'same~1#0' })
+    expect(keyOf([plain, studied])).toEqual({ p: 'same~0#0', s: 'same~1#0' })
+  })
+
+  it('numbers same-bytes images apart by study settings when their versions match', () => {
+    const values = (id: string, count: number): ImageDescriptor => ({
+      ...img(id, 3000, 2000, {}, 'same'),
+      study: { ...DEFAULT_STUDY, versions: ['values'], values: { ...DEFAULT_STUDY.values, count } },
+    })
+    const keyOf = (images: ImageDescriptor[]) =>
+      Object.fromEntries(buildLayoutItems(images).map((i) => [i.imageId, i.key]))
+    const three = values('three', 3)
+    const five = values('five', 5)
+    expect(keyOf([five, three])).toEqual(keyOf([three, five]))
+  })
+
+  it('keeps input-order numbering for same-bytes Original-only images with other study settings', () => {
+    const original = (id: string, blurPct: number, count: number): ImageDescriptor => ({
+      ...img(id, 3000, 2000, {}, 'same'),
+      study: { ...DEFAULT_STUDY, blurPct, values: { ...DEFAULT_STUDY.values, count } },
+    })
+    const items = buildLayoutItems([original('x', 90, 12), original('y', 10, 3)])
+    expect(items.map((i) => [i.imageId, i.key])).toEqual([
+      ['x', 'same~0#0'],
+      ['y', 'same~1#0'],
+    ])
+  })
+
   it('prints one tile for an unsanitized empty version list', () => {
     const [item] = buildLayoutItems([withVersions(img('a', 3000, 2000), [])])
     expect(item?.tiles).toBe(1)
