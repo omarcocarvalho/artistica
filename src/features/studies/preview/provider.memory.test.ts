@@ -18,7 +18,7 @@ const arbPage = fc.record({
 })
 
 describe('provider memory bound', () => {
-  it('wanted bytes never exceed the sheets’ area (plus one device pixel of rounding per tile side)', async () => {
+  it('wanted bytes never exceed the sheets’ area (plus one device pixel of rounding per tile side), and none is evicted', async () => {
     await fc.assert(
       fc.asyncProperty(arbPage, async ({ cssWidth, dpr, cols, rows, fill, bleed }) => {
         const size = { w: 210, h: 297 }
@@ -26,7 +26,7 @@ describe('provider memory bound', () => {
         const dpi = previewDpi(scale)
         const cellW = size.w / cols
         const cellH = size.h / rows
-        const f = fakeDeps()
+        const f = fakeDeps(0)
         f.add('a')
         const p = createStudyPreviewProvider(f.deps)
         const requests = []
@@ -47,12 +47,14 @@ describe('provider memory bound', () => {
             roundingPx += 2 * (plan.canvasW + plan.canvasH) + 4
           }
         p.want('page0', requests)
+        const results = []
         for (let i = 0; i < requests.length; i++) {
           await f.settle()
-          await f.finish(i)
+          results.push(await f.finish(i))
         }
         const sheetBytes = scale.deviceW * scale.deviceH * 4
         expect(p.stats().wantedBytes).toBeLessThanOrEqual(sheetBytes + roundingPx * 4)
+        expect(results.filter((r) => r.closed > 0)).toEqual([])
         expect(dpi).toBeLessThanOrEqual(scale.pxPerMm * MM_PER_INCH + 1e-9)
       }),
       { numRuns: 60 },

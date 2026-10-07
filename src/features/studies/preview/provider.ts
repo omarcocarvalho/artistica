@@ -139,6 +139,10 @@ export function createStudyPreviewProvider<B extends BitmapLike>(
 
   const stillWanted = (job: StudyTileRequest): boolean =>
     !disposed && wantedKeys().has(job.key) && !imageGone(job.imageId)
+  const discard = (job: StudyTileRequest, bitmap?: B): void => {
+    bitmap?.close()
+    if (wantedKeys().has(job.key)) notify()
+  }
 
   const nextJob = (): { job: StudyTileRequest; source: StudyPreviewSource } | undefined => {
     const keys = wantedKeys()
@@ -166,7 +170,12 @@ export function createStudyPreviewProvider<B extends BitmapLike>(
       .cropBitmap(source.bitmap, integerCropBox(scaled.src))
       .then((clone) => {
         if (!stillWanted(job)) {
+          discard(job, clone)
+          return null
+        }
+        if (paused) {
           clone.close()
+          queue.unshift(job)
           return null
         }
         return deps.render(forCroppedSource(scaled), clone, job.study)
@@ -176,6 +185,10 @@ export function createStudyPreviewProvider<B extends BitmapLike>(
           if (result !== null) accept(job, result)
         },
         (error: unknown) => {
+          if (!stillWanted(job)) {
+            discard(job)
+            return
+          }
           if (isRetryable(error) && !retried.has(job.key)) {
             retried.add(job.key)
             queue.unshift(job)
@@ -193,7 +206,7 @@ export function createStudyPreviewProvider<B extends BitmapLike>(
 
   const accept = (job: StudyTileRequest, result: B): void => {
     if (!stillWanted(job)) {
-      result.close()
+      discard(job, result)
       return
     }
     const entry: Entry<B> = { bitmap: result, imageId: job.imageId, bytes: bytesOf(result) }
@@ -240,7 +253,8 @@ export function createStudyPreviewProvider<B extends BitmapLike>(
 
     pending(consumer) {
       const reqs = wants.get(consumer) ?? []
-      return reqs.filter((r) => !entries.has(r.key) && !failed.has(r.key)).length
+      return reqs.filter((r) => !entries.has(r.key) && !failed.has(r.key) && !imageGone(r.imageId))
+        .length
     },
 
     release(consumer) {
