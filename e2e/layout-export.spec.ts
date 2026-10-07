@@ -193,10 +193,12 @@ test.describe('page setup and export (chromium)', () => {
     await app.expectImages(20)
     await app.expectPreviewPages(1)
     await expect(page.getByText(/Page 1 of \d+ · A4/).first()).toBeVisible()
-    const start = Date.now()
+    await expect(page.locator('main [aria-busy="true"]')).toHaveCount(0)
+    // The caption reads the paper from the settings store, so it changes before the layout runs.
+    await armRedrawTimer(page, 'input')
     await app.setPaper('Letter')
-    await expect(page.getByText(/Page 1 of \d+ · Letter/).first()).toBeVisible({ timeout: 5_000 })
-    const ms = Date.now() - start
+    const ms = await layoutMs(page, 5_000)
+    await expect(page.getByText(/Page 1 of \d+ · Letter/).first()).toBeVisible()
     testInfo.annotations.push({ type: 'preview-update-ms', description: String(ms) })
     expect(ms).toBeLessThan(1000)
   })
@@ -340,6 +342,17 @@ async function redrawMs(
     layoutMs: r.layoutMs === null ? null : Math.round(r.layoutMs),
     studiesMs: Math.round(r.studiesMs),
   }
+}
+
+/** Milliseconds from the armed event to the frame after the layout finished. */
+async function layoutMs(page: Page, timeout: number): Promise<number> {
+  const read = () =>
+    page.evaluate(() => {
+      const t = (globalThis as unknown as TimerWindow).__redraw
+      return t && t.layoutEnd > 0 ? t.layoutEnd - t.start : null
+    })
+  await expect.poll(read, { timeout }).not.toBeNull()
+  return Math.round((await read()) ?? NaN)
 }
 
 const INTERIOR = [

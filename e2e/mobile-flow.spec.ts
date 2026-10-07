@@ -74,7 +74,6 @@ test('M1 phone flow: Images, edit sheet, Page, Preview, Export, parse the PDF', 
   expect(sum(info.pages.map((p) => p.imagePlacements))).toBe(2)
 })
 
-/** Total RSS of the browser's process tree, in MB. */
 /** Interior points of a tile; a drawn value study puts most of them exactly on a ramp colour. */
 const SAMPLES = [
   [0.3, 0.3],
@@ -83,6 +82,7 @@ const SAMPLES = [
   [0.3, 0.7],
   [0.7, 0.7],
 ] as const
+/** Total RSS of the browser's process tree, in MB. */
 const SETTLED_AFTER_IMPORT_BUDGET_MB = 1500
 const EXPORT_PEAK_BUDGET_MB = 1700
 
