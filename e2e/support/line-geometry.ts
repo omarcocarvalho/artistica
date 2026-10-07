@@ -1,58 +1,19 @@
+import type { RectMm } from '../../src/features/layout/types.ts'
+import { tileLinesFor as pageTileLines } from '../../src/features/render/page-model/tile-lines.ts'
+import type { TileLines } from '../../src/features/render/types.ts'
 import { DEFAULT_LINES, type LineSettings } from '../../src/shared/model/lines.ts'
 import { PT_PER_MM } from '../../src/shared/model/units.ts'
-import { rectPtToMm, strokeToMm, type MmPathOp, type PdfDraw, type PdfStroke } from './pdf.ts'
+import { rectPtToMm, strokeToMm, type PdfDraw, type PdfStroke } from './pdf.ts'
 
-export interface RectMm {
-  x: number
-  y: number
-  w: number
-  h: number
-}
+export type { RectMm, TileLines }
 export interface PointMm {
   x: number
   y: number
 }
-export interface ExpectedStroke {
-  readonly dashMm: readonly number[]
-  readonly cmds: readonly MmPathOp[]
-}
-/** The page model's lines for one tile (render `TileLines`), in page mm. */
-export interface ExpectedTileLines {
-  readonly clip: RectMm
-  readonly colour: string
-  readonly opacity: number
-  readonly widthMm: number
-  readonly types: readonly string[]
-  readonly strokes: readonly ExpectedStroke[]
-}
-
-interface TileLinesModule {
-  tileLinesFor(
-    lines: LineSettings,
-    trim: RectMm,
-    turned: boolean,
-    tileIndex: number,
-  ): ExpectedTileLines | null
-}
-const isTileLinesModule = (m: unknown): m is TileLinesModule =>
-  typeof m === 'object' && m !== null && 'tileLinesFor' in m && typeof m.tileLinesFor === 'function'
-
-// Loaded by URL at run time: the e2e tsconfig resolves imports as node does, which rejects the
-// app's extensionless relative imports, while Playwright's loader resolves them.
-const TILE_LINES_URL = new URL(
-  '../../src/features/render/page-model/tile-lines.ts',
-  import.meta.url,
-).href
 
 /** The app's own pure geometry for one tile (what both renderers must draw). */
-export async function tileLinesFor(
-  lines: LineSettings,
-  trim: RectMm,
-  turned: boolean,
-): Promise<ExpectedTileLines> {
-  const mod: unknown = await import(TILE_LINES_URL)
-  if (!isTileLinesModule(mod)) throw new Error('tile-lines.ts does not export tileLinesFor')
-  const tile = mod.tileLinesFor(lines, trim, turned, 0)
+export function tileLinesFor(lines: LineSettings, trim: RectMm, turned: boolean): TileLines {
+  const tile = pageTileLines(lines, trim, turned, 0)
   if (!tile) throw new Error('these settings draw no lines')
   return tile
 }
@@ -93,7 +54,7 @@ export const hexRgb = (hex: string): [number, number, number] => [
 /** Every difference between the PDF strokes of one tile and the page model's lines for it. */
 export function strokeMismatches(
   got: readonly PdfStroke[],
-  want: ExpectedTileLines,
+  want: TileLines,
   pageHeightPt: number,
   tolMm = 0.01,
 ): string[] {
@@ -221,7 +182,7 @@ function distToPoly(q: PointMm, poly: readonly PointMm[]): number {
   return best
 }
 
-function subpathsOf(tile: ExpectedTileLines): Subpath[] {
+function subpathsOf(tile: TileLines): Subpath[] {
   const out: Subpath[] = []
   for (const s of tile.strokes) {
     let pieces: Piece[] = []
@@ -263,6 +224,16 @@ export interface SampleOptions {
   readonly edgeMm: number
   /** Samples this close to a dash end are skipped. */
   readonly dashMarginMm: number
+  /** Also probe the device pixels just outside both edges of the stroke (see `LineSamples.edge`). */
+  readonly edge?: EdgeOptions
+}
+
+export interface EdgeOptions {
+  readonly pxPerMm: number
+  /** How far past the stroke's edge a probed pixel's centre lies, at least, in device px. */
+  readonly marginPx: number
+  /** Probes stay this far from the ends of a straight piece (joins and caps). */
+  readonly endMm: number
 }
 
 export interface LineSamples {
@@ -270,10 +241,15 @@ export interface LineSamples {
   readonly on: PointMm[]
   /** Points beside the lines, or in a dash gap, that must show the photo. */
   readonly off: PointMm[]
+  /**
+   * Device-pixel centres just past either edge of the stroke, beside each on-line point, that
+   * must show the photo: a path drawn off its place by more than about a pixel covers them.
+   */
+  readonly edge: PointMm[]
 }
 
 /** Sample points along every subpath of a tile's lines, away from crossings and edges. */
-export function lineSamples(tile: ExpectedTileLines, o: SampleOptions): LineSamples {
+export function lineSamples(tile: TileLines, o: SampleOptions): LineSamples {
   const subs = subpathsOf(tile)
   const inside = (q: PointMm) =>
     q.x >= tile.clip.x + o.edgeMm &&
@@ -284,6 +260,7 @@ export function lineSamples(tile: ExpectedTileLines, o: SampleOptions): LineSamp
     subs.every((s, i) => i === skip || distToPoly(q, s.poly) >= min)
   const on: PointMm[] = []
   const off: PointMm[] = []
+  const edge: PointMm[] = []
   subs.forEach((sub, si) => {
     let before = 0
     for (const piece of sub.pieces) {
@@ -311,33 +288,54 @@ export function lineSamples(tile: ExpectedTileLines, o: SampleOptions): LineSamp
           if (clearOf(q, si, o.clearMm)) off.push(q)
           continue
         }
-        if (clearOf(q, si, o.crossMm)) on.push(q)
+        const lit = clearOf(q, si, o.crossMm)
+        if (lit) on.push(q)
         const d = tangent(piece, t)
         const n = Math.hypot(d.x, d.y)
         if (n === 0) continue
+        const normal = { x: -d.y / n, y: d.x / n }
         for (const side of [-1, 1]) {
           const p = {
-            x: q.x + (side * -d.y * o.offsetMm) / n,
-            y: q.y + (side * d.x * o.offsetMm) / n,
+            x: q.x + side * normal.x * o.offsetMm,
+            y: q.y + side * normal.y * o.offsetMm,
           }
           if (inside(p) && clearOf(p, null, o.clearMm)) off.push(p)
         }
+        const along = lengthOf(piece, t)
+        if (o.edge && lit && along >= o.edge.endMm && len - along >= o.edge.endMm)
+          for (const side of [-1, 1]) {
+            const p = edgeProbe(q, { x: side * normal.x, y: side * normal.y }, sub, o.edge)
+            if (p && inside(p) && clearOf(p, si, o.clearMm)) edge.push(p)
+          }
       }
       before += len
     }
   })
-  return { on, off }
+  return { on, off, edge }
+
+  function edgeProbe(q: PointMm, dir: PointMm, sub: Subpath, e: EdgeOptions): PointMm | null {
+    const k = e.pxPerMm
+    const min = tile.widthMm / 2 + e.marginPx / k
+    for (let s = min; s <= min + 2 / k; s += 0.2 / k) {
+      const c = {
+        x: (Math.floor((q.x + dir.x * s) * k) + 0.5) / k,
+        y: (Math.floor((q.y + dir.y * s) * k) + 0.5) / k,
+      }
+      if (distToPoly(c, sub.poly) >= min) return c
+    }
+    return null
+  }
 }
 
 /** The point at `t` of the first curve of a tile's lines (the spiral's outer arc). */
-export function firstCurvePoint(tile: ExpectedTileLines, t: number): PointMm {
+export function firstCurvePoint(tile: TileLines, t: number): PointMm {
   for (const sub of subpathsOf(tile))
     for (const piece of sub.pieces) if (piece.kind === 'C') return at(piece, t)
   throw new Error('these lines have no curve')
 }
 
 /** Distance from a point to the nearest of a tile's lines. */
-export const distanceToLines = (tile: ExpectedTileLines, p: PointMm): number =>
+export const distanceToLines = (tile: TileLines, p: PointMm): number =>
   Math.min(...subpathsOf(tile).map((s) => distToPoly(p, s.poly)))
 
 /** Euclidean RGB distance. */

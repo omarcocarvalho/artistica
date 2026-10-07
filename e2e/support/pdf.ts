@@ -163,6 +163,8 @@ export function rectPtToMm(
 
 /** A drawn image as stored: the JPEG file for DCTDecode, the decoded samples for FlateDecode. */
 export interface PdfImageData {
+  /** The XObject resource name the page draws it by. */
+  name: string
   filter: string
   widthPx: number
   heightPx: number
@@ -180,6 +182,7 @@ export async function drawnImageData(bytes: Uint8Array): Promise<PdfImageData[][
       const obj = ref ? doc.context.lookup(ref) : undefined
       if (!(obj instanceof PDFRawStream)) throw new Error(`no image XObject named ${d.name}`)
       return {
+        name: d.name,
         filter: d.filter,
         widthPx: d.widthPx,
         heightPx: d.heightPx,

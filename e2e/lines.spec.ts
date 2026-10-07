@@ -20,9 +20,11 @@ import {
   tileLinesFor,
   towards,
   trimOf,
-  type ExpectedTileLines,
+  type TileLines,
   type PointMm,
   type RectMm,
+  type EdgeOptions,
+  type LineSamples,
   type SampleOptions,
 } from './support/line-geometry.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
@@ -32,6 +34,7 @@ import {
   strokeToMm,
   summarizePdf,
   type PdfDraw,
+  type PdfImageData,
   type PdfSummary,
 } from './support/pdf.ts'
 import { inspectPdf } from '../src/features/render/pdf/inspect.ts'
@@ -94,6 +97,13 @@ async function expectSameSheet(a: Buffer, b: Buffer): Promise<void> {
   const db = (await drawnImageData(b)).flat()
   expect(da.length).toBeGreaterThan(0)
   expect(db).toHaveLength(da.length)
+  const meta = ({ name, filter, widthPx, heightPx }: PdfImageData) => ({
+    name,
+    filter,
+    widthPx,
+    heightPx,
+  })
+  expect(db.map(meta)).toEqual(da.map(meta))
   da.forEach((d, i) => {
     expect(Buffer.from(d.data).equals(Buffer.from(db[i]?.data ?? []))).toBe(true)
   })
@@ -102,7 +112,7 @@ async function expectSameSheet(a: Buffer, b: Buffer): Promise<void> {
 interface PreviewProbe {
   readonly pxPerMm: number
   /** Per tile, in tile order. */
-  readonly tiles: readonly { readonly on: PointMm[]; readonly off: PointMm[] }[]
+  readonly tiles: readonly LineSamples[]
 }
 
 async function pxPerMm(app: AppPage, info: PdfSummary): Promise<number> {
@@ -113,10 +123,13 @@ async function pxPerMm(app: AppPage, info: PdfSummary): Promise<number> {
 async function previewProbe(
   app: AppPage,
   info: PdfSummary,
-  tiles: readonly ExpectedTileLines[],
+  tiles: readonly TileLines[],
   opts: SampleOptions,
+  edge?: Omit<EdgeOptions, 'pxPerMm'>,
 ): Promise<PreviewProbe> {
-  return { pxPerMm: await pxPerMm(app, info), tiles: tiles.map((t) => lineSamples(t, opts)) }
+  const k = await pxPerMm(app, info)
+  const o = edge ? { ...opts, edge: { ...edge, pxPerMm: k } } : opts
+  return { pxPerMm: k, tiles: tiles.map((t) => lineSamples(t, o)) }
 }
 
 type Px = [number, number, number, number]
@@ -130,20 +143,25 @@ function pixelsAt(app: AppPage, k: number, points: readonly PointMm[]): Promise<
 }
 
 /** The sheet's pixels at every probe point, in the probe's order. */
-async function readProbe(app: AppPage, probe: PreviewProbe): Promise<{ on: Px[]; off: Px[] }[]> {
+async function readProbe(
+  app: AppPage,
+  probe: PreviewProbe,
+): Promise<{ on: Px[]; off: Px[]; edge: Px[] }[]> {
   const pixels = await pixelsAt(
     app,
     probe.pxPerMm,
-    probe.tiles.flatMap((t) => [...t.on, ...t.off]),
+    probe.tiles.flatMap((t) => [...t.on, ...t.off, ...t.edge]),
   )
   let i = 0
-  return probe.tiles.map((t) => {
-    const on = pixels.slice(i, i + t.on.length)
-    i += t.on.length
-    const off = pixels.slice(i, i + t.off.length)
-    i += t.off.length
-    return { on, off }
-  })
+  const take = (n: number) => {
+    i += n
+    return pixels.slice(i - n, i)
+  }
+  return probe.tiles.map((t) => ({
+    on: take(t.on.length),
+    off: take(t.off.length),
+    edge: take(t.edge.length),
+  }))
 }
 
 /** Messages for the points whose pixel fails `ok`. */
@@ -160,17 +178,15 @@ function failing(
 }
 
 /** The pure geometry for each drawn tile of the first page (flat-grey photos only). */
-async function expectedTiles(info: PdfSummary, lines: Parameters<typeof tileLinesFor>[0]) {
+function expectedTiles(info: PdfSummary, lines: Parameters<typeof tileLinesFor>[0]): TileLines[] {
   const p = firstPage(info)
-  return Promise.all(
-    p.draws.map((d) =>
-      tileLinesFor(lines, trimOf(d, p.heightPt), isTurned(d, FLAT_GREY_W, FLAT_GREY_H)),
-    ),
+  return p.draws.map((d) =>
+    tileLinesFor(lines, trimOf(d, p.heightPt), isTurned(d, FLAT_GREY_W, FLAT_GREY_H)),
   )
 }
 
 /** Every tile has one stroke per batch and they equal the pure geometry. */
-function strokeErrors(info: PdfSummary, tiles: readonly ExpectedTileLines[]): string[] {
+function strokeErrors(info: PdfSummary, tiles: readonly TileLines[]): string[] {
   const p = firstPage(info)
   let at = 0
   return tiles.flatMap((t, i) => {
@@ -199,6 +215,8 @@ const EXIT_SAMPLES: SampleOptions = {
   dashMarginMm: 1,
 }
 
+const EXIT_EDGE = { marginPx: 0.9, endMm: 3 }
+
 test.describe('exit criterion (all browsers)', () => {
   runOnly('chromium', 'firefox', 'webkit')
 
@@ -225,7 +243,7 @@ test.describe('exit criterion (all browsers)', () => {
       expect(page0.draws).toHaveLength(versions.length)
 
       expect(page0.lineStrokes).toHaveLength(2 * versions.length)
-      const tiles = await expectedTiles(on.info, EXIT_LINES)
+      const tiles = expectedTiles(on.info, EXIT_LINES)
       for (const t of tiles)
         expect(t.strokes.map((s) => s.dashMm.length > 0)).toEqual([false, true])
       expect(strokeErrors(on.info, tiles)).toEqual([])
@@ -233,17 +251,14 @@ test.describe('exit criterion (all browsers)', () => {
       // Preview = PDF: the sheet shows the line colour along every PDF path and the photo beside
       // it, which is what the same pixel shows once the lines are off.
       const line = hexRgb(BLUE)
-      const probe = await previewProbe(app, on.info, tiles, EXIT_SAMPLES)
+      const probe = await previewProbe(app, on.info, tiles, EXIT_SAMPLES, EXIT_EDGE)
       const lit = await readProbe(app, probe)
       await app.setAllLineSwitches(false)
       await app.expectPreviewSettled()
       const bare = await readProbe(app, probe)
-      const counts = probe.tiles.map((t) => [t.on.length, t.off.length])
+      const counts = probe.tiles.map((t) => [t.on.length, t.off.length, t.edge.length])
       testInfo.annotations.push({ type: 'preview-samples', description: JSON.stringify(counts) })
-      for (const [onCount, offCount] of counts) {
-        expect(onCount).toBeGreaterThanOrEqual(40)
-        expect(offCount).toBeGreaterThanOrEqual(40)
-      }
+      for (const n of counts.flat()) expect(n).toBeGreaterThanOrEqual(40)
       const failures = probe.tiles.flatMap((t, k) => {
         const l = lit[k]
         const b = bare[k]
@@ -260,6 +275,12 @@ test.describe('exit criterion (all browsers)', () => {
             t.off,
             l.off,
             (px, i) => rgbDistance(px, b.off[i] ?? []) <= 30,
+          ),
+          ...failing(
+            `tile ${String(k)} past the edge`,
+            t.edge,
+            l.edge,
+            (px, i) => rgbDistance(px, b.edge[i] ?? []) <= 30,
           ),
         ]
       })
@@ -311,7 +332,7 @@ test.describe('lines on desktop (all browsers)', () => {
     await app.setLineStyle({ colour: BLUE, widthMm: 1, opacityPct: 90 })
     await app.expectPreviewSettled()
     const at90 = await exported(app)
-    const tiles = await expectedTiles(
+    const tiles = expectedTiles(
       at90.info,
       lineSettings({
         ...EXIT_LINES,
@@ -371,7 +392,7 @@ test.describe('lines on desktop (all browsers)', () => {
       const turned = isTurned(draw, FLAT_GREY_W, FLAT_GREY_H)
       const settings = (c: (typeof CORNERS)[number][1]) =>
         lineSettings({ spiral: { on: true, corner: c }, style: STYLE_1MM })
-      const want = await tileLinesFor(settings(corner), trim, turned)
+      const want = tileLinesFor(settings(corner), trim, turned)
       expect(strokeErrors(info, [want])).toEqual([])
       const [stroke] = p.lineStrokes
       const [first] = strokeToMm(stroke, p.heightPt)
@@ -391,7 +412,7 @@ test.describe('lines on desktop (all browsers)', () => {
       const others: PointMm[] = []
       for (const [, c] of CORNERS) {
         if (c === corner) continue
-        const q = firstCurvePoint(await tileLinesFor(settings(c), trim, turned), 0.15)
+        const q = firstCurvePoint(tileLinesFor(settings(c), trim, turned), 0.15)
         if (distanceToLines(want, q) >= 2) others.push(q)
       }
       expect(others.length).toBeGreaterThanOrEqual(2)
@@ -453,7 +474,7 @@ test.describe('lines on desktop (all browsers)', () => {
     await app.expectPreviewSettled()
     const { info } = await exported(app)
     const thin = lineSettings({ thirds: true, centre: true, style: { ...STYLE_1MM, widthMm: 0.1 } })
-    const tiles = await expectedTiles(info, thin)
+    const tiles = expectedTiles(info, thin)
     expect(strokeErrors(info, tiles)).toEqual([])
 
     const probe = await previewProbe(app, info, tiles, {
@@ -620,7 +641,7 @@ test.describe('lines on desktop (all browsers)', () => {
 
     await app.expectPreviewSettled()
     const { info } = await exported(app)
-    const tiles = await expectedTiles(
+    const tiles = expectedTiles(
       info,
       lineSettings({
         grid: { on: true, cols: 3, rows: 5 },
@@ -711,7 +732,7 @@ test.describe('lines on desktop (all browsers)', () => {
     const [draw] = p.draws
     const box = tileBox(draw, info)
     const trim = { x: box.x + 3, y: box.y + 3, w: box.w - 6, h: box.h - 6 }
-    const want = await tileLinesFor(
+    const want = tileLinesFor(
       lineSettings({ spiral: { on: true }, style }),
       trim,
       isTurned(draw, FLAT_GREY_W, FLAT_GREY_H),
