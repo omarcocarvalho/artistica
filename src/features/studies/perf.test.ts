@@ -22,7 +22,7 @@ function medianMs(blurPct: number): number {
 }
 
 describe('performance', () => {
-  for (const blurPct of [40, 100]) {
+  for (const blurPct of [7.5, 40, 100]) {
     it(`blur ${String(blurPct)}% + values on a 1 MP tile`, () => {
       const median = medianMs(blurPct)
       console.log(

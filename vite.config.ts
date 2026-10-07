@@ -27,6 +27,7 @@ export default defineConfig({
         'src/features/render/**',
         'src/features/studies/**',
         'src/shared/colour/**',
+        'src/shared/model/study.ts',
       ],
       exclude: ['**/*.test.*', '**/*.worker.ts', '**/components/**', '**/test-support/**'],
       reporter: ['text', 'html'],
