@@ -224,6 +224,14 @@ describe('composePdf lines (M3-R6–R8)', () => {
     )
   })
 
+  it('leaves the miter limit at the PDF default of 10, as the preview sets it', async () => {
+    const pages = withLines(noLinesPages(), { ...EVERY_TYPE, style: { ...BLUE, opacityPct: 60 } })
+    const report = await inspectPdf(await composePdf(pages, encodedFor(pages)))
+    const contents = report.pages.map((p) => p.content)
+    expect(contents.join('\n')).toMatch(/\sS\s/)
+    for (const content of contents) expect(content).not.toMatch(/(^|\s)M(\s|$)/)
+  })
+
   it('strokes the solid batch then the dashed batch, in the exact colour, width, caps and dash', async () => {
     const pages = [
       pageModel([drawTile({ trim })], {
