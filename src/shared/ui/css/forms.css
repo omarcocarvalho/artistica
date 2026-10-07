@@ -131,22 +131,34 @@
     flex-direction: column;
   }
   .ds-switch {
+    --switch-w: 42px;
+    --switch-h: 24px;
+    --switch-inset-x: 0px;
+    --switch-inset-y: 0px;
     flex: none;
     cursor: pointer;
-    width: 42px;
-    height: 24px;
+    width: calc(var(--switch-w) + 2 * var(--switch-inset-x));
+    height: calc(var(--switch-h) + 2 * var(--switch-inset-y));
     padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    position: relative;
+  }
+  .ds-switch::before {
+    content: '';
+    position: absolute;
+    inset: var(--switch-inset-y) var(--switch-inset-x);
     border-radius: var(--radius-pill);
     background: var(--color-surface-sunken);
     border: var(--border-width-strong) solid var(--color-line-strong);
-    position: relative;
     transition: background var(--duration-base) var(--ease-out);
   }
   .ds-switch__thumb {
     display: block;
     position: absolute;
-    top: 2px;
-    left: 2px;
+    top: calc(var(--switch-inset-y) + var(--border-width-strong) + 2px);
+    left: calc(var(--switch-inset-x) + var(--border-width-strong) + 2px);
     width: 16px;
     height: 16px;
     border-radius: 50%;
@@ -155,7 +167,7 @@
       transform var(--duration-base) var(--ease-wobble),
       background var(--duration-base);
   }
-  .ds-switch[data-state='checked'] {
+  .ds-switch[data-state='checked']::before {
     background: var(--color-accent);
     border-color: var(--color-accent);
   }
@@ -258,5 +270,83 @@
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: 2px;
     border-radius: 999px;
+  }
+
+  /* 44 px touch targets on coarse pointers and in the phone layout (< 960 px), as for .ds-btn in basics.css.
+     Desktop (fine pointer, >= 960 px) keeps the dense sizes. The switch button grows to 44 x 44 around its 42 x 24
+     track, and the focus ring follows the track. */
+  @media (pointer: coarse), (max-width: 959.98px) {
+    .ds-input,
+    .ds-select,
+    .ds-switch-row {
+      min-height: var(--size-target);
+    }
+    /* iOS Safari zooms the page when it focuses a text control whose font is smaller than 16 px. */
+    .ds-input,
+    .ds-select {
+      font-size: var(--text-base);
+    }
+    .ds-seg__item {
+      min-height: var(--size-target);
+      min-width: var(--size-target);
+    }
+    .ds-switch {
+      --switch-inset-x: calc((var(--size-target) - var(--switch-w)) / 2);
+      --switch-inset-y: calc((var(--size-target) - var(--switch-h)) / 2);
+    }
+    .ds-switch:focus-visible {
+      outline: none;
+    }
+    .ds-switch:focus-visible::before {
+      outline: var(--focus-ring-width) solid var(--focus-ring-color);
+      outline-offset: var(--focus-ring-offset);
+    }
+  }
+  /* Forced colors (Windows high contrast) drop author backgrounds and box shadows, which carry the
+     state of these controls. System colours redraw that state: Highlight marks what is on, selected
+     or filled. */
+  @media (forced-colors: active) {
+    .ds-switch__thumb {
+      forced-color-adjust: none;
+      background: CanvasText;
+    }
+    .ds-switch[data-state='checked']::before {
+      forced-color-adjust: none;
+      background: Highlight;
+      border-color: Highlight;
+    }
+    .ds-switch[data-state='checked'] .ds-switch__thumb {
+      background: HighlightText;
+    }
+    .ds-switch:focus-visible::before {
+      outline-color: CanvasText;
+    }
+    .ds-seg__item[data-state='checked'] {
+      forced-color-adjust: none;
+      background: Highlight;
+      color: HighlightText;
+    }
+    .ds-slider input[type='range']::-webkit-slider-runnable-track {
+      forced-color-adjust: none;
+      background: linear-gradient(90deg, Highlight 0 var(--fill, 50%), Canvas var(--fill, 50%));
+      border-color: CanvasText;
+    }
+    .ds-slider input[type='range']::-moz-range-track {
+      forced-color-adjust: none;
+      background: Canvas;
+      border-color: CanvasText;
+    }
+    .ds-slider input[type='range']::-moz-range-progress {
+      forced-color-adjust: none;
+      background: Highlight;
+    }
+    .ds-slider input[type='range']::-webkit-slider-thumb {
+      background: Canvas;
+      border-color: CanvasText;
+    }
+    .ds-slider input[type='range']::-moz-range-thumb {
+      background: Canvas;
+      border-color: CanvasText;
+    }
   }
 }
