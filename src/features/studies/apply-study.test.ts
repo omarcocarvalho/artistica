@@ -79,7 +79,7 @@ describe('applyStudy', () => {
   it('allocates nothing proportional to the pixels (M2-R10)', () => {
     const w = 1000
     const h = 1000
-    for (const s of [study(40, VALUES), study(100, VALUES)]) {
+    for (const s of [study(1, VALUES), study(7.5, VALUES), study(40, VALUES), study(100, VALUES)]) {
       const d = noise(w, h, 11)
       const before = d
       const sizes = trackAllocations(() => {

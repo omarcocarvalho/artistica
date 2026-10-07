@@ -123,7 +123,7 @@ Five situations real users will hit that the contract does not spell out. Each h
 
 1. **A low-key or high-key photo** (a night street, a snowy field). With the tile's own range (owner Q11, default), the darkest pixels still map to value 1 and the lightest to value N, so a 5-value study shows 5 tones, not 2. A few specular highlights must not stretch the scale: 1% is clipped at each end. Pinned in A4 (`clips the brightest and darkest 1% before splitting`, `a dark photo still uses every value`).
 2. **A flat area or a nearly flat tile** (a grey wall, a tight crop of sky). Range width below 1e-6 must not divide by zero; everything maps to the middle value. Pinned in A4 (`a flat image maps to one middle value`).
-3. **A tiny tile at preview resolution** (a 40 × 60 px preview tile, or a 1 px wide sliver from an extreme crop). The blur must stay finite and in bounds; σ below 0.25 px is a no-op, and 1 × h / w × 1 images work. Pinned in A3 (`handles 1-pixel-wide and 1-pixel-tall images`, `is a no-op below 0.25 px`).
+3. **A tiny tile at preview resolution** (a 40 × 60 px preview tile, or a 1 px wide sliver from an extreme crop). The blur must stay finite and in bounds; σ below 1/16 px is a no-op (M2-R18), and 1 × h / w × 1 images work. Pinned in A3 (`handles 1-pixel-wide and 1-pixel-tall images`, `is a no-op below the floor, where a hard edge would move by less than half a level`).
 4. **Blur near the tile edges.** Clamp-to-edge must not darken or lighten the border (no black or white leak from outside the tile), so with bleed the extended edge pixels look like the tile. Pinned in A3 (`keeps a constant image constant`, `never widens the range`) and B5's order test (study before bleed).
 5. **Preview and PDF look the same at different resolutions.** σ is relative to the rendered tile's short side, so a 300 px preview tile and a 3000 px print tile get σ in the same proportion; posterising a resampled image gives the same number of values. Pinned in A3 (`scales with the short side, linearly in percent`) and A5 (`gives the same number of values at two resolutions`).
 
@@ -195,7 +195,7 @@ Reference values (from the paper's table and widely published conversions; toler
   radius_i = (size_i − 1) / 2
   ```
 
-  `m` is clamped to `[0, 3]` defensively: `wl ≤ wIdeal < wl + 2`, so `mIdeal` lies in `(0, 3]` for every σ ≥ 0. The variance of three boxes of radius `r_i` is `Σ ((2r_i + 1)² − 1) / 12 = Σ r_i(r_i + 1) / 3`. Moving one box from `wl` to `wl + 2` changes it by `(wl + 1) / 3`, so rounding `m` leaves it within half that step, `(r_min + 1) / 3` with `r_min = (wl − 1) / 2`, of σ². That is within 5% of σ² only from σ ≈ 6.7 up: at σ = 1 the nearest variances any three integer boxes reach are 2/3 and 4/3 (33% off), and this construction is 15% off at σ = 1.7 and 8.3% off at σ = 4. All three radii are 0 below σ = 1/√3 ≈ 0.577, so the blur changes nothing there.
+  `m` is clamped to `[0, 3]` defensively: `wl ≤ wIdeal < wl + 2`, so `mIdeal` lies in `(0, 3]` for every σ ≥ 0. The variance of three boxes of radius `r_i` is `Σ ((2r_i + 1)² − 1) / 12 = Σ r_i(r_i + 1) / 3`. Moving one box from `wl` to `wl + 2` changes it by `(wl + 1) / 3`, so rounding `m` leaves it within half that step, `(r_min + 1) / 3` with `r_min = (wl − 1) / 2`, of σ². That is within 5% of σ² only from σ ≈ 6.7 up: at σ = 1 the nearest variances any three integer boxes reach are 2/3 and 4/3 (33% off), and this construction is 15% off at σ = 1.7 and 8.3% off at σ = 4. All three radii are 0 below σ = 1/√3 ≈ 0.577, and just above it the boxes overshoot (σ_eff ≈ 0.816), so `gaussianBlurRGBA` uses the boxes only from σ = √(44/3) ≈ 3.83 up and an exact Gaussian below it (M2-R18).
 
 - **One box pass along one line** (horizontal: a row of `w` pixels; vertical: a column of `h` pixels), radius `r`, window `d = 2r + 1`, per colour channel c ∈ {R, G, B} (alpha untouched):
   1. Copy the line's RGBA bytes into the line buffer `buf` (a `Uint8ClampedArray` of `4 · max(w, h)`, allocated once per `gaussianBlurRGBA` call). The output is written straight back into `data`.
@@ -203,7 +203,7 @@ Reference values (from the paper's table and widely published conversions; toler
   3. `sum = Σ_{i = −r}^{r} at(i)` (initial window centred on 0).
   4. For `x = 0 … n − 1`: write `floor((sum + r) / d)` (round half up; `d` is odd so exact halves do not occur), then `sum += at(x + r + 1) − at(x − r)`.
   5. `r = 0` skips the pass.
-- **`gaussianBlurRGBA`:** `σ < 0.25` → return. Else compute the three radii; run the 3 horizontal passes on every row, then the 3 vertical passes on every column. Time O(3 · 2 · w · h · 3) = O(w · h) regardless of σ.
+- **`gaussianBlurRGBA`:** `σ < 1/16` → return; `σ < √(44/3)` → the exact Gaussian of M2-R18. Else compute the three radii; run the 3 horizontal passes on every row, then the 3 vertical passes on every column. Time O(3 · 2 · w · h · 3) = O(w · h) regardless of σ.
 - Properties: a constant image stays constant; no output value is outside `[min, max]` of the input channel; when the border ring of width ≥ `r_0 + r_1 + r_2` is constant, clamping changes nothing and the channel mean is kept up to rounding (≤ 0.5 levels).
 
 ### Ramp (A4) — M2-R8, owner D9
