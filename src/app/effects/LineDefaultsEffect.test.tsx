@@ -22,6 +22,8 @@ beforeEach(() => {
 })
 afterEach(() => {
   vi.restoreAllMocks()
+  useSettings.setState(useSettings.getInitialState(), true)
+  useImages.setState(useImages.getInitialState(), true)
 })
 
 describe('LineDefaultsEffect', () => {
@@ -113,6 +115,37 @@ describe('LineDefaultsEffect', () => {
       useImages.getState().applyLinesToAll(B)
     })
     expect(useSettings.getState().lineDefaults).toEqual({ ...DEFAULT_LINES, style: STYLE })
+  })
+
+  it('an apply that also changes the selected image writes the defaults once', () => {
+    render(<LineDefaultsEffect />)
+    useImages.getState().updateLines(B, { thirds: true, style: STYLE })
+    const set = vi.spyOn(useSettings.getState(), 'setLineDefaults')
+    act(() => {
+      useImages.getState().applyLinesToAll(B)
+    })
+    expect(useImages.getState().images.find((i) => i.id === A)?.lines.style).toEqual(STYLE)
+    expect(set).toHaveBeenCalledTimes(1)
+  })
+
+  it('a newly added image that becomes selected writes nothing', () => {
+    render(<LineDefaultsEffect />)
+    const set = vi.spyOn(useSettings.getState(), 'setLineDefaults')
+    const C = 'c' as ImageId
+    act(() => {
+      useImages.setState((s) => ({
+        images: [
+          ...s.images,
+          {
+            ...makeLoadedImage({ id: C, name: 'c.jpg' }),
+            lines: { ...DEFAULT_LINES, style: STYLE },
+          },
+        ],
+        selectedId: C,
+      }))
+    })
+    expect(set).not.toHaveBeenCalled()
+    expect(useSettings.getState().lineDefaults).toEqual(DEFAULT_LINES)
   })
 
   it('an apply that changes no image still counts as last used', () => {
