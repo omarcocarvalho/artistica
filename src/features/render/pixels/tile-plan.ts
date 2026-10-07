@@ -1,5 +1,6 @@
 import { MM_PER_INCH, TARGET_DPI } from '../../../shared/model/units'
 import type { Rotation } from '../../../shared/model/image'
+import { studyKey } from '../../../shared/model/study'
 import type { DrawTile } from '../types'
 
 /** JPEG quality for photos in the PDF (spec §2.5). */
@@ -212,7 +213,7 @@ export function downscaleSteps(
 
 /**
  * Identity of a tile's encoded pixels: equal keys ⇒ byte-identical images, so copies at the same
- * size share one embedded image in the PDF.
+ * size share one embedded image in the PDF. Includes the study version and its parameters.
  */
 export function tileRenderKey(tile: DrawTile, plan: TilePixelPlan = planTilePixels(tile)): string {
   const { x, y, w, h } = plan.src
@@ -224,6 +225,8 @@ export function tileRenderKey(tile: DrawTile, plan: TilePixelPlan = planTilePixe
     tile.flipH ? 'h' : '-',
     tile.flipV ? 'v' : '-',
     `b${String(plan.bleedPx)}`,
+    tile.version,
+    studyKey(tile.study),
   ].join('|')
 }
 

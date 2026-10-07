@@ -11,7 +11,7 @@ import {
   DEFAULT_PAGE_SETUP,
   type PageSetup,
 } from '../../../shared/model/page-setup'
-import { DEFAULT_STUDY, type StudySettings } from '../../../shared/model/study'
+import { DEFAULT_STUDY, type StudySettings, type StudyVersion } from '../../../shared/model/study'
 import type { LayoutResult, Placement, RectMm } from '../../layout/types'
 import type { DrawTile, PageModel } from '../types'
 
@@ -34,6 +34,16 @@ export function descriptor(
     edits: { ...DEFAULT_EDITS, ...edits },
     study,
   }
+}
+
+/** A descriptor whose study selects `versions` (other study fields default). */
+export function studyDescriptor(
+  name: string,
+  versions: readonly StudyVersion[],
+  pxW = 3000,
+  pxH = 2000,
+): ImageDescriptor {
+  return descriptor(name, pxW, pxH, {}, { ...DEFAULT_STUDY, versions })
 }
 
 export function placement(
@@ -80,6 +90,8 @@ export function drawTile(patch: Partial<DrawTile> = {}): DrawTile {
     flipV: false,
     lowDpi: false,
     scaledToFit: false,
+    version: 'original',
+    study: null,
     ...patch,
   }
 }
@@ -91,6 +103,7 @@ export function pageModel(tiles: readonly DrawTile[], patch: Partial<PageModel> 
     safeArea: { x: 5, y: 5, w: 200, h: 287 },
     tiles,
     cropMarks: [],
+    groups: [],
     ...patch,
   }
 }

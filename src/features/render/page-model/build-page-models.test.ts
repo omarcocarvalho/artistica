@@ -1,8 +1,19 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import type { Rotation } from '../../../shared/model/image'
-import { descriptor, id, layoutOf, placement, setupWith } from '../test-support/fixtures'
-import { buildPageModels, combineRotation, resolveCrop } from './build-page-models'
+import { outerReserveMm } from '../../../shared/model/page-setup'
+import { DEFAULT_STUDY } from '../../../shared/model/study'
+import type { RectMm } from '../../layout/types'
+import {
+  descriptor,
+  id,
+  layoutOf,
+  placement,
+  setupWith,
+  studyDescriptor,
+} from '../test-support/fixtures'
+import { buildPageModels, combineRotation, readingOrder, resolveCrop } from './build-page-models'
+import { idealCropMarks } from './crop-marks'
 import { expandRect, segmentIntersectsRect } from './rect'
 
 describe('resolveCrop', () => {
@@ -72,6 +83,8 @@ describe('buildPageModels', () => {
         flipV: false,
         lowDpi: true,
         scaledToFit: true,
+        version: 'original',
+        study: null,
       },
     ])
     expect(page?.cropMarks).toHaveLength(8)
@@ -130,7 +143,7 @@ describe('buildPageModels', () => {
     const [page] = buildPageModels(
       layoutOf([[placement('a', [trimA, { ...trimA, x: 130, w: 60 }])]]),
       setupWith(),
-      [descriptor('a')],
+      [studyDescriptor('a', ['original', 'blurred'])],
     )
     expect(page?.tiles).toHaveLength(2)
   })
@@ -181,5 +194,168 @@ describe('buildPageModels', () => {
         },
       ),
     )
+  })
+})
+
+const R = (x: number, y: number, w = 40, h = 60): RectMm => ({ x, y, w, h })
+
+describe('study versions (M2-R4)', () => {
+  const three = studyDescriptor('a', ['original', 'blurred', 'values'])
+
+  it('assigns versions in reading order: row, column, turned row, turned column', () => {
+    const row = placement('a', [R(20, 20), R(66, 20), R(112, 20)])
+    const column = placement('a', [R(20, 20, 60, 40), R(20, 66, 60, 40), R(20, 112, 60, 40)])
+    const turnedRow = placement('a', [R(20, 20, 60, 40), R(20, 66, 60, 40), R(20, 112, 60, 40)], {
+      turned: true,
+    })
+    // A turned column places tile i i-th from the right (CR-B5).
+    const turnedColumn = placement('a', [R(112, 20), R(66, 20), R(20, 20)], { turned: true })
+    for (const p of [row, column, turnedRow, turnedColumn]) {
+      const [page] = buildPageModels(layoutOf([[p]]), setupWith({ cropMarks: false }), [three])
+      const tiles = page?.tiles ?? []
+      expect(tiles.map((t) => t.version)).toEqual(['original', 'blurred', 'values'])
+      const trims = tiles.map((t) => t.trim)
+      expect(trims).toEqual(readingOrder(trims))
+    }
+    const [turned] = buildPageModels(layoutOf([[turnedColumn]]), setupWith(), [three])
+    expect(turned?.tiles[0]?.trim).toEqual(R(20, 20))
+  })
+
+  it("emits each placement's tiles consecutively, in reading order (CR-M2-5)", () => {
+    // Two side-by-side columns: sorting the whole page would interleave a and b.
+    const a = placement('a', [R(20, 112, 40, 40), R(20, 20, 40, 40), R(20, 66, 40, 40)])
+    const b = placement('b', [R(66, 66, 40, 40), R(66, 20, 40, 40)])
+    const [page] = buildPageModels(layoutOf([[a, b]]), setupWith({ cropMarks: false }), [
+      three,
+      studyDescriptor('b', ['original', 'values']),
+    ])
+    const tiles = page?.tiles ?? []
+    expect(tiles.map((t) => t.imageId)).toEqual([id('a'), id('a'), id('a'), id('b'), id('b')])
+    expect(tiles.map((t) => t.trim.y)).toEqual([20, 66, 112, 20, 66])
+    expect(tiles[3]?.version).toBe('original')
+    expect(tiles[4]?.version).toBe('values')
+  })
+
+  it('attaches tileStudyFor(version, study) and keeps the M1 fields of every tile', () => {
+    const p = placement('a', [R(20, 20), R(66, 20), R(112, 20)], { warnings: ['low-dpi'] })
+    const [page] = buildPageModels(layoutOf([[p]]), setupWith(), [three])
+    const [o, b, v] = page?.tiles ?? []
+    expect(o?.study).toBeNull()
+    expect(b?.study).toEqual({ blurPct: DEFAULT_STUDY.blurPct, values: null })
+    expect(v?.study).toEqual({ blurPct: null, values: DEFAULT_STUDY.values })
+    expect(page?.tiles.every((t) => t.lowDpi)).toBe(true)
+    expect(new Set(page?.tiles.map((t) => JSON.stringify(t.crop))).size).toBe(1)
+  })
+
+  it('gives every version of the four its study, in canonical order', () => {
+    const all = studyDescriptor('a', ['original', 'blurred', 'values', 'blurValues'])
+    const p = placement('a', [R(20, 20), R(66, 20), R(112, 20), R(158, 20)])
+    const [page] = buildPageModels(layoutOf([[p]]), setupWith(), [all])
+    expect(page?.tiles.map((t) => t.version)).toEqual([
+      'original',
+      'blurred',
+      'values',
+      'blurValues',
+    ])
+    expect(page?.tiles[3]?.study).toEqual({
+      blurPct: DEFAULT_STUDY.blurPct,
+      values: DEFAULT_STUDY.values,
+    })
+  })
+
+  it('lists placements with ≥ 2 tiles as groups, in placement order', () => {
+    const group = placement('a', [R(20, 20), R(66, 20)], { block: R(20, 20, 86, 60) })
+    const single = placement('b', [R(20, 100)])
+    const last = placement('c', [R(20, 180), R(66, 180)], { block: R(20, 180, 86, 60) })
+    const [page] = buildPageModels(layoutOf([[group, single, last]]), setupWith(), [
+      studyDescriptor('a', ['original', 'values']),
+      descriptor('b'),
+      studyDescriptor('c', ['blurred', 'values']),
+    ])
+    expect(page?.groups).toEqual([
+      { imageId: id('a'), block: group.block },
+      { imageId: id('c'), block: last.block },
+    ])
+  })
+
+  it('skips a placement whose tile count no longer matches the versions (stale layout)', () => {
+    const stale = placement('a', [R(20, 20)])
+    const other = placement('b', [R(20, 100)])
+    const pages = buildPageModels(layoutOf([[stale, other]]), setupWith(), [
+      studyDescriptor('a', ['original', 'values']),
+      descriptor('b'),
+    ])
+    expect(pages[0]?.tiles.map((t) => t.imageId)).toEqual([id('b')])
+    expect(pages[0]?.groups).toEqual([])
+  })
+
+  it('skips a stale group laid out for more tiles than the image now has', () => {
+    const stale = placement('a', [R(20, 20), R(66, 20)])
+    const pages = buildPageModels(layoutOf([[stale]]), setupWith(), [descriptor('a')])
+    expect(pages).toEqual([])
+  })
+
+  it('drops a page left empty by a stale placement and re-indexes', () => {
+    const pages = buildPageModels(
+      layoutOf([[placement('a', [R(20, 20)])], [placement('b', [R(20, 20)])]]),
+      setupWith(),
+      [studyDescriptor('a', ['original', 'values']), descriptor('b')],
+    )
+    expect(pages.map((p) => p.index)).toEqual([0])
+    expect(pages[0]?.tiles[0]?.imageId).toBe(id('b'))
+  })
+
+  it('Original-only images give the M1 model plus version/study/groups defaults', () => {
+    const [page] = buildPageModels(layoutOf([[placement('a', [R(20, 20)])]]), setupWith(), [
+      descriptor('a'),
+    ])
+    expect(page?.tiles[0]?.version).toBe('original')
+    expect(page?.tiles[0]?.study).toBeNull()
+    expect(page?.groups).toEqual([])
+  })
+
+  describe('a 3-version turned group with bleed and crop marks', () => {
+    const setup = setupWith({ bleed: { enabled: true, mm: 3 }, gutter: { enabled: true, mm: 6 } })
+    const x0 = setup.safeAreaMm + outerReserveMm(setup)
+    const p = placement('a', [R(x0 + 100, 14, 44, 66), R(x0 + 50, 14, 44, 66), R(x0, 14, 44, 66)], {
+      turned: true,
+      block: R(x0, 14, 144, 66),
+    })
+    const [page] = buildPageModels(layoutOf([[p]]), setup, [three])
+
+    it('matches the snapshot', () => {
+      expect(page).toMatchSnapshot()
+    })
+
+    it("keeps the group's outer crop marks at full length (H4)", () => {
+      const outer = idealCropMarks({ trim: p.block, bleedMm: 3 }).map((m) => ({
+        x1: m.x,
+        y1: m.y,
+        x2: m.x + m.dx * m.length,
+        y2: m.y + m.dy * m.length,
+      }))
+      expect(page?.cropMarks).toEqual(expect.arrayContaining(outer))
+    })
+  })
+})
+
+describe('readingOrder', () => {
+  it('sorts by y then x, treating y within 1e-6 mm as one row', () => {
+    const a = R(10, 20 + 1e-9)
+    const b = R(50, 20)
+    const c = R(10, 90)
+    expect(readingOrder([c, b, a])).toEqual([a, b, c])
+  })
+
+  it('starts a new row when y differs by more than 1e-6 mm', () => {
+    const lower = R(10, 20 + 1e-5)
+    const upper = R(50, 20)
+    expect(readingOrder([lower, upper])).toEqual([upper, lower])
+  })
+
+  it('does not mutate its input', () => {
+    const input = [R(50, 20), R(10, 20)]
+    readingOrder(input)
+    expect(input).toEqual([R(50, 20), R(10, 20)])
   })
 })
