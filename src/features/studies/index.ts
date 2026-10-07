@@ -30,5 +30,11 @@ export { RAMP_L_DARK, RAMP_L_LIGHT, rampChroma, valueRamp } from './ramp'
 export { LIGHTNESS_BINS, VALUE_CLIP, lightnessRange, posterizeRGBA, valueIndex } from './posterize'
 export type { LightnessRange } from './posterize'
 // --- preview (C1, C2) ---
+export {
+  createStudyPreviewProvider,
+  STUDY_RETAIN_BYTES,
+  type BitmapLike,
+  type StudyPreviewProvider,
+} from './preview/provider'
 // --- components (D1) ---
 export { StudiesPanel, type StudiesPanelProps } from './components/StudiesPanel'

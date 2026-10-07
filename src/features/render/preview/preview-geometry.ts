@@ -1,6 +1,8 @@
 import type { ImageId } from '../../../shared/model/image'
 import type { SizeMm } from '../../../shared/model/paper'
+import type { StudyVersion } from '../../../shared/model/study'
 import { MM_PER_INCH, TARGET_DPI } from '../../../shared/model/units'
+import type { RectMm } from '../../layout/types'
 import { MAX_CANVAS_AREA_PX, tileSourceDpi } from '../pixels/tile-plan'
 import type { PageModel } from '../types'
 
@@ -47,11 +49,38 @@ export interface TileHitArea {
   readonly scaledToFit: boolean
   /** Source DPI at the printed size (shown on the low-DPI chip). */
   readonly dpi: number
+  readonly version: StudyVersion
+  /** Tiles in this tile's study group (1 when it is in none). */
+  readonly groupSize: number
+  /** First tile of its group in reading order (true when it is in none). */
+  readonly firstInGroup: boolean
+}
+
+const EPS_MM = 1e-6
+
+const inside = (r: RectMm, box: RectMm): boolean =>
+  r.x >= box.x - EPS_MM &&
+  r.y >= box.y - EPS_MM &&
+  r.x + r.w <= box.x + box.w + EPS_MM &&
+  r.y + r.h <= box.y + box.h + EPS_MM
+
+function groupInfo(page: PageModel): { size: number; first: boolean }[] {
+  const info = page.tiles.map(() => ({ size: 1, first: true }))
+  for (const g of page.groups) {
+    const members = page.tiles.flatMap((t, i) =>
+      t.imageId === g.imageId && inside(t.trim, g.block) ? [i] : [],
+    )
+    members.forEach((m, k) => {
+      info[m] = { size: members.length, first: k === 0 }
+    })
+  }
+  return info
 }
 
 /** Hit areas cover each tile's trim box, in tile order (= reading order of the layout). */
 export function tileHitAreas(page: PageModel): TileHitArea[] {
   const { w, h } = page.size
+  const groups = groupInfo(page)
   return page.tiles.map((t, i) => ({
     key: `${String(page.index)}:${String(i)}`,
     imageId: t.imageId,
@@ -62,5 +91,8 @@ export function tileHitAreas(page: PageModel): TileHitArea[] {
     lowDpi: t.lowDpi,
     scaledToFit: t.scaledToFit,
     dpi: tileSourceDpi(t),
+    version: t.version,
+    groupSize: groups[i]?.size ?? 1,
+    firstInGroup: groups[i]?.first ?? true,
   }))
 }
