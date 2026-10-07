@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { valueRamp } from '../../studies/ramp'
 import { drawTile } from '../test-support/fixtures'
 import { FakeCanvas, fakeFactory } from '../test-support/fake-canvas'
 import { extendEdges, fillPixel, repeatColumn, repeatRow } from './bleed'
@@ -126,6 +127,25 @@ describe('renderTile', () => {
     expect(out.pixel(105, 0)).toEqual([99, 0, 7, 255])
     expect(out.pixel(0, 55)).toEqual([0, 49, 7, 255])
     expect(out.pixel(105, 55)).toEqual([99, 49, 7, 255])
+  })
+
+  it('posterises the image area to the ramp and extends the studied edge into the bleed', () => {
+    const plan = planTilePixels(drawTile({ bleedMm: 3, crop: { x: 0, y: 0, w: 100, h: 50 } }), {
+      dpi: 25.4,
+    })
+    const src = {
+      paint: (x: number) => [x * 2, x * 2, x * 2, 255],
+    } as unknown as CanvasImageSource
+    const values = { count: 3, hue: 0, neutral: true }
+    const out = renderTile(src, plan, fakeFactory(), { blurPct: null, values })
+    const ramp = valueRamp(values).map((c) => [c.r, c.g, c.b, 255].join())
+    const seen = new Set<string>()
+    for (let y = 0; y < out.height; y++)
+      for (let x = 0; x < out.width; x++) seen.add(out.pixel(x, y).join())
+    expect([...seen].sort()).toEqual([...ramp].sort())
+    expect(out.pixel(0, 10)).toEqual(out.pixel(3, 10))
+    expect(out.pixel(105, 10)).toEqual(out.pixel(102, 10))
+    expect(out.pixel(0, 10)).not.toEqual(out.pixel(105, 10))
   })
 
   it('refuses step-down temporaries above the canvas cap and releases what it made', () => {

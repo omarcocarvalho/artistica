@@ -1,11 +1,19 @@
 import { describe, expect, it, vi } from 'vitest'
 import { inspectPdf } from '../pdf/inspect'
 import { integerCropBox, planTilePixels, tileRenderKey, type PxRect } from '../pixels/tile-plan'
-import { fakeFactory } from '../test-support/fake-canvas'
+import { fakeFactory, type FakeCanvas } from '../test-support/fake-canvas'
 import { drawTile, id, pageModel } from '../test-support/fixtures'
-import { TINY_JPEG } from '../test-support/image-bytes'
+import { stripePng, TINY_JPEG } from '../test-support/image-bytes'
 import { ExportError, EXPORT_ERROR_KEYS, isAbortError, toExportError } from './errors'
 import type { ImageId } from '../../../shared/model/image'
+import {
+  DEFAULT_STUDY,
+  STUDY_VERSIONS,
+  tileFormat,
+  tileStudyFor,
+  type StudySettings,
+} from '../../../shared/model/study'
+import type { DrawTile } from '../types'
 import {
   runExport,
   type ExportDeps,
@@ -15,6 +23,14 @@ import {
   type GetSource,
 } from './run-export'
 import { createExportWorkerApi } from './worker-api'
+
+const FIVE: [number, number, number][] = [
+  [40, 30, 20],
+  [90, 70, 50],
+  [140, 115, 90],
+  [190, 170, 145],
+  [240, 232, 220],
+]
 
 /** A fake ImageBitmap: only close() and its size matter here. */
 function fakeBitmap(
@@ -73,6 +89,7 @@ function realWorkerDeps(overrides: Partial<ExportDeps> = {}) {
     supported: () => true,
     createCanvas: fakeFactory(),
     encodeJpeg: () => Promise.resolve(TINY_JPEG),
+    encodePng: () => Promise.resolve(stripePng(FIVE)),
   })
   const deps: ExportDeps = {
     api,
@@ -213,9 +230,9 @@ describe('runExport decodes on demand', () => {
     const encode = deps.api.encodeTile.bind(deps.api)
     const api: ExportWorkerApi = {
       ...deps.api,
-      encodeTile: (key, plan, bmp) => {
+      encodeTile: (key, plan, bmp, study, format) => {
         order.push(`${key.split('|')[0] ?? ''}:${String(src.decoded.at(-1)?.closed)}`)
-        return encode(key, plan, bmp)
+        return encode(key, plan, bmp, study, format)
       },
     }
     await runExport(spread, src.get, {}, { ...deps, api })
@@ -401,6 +418,7 @@ describe('createExportWorkerApi', () => {
       supported: () => false,
       createCanvas: fakeFactory(),
       encodeJpeg: vi.fn(),
+      encodePng: vi.fn(),
     })
     await expect(api.init()).rejects.toThrow('export:unsupported')
   })
@@ -410,11 +428,12 @@ describe('createExportWorkerApi', () => {
       supported: () => true,
       createCanvas: fakeFactory(),
       encodeJpeg: () => Promise.reject(new Error('boom')),
+      encodePng: vi.fn(),
     })
     await api.init()
     const bmp = fakeBitmap(10, 10)
     await expect(
-      api.encodeTile('k', { ...planOf(), src: { x: 0, y: 0, w: 10, h: 10 } }, bmp),
+      api.encodeTile('k', { ...planOf(), src: { x: 0, y: 0, w: 10, h: 10 } }, bmp, null, 'jpeg'),
     ).rejects.toThrow('boom')
     expect(bmp.closed).toBe(true)
   })
@@ -424,6 +443,7 @@ describe('createExportWorkerApi', () => {
       supported: () => true,
       createCanvas: fakeFactory(),
       encodeJpeg: vi.fn(),
+      encodePng: vi.fn(),
     })
     await expect(api.finish()).rejects.toThrow('export:failed')
   })
@@ -464,3 +484,81 @@ function planOf() {
     dpi: 300,
   }
 }
+
+describe('runExport with studies', () => {
+  const ALL: StudySettings = { ...DEFAULT_STUDY, versions: STUDY_VERSIONS }
+
+  /** Every version of image `a` as one row of small tiles (fast in node). */
+  const versionTiles = (y: number): DrawTile[] =>
+    STUDY_VERSIONS.map((version, i) =>
+      drawTile({
+        imageId: id('a'),
+        trim: { x: 20 + i * 12, y, w: 10, h: 5 },
+        version,
+        study: tileStudyFor(version, ALL),
+      }),
+    )
+
+  function studyWorkerDeps() {
+    const formats: string[] = []
+    const made: FakeCanvas[] = []
+    const api = createExportWorkerApi({
+      supported: () => true,
+      createCanvas: fakeFactory(made),
+      encodeJpeg: () => {
+        formats.push('jpeg')
+        return Promise.resolve(TINY_JPEG)
+      },
+      encodePng: () => {
+        formats.push('png')
+        return Promise.resolve(stripePng(FIVE))
+      },
+    })
+    const { deps, clones } = realWorkerDeps({ api })
+    return { deps, clones, formats, made }
+  }
+
+  it('decodes each image once for 4 versions × 2 copies across two pages', async () => {
+    const src = fakeSources({ a: [3000, 1500] })
+    const { deps, clones, made } = studyWorkerDeps()
+    const encode = vi.spyOn(deps.api, 'encodeTile')
+    const pages = [pageModel(versionTiles(20)), pageModel(versionTiles(20), { index: 1 })]
+    await runExport(pages, src.get, {}, deps)
+    expect(src.decodes).toEqual(['a'])
+    expect(src.maxAlive()).toBe(1)
+    expect(src.decoded.every((bmp) => bmp.closed)).toBe(true)
+    expect(encode).toHaveBeenCalledTimes(4)
+    expect(new Set(encode.mock.calls.map((c) => c[0])).size).toBe(4)
+    expect(clones).toHaveLength(4)
+    expect(clones.every((c) => c.closed)).toBe(true)
+    expect(made.every((c) => c.width === 0 && c.height === 0)).toBe(true)
+  })
+
+  it('passes each tile its study and format: PNG for values and blur + values, JPEG otherwise', async () => {
+    const { deps, formats } = studyWorkerDeps()
+    const encode = vi.spyOn(deps.api, 'encodeTile')
+    await runExport([pageModel(versionTiles(20))], fakeSources({ a: [3000, 1500] }).get, {}, deps)
+    expect(encode.mock.calls.map((c) => [c[3], c[4]])).toEqual(
+      STUDY_VERSIONS.map((v) => [tileStudyFor(v, ALL), tileFormat(v)]),
+    )
+    expect(formats).toEqual(['jpeg', 'jpeg', 'png', 'png'])
+  })
+
+  it('produces a PDF whose value tiles are FlateDecode images, drawn in page order', async () => {
+    const { deps } = studyWorkerDeps()
+    const bytes = await runExport(
+      [pageModel(versionTiles(20))],
+      fakeSources({ a: [3000, 1500] }).get,
+      {},
+      deps,
+    )
+    const report = await inspectPdf(bytes)
+    expect(report.pages[0]?.draws.map((d) => d.filter)).toEqual([
+      'DCTDecode',
+      'DCTDecode',
+      'FlateDecode',
+      'FlateDecode',
+    ])
+    expect(report.pages[0]?.draws[2]?.colours).toBe(5)
+  })
+})

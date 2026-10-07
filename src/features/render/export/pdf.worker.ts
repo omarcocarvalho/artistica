@@ -11,6 +11,10 @@ const api = createExportWorkerApi<OffscreenCanvas>({
     const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: JPEG_QUALITY })
     return new Uint8Array(await blob.arrayBuffer())
   },
+  encodePng: async (canvas) => {
+    const blob = await canvas.convertToBlob({ type: 'image/png' })
+    return new Uint8Array(await blob.arrayBuffer())
+  },
 })
 
 const exposed: ExportWorkerApi = {

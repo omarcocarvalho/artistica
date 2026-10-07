@@ -1,4 +1,5 @@
 import type { ImageId } from '../../../shared/model/image'
+import { tileFormat, type TileStudy } from '../../../shared/model/study'
 import {
   forCroppedSource,
   forScaledSource,
@@ -39,8 +40,14 @@ export type GetSource = (id: ImageId) => ExportSource | undefined
 export interface ExportWorkerApi {
   /** Rejects with "export:unsupported" when OffscreenCanvas 2D / convertToBlob are unavailable. */
   init(): Promise<void>
-  /** Render + JPEG-encode + embed one tile image. The worker closes `bitmap` when done. */
-  encodeTile(key: string, plan: TilePixelPlan, bitmap: ImageBitmap): Promise<void>
+  /** Render (+ study) + encode + embed one tile image. The worker closes `bitmap` when done. */
+  encodeTile(
+    key: string,
+    plan: TilePixelPlan,
+    bitmap: ImageBitmap,
+    study: TileStudy | null,
+    format: 'jpeg' | 'png',
+  ): Promise<void>
   addPage(page: PageModel): Promise<void>
   finish(): Promise<Uint8Array>
 }
@@ -84,6 +91,8 @@ const SAVE_SHARE = 0.05
 interface TileJob {
   readonly key: string
   readonly plan: TilePixelPlan
+  readonly study: TileStudy | null
+  readonly format: 'jpeg' | 'png'
 }
 
 /** Every distinct tile image to encode, grouped by source image (first appearance order). */
@@ -98,7 +107,7 @@ function jobsByImage(pages: readonly PageModel[]): Map<ImageId, TileJob[]> {
       if (seen.has(key)) continue
       seen.add(key)
       const jobs = byImage.get(tile.imageId) ?? []
-      jobs.push({ key, plan })
+      jobs.push({ key, plan, study: tile.study, format: tileFormat(tile.version) })
       byImage.set(tile.imageId, jobs)
     }
   }
@@ -107,9 +116,10 @@ function jobsByImage(pages: readonly PageModel[]): Map<ImageId, TileJob[]> {
 
 /**
  * Drives the export page by page. The first tile of an image decodes that image at full resolution
- * and encodes all of its tiles, on every page, before the bitmap is closed: each image is decoded
- * once and at most one full-resolution image is alive. Main-thread peak is that image plus one
- * cropped clone; worker peak is one tile canvas. Identical tiles (same tileRenderKey) are encoded once.
+ * and encodes all of its tiles (every study version, on every page) before the bitmap is closed:
+ * each image is decoded once and at most one full-resolution image is alive. Main-thread peak is
+ * that image plus one cropped clone; worker peak is one tile canvas, plus one copy of its image
+ * area while a study runs. Identical tiles (same tileRenderKey) are encoded once.
  * On abort it rejects with an AbortError right away, even if a decode or worker call is in flight.
  */
 export async function runExport(
@@ -154,7 +164,7 @@ export async function runExport(
     try {
       const sx = full.width / source.pxW
       const sy = full.height / source.pxH
-      for (const { key, plan } of jobs.get(imageId) ?? []) {
+      for (const { key, plan, study, format } of jobs.get(imageId) ?? []) {
         checkAborted(signal)
         const scaled = forScaledSource(plan, sx, sy)
         // Not raced: createImageBitmap always settles, and we must own the clone to close it.
@@ -165,7 +175,13 @@ export async function runExport(
         }
         try {
           await race(
-            deps.api.encodeTile(key, forCroppedSource(scaled), deps.transfer(clone, [clone])),
+            deps.api.encodeTile(
+              key,
+              forCroppedSource(scaled),
+              deps.transfer(clone, [clone]),
+              study,
+              format,
+            ),
           )
         } catch (e) {
           clone.close() // no-op once transferred; frees the clone if posting failed
