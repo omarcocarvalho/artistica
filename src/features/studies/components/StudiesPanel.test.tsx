@@ -404,6 +404,7 @@ describe('StudiesPanel', () => {
       const hint = screen.getByText(WAITING)
       expect(hint).toBeVisible()
       expect(hint).toHaveAttribute('aria-live', 'polite')
+      expect(hint).toHaveAttribute('tabindex', '-1')
       expect(controls()).toHaveLength(4 + 8 + 1 + 3)
       for (const control of controls()) {
         expect(control).toBeDisabled()

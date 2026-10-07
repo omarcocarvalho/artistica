@@ -436,6 +436,16 @@ test.describe('studies on chromium', () => {
     await expect(app.studySlider('Amount')).toHaveValue('70')
     await expect(app.versionChip('Original')).toHaveAttribute('aria-pressed', 'true')
     await expect(app.versionChip('Blurred')).toHaveAttribute('aria-pressed', 'false')
+
+    page.on('dialog', (d) => void d.accept())
+    await page.reload()
+    await expect(app.imageRows).toHaveCount(0)
+    await app.upload(FIXTURES.valueRamp)
+    await app.expectImages(1)
+    await app.openStudiesTab()
+    await expect(app.studiesPanel.getByText(RAMP, { exact: true })).toBeVisible()
+    await expect(app.studySlider('Amount')).toHaveValue('70')
+    await expect(app.versionChip('Blurred')).toHaveAttribute('aria-pressed', 'false')
   })
 
   test('S-D6 two copies with three versions print two complete groups; a fixed width applies per tile', async ({

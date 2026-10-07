@@ -398,6 +398,27 @@ describe('remove / clear / select', () => {
       expect(store.getState().selectedId).toBe('id-1')
     })
 
+    it('keeps the next image selected when the removed one was chosen by the user, even if an earlier photo finishes importing later', async () => {
+      const gates = [deferred<DecodedImage>(), deferred<DecodedImage>(), deferred<DecodedImage>()]
+      let i = 0
+      const { store } = setup({
+        decode: () => (gates[i++] as { promise: Promise<DecodedImage> }).promise,
+      })
+      const p = store.getState().addFiles([file('slow.jpg'), file('b.jpg'), file('c.jpg')])
+      gates[1]?.resolve(decoded())
+      gates[2]?.resolve(decoded())
+      await vi.waitFor(() => {
+        expect(store.getState().images).toHaveLength(2)
+      })
+      store.getState().select('id-2' as ImageId)
+      store.getState().remove('id-2' as ImageId)
+      expect(store.getState().selectedId).toBe('id-3')
+      gates[0]?.resolve(decoded())
+      await p
+      expect(store.getState().images).toHaveLength(2)
+      expect(store.getState().selectedId).toBe('id-3')
+    })
+
     it('keeps nothing selected when nothing was', async () => {
       const store = await three()
       store.getState().select(null)
