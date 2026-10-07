@@ -356,6 +356,20 @@ export class AppPage {
   get linesCount(): Locator {
     return this.linesHeading.locator('..').getByText(/^\d+ on$/)
   }
+  /** Drops the locators inside the phone Lines section, which is always open below the Studies panel. */
+  async outsideLinesSection(locators: readonly Locator[]): Promise<Locator[]> {
+    if ((await this.linesSection.count()) === 0) return [...locators]
+    const section = await this.linesSection.elementHandle()
+    const kept: Locator[] = []
+    for (const l of locators) {
+      const inside = await l.evaluate(
+        (el: unknown, s: { contains(node: unknown): boolean } | null) => s?.contains(el) ?? false,
+        section,
+      )
+      if (!inside) kept.push(l)
+    }
+    return kept
+  }
   get linesApplyButton(): Locator {
     return this.page.getByRole('button', { name: 'Apply lines to all images', exact: true })
   }

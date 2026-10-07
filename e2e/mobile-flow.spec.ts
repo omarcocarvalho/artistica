@@ -392,7 +392,7 @@ test('S-P2 phone: every Studies-step control is at least 44 px tall', async ({ p
     ...radios.map((r) => r.locator('xpath=ancestor::label')),
     ...(await page.getByRole('group', { name: 'Print these versions' }).getByRole('button').all()),
     ...(await page.getByRole('group', { name: 'Hue' }).getByRole('button').all()),
-    ...(await page.getByRole('slider').all()),
+    ...(await app.outsideLinesSection(await page.getByRole('slider').all())),
     page.getByRole('button', { name: 'Apply to all images' }),
   ]
   expect(targets).toHaveLength(2 + 4 + 8 + 3 + 1)

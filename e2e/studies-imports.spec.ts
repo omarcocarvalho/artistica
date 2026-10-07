@@ -56,12 +56,12 @@ async function holdUrlImport(page: Page): Promise<() => void> {
   return release
 }
 
-/** The version chips, swatches, Apply to all and the three sliders inside `scope` (native `disabled`: the locked chip is only aria-disabled). */
-async function expectStudyControls(scope: Locator, enabled: boolean): Promise<void> {
-  const controls = [
+/** The version chips, swatches, Apply to all and the three sliders inside `scope` and outside the phone Lines section (native `disabled`: the locked chip is only aria-disabled). */
+async function expectStudyControls(app: AppPage, scope: Locator, enabled: boolean): Promise<void> {
+  const controls = await app.outsideLinesSection([
     ...(await scope.getByRole('button').all()),
     ...(await scope.getByRole('slider').all()),
-  ]
+  ])
   expect(controls).toHaveLength(4 + 8 + 1 + 3)
   for (const c of controls) await expect(c).toHaveJSProperty('disabled', !enabled)
 }
@@ -78,7 +78,7 @@ test.describe('studies wait for imports in progress (desktop)', () => {
     await app.upload([FIXTURES.valueRamp, FIXTURES.quadrantsPng])
     await app.expectImages(2)
     await app.openStudiesTab()
-    await expectStudyControls(app.studiesPanel, true)
+    await expectStudyControls(app, app.studiesPanel, true)
     const release = await holdUrlImport(page)
 
     const slider = app.studySlider('Amount')
@@ -103,7 +103,7 @@ test.describe('studies wait for imports in progress (desktop)', () => {
 
     const waiting = app.studiesPanel.getByText(WAITING)
     await expect(waiting).toBeVisible()
-    await expectStudyControls(app.studiesPanel, false)
+    await expectStudyControls(app, app.studiesPanel, false)
     await expect(app.studySlider('Amount')).toHaveAccessibleDescription(WAITING)
     await expect(
       page.getByRole('button', { name: 'Apply to all images' }),
@@ -114,7 +114,7 @@ test.describe('studies wait for imports in progress (desktop)', () => {
     release()
     await app.expectImages(3)
     await expect(waiting).toHaveCount(0)
-    await expectStudyControls(app.studiesPanel, true)
+    await expectStudyControls(app, app.studiesPanel, true)
     if (pasteSupported) await expect(slider).toBeFocused()
     await app.setSlider('Amount', 55)
   })
@@ -137,7 +137,7 @@ test.describe('studies wait for imports in progress (phone)', () => {
     const waiting = step.getByText(WAITING)
     await expect(waiting).toHaveCount(2)
     await expect(waiting.first()).toBeVisible()
-    await expectStudyControls(step, false)
+    await expectStudyControls(app, step, false)
     await expect(app.studiesPicker.getByRole('radio').first()).toBeEnabled()
     await expectNoAxeViolations(page)
     release()
@@ -145,7 +145,7 @@ test.describe('studies wait for imports in progress (phone)', () => {
     await app.expectImages(3)
     await app.goToStep('Studies')
     await expect(step.getByText(WAITING)).toHaveCount(0)
-    await expectStudyControls(step, true)
+    await expectStudyControls(app, step, true)
   })
 
   test('L-W2 phone: one live region announces the wait for the step, and the Lines hint describes the Lines controls', async ({
