@@ -36,6 +36,8 @@ export interface PdfReport {
     readonly content: string
     /** One entry per `Do` of an image, in content-stream order (an image drawn twice appears twice). */
     readonly draws: readonly PdfDrawInfo[]
+    /** Every stroked path, in content-stream order. */
+    readonly strokes: readonly PdfStroke[]
   }[]
   /** Image XObjects in the file (each embedded image counts once, however often it is drawn). */
   readonly imageCount: number
@@ -145,6 +147,7 @@ export async function inspectPdf(bytes: Uint8Array): Promise<PdfReport> {
         heightPt: box.height,
         content,
         draws: pageDraws(doc, p, content, info),
+        strokes: strokesOf(content, (name) => strokeOpacity(doc, p, name)),
       }
     }),
     imageCount: drawn.length,
@@ -155,12 +158,295 @@ export async function inspectPdf(bytes: Uint8Array): Promise<PdfReport> {
   }
 }
 
-/** Number of stroked straight-line paths ("x y m … x y l … S") in a content stream. */
+/** Number of crop marks (registration-black strokes) in a content stream. */
 export function countStrokedLines(content: string): number {
-  return (content.match(/\bl\s+S\b/g) ?? []).length
+  return strokesOf(content, () => 1).filter(isRegistrationStroke).length
 }
 
 /** Number of image draws ("/Name Do") in a content stream. */
 export function countImageDraws(content: string): number {
   return (content.match(/\/\S+ Do\b/g) ?? []).length
+}
+
+export interface PdfStroke {
+  readonly colour: { readonly space: 'rgb' | 'cmyk' | 'gray'; readonly values: readonly number[] }
+  readonly widthPt: number
+  readonly dashPt: readonly number[]
+  /** ExtGState /CA in effect, 1 when none. */
+  readonly opacity: number
+  /** The last `re … W` rect in effect, in the user space it was written in (no CTM applied). */
+  readonly clip: {
+    readonly x: number
+    readonly y: number
+    readonly w: number
+    readonly h: number
+  } | null
+  readonly cap: number
+  readonly join: number
+  /** Page pt, CTM applied. */
+  readonly path: readonly PdfPathOp[]
+}
+
+export type PdfPathOp =
+  | { readonly op: 'm' | 'l'; readonly x: number; readonly y: number }
+  | {
+      readonly op: 'c'
+      readonly x1: number
+      readonly y1: number
+      readonly x2: number
+      readonly y2: number
+      readonly x: number
+      readonly y: number
+    }
+
+/** CMYK 1 1 1 1: a crop mark. */
+export function isRegistrationStroke(s: PdfStroke): boolean {
+  return (
+    s.colour.space === 'cmyk' &&
+    s.colour.values.length === 4 &&
+    s.colour.values.every((v) => v === 1)
+  )
+}
+
+function strokeOpacity(doc: PDFDocument, page: PDFPage, name: string): number {
+  const states = page.node.Resources()?.lookupMaybe(PDFName.of('ExtGState'), PDFDict)
+  const ref = states?.get(PDFName.of(name))
+  const state = ref ? doc.context.lookup(ref) : undefined
+  const ca = state instanceof PDFDict ? state.get(PDFName.of('CA')) : undefined
+  return ca instanceof PDFNumber ? ca.asNumber() : 1
+}
+
+type Operand = number | string | number[]
+
+const DELIMITERS = '()<>[]{}/%'
+const isSpace = (ch: string): boolean => /^[ \n\r\t\f\0]$/.test(ch)
+
+/** Operands and operators of a content stream. Names lose their slash; strings, dicts and inline image data are skipped. */
+function* operations(content: string): Generator<{ op: string; args: Operand[] }> {
+  const n = content.length
+  let i = 0
+  let args: Operand[] = []
+  let array: number[] | null = null
+  const skipString = (): void => {
+    let depth = 0
+    for (; i < n; i++) {
+      const ch = content[i]
+      if (ch === '\\') i++
+      else if (ch === '(') depth++
+      else if (ch === ')' && --depth === 0) {
+        i++
+        return
+      }
+    }
+  }
+  const skipDict = (): void => {
+    let depth = 0
+    while (i < n) {
+      if (content.startsWith('<<', i)) {
+        depth++
+        i += 2
+      } else if (content.startsWith('>>', i)) {
+        i += 2
+        if (--depth === 0) return
+      } else if (content[i] === '(') skipString()
+      else i++
+    }
+  }
+  while (i < n) {
+    const ch = content[i] ?? ''
+    if (isSpace(ch)) i++
+    else if (ch === '%') {
+      while (i < n && content[i] !== '\n' && content[i] !== '\r') i++
+    } else if (ch === '(') skipString()
+    else if (content.startsWith('<<', i)) skipDict()
+    else if (ch === '<') i = content.indexOf('>', i) + 1 || n
+    else if (ch === '[') {
+      array = []
+      i++
+    } else if (ch === ']') {
+      args.push(array ?? [])
+      array = null
+      i++
+    } else {
+      let j = i + 1
+      while (j < n && !isSpace(content[j] ?? '') && !DELIMITERS.includes(content[j] ?? '')) j++
+      const word = content.slice(i, j)
+      i = j
+      if (ch === '/') args.push(word.slice(1))
+      else if (/^[+-]?(\d+\.?\d*|\.\d+)$/.test(word)) {
+        if (array) array.push(Number(word))
+        else args.push(Number(word))
+      } else if (word === 'ID') {
+        const end = /\sEI(?=\s|$)/g
+        end.lastIndex = i
+        i = end.exec(content) ? end.lastIndex : n
+        args = []
+      } else {
+        yield { op: word, args }
+        args = []
+      }
+    }
+  }
+}
+
+type Matrix = readonly [number, number, number, number, number, number]
+
+const multiply = (m: Matrix, by: Matrix): Matrix => [
+  m[0] * by[0] + m[1] * by[2],
+  m[0] * by[1] + m[1] * by[3],
+  m[2] * by[0] + m[3] * by[2],
+  m[2] * by[1] + m[3] * by[3],
+  m[4] * by[0] + m[5] * by[2] + by[4],
+  m[4] * by[1] + m[5] * by[3] + by[5],
+]
+
+interface GState {
+  ctm: Matrix
+  colour: PdfStroke['colour']
+  widthPt: number
+  dashPt: readonly number[]
+  opacity: number
+  clip: PdfStroke['clip']
+  cap: number
+  join: number
+}
+
+/**
+ * Every stroked path of a content stream, with the graphics state it was stroked in.
+ * Fill-only painting (f, F, f*, n) discards the path; B, b and s stroke it too.
+ */
+export function strokesOf(
+  content: string,
+  extGStateOpacity: (name: string) => number,
+): PdfStroke[] {
+  const stack: GState[] = []
+  let gs: GState = {
+    ctm: [1, 0, 0, 1, 0, 0],
+    colour: { space: 'gray', values: [0] },
+    widthPt: 1,
+    dashPt: [],
+    opacity: 1,
+    clip: null,
+    cap: 0,
+    join: 0,
+  }
+  let path: PdfPathOp[] = []
+  let start: { x: number; y: number } | null = null
+  let rect: PdfStroke['clip'] = null
+  const out: PdfStroke[] = []
+  const point = (x: number, y: number): { x: number; y: number } => {
+    const [a, b, c, d, e, f] = gs.ctm
+    return { x: a * x + c * y + e, y: b * x + d * y + f }
+  }
+  const moveTo = (x: number, y: number): void => {
+    start = point(x, y)
+    path.push({ op: 'm', ...start })
+  }
+  const close = (): void => {
+    if (start) path.push({ op: 'l', ...start })
+  }
+  const paint = (strokes: boolean): void => {
+    if (strokes && path.length > 0) {
+      const { colour, widthPt, dashPt, opacity, clip, cap, join } = gs
+      out.push({ colour, widthPt, dashPt, opacity, clip, cap, join, path })
+    }
+    path = []
+    start = null
+    rect = null
+  }
+  for (const { op, args } of operations(content)) {
+    const v = args.filter((a): a is number => typeof a === 'number')
+    switch (op) {
+      case 'q':
+        stack.push(gs)
+        gs = { ...gs }
+        break
+      case 'Q':
+        gs = stack.pop() ?? gs
+        break
+      case 'cm': {
+        const [a = 1, b = 0, c = 0, d = 1, e = 0, f = 0] = v
+        gs.ctm = multiply([a, b, c, d, e, f], gs.ctm)
+        break
+      }
+      case 'w':
+        gs.widthPt = v[0] ?? gs.widthPt
+        break
+      case 'J':
+        gs.cap = v[0] ?? gs.cap
+        break
+      case 'j':
+        gs.join = v[0] ?? gs.join
+        break
+      case 'd': {
+        const dash = args[0]
+        gs.dashPt = Array.isArray(dash) ? dash : []
+        break
+      }
+      case 'RG':
+        gs.colour = { space: 'rgb', values: v }
+        break
+      case 'K':
+        gs.colour = { space: 'cmyk', values: v }
+        break
+      case 'G':
+        gs.colour = { space: 'gray', values: v }
+        break
+      case 'gs': {
+        const name = args[0]
+        gs.opacity = typeof name === 'string' ? extGStateOpacity(name) : 1
+        break
+      }
+      case 're': {
+        const [x = 0, y = 0, w = 0, h = 0] = v
+        moveTo(x, y)
+        path.push({ op: 'l', ...point(x + w, y) })
+        path.push({ op: 'l', ...point(x + w, y + h) })
+        path.push({ op: 'l', ...point(x, y + h) })
+        close()
+        rect = { x, y, w, h }
+        break
+      }
+      case 'W':
+      case 'W*':
+        gs.clip = rect
+        break
+      case 'm':
+        moveTo(v[0] ?? 0, v[1] ?? 0)
+        break
+      case 'l':
+        path.push({ op: 'l', ...point(v[0] ?? 0, v[1] ?? 0) })
+        break
+      case 'c': {
+        const [x1 = 0, y1 = 0, x2 = 0, y2 = 0, x = 0, y = 0] = v
+        const p1 = point(x1, y1)
+        const p2 = point(x2, y2)
+        path.push({ op: 'c', x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y, ...point(x, y) })
+        break
+      }
+      case 'h':
+        close()
+        break
+      case 'S':
+      case 'B':
+      case 'B*':
+        paint(true)
+        break
+      case 's':
+      case 'b':
+      case 'b*':
+        close()
+        paint(true)
+        break
+      case 'f':
+      case 'F':
+      case 'f*':
+      case 'n':
+        paint(false)
+        break
+      default:
+        break
+    }
+  }
+  return out
 }
