@@ -1,6 +1,11 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
+import type { Rotation } from '../../shared/model/image'
 import type { RectMm } from '../layout/types'
+import { drawTilesFor } from '../render/page-model/build-page-models'
+import { applyMatrix, orientMatrix } from '../render/pixels/tile-plan'
+import { descriptor, placement } from '../render/test-support/fixtures'
+import type { DrawTile } from '../render/types'
 import { frameOf, frameToPage } from './place'
 import type { PathCmd } from './types'
 
@@ -86,6 +91,34 @@ describe('frameToPage', () => {
         expect(Math.abs(bu - u)).toBeLessThan(eps)
         expect(Math.abs(bv - v)).toBeLessThan(eps)
       }),
+    )
+  })
+  it('turned lands on the same picture point as the tile pixels, for every user rotation and flip (property)', () => {
+    const rotations = fc.constantFrom<Rotation>(0, 90, 180, 270)
+    fc.assert(
+      fc.property(
+        anyTrim,
+        rotations,
+        fc.boolean(),
+        fc.boolean(),
+        unit,
+        unit,
+        (t, rotation, flipH, flipV, s, r) => {
+          const img = descriptor('a', 3000, 2000, { rotation, flipH, flipV })
+          const f = frameOf(t, true)
+          const asEdited = drawTilesFor(img, placement('a', [{ x: 0, y: 0, ...f }]), 0)[0]
+          const onPage = drawTilesFor(img, placement('a', [t], { turned: true }), 0)[0]
+          if (asEdited === undefined || onPage === undefined) throw new Error('no tile')
+          const pixelAt = (tile: DrawTile, w: number, h: number) =>
+            applyMatrix(orientMatrix(tile.rotation, tile.flipH, tile.flipV, 1, 1, w, h, 0), s, r)
+          const q = pixelAt(asEdited, f.w, f.h)
+          const want = pixelAt(onPage, t.w, t.h)
+          const got = frameToPage({ op: 'M', x: q.x, y: q.y }, t, true)
+          const eps = 1e-9 * (1 + Math.abs(t.x) + Math.abs(t.y) + t.w + t.h)
+          expect(Math.abs(got.x - (t.x + want.x))).toBeLessThan(eps)
+          expect(Math.abs(got.y - (t.y + want.y))).toBeLessThan(eps)
+        },
+      ),
     )
   })
   it("turned is a rotation: it keeps lengths and turns the frame's x axis onto the page's y axis", () => {

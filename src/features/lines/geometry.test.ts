@@ -74,6 +74,19 @@ describe('golden ratio', () => {
     expect(ys[0]).toBeCloseTo(152.79, 2)
     expect(ys[1]).toBeCloseTo(247.21, 2)
   })
+  it('draws the verticals left to right, then the horizontals top to bottom, edge to edge', () => {
+    const [a, b] = GOLDEN_FRACTIONS
+    expect(goldenPaths(frame)).toEqual([
+      { op: 'M', x: a * 300, y: 0 },
+      { op: 'L', x: a * 300, y: 400 },
+      { op: 'M', x: b * 300, y: 0 },
+      { op: 'L', x: b * 300, y: 400 },
+      { op: 'M', x: 0, y: a * 400 },
+      { op: 'L', x: 300, y: a * 400 },
+      { op: 'M', x: 0, y: b * 400 },
+      { op: 'L', x: 300, y: b * 400 },
+    ])
+  })
   it('is mirror-symmetric: the two lines on each axis sum to the side', () => {
     fc.assert(
       fc.property(dim, dim, (w, h) => {
