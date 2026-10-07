@@ -2,10 +2,26 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 import { AppPage } from './support/app.ts'
 import { FIXTURES } from './support/fixtures.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
-import { mmToPt, summarizePdf, type PdfDraw, type PdfSummary } from './support/pdf.ts'
+import {
+  drawnImageData,
+  mmToPt,
+  summarizePdf,
+  type PdfDraw,
+  type PdfImageData,
+  type PdfSummary,
+} from './support/pdf.ts'
 import { runOnly } from './support/projects.ts'
 
-declare const document: { activeElement: unknown }
+interface BrowserCanvas {
+  width: number
+  height: number
+  getContext(id: '2d'): {
+    drawImage(image: unknown, x: number, y: number): void
+    getImageData(x: number, y: number, w: number, h: number): { data: ArrayLike<number> }
+  } | null
+}
+declare const document: { activeElement: unknown; createElement(tag: 'canvas'): BrowserCanvas }
+declare function createImageBitmap(blob: Blob): Promise<{ width: number; height: number }>
 
 test.use({ viewport: { width: 1280, height: 900 } })
 
@@ -82,6 +98,38 @@ function pdfBox(d: PdfDraw, page: { widthPt: number; heightPt: number }) {
   }
 }
 
+/** Rec. 601 luma of one pixel column (fx in 0..1) of a JPEG, top to bottom, decoded by the browser. */
+function jpegLumaColumn(page: Page, jpeg: Uint8Array, fx: number): Promise<number[]> {
+  return page.evaluate(
+    async ([base64, f]) => {
+      const binary = atob(base64)
+      const bytes = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+      const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/jpeg' }))
+      const canvas = document.createElement('canvas')
+      canvas.width = bitmap.width
+      canvas.height = bitmap.height
+      const g = canvas.getContext('2d')
+      if (!g) throw new Error('canvas is not 2d')
+      g.drawImage(bitmap, 0, 0)
+      const d = g.getImageData(Math.floor(bitmap.width * f), 0, 1, bitmap.height).data
+      const luma: number[] = []
+      for (let y = 0; y < bitmap.height; y++)
+        luma.push(
+          0.299 * (d[4 * y] ?? 0) + 0.587 * (d[4 * y + 1] ?? 0) + 0.114 * (d[4 * y + 2] ?? 0),
+        )
+      return luma
+    },
+    [Buffer.from(jpeg).toString('base64'), fx] as const,
+  )
+}
+
+const largestStep = (column: readonly number[]): number =>
+  Math.max(...column.slice(1).map((v, i) => Math.abs(v - (column[i] ?? v))))
+
+const samePixels = (a: PdfImageData | undefined, b: PdfImageData | undefined): boolean =>
+  a !== undefined && b !== undefined && Buffer.from(a.data).equals(Buffer.from(b.data))
+
 test.describe('exit criterion (all browsers)', () => {
   runOnly('chromium', 'firefox', 'webkit')
 
@@ -103,7 +151,8 @@ test.describe('exit criterion (all browsers)', () => {
     await app.expectPreviewSettled()
     const previewPages = await app.pageCanvases.count()
     const boxes = await Promise.all(tiles.map((t) => previewBox(app, t)))
-    const info = await summarizePdf((await app.exportPdf()).bytes)
+    const { bytes } = await app.exportPdf()
+    const info = await summarizePdf(bytes)
 
     expect(info.pageCount).toBe(previewPages)
     expect(info.pageCount).toBe(1)
@@ -127,6 +176,14 @@ test.describe('exit criterion (all browsers)', () => {
       'DCTDecode',
       'FlateDecode',
     ])
+
+    for (const d of draws) expect([d.widthPx, d.heightPx]).toEqual([900, 600])
+    const stored = (await drawnImageData(bytes)).flat()
+    expect(stored.map((s) => s.filter)).toEqual(['DCTDecode', 'DCTDecode', 'FlateDecode'])
+    const [original, blurred] = stored as [PdfImageData, PdfImageData, PdfImageData]
+    // The ramp's grey half meets its ochre half in a hard horizontal edge.
+    expect(largestStep(await jpegLumaColumn(page, original.data, 0.9))).toBeGreaterThan(16)
+    expect(largestStep(await jpegLumaColumn(page, blurred.data, 0.9))).toBeLessThan(6)
 
     // The preview shows the same boxes as the PDF.
     draws.forEach((d, i) => {
@@ -152,13 +209,23 @@ test.describe('studies on chromium', () => {
     await app.setSlider('Number of values', 4)
     await app.setSlider('Amount', 80)
     await expect(app.studyTile(RAMP, 'Blur + Values')).toBeVisible()
-    const info = await summarizePdf((await app.exportPdf()).bytes)
+    const { bytes } = await app.exportPdf()
+    const info = await summarizePdf(bytes)
     const draws = allDraws(info)
     expect(draws.map((d) => d.filter)).toEqual(['FlateDecode', 'FlateDecode'])
     expect(draws[0]?.colours).toBe(4)
     expect(draws[1]?.colours).toBeGreaterThanOrEqual(2)
     expect(draws[1]?.colours).toBeLessThanOrEqual(4)
     expect(info.imageCount).toBe(2)
+
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await app.setSlider('Amount', 10)
+    const at80 = (await drawnImageData(bytes)).flat()
+    const at10 = (await drawnImageData((await app.exportPdf()).bytes)).flat()
+    expect(at10).toHaveLength(2)
+    expect(samePixels(at10[0], at80[0])).toBe(true)
+    expect(samePixels(at10[1], at80[1])).toBe(false)
   })
 
   test('S-D2 two values give a notan; Neutral grey gives greys', async ({ page }) => {

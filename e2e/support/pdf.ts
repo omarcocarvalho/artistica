@@ -1,3 +1,4 @@
+import { PDFDict, PDFDocument, PDFName, PDFRawStream, decodePDFRawStream } from '@pdfme/pdf-lib'
 import {
   countImageDraws,
   countStrokedLines,
@@ -120,4 +121,32 @@ export async function summarizePdf(bytes: Uint8Array): Promise<PdfSummary> {
       draws: drawsOf(p),
     })),
   }
+}
+
+/** A drawn image as stored: the JPEG file for DCTDecode, the decoded samples for FlateDecode. */
+export interface PdfImageData {
+  filter: string
+  widthPx: number
+  heightPx: number
+  data: Uint8Array
+}
+
+/** Every image draw's stored data, per page, in content-stream order (as `PdfPageSummary.draws`). */
+export async function drawnImageData(bytes: Uint8Array): Promise<PdfImageData[][]> {
+  const report = await inspectPdf(bytes)
+  const doc = await PDFDocument.load(bytes, { updateMetadata: false })
+  return doc.getPages().map((p, i) => {
+    const xobjects = p.node.Resources()?.lookupMaybe(PDFName.of('XObject'), PDFDict)
+    return (report.pages[i]?.draws ?? []).map((d) => {
+      const ref = xobjects?.get(PDFName.of(d.name))
+      const obj = ref ? doc.context.lookup(ref) : undefined
+      if (!(obj instanceof PDFRawStream)) throw new Error(`no image XObject named ${d.name}`)
+      return {
+        filter: d.filter,
+        widthPx: d.widthPx,
+        heightPx: d.heightPx,
+        data: d.filter === 'DCTDecode' ? obj.contents : decodePDFRawStream(obj).decode(),
+      }
+    })
+  })
 }
