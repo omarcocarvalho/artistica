@@ -1,5 +1,5 @@
 import fc from 'fast-check'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { lightness8, type Rgb8 } from '../../shared/colour/oklch'
 import { LIGHTNESS_BINS, VALUE_CLIP, lightnessRange, posterizeRGBA, valueIndex } from './posterize'
 import { valueRamp } from './ramp'
@@ -70,6 +70,21 @@ describe('lightnessRange', () => {
     const r = lightnessRange(base, w, h)
     expect(r.lo).toBe(0)
     expect(r.hi).toBe(1)
+  })
+  it('clips floor(1%) of the pixels at each end', () => {
+    // 150 px: floor(1.5) = 1 pixel clipped at each end.
+    const speckled = (specks: number): Uint8ClampedArray => {
+      const d = lightnessRampImage(150, 1, 0.4, 0.6)
+      for (let i = 0; i < specks; i++) {
+        d.set([0, 0, 0], i * 4 * 7)
+        d.set([255, 255, 255], (i * 7 + 3) * 4)
+      }
+      return d
+    }
+    const one = lightnessRange(speckled(1), 150, 1)
+    expect(one.lo).toBeGreaterThan(0.39)
+    expect(one.hi).toBeLessThan(0.61)
+    expect(lightnessRange(speckled(2), 150, 1)).toEqual({ lo: 0, hi: 1 })
   })
   it('a dark photo still uses every value (owner Q11, default)', () => {
     const dark = lightnessRampImage(500, 2, 0.15, 0.35)
@@ -163,6 +178,14 @@ describe('posterizeRGBA', () => {
     const before = d
     const typed = [Float32Array, Float64Array, Uint8ClampedArray, Uint8Array, Uint32Array]
     const made: number[] = []
+    let copyCalls = -1
+    const typedProto = Object.getPrototypeOf(Uint8Array.prototype) as Uint8Array
+    const copies = [
+      vi.spyOn(typedProto, 'slice'),
+      vi.spyOn(typedProto, 'map'),
+      vi.spyOn(typedProto, 'filter'),
+      vi.spyOn(Array, 'from'),
+    ]
     try {
       for (const T of typed) {
         Object.defineProperty(globalThis, T.name, {
@@ -178,11 +201,14 @@ describe('posterizeRGBA', () => {
       posterizeRGBA(d, w, h, ramp, range)
       lightnessRange(d, w, h)
     } finally {
+      copyCalls = copies.reduce((sum, spy) => sum + spy.mock.calls.length, 0)
+      for (const spy of copies) spy.mockRestore()
       for (const T of typed)
         Object.defineProperty(globalThis, T.name, { configurable: true, value: T })
     }
     expect(d).toBe(before)
     expect(made.every((n) => n <= LIGHTNESS_BINS)).toBe(true)
+    expect(copyCalls).toBe(0)
     expect(distinctColours(d).size).toBe(5)
   })
 })
