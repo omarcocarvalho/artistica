@@ -1,4 +1,4 @@
-# Handover: Artistica (state as of 2026-10-07)
+# Handover: Artistica (state as of 2026-10-08)
 
 This is for the next developer and their AI agent. Read it first, then [CLAUDE.md](CLAUDE.md) for conventions. The default branch is **`master`**. There is no `main` branch.
 
@@ -12,13 +12,14 @@ Artistica is a free, static web app for artists:
 - Export a print-ready PDF with crop marks and bleed.
 
 - Print study versions of each photo: blurred (a squint study), values (2–20 tones of one hue), or blur + values, next to the original.
+- Draw composition lines on each photo (grid, rule of thirds, diagonals and armature, golden ratio lines, golden spiral, centre lines), as vector paths in the PDF.
 
-Later milestones add composition lines (some AI, in the browser), polish, and translations.
+Later milestones add AI lines (in the browser), polish, and translations.
 
 - **Everything runs in the browser.** Photos are never uploaded or persisted.
 - **Hosting:** GitHub Pages. The landing page is at `/artistica/` and the tool at `/artistica/app/`.
 - **Product spec:** [docs/spec.md](docs/spec.md). It is the source of truth.
-- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3–M5 → `v0.3.0`–`v0.5.0`, M6 → `v1.0.0`.
+- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (built, awaiting sign-off), M4–M5 → `v0.4.0`–`v0.5.0`, M6 → `v1.0.0`.
 
 ## Current status
 
@@ -34,23 +35,27 @@ Later milestones add composition lines (some AI, in the browser), polish, and tr
 
 **Release:** M2 is released as [`v0.2.0`](https://github.com/omarcocarvalho/artistica/releases/tag/v0.2.0): release PR [#80](https://github.com/omarcocarvalho/artistica/pull/80) merged as `296f15d` on 2026-10-07. The M2 sign-off and the owner's answers are recorded on #80 and in the M2 ledger.
 
-**M3 ("composition lines") is planned, not started.** The plan is [`2026-10-07-m3-overview.md`](docs/superpowers/plans/2026-10-07-m3-overview.md) with sub-plans A–D. It waits for the owner's approval and answers to its "Questions for the owner".
+**M3 ("composition lines") is built and in final review, waiting for the owner's real-iPhone sign-off.** Plan: [`2026-10-07-m3-overview.md`](docs/superpowers/plans/2026-10-07-m3-overview.md) and sub-plans A–D, approved by the owner on 2026-10-07 with every recommended default (PR #102). All 13 tasks are merged (#103, #105–#117), then the milestone-wide final review in three parts; its fixes are in #118 (keyboard access to the line colour in WebKit, drafts kept with their image, apply-to-all guarded in the store while importing). The full record — per-task review findings, rulings, deferred items and the owner questions — is in [`docs/superpowers/ledgers/m3.md`](docs/superpowers/ledgers/m3.md).
+
+- **Exit criterion** ("the lines in the PDF match the preview exactly and stay sharp when zoomed"): pinned by E2E test L-X1 in `e2e/lines.spec.ts` on chromium, firefox and webkit — every line a stroked vector path whose geometry equals the pure geometry within 0.01 mm, image XObjects byte-identical with lines on and off, and the preview showing the line colour along every PDF path.
+- **Phone memory** (M3 in `e2e/mobile-flow.spec.ts`, every line on, CI): import 1013 MB, studies 1296 MB, settled 1158 MB, export 1292 MB, against the unchanged budgets of 1500 / 1500 / 1700 MB.
+- **Release PR:** [#104](https://github.com/omarcocarvalho/artistica/pull/104) (`chore(master): release 0.3.0`). Merge it only after the owner signs off.
 
 ## Branch map
 
 | Branch | Use |
 |---|---|
-| `master` | all M1 and M2 work; base for new work |
+| `master` | all M1, M2 and M3 work; base for new work |
 | `release-please--branches--master--components--artistica` | bot-managed; release-please opens the next release PR here. Don't touch it; merge only after the owner signs off a milestone |
 
 ## Next steps (in order)
 
-1. **Owner approves the M3 plan** (`docs/superpowers/plans/2026-10-07-m3-*.md`) and answers its "Questions for the owner" (Q1–Q12, Q-budget, H1–H2), or accepts the recommended defaults. No M3 code starts before that.
-2. **Run M3** subagent-driven, as M2: 13 tasks in 6 waves, then the final review (task F), then the owner's real-phone sign-off.
-3. **Release v0.3.0** (steps for any milestone):
-   1. Run `gh pr view <n> --json mergeable` on the release PR until it isn't `UNKNOWN`.
-   2. Close and reopen the PR and wait for the checks to pass.
-   3. Run `gh pr merge <n> --squash` from the main checkout. This creates the release and deploys to Pages.
+1. **Owner signs off M3** on the iPhone, with the checklist in the M3 overview ("M3 sign-off checklist"), after #118 merges. Record the device, OS version, export time and page count on #104.
+2. **Release v0.3.0** from release PR #104 (steps for any milestone):
+   1. Run `gh pr view 104 --json mergeable` until it isn't `UNKNOWN`.
+   2. Close and reopen #104 and wait for the checks to pass.
+   3. Run `gh pr merge 104 --squash` from the main checkout. This creates the release and deploys to Pages.
+3. **Plan M4** (AI lines) in `docs/superpowers/plans/`, for the owner's approval before any M4 code.
 
 ## Owner answers from M2 (2026-10-07)
 
@@ -66,7 +71,14 @@ Kept as built: **M2-3** the one-photo hint copy; **M2-5** the mockup differences
 
 The spec doesn't answer these. Nothing was changed for them.
 
-**Left open from M1** (Q1 was answered in M2 as H1: phone controls are now 44 px):
+**Raised in M3** (details in the [M3 ledger](docs/superpowers/ledgers/m3.md)):
+
+- **M3-1 Spiral wording:** the plan's Q2 said the stretched spiral passes through the golden-ratio crossings. Its eye sits at about (0.724, 0.724), not on the 0.618 crossing; the code is the classic construction and matches the mockup. Correct the docs, or move the eye?
+- **M3-2 Thick centre-line dashes:** at 2 mm the centre dash is [12, 8] mm, so on tiles under about 12 mm the centre lines look solid. Scale the dash with tile size (M5), or keep it?
+- **PQ1 Editable hex field:** the line colour's hex is an editable text field (#118), not read-only text as in the mockup, because keyboard-only users in WebKit can't reach the colour swatch. Accept the change from the mockup?
+- **PQ2 Up/Down arrows on segmented controls:** the ARIA radio pattern moves on all four arrows; ours only on Left/Right. This is app-wide since M1; the recommendation is M5 accessibility polish.
+
+**Left open from M1** (Q1 was answered in M2 as H1: phone controls are now 44 px; for Q5 and Q6 the owner accepted the M3 defaults H1 and H2 — unchanged in M3, cancelling to be decided in M5 — so both stay open):
 
 2. **Phone export:** export opens the same centred dialog as on desktop (ruling Q10). `design/mobile-flow.html` shows it inline in the Export step, and the user currently meets two "Create PDF" buttons in a row. Keep it, make it a bottom sheet, or put it inline?
 3. **Disabled Export button:** should the reason it is disabled be visible? Today it is only announced to screen readers.
@@ -110,6 +122,9 @@ The spec doesn't answer these. Nothing was changed for them.
 - **Dialogs return focus to whatever opened them.** If the opener is gone, they use the `returnFocus` fallback (`src/shared/ui/use-return-focus.ts`). WebKit doesn't focus buttons on mouse click, so with the mouse in Safari focus can return to the nearest focusable ancestor. The keyboard path is correct.
 - **CI release PRs don't trigger checks.** A release PR opened by `GITHUB_TOKEN` doesn't run CI. A person must close and reopen it.
 - **Branch protection uses `strict: false`.** Two green PRs can still conflict, so check `master` CI after merges. `gh pr update-branch <n>` can't resolve conflicts; merge `origin/master` into the branch instead.
+- **PDF resource names must not come from pdf-lib's seeded generator for anything optional.** Line opacity uses `setExtGState` with `GS0`, `GS1`, … per page; a seeded name would shift the image names on later pages (#113).
+- **E2E specs import pure `src` modules through `tsconfig.e2e.json`** (bundler resolution, `.ts` extensions allowed in `e2e/` only). `src` imports stay extensionless.
+- **zustand `persist` writes after every `set`**, even when the updater returns the same state. A setter that must not write on equal values skips `set` (#108).
 - **macOS has no `timeout` command.**
 - **pnpm bootstrap:** if the global `pnpm` shim fails to bootstrap the pinned pnpm version, run `corepack pnpm …`.
 
@@ -117,7 +132,7 @@ The spec doesn't answer these. Nothing was changed for them.
 
 Plans were executed with subagent-driven development: one worktree and PR per task, an independent review (often with mutation testing), fix rounds, then a squash merge.
 
-- Every ruling made during execution is recorded in the ledgers (`docs/superpowers/ledgers/m1-*.md`, `m2.md`).
+- Every ruling made during execution is recorded in the ledgers (`docs/superpowers/ledgers/m1-*.md`, `m2.md`, `m3.md`).
 - Contract changes are in the overview's "Ruled" section (CR-*/CCR-*).
 
 **Rejected or overridden approaches**
@@ -191,6 +206,6 @@ Only English ships until M6, so these don't show yet:
 - Live site: https://omarcocarvalho.github.io/artistica/
 - Releases: https://github.com/omarcocarvalho/artistica/releases
 - Spec: [docs/spec.md](docs/spec.md)
-- Plans: [docs/superpowers/plans/](docs/superpowers/plans/) — M1 starts at `2026-10-03-m1-overview.md`, M2 at `2026-10-07-m2-overview.md`
+- Plans: [docs/superpowers/plans/](docs/superpowers/plans/) — M1 starts at `2026-10-03-m1-overview.md`, M2 at `2026-10-07-m2-overview.md`, M3 at `2026-10-07-m3-overview.md`
 - Execution ledgers (progress, rulings, deferred minors per task): [docs/superpowers/ledgers/](docs/superpowers/ledgers/)
 - Design mockups: [design/](design/) (open `design/index.html`)
