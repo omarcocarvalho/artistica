@@ -35,7 +35,14 @@ export interface ProviderDeps<B extends BitmapLike> {
 }
 export interface StudyPreviewProvider<B extends BitmapLike> extends StudyTileProvider {
   get(key: string, slot: string): B | null
-  stats(): { wantedBytes: number; retainedBytes: number; queued: number; running: number }
+  stats(): {
+    wantedBytes: number
+    retainedBytes: number
+    /** Slot images no entry holds any more, drawn until their slot's fresh tile arrives. */
+    staleBytes: number
+    queued: number
+    running: number
+  }
   dispose(): void
 }
 
@@ -226,7 +233,10 @@ export function createStudyPreviewProvider<B extends BitmapLike>(
 
   return {
     get(key, slot) {
-      return entries.get(key)?.bitmap ?? slots.get(slot)?.bitmap ?? null
+      const fresh = entries.get(key)
+      if (fresh) return fresh.bitmap
+      if (failed.has(key)) return null
+      return slots.get(slot)?.bitmap ?? null
     },
 
     want(consumer, requests) {
@@ -276,9 +286,16 @@ export function createStudyPreviewProvider<B extends BitmapLike>(
       const keys = wantedKeys()
       let wantedBytes = 0
       for (const [key, e] of entries) if (keys.has(key)) wantedBytes += e.bytes
+      const held = new Set<B>()
+      for (const e of entries.values()) held.add(e.bitmap)
+      const stale = new Map<B, number>()
+      for (const e of slots.values()) if (!held.has(e.bitmap)) stale.set(e.bitmap, e.bytes)
+      let staleBytes = 0
+      for (const bytes of stale.values()) staleBytes += bytes
       return {
         wantedBytes,
         retainedBytes: retained.bytes,
+        staleBytes,
         queued: queue.length,
         running: running === null ? 0 : 1,
       }

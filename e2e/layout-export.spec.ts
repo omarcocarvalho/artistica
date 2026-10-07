@@ -75,7 +75,8 @@ test.describe('PDF export (all browsers)', () => {
     await expect(page.getByRole('switch', { name: 'Bleed' })).not.toBeChecked()
     await app.expectPreviewPages(1)
     const before = await summarizePdf((await app.exportPdf()).bytes)
-    await page.keyboard.press('Escape') // close the export dialog
+    await page.keyboard.press('Escape') // close the export dialog: it makes the settings inert
+    await expect(page.getByRole('dialog')).toHaveCount(0)
 
     await app.setField('Gutter size', '2') // below 2 x bleed, so turning bleed on must raise it
     await app.setSwitch('Bleed', true)
