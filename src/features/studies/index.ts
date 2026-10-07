@@ -37,5 +37,6 @@ export {
   type BitmapLike,
   type StudyPreviewProvider,
 } from './preview/provider'
+export { createAppStudyProvider, createStudyRenderer } from './preview/study-client'
 // --- components (D1) ---
 export { StudiesPanel, type StudiesPanelProps } from './components/StudiesPanel'
