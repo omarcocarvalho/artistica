@@ -126,6 +126,47 @@ describe('sanitizeLines', () => {
     expect(width(0.7)).toBe(0.7)
   })
 
+  it('gives every snapped width back unchanged, with at most two decimals', () => {
+    const width = (widthMm: number) =>
+      sanitizeLines({ ...DEFAULT_LINES, style: { ...DEFAULT_LINES.style, widthMm } }).style.widthMm
+    for (let k = 2; k <= 40; k++) {
+      const w = (k * 5) / 100
+      expect(width(w)).toBe(w)
+    }
+    expect(width(0.1 + 0.2)).toBe(0.3)
+    expect(width(0.15 + 0.2)).toBe(0.35)
+    fc.assert(
+      fc.property(fc.double({ min: -1, max: 3, noNaN: true }), (v) => {
+        const w = width(v)
+        expect(Number(w.toFixed(2))).toBe(w)
+        expect(width(w)).toBe(w)
+      }),
+    )
+  })
+
+  it('takes the default for a non-finite or non-number grid size, width or opacity', () => {
+    for (const bad of [
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      '7',
+      '0.5',
+      '',
+      true,
+      null,
+      [3],
+    ]) {
+      const s = sanitizeLines({
+        ...DEFAULT_LINES,
+        grid: { on: true, cols: bad as number, rows: bad as number },
+        style: { ...DEFAULT_LINES.style, widthMm: bad as number, opacityPct: bad as number },
+      })
+      expect([s.grid.cols, s.grid.rows, s.style.widthMm, s.style.opacityPct]).toEqual([
+        4, 5, 0.35, 90,
+      ])
+    }
+  })
+
   it('rounds the grid and opacity to integers', () => {
     const s = sanitizeLines({
       ...DEFAULT_LINES,
@@ -142,7 +183,22 @@ describe('sanitizeLines', () => {
         style: { ...DEFAULT_LINES.style, colour: c as string },
       }).style.colour
     expect(colour('#1F3FBF')).toBe('#1f3fbf')
-    for (const bad of ['#fff', '1f3fbf', '#1f3fbg', '#1f3fbf0', 'red', '', 7, null]) {
+    expect(colour('\t#1F3FBF\n')).toBe('#1f3fbf')
+    for (const bad of [
+      '#fff',
+      '#FFF',
+      '1f3fbf',
+      'x#1f3fbf',
+      '##1f3fbf',
+      '#1f3fbg',
+      '#1f3fbf0',
+      '#1f 3fbf',
+      'red',
+      'rgb(31, 63, 191)',
+      '',
+      7,
+      null,
+    ]) {
       expect(colour(bad)).toBe('#e0457b')
     }
   })
@@ -320,6 +376,79 @@ describe('keys and helpers', () => {
     expect(p.centre).toBe(true)
     expect(patchLines(start, { thirds: undefined }).thirds).toBe(true)
     expect(patchLines(start, {})).toEqual(start)
+  })
+
+  it("keeps every type the patch does not name, from the image's own settings", () => {
+    const allOn = patchLines(DEFAULT_LINES, {
+      grid: { on: true, cols: 2, rows: 9 },
+      thirds: true,
+      armature: true,
+      golden: true,
+      spiral: { on: true, corner: 'topRight' },
+      centre: true,
+      style: { colour: '#0a0b0c', widthMm: 1.5, opacityPct: 40 },
+    })
+    expect(patchLines(allOn, { style: { opacityPct: 41 } })).toEqual({
+      ...allOn,
+      style: { ...allOn.style, opacityPct: 41 },
+    })
+    expect(
+      patchLines(allOn, {
+        grid: undefined,
+        thirds: undefined,
+        armature: undefined,
+        golden: undefined,
+        spiral: undefined,
+        centre: undefined,
+        style: undefined,
+      }),
+    ).toEqual(allOn)
+    expect(patchLines(allOn, { golden: false })).toEqual({ ...allOn, golden: false })
+  })
+
+  it('changes the key exactly when one change alters what prints', () => {
+    const printing = anyLines.map(sanitizeLines).filter((l) => activeLineTypes(l).length > 0)
+    const change: fc.Arbitrary<(l: LineSettings) => LineSettings> = fc.oneof(
+      fc
+        .integer({ min: 1, max: 20 })
+        .map((cols) => (l: LineSettings) => patchLines(l, { grid: { cols } })),
+      fc
+        .integer({ min: 1, max: 20 })
+        .map((rows) => (l: LineSettings) => patchLines(l, { grid: { rows } })),
+      fc
+        .constantFrom(...SPIRAL_CORNERS)
+        .map((corner) => (l: LineSettings) => patchLines(l, { spiral: { corner } })),
+      fc.constantFrom(...COMPOSITION_LINE_TYPES).map((t) => (l: LineSettings) => {
+        if (t === 'grid') return patchLines(l, { grid: { on: !l.grid.on } })
+        if (t === 'spiral') return patchLines(l, { spiral: { on: !l.spiral.on } })
+        return patchLines(l, { [t]: !l[t] })
+      }),
+      fc
+        .integer({ min: 0, max: 0xffffff })
+        .map(
+          (n) => (l: LineSettings) =>
+            patchLines(l, { style: { colour: `#${n.toString(16).padStart(6, '0')}` } }),
+        ),
+      fc
+        .integer({ min: 2, max: 40 })
+        .map((k) => (l: LineSettings) => patchLines(l, { style: { widthMm: k * 0.05 } })),
+      fc
+        .integer({ min: 10, max: 100 })
+        .map((opacityPct) => (l: LineSettings) => patchLines(l, { style: { opacityPct } })),
+    )
+    const prints = (l: LineSettings) =>
+      JSON.stringify([
+        activeLineTypes(l),
+        l.grid.on ? [l.grid.cols, l.grid.rows] : null,
+        l.spiral.on ? l.spiral.corner : null,
+        activeLineTypes(l).length > 0 ? l.style : null,
+      ])
+    fc.assert(
+      fc.property(printing, change, (x, f) => {
+        const y = f(x)
+        expect(linesKey(x) === linesKey(y)).toBe(prints(x) === prints(y))
+      }),
+    )
   })
 
   it('has one key per canonical type', () => {
