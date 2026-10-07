@@ -43,27 +43,26 @@ Later milestones add composition lines (some AI, in the browser), polish, and tr
 
 ## Next steps (in order)
 
-1. **Owner sign-off for v0.2.0:** deploy `master` to Pages (`gh workflow run deploy-pages.yml --ref master`) and run the "M2 sign-off checklist (owner, on a real phone)" in the M2 overview on the owner's iPhone over HTTPS, including printing the exit-criterion sheet. Bring the owner questions below.
+1. **Owner sign-off for v0.2.0:** deploy `master` to Pages (`gh workflow run deploy-pages.yml --ref master`) and run the "M2 sign-off checklist (owner, on a real phone)" in the M2 overview on the owner's iPhone over HTTPS, including printing the exit-criterion sheet. Bring the open owner questions below.
 2. **Release v0.2.0 after approval** (steps for any milestone):
    1. Run `gh pr view <n> --json mergeable` on the release PR until it isn't `UNKNOWN`.
    2. Close and reopen the PR and wait for the checks to pass.
    3. Run `gh pr merge <n> --squash` from the main checkout. This creates the release and deploys to Pages.
-3. **Start M3** (composition lines): write the M3 plan in `docs/superpowers/plans/` and get owner approval **before** coding. Fold in the owner's answers below.
+3. **Start M3** (composition lines): write the M3 plan in `docs/superpowers/plans/` and get owner approval **before** coding. Fold in the owner's M2 answers below.
+
+## Owner answers from M2 (2026-10-07)
+
+The owner answered the questions raised in M2 (details in the M2 ledger). Three changed the app, in PR #101:
+
+- **M2-1, yes:** "Apply to all" counts as "last used". The applied study's blur %, value count, hue and neutral become the remembered defaults; versions still don't (new photos start Original only).
+- **M2-2, wait for imports:** while any photo is importing, the Studies controls and "Apply to all images" are disabled, with a visible "Waiting for photos to finish importing…" hint (desktop tab and phone step). So no photo can finish importing after an "Apply to all".
+- **M2-4, yes:** removing the selected image selects the next one, or the previous one if it was last; nothing only when the list is empty.
+
+Kept as built: **M2-3** the one-photo hint copy; **M2-5** the mockup differences; **M2-6** no minimum lightness span for value studies. **M2-7** and **M2-8** were not answered, so their defaults stand: ship v0.2.0 with phone memory growing with page count (gated by the real-phone run) and defer "visible pages only" to M5; keep plan labels in code comments.
 
 ## Owner questions (open)
 
 The spec doesn't answer these. Nothing was changed for them.
-
-**Raised in M2** (details in the M2 ledger):
-
-- **M2-1.** Should "Apply to all" count as "last used" for the remembered study defaults?
-- **M2-2.** A photo whose import finishes after "Apply to all" gets the default study, not the applied one. Change?
-- **M2-3.** Copy for the single-image "Apply to all" hint ("Add another photo to copy these settings to it.").
-- **M2-4.** Removing the selected image on desktop leaves nothing selected. Move the selection to the next image?
-- **M2-5.** Mockup differences: tab icons, a bare "5" readout, an image-name label under each group outline — adopt or accept as built?
-- **M2-6.** Value studies of low-contrast photos stretch noise into full-contrast speckle. Add a minimum lightness span?
-- **M2-7.** Ship with phone memory growing with page count (gated by the real-phone run), and defer "visible pages only" to M5?
-- **M2-8.** Plan-label shortcodes in code comments (`M2-R5`, `Q11`, …): keep, or remove in M5?
 
 **Left open from M1** (Q1 was answered in M2 as H1: phone controls are now 44 px):
 
