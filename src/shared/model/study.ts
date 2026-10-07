@@ -54,8 +54,7 @@ function clampInt(value: number, lo: number, hi: number, fallback: number): numb
 
 function wrapHue(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_STUDY.values.hue
-  // `+ 0` turns -0 into 0, so equal hues always compare and serialise equal.
-  return (((Math.round(value) % 360) + 360) % 360) + 0
+  return ((Math.round(value) % 360) + 360) % 360
 }
 
 const isVersion = (v: unknown): v is StudyVersion =>
