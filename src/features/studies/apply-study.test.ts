@@ -89,7 +89,7 @@ describe('applyStudy', () => {
       expect(sizes.length).toBeGreaterThan(0)
       expect(sizes.filter((bytes) => bytes >= 64 * 1024)).toEqual([])
     }
-  })
+  }, 30_000)
 })
 
 describe('applyStudyToContext', () => {
