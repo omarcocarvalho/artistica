@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_EDITS, type ImageId } from '../../shared/model/image'
-import { DEFAULT_STUDY } from '../../shared/model/study'
+import { DEFAULT_STUDY, patchStudy } from '../../shared/model/study'
 import type { DecodedImage } from './decode'
 import { sha256Hex } from './content-hash'
 import { ImportFailure } from './errors'
 import { createImagesStore, selectImageDescriptors, type ImagesDeps } from './store'
+import { makeLoadedImage } from './test-utils'
 
 function decoded(
   over: Partial<DecodedImage> = {},
@@ -588,5 +589,15 @@ describe('selectImageDescriptors', () => {
     expect(b).not.toBe(a)
     expect(b[0]).toBe(a[0]) // unchanged image keeps its descriptor object
     expect(b[1]).not.toBe(a[1])
+  })
+
+  it("passes each image's own study through", () => {
+    const study = patchStudy(DEFAULT_STUDY, {
+      versions: ['original', 'values'],
+      blurPct: 70,
+      values: { count: 9, hue: 200, neutral: true },
+    })
+    const [d] = selectImageDescriptors({ images: [makeLoadedImage({ study })] })
+    expect(d?.study).toBe(study)
   })
 })

@@ -1,6 +1,7 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import {
+  BLUR_SIGMA_AT_MAX,
   DEFAULT_STUDY,
   HUE_PRESETS,
   MAX_BLUR_PCT,
@@ -26,9 +27,13 @@ const arbRawStudy: fc.Arbitrary<StudySettings> = fc.record({
   versions: fc.array(fc.oneof(arbVersion, fc.string() as fc.Arbitrary<StudyVersion>), {
     maxLength: 6,
   }),
-  blurPct: fc.oneof(fc.double(), fc.integer({ min: -50, max: 500 })),
+  blurPct: fc.oneof(
+    fc.double(),
+    fc.double({ min: -50, max: 500 }),
+    fc.integer({ min: -50, max: 500 }),
+  ),
   values: fc.record({
-    count: fc.oneof(fc.double(), fc.integer({ min: -5, max: 50 })),
+    count: fc.oneof(fc.double(), fc.double({ min: -5, max: 50 }), fc.integer({ min: -5, max: 50 })),
     hue: fc.oneof(fc.double(), fc.integer({ min: -1000, max: 1000 })),
     neutral: fc.boolean(),
   }),
@@ -44,6 +49,13 @@ describe('DEFAULT_STUDY (owner Q1–Q4, default)', () => {
   })
   it('is already sanitized', () => {
     expect(sanitizeStudy(DEFAULT_STUDY)).toEqual(DEFAULT_STUDY)
+  })
+})
+
+describe('ranges (spec §2.5, §2.6)', () => {
+  it('blur is 1–100 %, values 2–20, σ at 100 % is 5 % of the short side', () => {
+    expect([MIN_BLUR_PCT, MAX_BLUR_PCT, MIN_VALUES, MAX_VALUES]).toEqual([1, 100, 2, 20])
+    expect(BLUR_SIGMA_AT_MAX).toBe(0.05)
   })
 })
 
@@ -91,6 +103,27 @@ describe('sanitizeStudy', () => {
       hue: 0,
       neutral: false,
     })
+  })
+  it('rounds in-range blur and value count to the nearest integer', () => {
+    const s = sanitizeStudy({
+      ...DEFAULT_STUDY,
+      blurPct: 40.6,
+      values: { count: 7.4, hue: 54.5, neutral: false },
+    })
+    expect(s).toEqual({
+      ...DEFAULT_STUDY,
+      blurPct: 41,
+      values: { count: 7, hue: 55, neutral: false },
+    })
+  })
+  it('treats only `true` as neutral', () => {
+    for (const neutral of [1, 'yes', 'true', {}, []]) {
+      const raw = { ...DEFAULT_STUDY, values: { ...DEFAULT_STUDY.values, neutral } }
+      expect(sanitizeStudy(raw as unknown as StudySettings).values.neutral).toBe(false)
+    }
+    expect(
+      sanitizeStudy(patchStudy(DEFAULT_STUDY, { values: { neutral: true } })).values.neutral,
+    ).toBe(true)
   })
   it('replaces non-finite numbers with the defaults', () => {
     const s = sanitizeStudy({
@@ -152,6 +185,23 @@ describe('patchStudy', () => {
     const s = patchStudy(DEFAULT_STUDY, { values: { hue: 200, count: undefined } })
     expect(s.values).toEqual({ count: 5, hue: 200, neutral: false })
   })
+  it('keeps unpatched non-default values when another value is patched', () => {
+    const base: StudySettings = {
+      versions: ['original', 'values'],
+      blurPct: 70,
+      values: { count: 9, hue: 200, neutral: true },
+    }
+    expect(patchStudy(base, { values: { hue: 10, count: undefined } })).toEqual({
+      versions: ['original', 'values'],
+      blurPct: 70,
+      values: { count: 9, hue: 10, neutral: true },
+    })
+    expect(patchStudy(base, { blurPct: undefined, values: { neutral: undefined } })).toEqual(base)
+  })
+  it('replaces the versions', () => {
+    const s = patchStudy(DEFAULT_STUDY, { versions: ['blurValues', 'blurred'] })
+    expect(s.versions).toEqual(['blurred', 'blurValues'])
+  })
   it('sanitizes the result', () => {
     expect(patchStudy(DEFAULT_STUDY, { blurPct: 0 }).blurPct).toBe(MIN_BLUR_PCT)
   })
@@ -165,6 +215,13 @@ describe('studyEqual', () => {
       studyEqual(DEFAULT_STUDY, patchStudy(DEFAULT_STUDY, { values: { neutral: true } })),
     ).toBe(false)
     expect(studyEqual(DEFAULT_STUDY, withVersion(DEFAULT_STUDY, 'values', true))).toBe(false)
+    expect(studyEqual(DEFAULT_STUDY, patchStudy(DEFAULT_STUDY, { values: { count: 6 } }))).toBe(
+      false,
+    )
+    expect(studyEqual(DEFAULT_STUDY, patchStudy(DEFAULT_STUDY, { values: { hue: 56 } }))).toBe(
+      false,
+    )
+    expect(studyEqual(DEFAULT_STUDY, { ...DEFAULT_STUDY, versions: ['values'] })).toBe(false)
   })
 })
 
