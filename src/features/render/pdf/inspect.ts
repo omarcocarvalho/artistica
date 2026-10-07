@@ -10,10 +10,6 @@ import {
   type PDFPage,
 } from '@pdfme/pdf-lib'
 
-/**
- * Parse a PDF back for tests (unit tests here, and E's Playwright E2E in node).
- * Not used by the app at runtime.
- */
 export interface PdfImageInfo {
   /** /Filter name without the slash: 'DCTDecode' (JPEG) or 'FlateDecode' (PNG). */
   readonly filter: string
@@ -28,6 +24,10 @@ export interface PdfDrawInfo extends PdfImageInfo {
   readonly name: string
 }
 
+/**
+ * Parse a PDF back for tests (unit tests here, and E's Playwright E2E in node).
+ * Not used by the app at runtime.
+ */
 export interface PdfReport {
   readonly pageCount: number
   readonly pages: readonly {
