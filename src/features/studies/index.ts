@@ -31,4 +31,10 @@ export { LIGHTNESS_BINS, VALUE_CLIP, lightnessRange, posterizeRGBA, valueIndex }
 export type { LightnessRange } from './posterize'
 export { applyStudy, applyStudyToContext } from './apply-study'
 // --- preview (C1, C2) ---
+export {
+  createStudyPreviewProvider,
+  STUDY_RETAIN_BYTES,
+  type BitmapLike,
+  type StudyPreviewProvider,
+} from './preview/provider'
 // --- components (D1) ---
