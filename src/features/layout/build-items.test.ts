@@ -6,6 +6,7 @@ import {
   type ImageId,
 } from '../../shared/model/image'
 import { DEFAULT_PAGE_SETUP } from '../../shared/model/page-setup'
+import { DEFAULT_STUDY } from '../../shared/model/study'
 import { buildLayoutItems } from './build-items'
 import { computeLayout } from './compute-layout'
 
@@ -21,6 +22,7 @@ const img = (
   pxW,
   pxH,
   edits: { ...DEFAULT_EDITS, ...edits },
+  study: DEFAULT_STUDY,
 })
 
 /** Placements as (content hash, page, block), so sessions with different random ids compare equal. */

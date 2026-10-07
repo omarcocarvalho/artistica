@@ -20,9 +20,14 @@ export default defineConfig({
   test: {
     coverage: {
       provider: 'v8',
-      // Vitest 5 reports every file matching `include` (0% if untested) and exits 0 when nothing
-      // matches, so the gate is harmless until sub-plans B and D add code.
-      include: ['src/features/layout/**', 'src/features/render/**'],
+      // The gate covers the pure core modules (owner P3). Vitest 5 reports every file matching
+      // `include` (0% if untested) and exits 0 when a glob matches nothing.
+      include: [
+        'src/features/layout/**',
+        'src/features/render/**',
+        'src/features/studies/**',
+        'src/shared/colour/**',
+      ],
       exclude: ['**/*.test.*', '**/*.worker.ts', '**/components/**', '**/test-support/**'],
       reporter: ['text', 'html'],
       thresholds: { lines: 80, branches: 80, functions: 80, statements: 80 },
