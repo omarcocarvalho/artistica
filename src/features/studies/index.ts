@@ -27,4 +27,10 @@ export type {
 // --- maths (A3–A5) ---
 export { blurSigmaPx, boxRadiiForGauss, gaussianBlurRGBA } from './blur'
 // --- preview (C1, C2) ---
+export {
+  createStudyPreviewProvider,
+  STUDY_RETAIN_BYTES,
+  type BitmapLike,
+  type StudyPreviewProvider,
+} from './preview/provider'
 // --- components (D1) ---
