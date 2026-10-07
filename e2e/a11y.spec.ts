@@ -340,9 +340,11 @@ test.describe('phone steps (mobile-chromium)', () => {
       await app.goToStep('Studies')
       await app.openLinesSection()
       await expectNoAxeViolations(page)
-      await app.everyLineOn(app.linesSection, { cols: 3, rows: 3 }, 'Bottom right')
+      await app.setAllLineSwitches(true)
+      await app.setGrid(3, 3)
+      await app.setSpiralCorner('Bottom right')
       await expect(app.linesSummary).toHaveAccessibleName('Lines, 6 on')
-      await app.linesApplyButton.click()
+      await app.applyLinesToAll()
       await expect(
         page.getByRole('status').filter({ hasText: 'Line settings copied to 1 image.' }),
       ).toBeAttached()

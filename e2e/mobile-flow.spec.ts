@@ -4,7 +4,7 @@ import { AppPage, colourDistance } from './support/app.ts'
 import { FIXTURES } from './support/fixtures.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { summarizePdf } from './support/pdf.ts'
-import { inspectPdf, isRegistrationStroke } from '../src/features/render/pdf/inspect.ts'
+import { inspectPdf } from '../src/features/render/pdf/inspect.ts'
 import { compositionPaths } from '../src/features/lines/composition.ts'
 import { DEFAULT_LINES, patchLines } from '../src/shared/model/lines.ts'
 import { runOnly } from './support/projects.ts'
@@ -30,9 +30,6 @@ test.afterEach(() => {
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0)
 const pdfDraws = async (bytes: Uint8Array) =>
   (await inspectPdf(bytes)).pages.flatMap((p) => p.draws)
-/** Every stroke that is not a crop mark, per page, in content order. */
-const pdfLineStrokes = async (bytes: Uint8Array) =>
-  (await inspectPdf(bytes)).pages.map((p) => p.strokes.filter((s) => !isRegistrationStroke(s)))
 const EVERY_LINE_TYPE =
   /, lines: Grid, Rule of thirds, Diagonals & armature, Golden ratio, Golden spiral, and Centre lines$/
 
@@ -179,8 +176,10 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line on import, p
       page.getByRole('status').filter({ hasText: 'Study settings copied to 21 images.' }),
     ).toBeAttached()
     await app.openLinesSection()
-    await app.everyLineOn(app.linesSection, { cols: 20, rows: 20 }, 'Top right')
-    await app.linesApplyButton.click()
+    await app.setAllLineSwitches(true)
+    await app.setGrid(20, 20)
+    await app.setSpiralCorner('Top right')
+    await app.applyLinesToAll()
     await expect(
       page.getByRole('status').filter({ hasText: 'Line settings copied to 21 images.' }),
     ).toBeAttached()
@@ -242,7 +241,7 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line on import, p
   expect(sum(info.pages.map((p) => p.imagePlacements))).toBe(66)
   expect((await pdfDraws(pdf)).filter((d) => d.filter === 'FlateDecode')).toHaveLength(22)
   expect(previewTilesWithLines).toBe(66)
-  const lineStrokes = (await pdfLineStrokes(pdf)).flat()
+  const lineStrokes = info.pages.flatMap((p) => p.lineStrokes)
   expect(lineStrokes).toHaveLength(66 * 2)
   expect(lineStrokes.filter((s) => s.dashPt.length === 0)).toHaveLength(66)
   await expect(page.getByRole('alert')).toHaveCount(0)
@@ -423,12 +422,12 @@ test('L-P1 phone: the Lines section in the Studies step, lines in the preview an
   await app.pickStudiesImage('quadrants.jpg')
   await expect(app.linesSection).not.toHaveAttribute('open')
   await expect(app.linesSummary).toHaveAccessibleName('Lines')
-  await expect(app.phoneLineSwitch('Rule of thirds')).toBeHidden()
+  await expect(app.lineSwitch('Rule of thirds')).toBeHidden()
 
   await app.openLinesSection()
   await expect(page.getByText('Lines for quadrants.jpg')).toBeVisible()
-  await app.phoneLineSwitch('Rule of thirds').click()
-  await app.phoneLineSwitch('Centre lines').click()
+  await app.lineSwitch('Rule of thirds').click()
+  await app.lineSwitch('Centre lines').click()
   await expect(app.linesSummary).toHaveAccessibleName('Lines, 2 on')
   if (testInfo.project.name === 'mobile-chromium') {
     const cdp = await page.context().newCDPSession(page)
@@ -469,7 +468,7 @@ test('L-P1 phone: the Lines section in the Studies step, lines in the preview an
 
   await page.getByRole('button', { name: 'Next' }).click()
   const { bytes } = await app.exportPdf('step')
-  const strokes = (await pdfLineStrokes(bytes)).flat()
+  const strokes = (await summarizePdf(bytes)).pages.flatMap((p) => p.lineStrokes)
   expect(strokes.map((s) => s.dashPt.length > 0)).toEqual([false, true])
   for (const s of strokes) {
     expect(s.colour.space).toBe('rgb')
@@ -490,8 +489,8 @@ test('L-P2 phone: every Lines control is at least 44 x 44 px, with 16 px text in
   await app.goToStep('Studies')
   await expectTouchTargets([app.linesSummary])
   await app.openLinesSection()
-  await app.setSwitch('Grid', true)
-  await app.setSwitch('Golden spiral', true)
+  await app.setLineSwitch('Grid', true)
+  await app.setLineSwitch('Golden spiral', true)
   const section = app.linesSection
   const switches = await section.getByRole('switch').all()
   const fields = [
@@ -538,7 +537,7 @@ test('L-P3 phone: the Lines section opens and its controls work from the keyboar
   await page.keyboard.press('Enter')
   await expect(app.linesSection).toHaveAttribute('open', '')
   await page.keyboard.press(tab)
-  const grid = app.phoneLineSwitch('Grid')
+  const grid = app.lineSwitch('Grid')
   await expect(grid).toBeFocused()
   await page.keyboard.press('Space')
   await expect(grid).toHaveAttribute('aria-checked', 'true')
@@ -547,7 +546,7 @@ test('L-P3 phone: the Lines section opens and its controls work from the keyboar
   await expect(cols).toBeFocused()
   await page.keyboard.press('ArrowUp')
   await expect(cols).toHaveValue('5')
-  const spiral = app.phoneLineSwitch('Golden spiral')
+  const spiral = app.lineSwitch('Golden spiral')
   await spiral.focus()
   await page.keyboard.press('Space')
   await expect(spiral).toHaveAttribute('aria-checked', 'true')

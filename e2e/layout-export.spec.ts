@@ -619,10 +619,11 @@ test.describe('study preview timing and races (chromium)', () => {
     await app.setVersions(['Original', 'Blurred', 'Values'])
     await app.applyStudiesToAll()
     await expect(app.pageFigures.getByRole('button')).toHaveCount(60)
-    await page.getByRole('tab', { name: 'Lines' }).click()
-    const panel = page.getByRole('tabpanel', { name: 'Lines' })
-    await expect(panel.getByText('Lines for quadrants.png')).toBeVisible()
-    await app.everyLineOn(panel, { cols: 20, rows: 20 }, 'Top right')
+    await app.openLinesTab()
+    await expect(app.linesPanel.getByText('Lines for quadrants.png')).toBeVisible()
+    await app.setAllLineSwitches(true)
+    await app.setGrid(20, 20)
+    await app.setSpiralCorner('Top right')
     await app.expectPreviewSettled(60_000)
     const sheets = await app.pageCanvases.count()
     const tileItems = page.getByRole('list', { name: /^Page \d+ contents$/ }).getByRole('listitem')
@@ -630,7 +631,7 @@ test.describe('study preview timing and races (chromium)', () => {
     await expect(withCentre).toHaveCount(3)
 
     await armLineProbe(page, 'click')
-    await app.linesApplyButton.click()
+    await app.applyLinesToAll()
     const applyAll = await lineRedraw(page, sheets)
     await expect(
       page.getByRole('status').filter({ hasText: 'Line settings copied to 19 images.' }),
@@ -638,12 +639,12 @@ test.describe('study preview timing and races (chromium)', () => {
     await expect(withCentre).toHaveCount(60)
 
     await armLineProbe(page, 'click')
-    await panel.getByRole('switch', { name: 'Centre lines', exact: true }).click()
+    await app.lineSwitch('Centre lines').click()
     const toggle = await lineRedraw(page, sheets)
     await expect(withCentre).toHaveCount(57)
 
     await armLineProbe(page, 'input')
-    await panel.getByRole('slider', { name: 'Thickness' }).fill('1')
+    await app.lineSlider('Thickness').fill('1')
     const thickness = await lineRedraw(page, sheets)
 
     const runs = { applyAll, toggle, thickness }

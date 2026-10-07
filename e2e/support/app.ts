@@ -287,6 +287,29 @@ export class AppPage {
     )
   }
 
+  /** Pixel (fx, fy in 0..1) of a page canvas as [r,g,b,a]. */
+  async canvasPixel(fx: number, fy: number, index = 0): Promise<number[]> {
+    return this.pageCanvases.nth(index).evaluate(
+      (
+        c: {
+          width: number
+          height: number
+          getContext(id: '2d'): {
+            getImageData(x: number, y: number, w: number, h: number): { data: ArrayLike<number> }
+          } | null
+        },
+        [x, y]: [number, number],
+      ) => {
+        const g = c.getContext('2d')
+        if (!g) throw new Error('canvas is not 2d')
+        return Array.from(
+          g.getImageData(Math.floor(c.width * x), Math.floor(c.height * y), 1, 1).data,
+        )
+      },
+      [fx, fy] as [number, number],
+    )
+  }
+
   /** Pixels at tile fractions [fx, fy] of a tile, as [r,g,b,a] each, read in one call. */
   async tilePixels(
     tile: Locator,
@@ -333,60 +356,8 @@ export class AppPage {
     if ((await this.linesSection.getAttribute('open')) === null) await this.linesSummary.click()
     await expect(this.linesSection).toHaveAttribute('open', '')
   }
-  phoneLineSwitch(name: LineTypeName): Locator {
-    return this.linesSection.getByRole('switch', { name, exact: true })
-  }
   get linesApplyButton(): Locator {
     return this.page.getByRole('button', { name: 'Apply lines to all images', exact: true })
-  }
-  /** Every composition type on, with the given grid and spiral corner, in the Lines controls inside `scope`. */
-  async everyLineOn(
-    scope: Locator,
-    grid: { cols: number; rows: number },
-    corner: SpiralCornerName,
-  ): Promise<void> {
-    for (const name of LINE_TYPE_NAMES) {
-      const sw = scope.getByRole('switch', { name, exact: true })
-      if ((await sw.getAttribute('aria-checked')) !== 'true') await sw.click()
-      await expect(sw).toHaveAttribute('aria-checked', 'true')
-    }
-    for (const [label, n] of [
-      ['Columns', grid.cols],
-      ['Rows', grid.rows],
-    ] as const) {
-      const field = scope.getByRole('textbox', { name: label, exact: true })
-      await field.fill(String(n))
-      await field.press('Enter')
-      await expect(field).toHaveValue(String(n))
-    }
-    const radio = scope
-      .getByRole('radiogroup', { name: 'Spiral starts at' })
-      .getByRole('radio', { name: corner, exact: true })
-    await radio.click()
-    await expect(radio).toBeChecked()
-  }
-
-  /** Pixel (fx, fy in 0..1) of a page canvas as [r,g,b,a]. */
-  async canvasPixel(fx: number, fy: number, index = 0): Promise<number[]> {
-    return this.pageCanvases.nth(index).evaluate(
-      (
-        c: {
-          width: number
-          height: number
-          getContext(id: '2d'): {
-            getImageData(x: number, y: number, w: number, h: number): { data: ArrayLike<number> }
-          } | null
-        },
-        [x, y]: [number, number],
-      ) => {
-        const g = c.getContext('2d')
-        if (!g) throw new Error('canvas is not 2d')
-        return Array.from(
-          g.getImageData(Math.floor(c.width * x), Math.floor(c.height * y), 1, 1).data,
-        )
-      },
-      [fx, fy] as [number, number],
-    )
   }
 
   // --- Lines (D3) ---
