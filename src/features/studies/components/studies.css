@@ -47,6 +47,38 @@
     flex: 1 1 0;
   }
 
+  @media (forced-colors: active) {
+    .studies-swatch,
+    .studies-ramp {
+      forced-color-adjust: none;
+    }
+    .studies-swatch {
+      border-color: Canvas;
+      box-shadow: 0 0 0 1px CanvasText;
+    }
+    .studies-swatch[aria-pressed='true'] {
+      box-shadow: 0 0 0 1px CanvasText;
+      outline: 3px solid Highlight;
+      outline-offset: 3px;
+    }
+    .studies-swatch[aria-pressed='true']::before {
+      content: '';
+      position: absolute;
+      inset: 12%;
+      border-radius: 50%;
+      background: Highlight;
+    }
+    .studies-swatch[aria-pressed='true']::after {
+      background: HighlightText;
+      mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/></svg>")
+        center / 100% no-repeat;
+    }
+    .studies-ramp {
+      box-shadow: none;
+      outline: 1px solid CanvasText;
+    }
+  }
+
   .studies-panel .ds-chip[aria-disabled='true'] {
     cursor: not-allowed;
   }

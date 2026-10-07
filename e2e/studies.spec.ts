@@ -21,6 +21,13 @@ interface BrowserCanvas {
   } | null
 }
 declare const document: { activeElement: unknown; createElement(tag: 'canvas'): BrowserCanvas }
+interface ComputedStyle {
+  backgroundColor: string
+  outlineStyle: string
+  outlineWidth: string
+  outlineColor: string
+}
+declare function getComputedStyle(el: unknown, pseudo?: string): ComputedStyle
 declare function createImageBitmap(blob: Blob): Promise<{ width: number; height: number }>
 
 test.use({ viewport: { width: 1280, height: 900 } })
@@ -260,6 +267,62 @@ test.describe('studies on chromium', () => {
       .evaluate((el: { style: { backgroundColor: string } }) => el.style.backgroundColor)
     expect(lightest).toMatch(/^rgb\(/)
     expect(lightest).not.toBe('rgb(255, 255, 255)')
+  })
+
+  test('S-D11 in forced colors the swatches and the ramp keep their colours and the pressed swatch is outlined', async ({
+    page,
+  }, testInfo) => {
+    const app = await withPhotos(page)
+    const swatches = page.getByRole('group', { name: 'Hue' }).getByRole('button')
+    const ramp = page
+      .getByRole('img', { name: '5 values, from darkest to lightest tint' })
+      .locator('span')
+    const computed = (l: Locator, pseudo?: string) =>
+      l.evaluateAll(
+        (els, p) =>
+          els.map((el) => {
+            const cs = getComputedStyle(el, p)
+            return {
+              bg: cs.backgroundColor,
+              outline: cs.outlineStyle,
+              outlineWidth: Number.parseFloat(cs.outlineWidth),
+              outlineColor: cs.outlineColor,
+            }
+          }),
+        pseudo,
+      )
+    const inline = (l: Locator) =>
+      l.evaluateAll((els) =>
+        els.map((el) => (el as { style: { backgroundColor: string } }).style.backgroundColor),
+      )
+
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ forcedColors: 'active', colorScheme })
+      await expect(swatches).toHaveCount(8)
+      const swatchStyles = await computed(swatches)
+      expect(new Set(swatchStyles.map((s) => s.bg)).size).toBe(8)
+
+      await expect(ramp).toHaveCount(5)
+      const rampBgs = (await computed(ramp)).map((s) => s.bg)
+      expect(rampBgs).toEqual(await inline(ramp))
+      expect(new Set(rampBgs).size).toBe(5)
+
+      const pressed = page.getByRole('group', { name: 'Hue' }).locator('[aria-pressed="true"]')
+      await expect(pressed).toHaveCount(1)
+      const [ring] = await computed(pressed)
+      expect(ring.outline).toBe('solid')
+      expect(ring.outlineWidth).toBeGreaterThanOrEqual(2)
+      expect(ring.outlineColor).not.toBe(swatchStyles[0]?.bg)
+      const [disc] = await computed(pressed, '::before')
+      const [tick] = await computed(pressed, '::after')
+      expect(disc.bg).not.toBe('rgba(0, 0, 0, 0)')
+      expect(tick.bg).not.toBe('rgba(0, 0, 0, 0)')
+      expect(tick.bg).not.toBe(disc.bg)
+
+      await app.studiesPanel.screenshot({
+        path: testInfo.outputPath(`forced-colors-${colorScheme}.png`),
+      })
+    }
   })
 
   test('S-D4 Apply to all copies the versions to every image, keeps copies, and announces it', async ({
