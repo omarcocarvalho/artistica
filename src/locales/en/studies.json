@@ -53,7 +53,7 @@
   },
   "applyAll": {
     "button": "Apply to all images",
-    "hint_one": "Copies these study settings to all {{count}} image.",
+    "hint_one": "Add another photo to copy these settings to it.",
     "hint_other": "Copies these study settings to all {{count}} images.",
     "done_one": "Study settings copied to {{count}} image.",
     "done_other": "Study settings copied to {{count}} images.",
