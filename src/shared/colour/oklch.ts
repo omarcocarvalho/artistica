@@ -3,18 +3,15 @@
  * studies, so the hot path (lightness8) avoids allocation: one table lookup per channel, three cbrt.
  */
 
-const SRGB_TO_LINEAR = (() => {
-  const t = new Float64Array(256)
-  for (let i = 0; i < 256; i++) {
-    const c = i / 255
-    t[i] = c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
-  }
-  return t
-})()
+function srgbToLinear(c: number): number {
+  return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+}
 
-/** 8-bit gamma-encoded sRGB → linear [0, 1]. */
+const SRGB_TO_LINEAR = Float64Array.from({ length: 256 }, (_, i) => srgbToLinear(i / 255))
+
+/** 8-bit gamma-encoded sRGB → linear [0, 1]. A value that is not an integer 0..255 skips the table. */
 export function srgb8ToLinear(c8: number): number {
-  return SRGB_TO_LINEAR[c8 & 255] ?? 0
+  return SRGB_TO_LINEAR[c8] ?? srgbToLinear(c8 / 255)
 }
 
 /** Linear [0, 1] → 8-bit sRGB, rounded and clamped to 0..255. */
@@ -76,7 +73,11 @@ export function inSrgbGamut(L: number, C: number, hDeg: number): boolean {
   )
 }
 
-/** Largest in-gamut chroma at (L, h), to 1e-5 (17 bisection steps over [0, 0.4]). */
+/**
+ * A chroma on the sRGB gamut boundary at (L, h): in gamut, and 1e-5 more is not (17 bisection steps
+ * over [0, 0.4]). Where the in-gamut chromas at (L, h) are not one interval (very low L, and hues
+ * within a fraction of a degree of the blue primary), it is not necessarily the largest.
+ */
 export function maxChroma(L: number, hDeg: number): number {
   if (!(L > 0 && L < 1)) return 0
   let lo = 0
