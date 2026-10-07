@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { StateStorage } from 'zustand/middleware'
+import { DEFAULT_STUDY } from '../../shared/model/study'
 import { DEFAULT_SETTINGS } from './schema'
 import {
   SETTINGS_STORAGE_KEY,
@@ -179,16 +180,22 @@ describe('actions', () => {
 })
 
 describe('persistence', () => {
-  it('writes version 1 under artistica:settings, without notes or actions', () => {
+  it('writes version 2 under artistica:settings, without notes or actions', () => {
     const storage = memoryStorage()
     const store = createSettingsStore(storage)
     store.getState().setTheme('light')
     store.getState().setPageSetup({ safeAreaMm: 1 })
     const { version, state } = saved(storage)
     expect(SETTINGS_STORAGE_KEY).toBe('artistica:settings')
-    expect(version).toBe(1)
-    expect(SETTINGS_VERSION).toBe(1)
-    expect(Object.keys(state).sort()).toEqual(['language', 'pageSetup', 'theme', 'unit'])
+    expect(version).toBe(2)
+    expect(SETTINGS_VERSION).toBe(2)
+    expect(Object.keys(state).sort()).toEqual([
+      'language',
+      'pageSetup',
+      'studyDefaults',
+      'theme',
+      'unit',
+    ])
   })
 
   it('restores saved settings', () => {
@@ -250,7 +257,7 @@ describe('persistence', () => {
     expect(s).not.toHaveProperty('extra')
   })
 
-  it('does not store anything but the four settings (privacy)', () => {
+  it('does not store anything but the settings (privacy)', () => {
     const storage = memoryStorage()
     const store = createSettingsStore(storage)
     store.getState().setUnit('in')
@@ -293,5 +300,147 @@ describe('storage that fails', () => {
       store.getState().setTheme('dark')
     }).not.toThrow()
     expect(store.getState().theme).toBe('dark')
+  })
+})
+
+describe('study defaults (schema v2)', () => {
+  const D = { blurPct: DEFAULT_STUDY.blurPct, values: DEFAULT_STUDY.values }
+
+  it('is version 2', () => {
+    expect(SETTINGS_VERSION).toBe(2)
+  })
+
+  it('migrates a v1 envelope to v2 keeping every field', () => {
+    const v1 = {
+      pageSetup: { ...DEFAULT_SETTINGS.pageSetup, paper: 'Letter', safeAreaMm: 7 },
+      unit: 'in',
+      language: 'en',
+      theme: 'dark',
+    }
+    const storage = memoryStorage(JSON.stringify({ version: 1, state: v1 }))
+    const s = createSettingsStore(storage).getState()
+    expect(s.pageSetup).toEqual(v1.pageSetup)
+    expect(s.unit).toBe('in')
+    expect(s.language).toBe('en')
+    expect(s.theme).toBe('dark')
+    expect(s.studyDefaults).toEqual(D)
+  })
+
+  it.each([
+    ['values: null', { blurPct: 22, values: null }],
+    ['values: "x"', { blurPct: 22, values: 'x' }],
+    ['no values', { blurPct: 22 }],
+  ])('loads a v2 envelope with %s, keeping every other field', (_name, studyDefaults) => {
+    const state = {
+      pageSetup: { ...DEFAULT_SETTINGS.pageSetup, paper: 'A3' },
+      unit: 'in',
+      language: 'ja',
+      theme: 'light',
+      studyDefaults,
+    }
+    const s = createSettingsStore(memoryStorage(JSON.stringify({ version: 2, state }))).getState()
+    expect(s.pageSetup).toEqual(state.pageSetup)
+    expect(s).toMatchObject({ unit: 'in', language: 'ja', theme: 'light' })
+    expect(s.studyDefaults).toEqual({ blurPct: 22, values: DEFAULT_STUDY.values })
+  })
+
+  it('loads a v2 envelope without studyDefaults with the defaults', () => {
+    const state = { ...DEFAULT_SETTINGS, unit: 'in' } as Record<string, unknown>
+    delete state.studyDefaults
+    const s = createSettingsStore(memoryStorage(JSON.stringify({ version: 2, state }))).getState()
+    expect(s.unit).toBe('in')
+    expect(s.studyDefaults).toEqual(D)
+  })
+
+  it.each([
+    [{ blurPct: 250, values: { count: 7, hue: 420, neutral: false } }],
+    [{ blurPct: -5, values: { count: 99, hue: -30, neutral: true } }],
+    [{ blurPct: 33.6, values: { count: 1, hue: 360, neutral: false } }],
+  ])('loads stored study defaults %j the same as setStudyDefaults sets them', (input) => {
+    const set = createSettingsStore(memoryStorage())
+    set.getState().setStudyDefaults(input)
+    const state = { ...DEFAULT_SETTINGS, unit: 'in', studyDefaults: input }
+    const loaded = createSettingsStore(memoryStorage(JSON.stringify({ version: 2, state })))
+    expect(loaded.getState().unit).toBe('in')
+    expect(loaded.getState().studyDefaults).toEqual(set.getState().studyDefaults)
+    expect(loaded.getState().studyDefaults).not.toEqual(DEFAULT_SETTINGS.studyDefaults)
+  })
+
+  it('setStudyDefaults persists blur and values, sanitized, under version 2', () => {
+    const storage = memoryStorage()
+    const store = createSettingsStore(storage)
+    store
+      .getState()
+      .setStudyDefaults({ blurPct: 250, values: { count: 7, hue: 420, neutral: false } })
+    expect(store.getState().studyDefaults).toEqual({
+      blurPct: 100,
+      values: { count: 7, hue: 60, neutral: false },
+    })
+    const env = saved(storage)
+    expect(env.version).toBe(2)
+    expect(env.state.studyDefaults).toEqual(store.getState().studyDefaults)
+  })
+
+  it('persists nothing but the four M1 fields and studyDefaults', () => {
+    const storage = memoryStorage()
+    const store = createSettingsStore(storage)
+    store.getState().setStudyDefaults({ blurPct: 10, values: DEFAULT_STUDY.values })
+    expect(Object.keys(saved(storage).state).sort()).toEqual([
+      'language',
+      'pageSetup',
+      'studyDefaults',
+      'theme',
+      'unit',
+    ])
+  })
+
+  it('never persists versions, even when the caller passes them', () => {
+    const storage = memoryStorage()
+    const store = createSettingsStore(storage)
+    const withVersions = { blurPct: 10, values: DEFAULT_STUDY.values, versions: ['values'] }
+    store.getState().setStudyDefaults(withVersions)
+    expect(store.getState().studyDefaults).toEqual({ blurPct: 10, values: DEFAULT_STUDY.values })
+    expect(saved(storage).state.studyDefaults).toEqual({
+      blurPct: 10,
+      values: DEFAULT_STUDY.values,
+    })
+  })
+
+  it('reloads the saved study defaults', () => {
+    const storage = memoryStorage()
+    createSettingsStore(storage)
+      .getState()
+      .setStudyDefaults({ blurPct: 15, values: { count: 3, hue: 195, neutral: true } })
+    expect(createSettingsStore(storage).getState().studyDefaults).toEqual({
+      blurPct: 15,
+      values: { count: 3, hue: 195, neutral: true },
+    })
+  })
+
+  it('reset restores the default study defaults', () => {
+    const store = createSettingsStore(memoryStorage())
+    store.getState().setStudyDefaults({ blurPct: 15, values: DEFAULT_STUDY.values })
+    store.getState().reset()
+    expect(store.getState().studyDefaults).toEqual(DEFAULT_SETTINGS.studyDefaults)
+  })
+
+  it.each([
+    ['blurPct', { blurPct: 41, values: DEFAULT_STUDY.values }],
+    ['count', { blurPct: 40, values: { ...DEFAULT_STUDY.values, count: 6 } }],
+    ['hue', { blurPct: 40, values: { ...DEFAULT_STUDY.values, hue: 56 } }],
+    ['neutral', { blurPct: 40, values: { ...DEFAULT_STUDY.values, neutral: true } }],
+  ])('setStudyDefaults stores a change to %s alone', (_name, next) => {
+    const storage = memoryStorage()
+    const store = createSettingsStore(storage)
+    store.getState().setStudyDefaults(next)
+    expect(store.getState().studyDefaults).toEqual(next)
+    expect(saved(storage).state.studyDefaults).toEqual(next)
+  })
+
+  it('keeps the same state when setStudyDefaults gets equal values (no storage write churn)', () => {
+    const store = createSettingsStore(memoryStorage())
+    const before = store.getState().studyDefaults
+    store.getState().setStudyDefaults({ ...before, values: { ...before.values } })
+    expect(store.getState().studyDefaults).toBe(before)
   })
 })

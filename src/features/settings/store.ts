@@ -8,10 +8,17 @@ import {
 } from '../../shared/model/page-setup'
 import type { SizeMm } from '../../shared/model/paper'
 import { defaultUnitForLocale, type Unit } from '../../shared/model/units'
-import { DEFAULT_SETTINGS, parseSettings, type SettingsData, type Theme } from './schema'
+import {
+  DEFAULT_SETTINGS,
+  normalizeStudyDefaults,
+  parseSettings,
+  type SettingsData,
+  type StudyDefaults,
+  type Theme,
+} from './schema'
 
 export const SETTINGS_STORAGE_KEY = 'artistica:settings'
-export const SETTINGS_VERSION = 1
+export const SETTINGS_VERSION = 2
 
 /** Nested objects are merged one level deep, so callers can change one gutter field. */
 export interface PageSetupPatch {
@@ -31,6 +38,8 @@ export interface SettingsState extends SettingsData {
   setUnit(unit: Unit): void
   setLanguage(language: LanguageCode | null): void
   setTheme(theme: Theme): void
+  /** Remember the last-used study settings (owner Q5, default). Normalised; same state when equal. */
+  setStudyDefaults(defaults: StudyDefaults): void
   reset(): void
 }
 
@@ -129,6 +138,18 @@ export function createSettingsStore(
         setTheme: (theme) => {
           set({ theme })
         },
+        setStudyDefaults: (defaults) => {
+          set((state) => {
+            const next = normalizeStudyDefaults(defaults)
+            const cur = state.studyDefaults
+            const equal =
+              next.blurPct === cur.blurPct &&
+              next.values.count === cur.values.count &&
+              next.values.hue === cur.values.hue &&
+              next.values.neutral === cur.values.neutral
+            return equal ? state : { studyDefaults: next }
+          })
+        },
         reset: () => {
           set({ ...DEFAULT_SETTINGS, unit: initialUnit, pageSetupNotes: [] })
         },
@@ -137,14 +158,15 @@ export function createSettingsStore(
         name: SETTINGS_STORAGE_KEY,
         version: SETTINGS_VERSION,
         storage: createJSONStorage(() => storage),
-        partialize: ({ pageSetup, unit, language, theme }) => ({
+        partialize: ({ pageSetup, unit, language, theme, studyDefaults }) => ({
           pageSetup,
           unit,
           language,
           theme,
+          studyDefaults,
         }),
-        // Runs for older/newer versions. There is no earlier format to convert, so anything
-        // that is not a v1 object is sanitised the same way.
+        // Runs for v1 and any other version. parseSettings keeps every v1 field and fills
+        // studyDefaults with the default; there is no other format to convert.
         migrate: (persisted) => parseSettings(persisted),
         // Runs for every load, including current-version data that was edited by hand.
         // Nothing saved (or unreadable JSON, which storage reports as null) keeps the initial
