@@ -18,7 +18,7 @@ Later milestones add composition lines (some AI, in the browser), polish, and tr
 - **Everything runs in the browser.** Photos are never uploaded or persisted.
 - **Hosting:** GitHub Pages. The landing page is at `/artistica/` and the tool at `/artistica/app/`.
 - **Product spec:** [docs/spec.md](docs/spec.md). It is the source of truth.
-- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (signed off; release next), M3–M5 → `v0.3.0`–`v0.5.0`, M6 → `v1.0.0`.
+- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3–M5 → `v0.3.0`–`v0.5.0`, M6 → `v1.0.0`.
 
 ## Current status
 
@@ -32,7 +32,9 @@ Later milestones add composition lines (some AI, in the browser), polish, and tr
 - **Phone memory** (M3 in `e2e/mobile-flow.spec.ts`, 22 × 24 MP photos × 3 versions, CI): import 1169 MB, studies 1327 MB, settled 1150 MB, export 1285 MB, against budgets of 1500 / 1500 / 1700 MB.
 - **Phone controls** are 44 px on touch screens, and phone inputs use 16 px text so iOS doesn't zoom on focus (#97, owner answer H1).
 
-**Release:** the release-please PR [#80](https://github.com/omarcocarvalho/artistica/pull/80) (`chore(master): release 0.2.0`) is open and ready to merge.
+**Release:** M2 is released as [`v0.2.0`](https://github.com/omarcocarvalho/artistica/releases/tag/v0.2.0): release PR [#80](https://github.com/omarcocarvalho/artistica/pull/80) merged as `296f15d` on 2026-10-07. The M2 sign-off and the owner's answers are recorded on #80 and in the M2 ledger.
+
+**M3 ("composition lines") is planned, not started.** The plan is [`2026-10-07-m3-overview.md`](docs/superpowers/plans/2026-10-07-m3-overview.md) with sub-plans A–D. It waits for the owner's approval and answers to its "Questions for the owner".
 
 ## Branch map
 
@@ -43,11 +45,12 @@ Later milestones add composition lines (some AI, in the browser), polish, and tr
 
 ## Next steps (in order)
 
-1. **Release v0.2.0** (signed off; steps for any milestone):
+1. **Owner approves the M3 plan** (`docs/superpowers/plans/2026-10-07-m3-*.md`) and answers its "Questions for the owner" (Q1–Q12, Q-budget, H1–H2), or accepts the recommended defaults. No M3 code starts before that.
+2. **Run M3** subagent-driven, as M2: 13 tasks in 6 waves, then the final review (task F), then the owner's real-phone sign-off.
+3. **Release v0.3.0** (steps for any milestone):
    1. Run `gh pr view <n> --json mergeable` on the release PR until it isn't `UNKNOWN`.
    2. Close and reopen the PR and wait for the checks to pass.
    3. Run `gh pr merge <n> --squash` from the main checkout. This creates the release and deploys to Pages.
-2. **Start M3** (composition lines): write the M3 plan in `docs/superpowers/plans/` and get owner approval **before** coding. Bring the open owner questions below.
 
 ## Owner answers from M2 (2026-10-07)
 
