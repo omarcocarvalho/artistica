@@ -16,6 +16,10 @@ export interface SegmentedControlProps<T extends string> {
   options: readonly SegmentedOption<T>[]
   /** Fill the container width. */
   block?: boolean
+  /** Disables every option. */
+  disabled?: boolean
+  /** Id(s) of text that describes each option, e.g. why they are disabled. */
+  describedBy?: string
   className?: string
 }
 
@@ -26,6 +30,8 @@ export function SegmentedControl<T extends string>({
   onValueChange,
   options,
   block = false,
+  disabled,
+  describedBy,
   className,
 }: SegmentedControlProps<T>) {
   return (
@@ -36,6 +42,7 @@ export function SegmentedControl<T extends string>({
         onValueChange(v as T)
       }}
       orientation="horizontal"
+      disabled={disabled}
       className={cx('ds-seg', block && 'ds-seg--block', className)}
     >
       {options.map((o) => (
@@ -43,6 +50,7 @@ export function SegmentedControl<T extends string>({
           key={o.value}
           value={o.value}
           disabled={o.disabled}
+          aria-describedby={describedBy}
           className="ds-seg__item"
         >
           {o.label}

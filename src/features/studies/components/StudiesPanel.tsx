@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef, useState } from 'react'
+import { useId, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useImages } from '../../images'
 import type { ImageId } from '../../../shared/model/image'
@@ -11,7 +11,7 @@ import {
   withVersion,
   type StudyPatch,
 } from '../../../shared/model/study'
-import { Button, Chip, Slider, VisuallyHidden } from '../../../shared/ui'
+import { Button, Chip, Slider, useImportWait, VisuallyHidden } from '../../../shared/ui'
 import { HueSwatches } from './HueSwatches'
 import { RampStrip } from './RampStrip'
 import './studies.css'
@@ -32,10 +32,12 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
   const { t } = useTranslation('studies')
   const image = useImages((s) => s.images.find((i) => i.id === imageId))
   const imageCount = useImages((s) => s.images.length)
-  const importing = useImages((s) => s.importing > 0)
-  const panelRef = useRef<HTMLDivElement>(null)
-  const waitingRef = useRef<HTMLParagraphElement>(null)
-  const focusAfterImport = useRef<HTMLElement | null>(null)
+  const {
+    waiting: importing,
+    hintId: waitingId,
+    hintRef: waitingRef,
+    panelRef,
+  } = useImportWait(useImages((s) => s.importing > 0))
   const [announcement, setAnnouncement] = useState<{ text: string; seq: number } | null>(null)
   const [announcedFor, setAnnouncedFor] = useState(imageId)
   if (announcedFor !== imageId) {
@@ -46,28 +48,7 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
   const lastOneId = `${baseId}-last`
   const blurHeadingId = `${baseId}-blur`
   const valuesHeadingId = `${baseId}-values`
-  const waitingId = `${baseId}-waiting`
   const busy = importing ? waitingId : undefined
-
-  useLayoutEffect(() => {
-    const waiting = waitingRef.current
-    const active = document.activeElement
-    if (!waiting) return
-    if (importing) {
-      if (
-        active instanceof HTMLElement &&
-        active !== waiting &&
-        panelRef.current?.contains(active)
-      ) {
-        focusAfterImport.current = active
-        waiting.focus()
-      }
-      return
-    }
-    const back = focusAfterImport.current
-    focusAfterImport.current = null
-    if (back?.isConnected && active === waiting) back.focus()
-  }, [importing])
 
   let content
   if (!image) {

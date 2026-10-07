@@ -19,13 +19,14 @@ describe('the 44 px touch-target query', () => {
     })),
   )
 
-  it('is used by the shared buttons, the shared form controls, the studies controls and the touch variant', () => {
+  it('is used by the shared buttons, the shared form controls, the studies and lines controls and the touch variant', () => {
     expect(queries.map((q) => q.file).sort()).toEqual(
       expect.arrayContaining([
         'features/studies/components/studies.css',
         'shared/styles.css',
         'shared/ui/css/basics.css',
         'shared/ui/css/forms.css',
+        'features/lines/components/lines.css',
       ]),
     )
   })

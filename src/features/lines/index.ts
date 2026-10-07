@@ -16,3 +16,5 @@ export { frameOf, frameToPage } from './place'
 export { goldenSpiral, KAPPA, SPIRAL_ARCS } from './spiral'
 // --- composition (C1) ---
 // --- components (D1) ---
+export { LinesPanel } from './components/LinesPanel'
+export type { LinesPanelProps } from './components/LinesPanel'
