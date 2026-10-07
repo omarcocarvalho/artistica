@@ -58,6 +58,12 @@ test('P1 import, layout, edit and export make no request except same-origin GETs
   await app.editButton('quadrants.jpg').click()
   await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
+  await app.openStudiesTab()
+  await app.setVersions(['Original', 'Blurred', 'Values', 'Blur + Values'])
+  await app.applyStudiesToAll()
+  await expect(app.studyTile('quadrants.jpg', 'Blur + Values')).toBeVisible()
+  await expect(app.studyTile('typed.jpg', 'Blur + Values')).toBeVisible()
+  await app.expectPreviewSettled()
   const { bytes } = await app.exportPdf()
   expect(bytes.length).toBeGreaterThan(1000)
 })
@@ -71,6 +77,13 @@ test('P2 nothing from the photos is persisted: storage stays small and a reload 
   await app.expectImages(1)
   await app.setPaper('A5')
   await expect(page.getByLabel('Paper size')).toHaveValue('A5')
+  await app.openStudiesTab()
+  await app.setVersions(['Original', 'Blurred'])
+  await app.setSlider('Amount', 63)
+  await app.setSlider('Number of values', 9)
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('artistica:settings')))
+    .toContain('"count":9')
 
   const stored = await page.evaluate(async () => {
     const size = (s: StorageLike) => {
@@ -85,9 +98,33 @@ test('P2 nothing from the photos is persisted: storage stays small and a reload 
     for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i) ?? '')
     const dbs = indexedDB.databases ? (await indexedDB.databases()).length : 0
     const cacheKeys = typeof caches === 'undefined' ? 0 : (await caches.keys()).length
-    return { keys, local: size(localStorage), session: size(sessionStorage), dbs, cacheKeys }
+    return {
+      keys,
+      settings: localStorage.getItem('artistica:settings'),
+      local: size(localStorage),
+      session: size(sessionStorage),
+      dbs,
+      cacheKeys,
+    }
   })
   expect(stored.keys).toEqual(['artistica:settings'])
+  const envelope = JSON.parse(stored.settings ?? 'null') as {
+    version: number
+    state: Record<string, unknown>
+  }
+  expect(envelope.version).toBe(2)
+  expect(Object.keys(envelope.state).sort()).toEqual([
+    'language',
+    'pageSetup',
+    'studyDefaults',
+    'theme',
+    'unit',
+  ])
+  // Only numbers join the settings for studies: no versions, nothing from the photos.
+  expect(envelope.state.studyDefaults).toEqual({
+    blurPct: 63,
+    values: { count: 9, hue: 55, neutral: false },
+  })
   expect(stored.local).toBeLessThan(2_000)
   expect(stored.session).toBe(0)
   expect(stored.dbs).toBe(0)
@@ -98,4 +135,18 @@ test('P2 nothing from the photos is persisted: storage stays small and a reload 
   await expect(page.getByRole('heading', { name: 'Add some reference photos' })).toBeVisible()
   await expect(app.imageRows).toHaveCount(0)
   await expect(page.getByLabel('Paper size')).toHaveValue('A5')
+
+  // A photo added after the reload starts as Original only, with the remembered blur and values.
+  await app.upload(FIXTURES.quadrantsPng)
+  await app.expectImages(1)
+  await app.openStudiesTab()
+  await expect(app.studySlider('Amount')).toHaveAttribute('aria-valuetext', '63%')
+  await expect(app.studySlider('Number of values')).toHaveAttribute('aria-valuetext', '9 values')
+  for (const [v, on] of [
+    ['Original', 'true'],
+    ['Blurred', 'false'],
+    ['Values', 'false'],
+    ['Blur + Values', 'false'],
+  ] as const)
+    await expect(app.versionChip(v)).toHaveAttribute('aria-pressed', on)
 })

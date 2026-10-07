@@ -3,6 +3,11 @@ import type { UploadFile } from './synthetic.ts'
 
 type Upload = string | string[] | UploadFile | UploadFile[]
 
+const STUDY_VERSION_NAMES = ['Original', 'Blurred', 'Values', 'Blur + Values'] as const
+export type StudyVersionName = (typeof STUDY_VERSION_NAMES)[number]
+
+declare const requestAnimationFrame: (callback: () => void) => number
+
 /**
  * Single home for selectors that depend on the app's markup (roles and accessible names from the
  * en locale). Adapt here, nowhere else.
@@ -150,6 +155,92 @@ export class AppPage {
     const chunks: Buffer[] = []
     for await (const c of stream) chunks.push(c as Buffer)
     return { bytes: Buffer.concat(chunks), fileName: d.suggestedFilename() }
+  }
+
+  // --- Studies (D3) ---
+  async openStudiesTab(): Promise<void> {
+    await this.page.getByRole('tab', { name: 'Studies' }).click()
+  }
+  get studiesPanel(): Locator {
+    return this.page.getByRole('tabpanel', { name: 'Studies' })
+  }
+  versionChip(name: StudyVersionName): Locator {
+    return this.page
+      .getByRole('group', { name: 'Print these versions' })
+      .getByRole('button', { name, exact: true })
+  }
+  /** Turns the wanted versions on first, so the last-version rule never blocks a switch. */
+  async setVersions(on: readonly StudyVersionName[]): Promise<void> {
+    for (const v of on) {
+      const chip = this.versionChip(v)
+      if ((await chip.getAttribute('aria-pressed')) !== 'true') await chip.click()
+      await expect(chip).toHaveAttribute('aria-pressed', 'true')
+    }
+    for (const v of STUDY_VERSION_NAMES) {
+      const chip = this.versionChip(v)
+      if (!on.includes(v) && (await chip.getAttribute('aria-pressed')) === 'true') {
+        await chip.click()
+        await expect(chip).toHaveAttribute('aria-pressed', 'false')
+      }
+    }
+  }
+  studySlider(name: 'Amount' | 'Number of values' | 'Custom hue'): Locator {
+    return this.page.getByRole('slider', { name, exact: true })
+  }
+  /** Native range input: fill() sets the value and fires input/change in every engine. */
+  async setSlider(
+    name: 'Amount' | 'Number of values' | 'Custom hue',
+    value: number,
+  ): Promise<void> {
+    await this.studySlider(name).fill(String(value))
+    await expect(this.studySlider(name)).toHaveValue(String(value))
+  }
+  swatch(name: string): Locator {
+    return this.page.getByRole('group', { name: 'Hue' }).getByRole('button', { name, exact: true })
+  }
+  async applyStudiesToAll(): Promise<void> {
+    await this.page.getByRole('button', { name: 'Apply to all images' }).click()
+  }
+  /** A study tile on the preview: "<name>, <Version>"; originals keep the bare name. */
+  studyTile(name: string, version: Exclude<StudyVersionName, 'Original'>): Locator {
+    return this.pageFigures.getByRole('button', { name: `${name}, ${version}`, exact: true })
+  }
+  /**
+   * Waits until no sheet is busy (layout or study tiles pending), then checks again a couple of
+   * frames later: a sheet marks itself busy in an effect that runs after its tiles are painted.
+   */
+  async expectPreviewSettled(timeout = 30_000): Promise<void> {
+    const busy = this.page.locator('main [aria-busy="true"]')
+    await expect
+      .poll(
+        async () => {
+          if ((await busy.count()) > 0) return false
+          await this.page.evaluate(
+            () =>
+              new Promise<void>((done) => {
+                requestAnimationFrame(() => {
+                  requestAnimationFrame(() => {
+                    done()
+                  })
+                })
+              }),
+          )
+          return (await busy.count()) === 0
+        },
+        { timeout },
+      )
+      .toBe(true)
+  }
+  /** Pixel at the centre of a preview tile, read from its page canvas, as [r,g,b,a]. */
+  async tileCentrePixel(tile: Locator, pageIndex = 0): Promise<number[]> {
+    const box = await tile.boundingBox()
+    const sheet = await this.pageCanvases.nth(pageIndex).boundingBox()
+    if (!box || !sheet) throw new Error('tile or page canvas is not rendered')
+    return this.canvasPixel(
+      (box.x + box.width / 2 - sheet.x) / sheet.width,
+      (box.y + box.height / 2 - sheet.y) / sheet.height,
+      pageIndex,
+    )
   }
 
   /** Pixel (fx, fy in 0..1) of a page canvas as [r,g,b,a]. */

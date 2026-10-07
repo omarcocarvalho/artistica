@@ -70,6 +70,44 @@ test.describe('desktop, images loaded', () => {
   })
 })
 
+test.describe('desktop Studies tab (chromium)', () => {
+  runOnly('chromium')
+  test.use({ viewport: { width: 1280, height: 900 } })
+
+  for (const scheme of THEMES) {
+    test(`Studies tab: no photo, a study group applied to all, a locked chip (${scheme})`, async ({
+      page,
+    }) => {
+      test.setTimeout(60_000)
+      await page.emulateMedia({ colorScheme: scheme })
+      const app = startApp(page)
+      await app.goto()
+      await app.openStudiesTab()
+      await expect(
+        app.studiesPanel.getByText('Add a photo, or select one, to set up its studies.'),
+      ).toBeVisible()
+      await expectNoAxeViolations(page)
+
+      await app.upload(FILES)
+      await app.expectImages(2)
+      await app.setVersions(['Original', 'Blurred', 'Values'])
+      await app.applyStudiesToAll()
+      await expect(
+        page.getByRole('status').filter({ hasText: 'Study settings copied to 1 image.' }),
+      ).toBeAttached()
+      await expect(app.studyTile('quadrants-exif6.jpg', 'Values')).toBeVisible()
+      await app.expectPreviewSettled()
+      await expectNoAxeViolations(page)
+
+      await app.setVersions(['Values'])
+      await expect(app.versionChip('Values')).toHaveAttribute('aria-disabled', 'true')
+      await expect(app.studiesPanel.getByText('At least one version prints.')).toBeVisible()
+      await app.expectPreviewSettled()
+      await expectNoAxeViolations(page)
+    })
+  }
+})
+
 // Dialogs, notices and the custom-paper fields are plain DOM: one engine is enough.
 test.describe('dialogs and notices (chromium)', () => {
   runOnly('chromium')
