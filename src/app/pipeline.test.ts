@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_PAGE_SETUP } from '../shared/model/page-setup'
 import type { ImageDescriptor, ImageId } from '../shared/model/image'
 import { DEFAULT_EDITS } from '../shared/model/image'
+import { DEFAULT_LINES } from '../shared/model/lines'
 import { DEFAULT_STUDY } from '../shared/model/study'
 import { createPipeline, type PipelineDeps, type PipelineSink } from './pipeline'
 import type { LayoutItemInput, LayoutResult } from '../features/layout'
@@ -18,6 +19,7 @@ const img = (id: string): ImageDescriptor => ({
   pxH: 600,
   edits: DEFAULT_EDITS,
   study: DEFAULT_STUDY,
+  lines: DEFAULT_LINES,
 })
 const layoutOf = (n: number): LayoutResult => ({
   orientation: 'portrait',

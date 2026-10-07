@@ -6,6 +6,7 @@ import { computeLayout } from '../../features/layout'
 import { useSettings } from '../../features/settings'
 import { initI18n } from '../../shared/i18n'
 import { DEFAULT_EDITS, type ImageId } from '../../shared/model/image'
+import { DEFAULT_LINES } from '../../shared/model/lines'
 import { DEFAULT_STUDY } from '../../shared/model/study'
 import { stubDesktop } from '../test-utils'
 
@@ -49,6 +50,7 @@ beforeEach(() => {
         originalPxH: 300,
         edits: DEFAULT_EDITS,
         study: DEFAULT_STUDY,
+        lines: DEFAULT_LINES,
         preview: {} as ImageBitmap,
         source: new Blob(),
         thumbUrl: 'blob:a',

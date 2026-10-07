@@ -5,6 +5,7 @@ import {
   type ImageDescriptor,
   type ImageId,
 } from '../../shared/model/image'
+import { DEFAULT_LINES } from '../../shared/model/lines'
 import { DEFAULT_PAGE_SETUP } from '../../shared/model/page-setup'
 import { DEFAULT_STUDY, type StudyVersion } from '../../shared/model/study'
 import { buildLayoutItems } from './build-items'
@@ -23,6 +24,7 @@ const img = (
   pxH,
   edits: { ...DEFAULT_EDITS, ...edits },
   study: DEFAULT_STUDY,
+  lines: DEFAULT_LINES,
 })
 
 const withVersions = (d: ImageDescriptor, versions: readonly StudyVersion[]): ImageDescriptor => ({

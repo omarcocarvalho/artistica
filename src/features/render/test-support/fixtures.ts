@@ -5,6 +5,7 @@ import {
   type ImageEdits,
   type ImageId,
 } from '../../../shared/model/image'
+import { DEFAULT_LINES } from '../../../shared/model/lines'
 import {
   CROP_MARK_LENGTH_MM,
   CROP_MARK_OFFSET_MM,
@@ -33,6 +34,7 @@ export function descriptor(
     pxH,
     edits: { ...DEFAULT_EDITS, ...edits },
     study,
+    lines: DEFAULT_LINES,
   }
 }
 
