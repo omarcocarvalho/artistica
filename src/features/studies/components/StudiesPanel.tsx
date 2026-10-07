@@ -29,11 +29,12 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
   const { t } = useTranslation('studies')
   const image = useImages((s) => s.images.find((i) => i.id === imageId))
   const imageCount = useImages((s) => s.images.length)
-  const [announcement, setAnnouncement] = useState<{
-    id: ImageId
-    text: string
-    seq: number
-  } | null>(null)
+  const [announcement, setAnnouncement] = useState<{ text: string; seq: number } | null>(null)
+  const [announcedFor, setAnnouncedFor] = useState(imageId)
+  if (announcedFor !== imageId) {
+    setAnnouncedFor(imageId)
+    setAnnouncement(null)
+  }
   const baseId = useId()
   const lastOneId = `${baseId}-last`
   const blurHeadingId = `${baseId}-blur`
@@ -162,7 +163,6 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
             onClick={() => {
               const n = useImages.getState().applyStudyToAll(id)
               setAnnouncement((prev) => ({
-                id,
                 text: n === 0 ? t('applyAll.nothingChanged') : t('applyAll.done', { count: n }),
                 seq: (prev?.seq ?? 0) + 1,
               }))
@@ -180,9 +180,7 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
     <div className="studies-panel flex flex-col">
       {content}
       <VisuallyHidden role="status" aria-live="polite">
-        {announcement !== null && announcement.id === imageId ? (
-          <span key={announcement.seq}>{announcement.text}</span>
-        ) : null}
+        {announcement !== null ? <span key={announcement.seq}>{announcement.text}</span> : null}
       </VisuallyHidden>
     </div>
   )

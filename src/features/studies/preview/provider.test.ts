@@ -151,6 +151,19 @@ describe('createStudyPreviewProvider: results, slots and notifications', () => {
     expect(p.get('k2', 'a|values|0:1')).toBeNull() // another slot never borrows it
   })
 
+  it('draws a slot whose new key failed as missing, not as the previous image, and not as pending', async () => {
+    const p = createStudyPreviewProvider(f.deps)
+    p.want('page0', [request('a', 'k1')])
+    const first = await f.finish(0)
+    p.want('page0', [request('a', 'k2')])
+    await f.settle()
+    f.renders[1]?.result.reject(new Error('CanvasUnavailableError'))
+    await f.settle()
+    expect(p.get('k2', 'a|blurred|0:0')).toBeNull()
+    expect(p.pending('page0')).toBe(0)
+    expect(p.get('k1', 'a|blurred|0:0')).toBe(first)
+  })
+
   it('replaces the slot image and closes the old one when the fresh tile arrives', async () => {
     const p = createStudyPreviewProvider(f.deps)
     p.want('page0', [request('a', 'k1')])
@@ -275,6 +288,34 @@ describe('createStudyPreviewProvider: retention, removal, pause', () => {
     p.resume()
     await f.settle()
     expect(f.renders).toHaveLength(3)
+  })
+
+  it('starts no crop while paused, and starts the queued one on resume', async () => {
+    const cropBitmap = vi.fn<typeof f.deps.cropBitmap>(() => deferred<FakeBitmap>().promise)
+    const p = createStudyPreviewProvider({ ...f.deps, cropBitmap })
+    p.pause()
+    p.want('page0', [request('a', 'k1'), request('b', 'k2', { slot: 'b|blurred|0:1' })])
+    await f.settle()
+    p.want('page0', [request('a', 'k3'), request('b', 'k2', { slot: 'b|blurred|0:1' })])
+    await f.settle()
+    expect(cropBitmap).not.toHaveBeenCalled()
+    expect(p.stats()).toMatchObject({ running: 0, queued: 2 })
+    p.resume()
+    expect(cropBitmap).toHaveBeenCalledTimes(1)
+  })
+
+  it('counts slot images no entry holds as stale bytes, once per bitmap', async () => {
+    const p = createStudyPreviewProvider(f.deps)
+    p.want('page0', [request('a', 'k1'), request('a', 'k1', { slot: 'a|values|0:1' })])
+    await f.finish(0)
+    expect(p.stats().staleBytes).toBe(0)
+    p.want('page0', [request('a', 'k2'), request('a', 'k2', { slot: 'a|values|0:1' })])
+    expect(p.stats()).toMatchObject({ staleBytes: 0, retainedBytes: 100 * 100 * 4 })
+    p.pause()
+    expect(p.stats()).toMatchObject({ staleBytes: 100 * 100 * 4, retainedBytes: 0 })
+    p.resume()
+    await f.finish(1)
+    expect(p.stats()).toMatchObject({ staleBytes: 0, wantedBytes: 100 * 100 * 4 })
   })
 
   it('pause lets the running job finish and keeps its result if wanted', async () => {

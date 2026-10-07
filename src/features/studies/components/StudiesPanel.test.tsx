@@ -334,11 +334,25 @@ describe('StudiesPanel', () => {
     expect(liveRegion()).toBe(status)
   })
 
+  it('P9 does not announce an earlier Apply to all again on returning to that image', async () => {
+    const user = userEvent.setup()
+    seed({ a: { ...DEFAULT_STUDY, blurPct: 70 }, b: DEFAULT_STUDY })
+    const { rerender } = render(<StudiesPanel imageId={A} />)
+    const status = liveRegion()
+    await user.click(screen.getByRole('button', { name: 'Apply to all images' }))
+    expect(status).toHaveTextContent('Study settings copied to 1 image.')
+    rerender(<StudiesPanel imageId={B} />)
+    expect(status).toBeEmptyDOMElement()
+    rerender(<StudiesPanel imageId={A} />)
+    expect(status).toBeEmptyDOMElement()
+  })
+
   it('P9 Apply to all is disabled with a single image', () => {
     seed({ a: DEFAULT_STUDY })
     render(<StudiesPanel imageId={A} />)
     expect(screen.getByRole('button', { name: 'Apply to all images' })).toBeDisabled()
-    expect(screen.getByText('Copies these study settings to all 1 image.')).toBeVisible()
+    expect(screen.getByText('Add another photo to copy these settings to it.')).toBeVisible()
+    expect(screen.queryByText(/to all 1 image/)).not.toBeInTheDocument()
   })
 
   it('P10 the hint names the image count', () => {
