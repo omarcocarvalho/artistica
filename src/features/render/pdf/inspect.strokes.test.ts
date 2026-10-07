@@ -197,10 +197,37 @@ describe('inspectPdf strokes', () => {
   })
 
   it('ignores fill colours, text and its strings', () => {
-    const content = '0.2 g\n1 0 0 rg\nBT\n/F1 12 Tf\n(a \\) S) Tj [ (x S) -2 ] TJ\nET\n%  9 9 m S\n0 0 m\n1 1 l\nS'
+    const content =
+      '0.2 g\n1 0 0 rg\nBT\n/F1 12 Tf\n(a \\) 5 5 m 6 6 l S) Tj [ (7 7 m 8 8 l S) -2 ] TJ\nET\n% 9 9 m 9 8 l S\n0 0 m\n1 1 l\nS'
     const strokes = strokesOf(content, () => 1)
     expect(strokes).toHaveLength(1)
     expect(at(strokes, 0).colour).toEqual({ space: 'gray', values: [0] })
+  })
+
+  it('skips marked-content dicts, hex strings and inline image data', () => {
+    const content = [
+      '/Span << /ActualText (1 1 m 2 2 l S) /Nested << /A <3 3 m S> >> >> BDC',
+      '<4c S> Tj',
+      'EMC',
+      'BI /W 2 /H 1 /CS /G /BPC 8 ID 9 9 m 9 8 l S EI',
+      '0 0 m 1 1 l S',
+    ].join('\n')
+    expect(strokesOf(content, () => 1).map((s) => s.path)).toEqual([
+      [
+        { op: 'm', x: 0, y: 0 },
+        { op: 'l', x: 1, y: 1 },
+      ],
+    ])
+  })
+
+  it('strokes B, B*, b, b* and s paths, closing the last three', () => {
+    const content = ['B', 'B*', 'b', 'b*', 's'].map((op) => `0 0 m 2 0 l 2 2 l ${op}`).join('\n')
+    expect(strokesOf(content, () => 1).map((s) => s.path.length)).toEqual([3, 3, 4, 4, 4])
+  })
+
+  it('takes an even-odd clip from its rect too', () => {
+    const [s] = strokesOf('1 2 3 4 re W* n 0 0 m 1 1 l S', () => 1)
+    expect(s?.clip).toEqual({ x: 1, y: 2, w: 3, h: 4 })
   })
 
   it('tells registration-black crop marks from coloured strokes', async () => {

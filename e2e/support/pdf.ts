@@ -15,7 +15,7 @@ export interface PdfPageSummary {
   heightPt: number
   /** `/Name Do` draws (an image embedded once and drawn twice counts 2). */
   imagePlacements: number
-  /** Stroked straight lines: the vector crop marks. */
+  /** Registration-black strokes: the vector crop marks. */
   strokes: number
   /** Width in pt of each drawn image (the `W 0 0 H 0 0 cm` matrix right before its `Do`). */
   imageWidthsPt: number[]

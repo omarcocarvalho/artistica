@@ -6,6 +6,8 @@ import { drawTile, id, pageModel } from '../test-support/fixtures'
 import { stripePng, TINY_JPEG } from '../test-support/image-bytes'
 import { ExportError, EXPORT_ERROR_KEYS, isAbortError, toExportError } from './errors'
 import type { ImageId } from '../../../shared/model/image'
+import { DEFAULT_LINES, patchLines } from '../../../shared/model/lines'
+import { tileLinesFor } from '../page-model/tile-lines'
 import {
   DEFAULT_STUDY,
   STUDY_VERSIONS,
@@ -121,6 +123,20 @@ describe('runExport', () => {
     expect(encodeSpy.mock.calls[0]?.[0]).toBe(tileRenderKey(a))
     expect(encodeSpy.mock.calls[0]?.[1].src).toMatchObject({ x: 0, y: 0 }) // cropped clone
     expect(clones.every((c) => c.closed)).toBe(true)
+  })
+
+  it('hands each page to the worker with its lines untouched, and the PDF strokes them', async () => {
+    const { deps } = realWorkerDeps()
+    const addPage = vi.spyOn(deps.api, 'addPage')
+    const thirds = patchLines(DEFAULT_LINES, { thirds: true })
+    const lined = pages.map((p) => ({
+      ...p,
+      lines: p.tiles.flatMap((t, i) => tileLinesFor(thirds, t.trim, false, i) ?? []),
+    }))
+    const bytes = await runExport(lined, sources(), {}, deps)
+    expect(addPage.mock.calls.map(([p]) => p.lines)).toEqual(lined.map((p) => p.lines))
+    const report = await inspectPdf(bytes)
+    expect(report.pages.map((p) => p.strokes.length)).toEqual([2, 1])
   })
 
   it('reports monotonic progress ending at 1', async () => {
