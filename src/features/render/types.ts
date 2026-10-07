@@ -1,8 +1,10 @@
 import type { CropRect, ImageId, Rotation } from '../../shared/model/image'
+import type { CompositionLineType } from '../../shared/model/lines'
 import type { SizeMm } from '../../shared/model/paper'
 import type { StudyVersion, TileStudy } from '../../shared/model/study'
 import type { Mm } from '../../shared/model/units'
 import type { RectMm } from '../layout/types'
+import type { PathCmd } from '../lines/types'
 
 export interface DrawTile {
   readonly imageId: ImageId
@@ -42,6 +44,32 @@ export interface PageModel {
   readonly cropMarks: readonly Segment[] // already shortened so they never cross another tile's trim+bleed
   /** Placements with ≥ 2 tiles, in placement order. Screen-only. */
   readonly groups: readonly StudyGroupOutline[]
+  /** In tile order; a tile whose image has no active type has no entry. */
+  readonly lines: readonly TileLines[]
+}
+
+export interface LineStroke {
+  /** [] = solid; otherwise [dash, gap] in mm, phase 0. */
+  readonly dashMm: readonly Mm[]
+  /** Page mm. */
+  readonly cmds: readonly PathCmd[]
+}
+
+/** One tile's composition lines, replayed as-is by the PDF and the preview (M3-R6). */
+export interface TileLines {
+  /** Index into PageModel.tiles. */
+  readonly tileIndex: number
+  /** That tile's trim (M3-R4). */
+  readonly clip: RectMm
+  /** '#rrggbb'. */
+  readonly colour: string
+  /** 0..1. */
+  readonly opacity: number
+  readonly widthMm: Mm
+  /** The types drawn, in canonical order. */
+  readonly types: readonly CompositionLineType[]
+  /** The solid batch first, then the dashed batch; an empty batch is omitted (M3-R7). */
+  readonly strokes: readonly LineStroke[]
 }
 
 /** One tile's pixels (trim + bleed), encoded once and embedded in the PDF. */

@@ -1,17 +1,24 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
-import type { Rotation } from '../../../shared/model/image'
+import type { ImageDescriptor, Rotation } from '../../../shared/model/image'
+import { DEFAULT_LINES, type LinesPatch } from '../../../shared/model/lines'
 import { outerReserveMm } from '../../../shared/model/page-setup'
-import { DEFAULT_STUDY } from '../../../shared/model/study'
-import type { RectMm } from '../../layout/types'
+import { DEFAULT_STUDY, type StudyVersion } from '../../../shared/model/study'
+import { compositionPaths } from '../../lines/composition'
+import type { PathCmd } from '../../lines/types'
+import type { Placement, RectMm } from '../../layout/types'
+import { tileRenderKey } from '../pixels/tile-plan'
 import {
+  arbLineSettings,
   descriptor,
   id,
   layoutOf,
+  linesDescriptor,
   placement,
   setupWith,
   studyDescriptor,
 } from '../test-support/fixtures'
+import type { PageModel, TileLines } from '../types'
 import { buildPageModels, combineRotation, readingOrder, resolveCrop } from './build-page-models'
 import { idealCropMarks } from './crop-marks'
 import { expandRect, segmentIntersectsRect } from './rect'
@@ -357,5 +364,310 @@ describe('readingOrder', () => {
     const input = [R(50, 20), R(10, 20)]
     readingOrder(input)
     expect(input).toEqual([R(50, 20), R(10, 20)])
+  })
+})
+
+const EVERY_TYPE: LinesPatch = {
+  grid: { on: true, cols: 4, rows: 5 },
+  thirds: true,
+  armature: true,
+  golden: true,
+  spiral: { on: true, corner: 'topRight' },
+  centre: true,
+}
+const VERSIONS: readonly StudyVersion[] = ['original', 'blurred', 'values', 'blurValues']
+
+const withLines = (img: ImageDescriptor, patch: LinesPatch): ImageDescriptor =>
+  linesDescriptor(img.id, patch, img)
+
+/** Every end and control point, relative to the trim's top-left corner. */
+const relative = (tl: TileLines): number[][] =>
+  tl.strokes.map((s) =>
+    s.cmds.flatMap((c: PathCmd) => {
+      const { x, y } = tl.clip
+      return c.op === 'C'
+        ? [c.x1 - x, c.y1 - y, c.x2 - x, c.y2 - y, c.x - x, c.y - y]
+        : [c.x - x, c.y - y]
+    }),
+  )
+
+function expectClose(a: readonly number[][], b: readonly number[][]): void {
+  expect(a.map((r) => r.length)).toEqual(b.map((r) => r.length))
+  a.forEach((row, i) => {
+    row.forEach((v, j) => {
+      expect(Math.abs(v - (b[i]?.[j] ?? Number.NaN))).toBeLessThan(1e-9)
+    })
+  })
+}
+
+const pointsOf = (cmds: readonly PathCmd[]): (readonly [number, number])[] =>
+  cmds.flatMap((c) =>
+    c.op === 'C'
+      ? [[c.x1, c.y1] as const, [c.x2, c.y2] as const, [c.x, c.y] as const]
+      : [[c.x, c.y] as const],
+  )
+
+const firstMove = (page: PageModel | undefined): PathCmd | undefined =>
+  page?.lines[0]?.strokes[0]?.cmds[0]
+
+const withoutLines = (pages: readonly PageModel[]) => pages.map((p) => ({ ...p, lines: [] }))
+
+describe('composition lines in the page model', () => {
+  const three = studyDescriptor('a', ['original', 'blurred', 'values'])
+  const row = placement('a', [R(20, 20), R(66, 20), R(112, 20)], { block: R(20, 20, 132, 60) })
+  const single = placement('b', [R(20, 100, 60, 40)])
+
+  it('puts the same lines on every version tile of a group, none on a photo without lines (golden)', () => {
+    const [page] = buildPageModels(layoutOf([[row, single]]), setupWith(), [
+      withLines(three, EVERY_TYPE),
+      descriptor('b'),
+    ])
+    const lines = page?.lines ?? []
+    expect(lines.map((l) => l.tileIndex)).toEqual([0, 1, 2])
+    lines.forEach((l) => {
+      expect(l.clip).toEqual(page?.tiles[l.tileIndex]?.trim)
+      expect(l.types).toEqual(['grid', 'thirds', 'armature', 'golden', 'spiral', 'centre'])
+    })
+    const [first, ...rest] = lines
+    rest.forEach((l) => {
+      expectClose(relative(l), first ? relative(first) : [])
+    })
+    expect(page).toMatchSnapshot()
+  })
+
+  it('emits no lines, whatever the grid size and style, when no type is on', () => {
+    const images = [three, descriptor('b')]
+    const pages = buildPageModels(layoutOf([[row, single]]), setupWith(), images)
+    expect(pages.map((p) => p.lines)).toEqual([[]])
+    const styled = images.map((img) =>
+      withLines(img, { grid: { cols: 9 }, style: { colour: '#000000', opacityPct: 10 } }),
+    )
+    expect(buildPageModels(layoutOf([[row, single]]), setupWith(), styled)).toEqual(pages)
+  })
+
+  it('turns the lines with a turned placement: a top-left spiral starts at the trim top right', () => {
+    const trim = R(20, 20, 60, 40)
+    const [page] = buildPageModels(
+      layoutOf([[placement('a', [trim], { turned: true })]]),
+      setupWith(),
+      [linesDescriptor('a', { spiral: { on: true, corner: 'topLeft' } })],
+    )
+    expect(firstMove(page)).toEqual({ op: 'M', x: trim.x + trim.w, y: trim.y })
+  })
+
+  it.each<[string, Partial<ImageDescriptor['edits']>]>([
+    ['rotated 90°', { rotation: 90 }],
+    ['rotated 270°', { rotation: 270 }],
+    ['flipped horizontally', { flipH: true }],
+    ['flipped vertically', { flipV: true }],
+  ])('does not move the lines of a photo the user %s (M3-R2)', (_, edits) => {
+    const trim = R(20, 20, 60, 40)
+    const img = linesDescriptor(
+      'a',
+      { spiral: { on: true, corner: 'topLeft' } },
+      descriptor('a', 3000, 2000, edits),
+    )
+    const [flat] = buildPageModels(layoutOf([[placement('a', [trim])]]), setupWith(), [img])
+    expect(firstMove(flat)).toEqual({ op: 'M', x: trim.x, y: trim.y })
+    const [turned] = buildPageModels(
+      layoutOf([[placement('a', [trim], { turned: true })]]),
+      setupWith(),
+      [img],
+    )
+    expect(firstMove(turned)).toEqual({ op: 'M', x: trim.x + trim.w, y: trim.y })
+  })
+
+  it('clips to the trim, never to the trim plus bleed (M3-R4)', () => {
+    const [page] = buildPageModels(
+      layoutOf([[row]]),
+      setupWith({ bleed: { enabled: true, mm: 3 }, gutter: { enabled: true, mm: 6 } }),
+      [withLines(three, { thirds: true })],
+    )
+    expect(page?.tiles.every((t) => t.bleedMm === 3)).toBe(true)
+    expect(page?.lines.map((l) => l.clip)).toEqual(page?.tiles.map((t) => t.trim))
+  })
+
+  it('leaves every tile and its render key unchanged when lines are switched on (M3-R5)', () => {
+    const layout = layoutOf([[row, single]])
+    const setup = setupWith({ bleed: { enabled: true, mm: 3 }, gutter: { enabled: true, mm: 6 } })
+    const off = buildPageModels(layout, setup, [three, descriptor('b')])
+    const on = buildPageModels(layout, setup, [
+      withLines(three, EVERY_TYPE),
+      linesDescriptor('b', { centre: true }),
+    ])
+    expect(on.flatMap((p) => p.lines)).toHaveLength(4)
+    expect(withoutLines(on)).toEqual(withoutLines(off))
+    expect(on.flatMap((p) => p.tiles.map((t) => tileRenderKey(t)))).toEqual(
+      off.flatMap((p) => p.tiles.map((t) => tileRenderKey(t))),
+    )
+  })
+
+  it('indexes the tiles left after skipping a stale or missing placement', () => {
+    const stale = placement('s', [R(20, 20)])
+    const gone = placement('gone', [R(66, 20)])
+    const plain = placement('p', [R(112, 20)])
+    const group = placement('g', [R(20, 100), R(66, 100)])
+    const [page] = buildPageModels(layoutOf([[stale, gone, plain, group]]), setupWith(), [
+      linesDescriptor('s', { thirds: true }, studyDescriptor('s', ['original', 'values'])),
+      descriptor('p'),
+      linesDescriptor('g', { centre: true }, studyDescriptor('g', ['original', 'values'])),
+    ])
+    expect(page?.tiles.map((t) => t.imageId)).toEqual([id('p'), id('g'), id('g')])
+    expect(page?.lines.map((l) => l.tileIndex)).toEqual([1, 2])
+    expect(page?.lines.map((l) => l.clip)).toEqual(page?.tiles.slice(1).map((t) => t.trim))
+  })
+
+  it('restarts the tile index on every page', () => {
+    const pages = buildPageModels(
+      layoutOf([[placement('a', [R(20, 20)])], [placement('b', [R(20, 20)])]]),
+      setupWith(),
+      [linesDescriptor('a', { thirds: true }), linesDescriptor('b', { thirds: true })],
+    )
+    expect(pages.map((p) => p.lines.map((l) => l.tileIndex))).toEqual([[0], [0]])
+  })
+
+  describe('a 3-version turned group with lines, bleed and crop marks', () => {
+    const setup = setupWith({ bleed: { enabled: true, mm: 3 }, gutter: { enabled: true, mm: 6 } })
+    const x0 = setup.safeAreaMm + outerReserveMm(setup)
+    const p = placement('a', [R(x0 + 100, 14, 44, 66), R(x0 + 50, 14, 44, 66), R(x0, 14, 44, 66)], {
+      turned: true,
+      block: R(x0, 14, 144, 66),
+    })
+    const img = withLines(three, {
+      thirds: true,
+      spiral: { on: true, corner: 'topLeft' },
+      centre: true,
+      style: { colour: '#1f3fbf', widthMm: 0.5, opacityPct: 75 },
+    })
+    const [page] = buildPageModels(layoutOf([[p]]), setup, [img])
+
+    it('matches the snapshot', () => {
+      expect(page).toMatchSnapshot()
+    })
+
+    it("starts each tile's spiral at its own trim's top right", () => {
+      expect(page?.lines).toHaveLength(3)
+      page?.lines.forEach((l) => {
+        expect(l.strokes[0]?.cmds[8]).toEqual({ op: 'M', x: l.clip.x + l.clip.w, y: l.clip.y })
+      })
+    })
+  })
+
+  interface Case {
+    readonly images: ImageDescriptor[]
+    readonly placements: Placement[]
+  }
+  const arbCase: fc.Arbitrary<Case> = fc
+    .array(
+      fc.record({
+        versions: fc.integer({ min: 1, max: 4 }),
+        laidOut: fc.integer({ min: 1, max: 4 }),
+        w: fc.double({ min: 5, max: 80, noNaN: true }),
+        h: fc.double({ min: 5, max: 80, noNaN: true }),
+        turned: fc.boolean(),
+        rotation: fc.constantFrom<Rotation>(0, 90, 180, 270),
+        flipH: fc.boolean(),
+        lines: fc.oneof(fc.constant(DEFAULT_LINES), arbLineSettings),
+      }),
+      { minLength: 1, maxLength: 5 },
+    )
+    .map((specs) => {
+      let y = 10
+      const images: ImageDescriptor[] = []
+      const placements: Placement[] = []
+      specs.forEach((s, i) => {
+        const name = `i${String(i)}`
+        const tiles = Array.from({ length: s.laidOut }, (_, k) =>
+          R(10 + k * (s.w + 2), y, s.w, s.h),
+        )
+        y += s.h + 2
+        images.push({
+          ...descriptor(name, 1200, 800, { rotation: s.rotation, flipH: s.flipH }),
+          study: { ...DEFAULT_STUDY, versions: VERSIONS.slice(0, s.versions) },
+          lines: s.lines,
+        })
+        placements.push(placement(name, tiles, { turned: s.turned }))
+      })
+      return { images, placements }
+    })
+  const pagesOf = ({ images, placements }: Case, bleed: boolean) =>
+    buildPageModels(
+      layoutOf([placements], { w: 420, h: 594 }),
+      bleed
+        ? setupWith({ bleed: { enabled: true, mm: 3 }, gutter: { enabled: true, mm: 6 } })
+        : setupWith(),
+      images,
+    )
+
+  it('one entry per tile whose image prints lines, in tile order, inside its trim (property)', () => {
+    fc.assert(
+      fc.property(arbCase, fc.boolean(), (c, bleed) => {
+        const byId = new Map(c.images.map((img) => [img.id, img]))
+        for (const page of pagesOf(c, bleed)) {
+          const expected = page.tiles.flatMap((t, i) => {
+            const lines = byId.get(t.imageId)?.lines ?? DEFAULT_LINES
+            return compositionPaths(lines, { w: 1, h: 1 }).length > 0 ? [i] : []
+          })
+          expect(page.lines.map((l) => l.tileIndex)).toEqual(expected)
+          page.lines.forEach((l) => {
+            expect(l.clip).toEqual(page.tiles[l.tileIndex]?.trim)
+            const { x, y, w, h } = l.clip
+            pointsOf(l.strokes.flatMap((s) => s.cmds)).forEach(([px, py]) => {
+              expect(px).toBeGreaterThanOrEqual(x - 1e-9)
+              expect(px).toBeLessThanOrEqual(x + w + 1e-9)
+              expect(py).toBeGreaterThanOrEqual(y - 1e-9)
+              expect(py).toBeLessThanOrEqual(y + h + 1e-9)
+            })
+          })
+        }
+      }),
+    )
+  })
+
+  it('gives every version of a group the same lines, relative to its tile (property)', () => {
+    fc.assert(
+      fc.property(arbCase, fc.boolean(), (c, bleed) => {
+        for (const page of pagesOf(c, bleed)) {
+          const firstOf = new Map<string, TileLines>()
+          page.lines.forEach((l) => {
+            const imageId = page.tiles[l.tileIndex]?.imageId ?? ''
+            const first = firstOf.get(imageId)
+            if (!first) {
+              firstOf.set(imageId, l)
+              return
+            }
+            expect([l.colour, l.opacity, l.widthMm, l.types]).toEqual([
+              first.colour,
+              first.opacity,
+              first.widthMm,
+              first.types,
+            ])
+            expect(l.strokes.map((s) => s.dashMm)).toEqual(first.strokes.map((s) => s.dashMm))
+            expectClose(relative(l), relative(first))
+          })
+        }
+      }),
+    )
+  })
+
+  it('lines change nothing else in the model, and no lines means lines: [] (property)', () => {
+    fc.assert(
+      fc.property(arbCase, fc.boolean(), (c, bleed) => {
+        const plain = pagesOf(
+          { ...c, images: c.images.map((img) => ({ ...img, lines: DEFAULT_LINES })) },
+          bleed,
+        )
+        expect(plain.every((p) => p.lines.length === 0)).toBe(true)
+        expect(withoutLines(pagesOf(c, bleed))).toEqual(withoutLines(plain))
+      }),
+    )
+  })
+
+  it('is deterministic with lines on (property)', () => {
+    fc.assert(
+      fc.property(arbCase, fc.boolean(), (c, bleed) => {
+        expect(pagesOf(c, bleed)).toEqual(pagesOf(c, bleed))
+      }),
+    )
   })
 })

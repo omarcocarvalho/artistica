@@ -5,7 +5,19 @@ import {
   type ImageEdits,
   type ImageId,
 } from '../../../shared/model/image'
-import { DEFAULT_LINES } from '../../../shared/model/lines'
+import {
+  DEFAULT_LINES,
+  type LineSettings,
+  type LinesPatch,
+  MAX_GRID,
+  MAX_LINE_OPACITY_PCT,
+  MAX_LINE_WIDTH_MM,
+  MIN_GRID,
+  MIN_LINE_OPACITY_PCT,
+  MIN_LINE_WIDTH_MM,
+  patchLines,
+  SPIRAL_CORNERS,
+} from '../../../shared/model/lines'
 import {
   CROP_MARK_LENGTH_MM,
   CROP_MARK_OFFSET_MM,
@@ -37,6 +49,38 @@ export function descriptor(
     lines: DEFAULT_LINES,
   }
 }
+
+/** `base` with its lines patched from DEFAULT_LINES. */
+export function linesDescriptor(
+  name: string,
+  patch: LinesPatch,
+  base: ImageDescriptor = descriptor(name),
+): ImageDescriptor {
+  return { ...base, lines: patchLines(DEFAULT_LINES, patch) }
+}
+
+/** Any sanitized line settings, every type and every style value in range. */
+export const arbLineSettings: fc.Arbitrary<LineSettings> = fc
+  .record({
+    grid: fc.record({
+      on: fc.boolean(),
+      cols: fc.integer({ min: MIN_GRID, max: MAX_GRID }),
+      rows: fc.integer({ min: MIN_GRID, max: MAX_GRID }),
+    }),
+    thirds: fc.boolean(),
+    armature: fc.boolean(),
+    golden: fc.boolean(),
+    spiral: fc.record({ on: fc.boolean(), corner: fc.constantFrom(...SPIRAL_CORNERS) }),
+    centre: fc.boolean(),
+    style: fc.record({
+      colour: fc
+        .integer({ min: 0, max: 0xffffff })
+        .map((n) => `#${n.toString(16).padStart(6, '0')}`),
+      widthMm: fc.double({ min: MIN_LINE_WIDTH_MM, max: MAX_LINE_WIDTH_MM, noNaN: true }),
+      opacityPct: fc.integer({ min: MIN_LINE_OPACITY_PCT, max: MAX_LINE_OPACITY_PCT }),
+    }),
+  })
+  .map((raw) => patchLines(DEFAULT_LINES, raw))
 
 /** A descriptor whose study selects `versions` (other study fields default). */
 export function studyDescriptor(
@@ -106,6 +150,7 @@ export function pageModel(tiles: readonly DrawTile[], patch: Partial<PageModel> 
     tiles,
     cropMarks: [],
     groups: [],
+    lines: [],
     ...patch,
   }
 }
