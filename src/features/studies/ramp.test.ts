@@ -52,9 +52,9 @@ describe('valueRamp', () => {
     fc.assert(
       fc.property(arbValues, (v) => {
         const ramp = valueRamp(v)
-        expect(measuredLightness(ramp[0] ?? { r: 0, g: 0, b: 0 })).toBeCloseTo(RAMP_L_DARK, 1.7)
+        expect(measuredLightness(ramp[0] ?? { r: 0, g: 0, b: 0 })).toBeCloseTo(0.2, 1.7)
         expect(measuredLightness(ramp[ramp.length - 1] ?? { r: 0, g: 0, b: 0 })).toBeCloseTo(
-          RAMP_L_LIGHT,
+          0.95,
           1.7,
         )
       }),
@@ -139,6 +139,27 @@ describe('valueRamp', () => {
       expect(c.r).toBe(c.g)
       expect(c.g).toBe(c.b)
     }
+  })
+
+  it('matches independently computed colours where the gamut clamp binds', () => {
+    // Computed outside this codebase (float64 OKLab, dense-scan max chroma): never regenerate here.
+    const teal = [
+      { r: 1, g: 26, b: 26 },
+      { r: 5, g: 79, b: 79 },
+      { r: 43, g: 136, b: 136 },
+      { r: 127, g: 191, b: 191 },
+      { r: 220, g: 244, b: 244 },
+    ]
+    expect(valueRamp({ count: 5, hue: 195, neutral: false })).toEqual(teal)
+    expect(valueRamp({ count: 5, hue: 265, neutral: false })[4]).toEqual({ r: 231, g: 239, b: 254 })
+    expect(valueRamp({ count: 5, hue: 85, neutral: false })[0]).toEqual({ r: 30, g: 20, b: 1 })
+    expect(valueRamp({ count: 5, hue: 35, neutral: false })[4]).toEqual({ r: 254, g: 233, b: 228 })
+  })
+
+  it('needs the clamp: the unclamped curve leaves sRGB at some hues', () => {
+    expect(inSrgbGamut(0.95, rampChroma(1), 265)).toBe(false)
+    expect(inSrgbGamut(0.2, rampChroma(0), 85)).toBe(false)
+    expect(inSrgbGamut(0.2, rampChroma(0), 195)).toBe(false)
   })
 
   it('pins the default sepia 5-value ramp', () => {
