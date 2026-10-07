@@ -56,8 +56,7 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
             <Trans
               t={t}
               i18nKey="panel.forImage"
-              values={{ name: image.name }}
-              components={{ strong: <strong className="text-ink" /> }}
+              components={{ name: <strong className="text-ink">{image.name}</strong> }}
             />
           </p>
           <fieldset className="flex flex-col gap-2">

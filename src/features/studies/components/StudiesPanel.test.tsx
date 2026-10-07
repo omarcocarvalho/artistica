@@ -61,15 +61,27 @@ describe('StudiesPanel', () => {
     expect(screen.queryByRole('slider')).not.toBeInTheDocument()
   })
 
-  it('P1 shows a file name with markup-like characters as plain text', () => {
+  it.each([
+    'x<em>y</em> & z.jpg',
+    'a<i>b</i>.jpg',
+    '<strong>x</strong>.jpg',
+    'a<br/>b.jpg',
+    '<p>q</p>.jpg',
+    '<0>z</0>.jpg',
+    '<1>w</1>.jpg',
+    'a&amp;b {{name}}.jpg',
+  ])('P1 shows the file name %j as plain text', (name) => {
     useImages.setState({
-      images: [makeLoadedImage({ id: A, name: 'x<em>y</em> & z.jpg', study: DEFAULT_STUDY })],
+      images: [makeLoadedImage({ id: A, name, study: DEFAULT_STUDY })],
       selectedId: A,
     })
     render(<StudiesPanel imageId={A} />)
-    const strong = screen.getByText('x<em>y</em> & z.jpg')
+    const strong = screen.getByText(name)
     expect(strong.tagName).toBe('STRONG')
-    expect(strong.querySelector('em')).toBeNull()
+    expect(strong.children).toHaveLength(0)
+    expect(strong.closest('p')).toHaveTextContent(`Studies for ${name}`, {
+      normalizeWhitespace: false,
+    })
   })
 
   it('P2 lists the four versions in canonical order and toggles one', async () => {

@@ -6,7 +6,7 @@
     "blurValues": "Blur + Values"
   },
   "panel": {
-    "forImage": "Studies for <strong>{{name}}</strong>",
+    "forImage": "Studies for <name/>",
     "noImage": "Add a photo, or select one, to set up its studies."
   },
   "versions": {
