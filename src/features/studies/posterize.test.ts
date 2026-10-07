@@ -173,7 +173,7 @@ describe('posterizeRGBA', () => {
     const before = d
     const typed = [Float32Array, Float64Array, Uint8ClampedArray, Uint8Array, Uint32Array]
     const made: number[] = []
-    let copyCalls = -1
+    let copyCalls: number | undefined
     const typedProto = Object.getPrototypeOf(Uint8Array.prototype) as Uint8Array
     const copies = [
       vi.spyOn(typedProto, 'slice'),
