@@ -388,6 +388,119 @@ export class AppPage {
       [fx, fy] as [number, number],
     )
   }
+
+  // --- Lines (D3) ---
+  async openLinesTab(): Promise<void> {
+    await this.page.getByRole('tab', { name: 'Lines' }).click()
+  }
+  get linesPanel(): Locator {
+    return this.page.getByRole('tabpanel', { name: 'Lines' })
+  }
+  lineSwitch(name: LineTypeName): Locator {
+    return this.page.getByRole('switch', { name, exact: true })
+  }
+  async setLineSwitch(name: LineTypeName, on: boolean): Promise<void> {
+    const s = this.lineSwitch(name)
+    if ((await s.getAttribute('aria-checked')) !== String(on)) await s.click()
+    await expect(s).toHaveAttribute('aria-checked', String(on))
+  }
+  /** Turns every composition type on or off. */
+  async setAllLineSwitches(on: boolean): Promise<void> {
+    for (const name of LINE_TYPE_NAMES) await this.setLineSwitch(name, on)
+  }
+  gridField(name: 'Columns' | 'Rows'): Locator {
+    return this.page.getByRole('textbox', { name, exact: true })
+  }
+  /** Commits each count with Enter (the grid switch must be on). */
+  async setGrid(cols: number, rows: number): Promise<void> {
+    for (const [name, n] of [
+      ['Columns', cols],
+      ['Rows', rows],
+    ] as const) {
+      const field = this.gridField(name)
+      await field.fill(String(n))
+      await field.press('Enter')
+      await expect(field).toHaveValue(String(n))
+    }
+  }
+  spiralCorner(name: SpiralCornerName): Locator {
+    return this.page
+      .getByRole('radiogroup', { name: 'Spiral starts at' })
+      .getByRole('radio', { name, exact: true })
+  }
+  /** The golden spiral switch must be on. */
+  async setSpiralCorner(name: SpiralCornerName): Promise<void> {
+    await this.spiralCorner(name).click()
+    await expect(this.spiralCorner(name)).toHaveAttribute('aria-checked', 'true')
+  }
+  get lineColour(): Locator {
+    return this.page.getByLabel('Colour', { exact: true })
+  }
+  lineSlider(name: 'Thickness' | 'Opacity'): Locator {
+    return this.page.getByRole('slider', { name, exact: true })
+  }
+  /**
+   * fill() on input[type=color] sets the value and fires input and change in chromium, firefox
+   * and webkit (checked by L-D11); native range inputs take fill() the same way.
+   */
+  async setLineStyle(style: {
+    colour?: string
+    widthMm?: number
+    opacityPct?: number
+  }): Promise<void> {
+    if (style.colour !== undefined) {
+      await this.lineColour.fill(style.colour)
+      await expect(this.lineColour).toHaveValue(style.colour.toLowerCase())
+    }
+    if (style.widthMm !== undefined) {
+      await this.lineSlider('Thickness').fill(String(style.widthMm))
+      await expect(this.lineSlider('Thickness')).toHaveValue(String(style.widthMm))
+    }
+    if (style.opacityPct !== undefined) {
+      await this.lineSlider('Opacity').fill(String(style.opacityPct))
+      await expect(this.lineSlider('Opacity')).toHaveValue(String(style.opacityPct))
+    }
+  }
+  async applyLinesToAll(): Promise<void> {
+    await this.page.getByRole('button', { name: 'Apply lines to all images' }).click()
+  }
+  /** Device-pixel RGBA at (x, y) of the n-th sheet canvas. */
+  async sheetPixel(n: number, x: number, y: number): Promise<[number, number, number, number]> {
+    const [px] = await this.sheetPixels(n, [[x, y]])
+    return px
+  }
+  /** Device-pixel RGBA at each (x, y) of the n-th sheet canvas, read in one round trip. */
+  async sheetPixels(
+    n: number,
+    points: readonly (readonly [number, number])[],
+  ): Promise<[number, number, number, number][]> {
+    return this.pageCanvases.nth(n).evaluate(
+      (c: SheetCanvas, pts: [number, number][]) => {
+        const g = c.getContext('2d')
+        if (!g) throw new Error('canvas is not 2d')
+        const all = g.getImageData(0, 0, c.width, c.height).data
+        return pts.map(([x, y]) => {
+          const o = 4 * (Math.floor(y) * c.width + Math.floor(x))
+          return [all[o] ?? NaN, all[o + 1] ?? NaN, all[o + 2] ?? NaN, all[o + 3] ?? NaN]
+        })
+      },
+      points.map(([x, y]) => [x, y] as [number, number]),
+    )
+  }
+  /** Device pixels per millimetre of the n-th sheet: its canvas width over the page width in mm. */
+  async sheetScale(n: number, pageWidthMm: number): Promise<{ pxPerMm: number }> {
+    const width = await this.pageCanvases.nth(n).evaluate((c: SheetCanvas) => c.width)
+    return { pxPerMm: width / pageWidthMm }
+  }
+}
+
+// --- Lines (D3) ---
+interface SheetCanvas {
+  width: number
+  height: number
+  getContext(id: '2d'): {
+    getImageData(x: number, y: number, w: number, h: number): { data: ArrayLike<number> }
+  } | null
 }
 
 /** Largest channel difference between a pixel and the closest colour of a palette. */

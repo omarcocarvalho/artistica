@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { readJpegInfo } from './exif'
 import { isAnimatedGif, sniffImage } from './sniff'
+import { flatGreyPng } from './__fixtures__/flat-grey'
 import { valueRampPng } from './__fixtures__/value-ramp'
 
 const read = (name: string) =>
@@ -29,6 +30,7 @@ describe('image fixtures', () => {
       'photo.heic': 'heic',
       'mislabelled-heic.jpg': 'heic',
       'value-ramp.png': 'png',
+      'flat-grey.png': 'png',
       'notes.pdf': null,
     }
     for (const [name, kind] of Object.entries(kinds))
@@ -40,5 +42,8 @@ describe('image fixtures', () => {
   })
   it('value-ramp.png is exactly what its generator writes', () => {
     expect(Buffer.from(read('value-ramp.png')).equals(valueRampPng())).toBe(true)
+  })
+  it('flat-grey.png is exactly what its generator writes', () => {
+    expect(Buffer.from(read('flat-grey.png')).equals(flatGreyPng())).toBe(true)
   })
 })

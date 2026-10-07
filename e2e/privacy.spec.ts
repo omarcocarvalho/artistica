@@ -63,6 +63,12 @@ test('P1 import, layout, edit and export make no request except same-origin GETs
   await app.applyStudiesToAll()
   await expect(app.studyTile('quadrants.jpg', 'Blur + Values')).toBeVisible()
   await expect(app.studyTile('typed.jpg', 'Blur + Values')).toBeVisible()
+  await app.openLinesTab()
+  await app.setAllLineSwitches(true)
+  await app.setGrid(6, 2)
+  await app.setSpiralCorner('Bottom right')
+  await app.setLineStyle({ colour: '#1f3fbf', widthMm: 1.2, opacityPct: 55 })
+  await app.applyLinesToAll()
   await app.expectPreviewSettled()
   const { bytes } = await app.exportPdf()
   expect(bytes.length).toBeGreaterThan(1000)
@@ -81,9 +87,17 @@ test('P2 nothing from the photos is persisted: storage stays small and a reload 
   await app.setVersions(['Original', 'Blurred'])
   await app.setSlider('Amount', 63)
   await app.setSlider('Number of values', 9)
+  await app.openLinesTab()
+  await app.setAllLineSwitches(true)
+  await app.setGrid(7, 3)
+  await app.setSpiralCorner('Bottom left')
+  await app.setLineStyle({ colour: '#2a9d3c', widthMm: 0.8, opacityPct: 45 })
   await expect
     .poll(() => page.evaluate(() => localStorage.getItem('artistica:settings')))
     .toContain('"count":9')
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('artistica:settings')))
+    .toContain('"opacityPct":45')
 
   const stored = await page.evaluate(async () => {
     const size = (s: StorageLike) => {
@@ -126,14 +140,15 @@ test('P2 nothing from the photos is persisted: storage stays small and a reload 
     blurPct: 63,
     values: { count: 9, hue: 55, neutral: false },
   })
+  // Line defaults keep the chosen style, grid size and corner; every type is off (owner Q7).
   expect(envelope.state.lineDefaults).toEqual({
-    grid: { on: false, cols: 4, rows: 5 },
+    grid: { on: false, cols: 7, rows: 3 },
     thirds: false,
     armature: false,
     golden: false,
-    spiral: { on: false, corner: 'topLeft' },
+    spiral: { on: false, corner: 'bottomLeft' },
     centre: false,
-    style: { colour: '#e0457b', widthMm: 0.35, opacityPct: 90 },
+    style: { colour: '#2a9d3c', widthMm: 0.8, opacityPct: 45 },
   })
   expect(stored.local).toBeLessThan(2_000)
   expect(stored.session).toBe(0)

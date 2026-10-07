@@ -4,9 +4,13 @@ import {
   isRegistrationStroke,
   inspectPdf,
   type PdfImageInfo,
+  type PdfPathOp,
   type PdfReport,
+  type PdfStroke,
 } from '../../src/features/render/pdf/inspect.ts'
 import { PT_PER_MM } from '../../src/shared/model/units.ts'
+
+export type { PdfPathOp, PdfStroke }
 
 export const mmToPt = (mm: number): number => mm * PT_PER_MM
 
@@ -25,6 +29,8 @@ export interface PdfPageSummary {
   markSegments: PdfSegment[]
   /** Every image draw, in content-stream order. */
   draws: PdfDraw[]
+  /** Every stroke that is not registration black (the composition lines), in content order. */
+  lineStrokes: PdfStroke[]
 }
 export interface PdfDraw {
   /** Image box in pt, PDF coordinates (origin bottom-left). */
@@ -120,13 +126,45 @@ export async function summarizePdf(bytes: Uint8Array): Promise<PdfSummary> {
           return a?.op === 'm' && b?.op === 'l' ? [{ x1: a.x, y1: a.y, x2: b.x, y2: b.y }] : []
         }),
         draws: drawsOf(p),
+        lineStrokes: p.strokes.filter((s) => !isRegistrationStroke(s)),
       }
     }),
   }
 }
 
+/** A path command in page millimetres, origin top left, y down (the page model's space). */
+export type MmPathOp =
+  | { op: 'M' | 'L'; x: number; y: number }
+  | { op: 'C'; x1: number; y1: number; x2: number; y2: number; x: number; y: number }
+
+/** A stroke's path in page mm with the y flip, comparable with the page model's line commands. */
+export function strokeToMm(stroke: PdfStroke, pageHeightPt: number): MmPathOp[] {
+  const x = (pt: number) => pt / PT_PER_MM
+  const y = (pt: number) => (pageHeightPt - pt) / PT_PER_MM
+  return stroke.path.map((p) =>
+    p.op === 'c'
+      ? { op: 'C', x1: x(p.x1), y1: y(p.y1), x2: x(p.x2), y2: y(p.y2), x: x(p.x), y: y(p.y) }
+      : { op: p.op === 'm' ? 'M' : 'L', x: x(p.x), y: y(p.y) },
+  )
+}
+
+/** A rect in PDF pt (origin bottom left) as page mm, origin top left. */
+export function rectPtToMm(
+  r: { x: number; y: number; w: number; h: number },
+  pageHeightPt: number,
+): { x: number; y: number; w: number; h: number } {
+  return {
+    x: r.x / PT_PER_MM,
+    y: (pageHeightPt - r.y - r.h) / PT_PER_MM,
+    w: r.w / PT_PER_MM,
+    h: r.h / PT_PER_MM,
+  }
+}
+
 /** A drawn image as stored: the JPEG file for DCTDecode, the decoded samples for FlateDecode. */
 export interface PdfImageData {
+  /** The XObject resource name the page draws it by. */
+  name: string
   filter: string
   widthPx: number
   heightPx: number
@@ -144,6 +182,7 @@ export async function drawnImageData(bytes: Uint8Array): Promise<PdfImageData[][
       const obj = ref ? doc.context.lookup(ref) : undefined
       if (!(obj instanceof PDFRawStream)) throw new Error(`no image XObject named ${d.name}`)
       return {
+        name: d.name,
         filter: d.filter,
         widthPx: d.widthPx,
         heightPx: d.heightPx,

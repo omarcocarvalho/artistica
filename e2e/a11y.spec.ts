@@ -1,8 +1,10 @@
+import { readFileSync } from 'node:fs'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { AppPage } from './support/app.ts'
 import { expectNoAxeViolations } from './support/axe.ts'
 import { FIXTURES } from './support/fixtures.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
+import { paintedPixels } from './support/png.ts'
 import { runOnly } from './support/projects.ts'
 import { centre, MIN_TOUCH_TARGET_PX, paintStyle, settled, targetSize } from './support/targets.ts'
 
@@ -107,6 +109,107 @@ test.describe('desktop Studies tab (chromium)', () => {
       await expectNoAxeViolations(page)
     })
   }
+})
+
+test.describe('desktop Lines tab (chromium, webkit)', () => {
+  runOnly('chromium', 'webkit')
+  test.use({ viewport: { width: 1280, height: 900 } })
+
+  const SLOW_URL = 'https://photos.example/slow.jpg'
+
+  for (const scheme of THEMES) {
+    test(`Lines tab: no photo, every line on, and waiting for an import (${scheme})`, async ({
+      page,
+    }) => {
+      test.setTimeout(60_000)
+      await page.emulateMedia({ colorScheme: scheme })
+      const app = startApp(page)
+      await app.goto()
+      await app.openLinesTab()
+      await expect(
+        app.linesPanel.getByText('Add a photo, or select one, to draw lines on it.'),
+      ).toBeVisible()
+      await expectNoAxeViolations(page)
+
+      await app.upload(FILES)
+      await app.expectImages(2)
+      await app.setAllLineSwitches(true)
+      await app.setSpiralCorner('Bottom right')
+      await app.applyLinesToAll()
+      await expect(
+        page.getByRole('status').filter({ hasText: 'Line settings copied to 1 image.' }),
+      ).toBeAttached()
+      await app.expectPreviewSettled()
+      await expectNoAxeViolations(page)
+
+      let release!: () => void
+      const held = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      await page.route(SLOW_URL, async (route) => {
+        await held
+        await route.fulfill({
+          status: 200,
+          contentType: 'image/jpeg',
+          headers: { 'access-control-allow-origin': '*' },
+          body: readFileSync(FIXTURES.quadrantsJpg),
+        })
+      })
+      guard?.allowExternal(SLOW_URL)
+      await app.submitLink(SLOW_URL)
+      await expect(
+        app.linesPanel.getByText('Waiting for photos to finish importing…'),
+      ).toBeVisible()
+      await expect(app.lineSwitch('Grid')).toBeDisabled()
+      await expect(app.lineSlider('Thickness')).toBeDisabled()
+      await expectNoAxeViolations(page)
+      release()
+      await app.expectImages(3)
+      await expect(app.lineSwitch('Grid')).toBeEnabled()
+    })
+  }
+})
+
+test.describe('forced colors, Lines tab (chromium)', () => {
+  runOnly('chromium')
+  test.use({ viewport: { width: 1280, height: 900 } })
+
+  test('line switches keep their state, the colour swatch its colour, the chosen corner its mark', async ({
+    page,
+  }) => {
+    const app = startApp(page)
+    await app.goto()
+    await app.upload([FIXTURES.quadrantsJpg])
+    await app.expectImages(1)
+    await app.openLinesTab()
+    await app.setLineSwitch('Rule of thirds', true)
+    await app.setLineSwitch('Golden spiral', true)
+    await app.setLineStyle({ colour: '#1f3fbf' })
+    const on = app.lineSwitch('Rule of thirds')
+    const off = app.lineSwitch('Grid')
+    const corners = page.getByRole('radiogroup', { name: 'Spiral starts at' })
+    const checked = corners.locator('[data-state="checked"]')
+    const unchecked = corners.locator('[data-state="unchecked"]').first()
+
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ forcedColors: 'active', colorScheme })
+      const trackOn = await paintStyle(on, '::before')
+      const trackOff = await paintStyle(off, '::before')
+      expect(trackOn.bg).not.toBe(trackOff.bg)
+      expect((await paintStyle(on.locator('.ds-switch__thumb'))).bg).not.toBe(trackOn.bg)
+      // The native swatch paints the chosen colour itself (forced-color-adjust: none).
+      const box = await app.lineColour.boundingBox()
+      if (!box) throw new Error('colour input is not laid out')
+      const [swatch] = await paintedPixels(app.lineColour, [[box.width / 2, box.height / 2]])
+      ;[0x1f, 0x3f, 0xbf].forEach((c, i) => {
+        expect(Math.abs(swatch[i] - c)).toBeLessThanOrEqual(8)
+      })
+      const segOn = await paintStyle(checked)
+      expect(segOn.bg).not.toBe('rgba(0, 0, 0, 0)')
+      expect(segOn.bg).not.toBe((await paintStyle(unchecked)).bg)
+      expect(segOn.color).not.toBe(segOn.bg)
+    }
+  })
 })
 
 // Dialogs, notices and the custom-paper fields are plain DOM: one engine is enough.
