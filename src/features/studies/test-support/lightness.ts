@@ -13,30 +13,6 @@ export function lightnessRampImage(w: number, h: number, lo = 0.3, hi = 0.9): Ui
   return d
 }
 
-/** A w × h image of one colour, alpha 255. */
-export function solidImage(w: number, h: number, c: Rgb8): Uint8ClampedArray {
-  const d = new Uint8ClampedArray(w * h * 4)
-  for (let i = 0; i < d.length; i += 4) d.set([c.r, c.g, c.b, 255], i)
-  return d
-}
-
-/** A w × h image of uniformly random colours (mulberry32 seeded with `seed`), alpha 255. */
-export function noiseImage(w: number, h: number, seed: number): Uint8ClampedArray {
-  let a = seed >>> 0
-  const next = (): number => {
-    a = (a + 0x6d2b79f5) >>> 0
-    let t = a
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-  const d = new Uint8ClampedArray(w * h * 4)
-  for (let i = 0; i < d.length; i += 4) {
-    d.set([Math.floor(next() * 256), Math.floor(next() * 256), Math.floor(next() * 256), 255], i)
-  }
-  return d
-}
-
 /** Distinct RGB triples, as 'r,g,b' strings. */
 export function distinctColours(d: Uint8ClampedArray): Set<string> {
   const out = new Set<string>()

@@ -3,13 +3,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { lightness8, type Rgb8 } from '../../shared/colour/oklch'
 import { LIGHTNESS_BINS, VALUE_CLIP, lightnessRange, posterizeRGBA, valueIndex } from './posterize'
 import { valueRamp } from './ramp'
-import {
-  distinctColours,
-  key,
-  lightnessRampImage,
-  noiseImage,
-  solidImage,
-} from './test-support/lightness'
+import { distinctColours, key, lightnessRampImage } from './test-support/lightness'
+import { noise, solid } from './test-support/pixels'
 
 const SEPIA = (count: number) => valueRamp({ count, hue: 55, neutral: false })
 
@@ -94,12 +89,12 @@ describe('lightnessRange', () => {
   })
   it('ends on 1/1024 bin edges', () => {
     expect(LIGHTNESS_BINS).toBe(1024)
-    const r = lightnessRange(noiseImage(32, 32, 5), 32, 32)
+    const r = lightnessRange(noise(32, 32, 5), 32, 32)
     expect(Number.isInteger(r.lo * 1024)).toBe(true)
     expect(Number.isInteger(r.hi * 1024)).toBe(true)
   })
   it('is degenerate when every kept pixel falls in one bin', () => {
-    const r = lightnessRange(solidImage(4, 4, { r: 119, g: 119, b: 119 }), 4, 4)
+    const r = lightnessRange(solid(4, 4, [119, 119, 119]), 4, 4)
     expect(r.hi).toBe(r.lo)
     const bin = Math.floor(lightness8(119, 119, 119) * LIGHTNESS_BINS)
     expect(r.lo).toBe((bin + 0.5) / LIGHTNESS_BINS)
@@ -136,7 +131,7 @@ describe('posterizeRGBA', () => {
   })
 
   it('a flat image maps to one middle value', () => {
-    const d = solidImage(10, 10, { r: 90, g: 120, b: 60 })
+    const d = solid(10, 10, [90, 120, 60])
     const ramp = SEPIA(5)
     posterizeRGBA(d, 10, 10, ramp, lightnessRange(d, 10, 10))
     expect([...distinctColours(d)]).toEqual([key(ramp[2] ?? { r: 0, g: 0, b: 0 })])
@@ -145,7 +140,7 @@ describe('posterizeRGBA', () => {
   it('keeps darker pixels on darker values (monotone, property)', () => {
     fc.assert(
       fc.property(fc.integer({ min: 0, max: 1e6 }), fc.integer({ min: 2, max: 20 }), (seed, n) => {
-        const d = noiseImage(16, 16, seed)
+        const d = noise(16, 16, seed)
         const src = d.slice()
         const ramp = SEPIA(n)
         const index = new Map(ramp.map((c, i) => [key(c), i]))
@@ -163,7 +158,7 @@ describe('posterizeRGBA', () => {
   })
 
   it('sets alpha to 255', () => {
-    const d = solidImage(3, 3, { r: 200, g: 10, b: 10 })
+    const d = solid(3, 3, [200, 10, 10])
     d[3] = 0
     posterizeRGBA(d, 3, 3, SEPIA(3), { lo: 0, hi: 1 })
     expect(d[3]).toBe(255)
