@@ -504,12 +504,18 @@ test.describe('lines on desktop (all browsers)', () => {
   }) => {
     test.setTimeout(150_000)
     const app = await withPhotos(page, [FIXTURES.flatGrey, FIXTURES.valueRamp])
-    await app.tile(RAMP).click()
+    const select = async (name: string) => {
+      await app.expectPreviewSettled()
+      await app.tile(name).click()
+      await expect(app.tile(name)).toHaveAttribute('aria-pressed', 'true')
+    }
+    await select(RAMP)
     await app.openStudiesTab()
     await expect(app.studiesPanel.getByText(RAMP, { exact: true })).toBeVisible()
     await app.setVersions(['Original', 'Blurred'])
+    await expect(app.studyTile(RAMP, 'Blurred')).toBeVisible()
 
-    await app.tile(GREY).click()
+    await select(GREY)
     await app.openLinesTab()
     await expect(app.linesPanel.getByText(GREY, { exact: true })).toBeVisible()
     await app.setLineSwitch('Rule of thirds', true)
@@ -520,7 +526,7 @@ test.describe('lines on desktop (all browsers)', () => {
       page.getByRole('status').filter({ hasText: 'Line settings copied to 1 image.' }),
     ).toBeAttached()
 
-    await app.tile(RAMP).click()
+    await select(RAMP)
     await expect(app.linesPanel.getByText(RAMP, { exact: true })).toBeVisible()
     for (const name of LINE_TYPE_NAMES)
       await expect(app.lineSwitch(name)).toHaveAttribute(
@@ -536,7 +542,7 @@ test.describe('lines on desktop (all browsers)', () => {
     // The other way round: the ramp's own lines survive the studies' Apply to all (D7).
     await app.openLinesTab()
     await app.setLineSwitch('Golden ratio', true)
-    await app.tile(GREY).click()
+    await select(GREY)
     await app.openStudiesTab()
     await expect(app.studiesPanel.getByText(GREY, { exact: true })).toBeVisible()
     await app.setVersions(['Original', 'Values'])
@@ -545,11 +551,11 @@ test.describe('lines on desktop (all browsers)', () => {
       page.getByRole('status').filter({ hasText: 'Study settings copied to 1 image.' }),
     ).toBeAttached()
     await expect(app.studyTile(RAMP, 'Values')).toBeVisible()
-    await app.tile(RAMP).click()
+    await select(RAMP)
     await app.openLinesTab()
     await expect(app.linesPanel.getByText(RAMP, { exact: true })).toBeVisible()
     await expect(app.lineSwitch('Golden ratio')).toHaveAttribute('aria-checked', 'true')
-    await app.tile(GREY).click()
+    await select(GREY)
     await expect(app.linesPanel.getByText(GREY, { exact: true })).toBeVisible()
     await expect(app.lineSwitch('Golden ratio')).toHaveAttribute('aria-checked', 'false')
 
