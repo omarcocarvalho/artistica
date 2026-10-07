@@ -5,9 +5,11 @@ export interface HueSwatchesProps {
   readonly legend: string
   readonly values: StudyValues
   readonly onChange: (patch: Partial<StudyValues>) => void
+  readonly disabled?: boolean
+  readonly describedBy?: string
 }
 
-export function HueSwatches({ legend, values, onChange }: HueSwatchesProps) {
+export function HueSwatches({ legend, values, onChange, disabled, describedBy }: HueSwatchesProps) {
   const { t } = useTranslation('studies')
   return (
     <fieldset className="flex flex-col gap-1">
@@ -25,6 +27,8 @@ export function HueSwatches({ legend, values, onChange }: HueSwatchesProps) {
               }
               style={p.hue === null ? undefined : { ['--h' as string]: String(p.hue) }}
               aria-pressed={pressed}
+              disabled={disabled}
+              aria-describedby={describedBy}
               aria-label={name}
               title={name}
               onClick={() => {

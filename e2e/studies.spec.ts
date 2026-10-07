@@ -30,6 +30,7 @@ interface ComputedStyle {
 }
 declare function getComputedStyle(el: unknown, pseudo?: string): ComputedStyle
 declare function createImageBitmap(blob: Blob): Promise<{ width: number; height: number }>
+declare const localStorage: { getItem(key: string): string | null }
 
 test.use({ viewport: { width: 1280, height: 900 } })
 
@@ -397,6 +398,42 @@ test.describe('studies on chromium', () => {
     await expect(app.studyTile(RAMP, 'Blurred')).toHaveCount(0)
     await app.tile(RAMP).click()
     await expect(app.studiesPanel.getByText(RAMP, { exact: true })).toBeVisible()
+    await expect(app.versionChip('Original')).toHaveAttribute('aria-pressed', 'true')
+    await expect(app.versionChip('Blurred')).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  test('S-D12 Apply to all makes the applied study the remembered default for new photos', async ({
+    page,
+  }) => {
+    const app = await withPhotos(page, [FIXTURES.valueRamp, FIXTURES.quadrantsJpg])
+    const savedBlur = () =>
+      page.evaluate(
+        () =>
+          (
+            JSON.parse(localStorage.getItem('artistica:settings') ?? '{}') as {
+              state?: { studyDefaults?: { blurPct?: number } }
+            }
+          ).state?.studyDefaults?.blurPct,
+      )
+    await app.selectButton('quadrants.jpg').click()
+    await expect(app.studiesPanel.getByText('quadrants.jpg', { exact: true })).toBeVisible()
+    await app.setSlider('Amount', 70)
+    await app.selectButton(RAMP).click()
+    await expect(app.studiesPanel.getByText(RAMP, { exact: true })).toBeVisible()
+    await app.setSlider('Amount', 30)
+    await expect.poll(savedBlur).toBe(30)
+
+    await app.selectButton('quadrants.jpg').click()
+    await expect(app.studiesPanel.getByText('quadrants.jpg', { exact: true })).toBeVisible()
+    await app.setVersions(['Original', 'Blurred'])
+    await app.applyStudiesToAll()
+    await expect.poll(savedBlur).toBe(70)
+
+    await app.upload(FIXTURES.quadrantsPng)
+    await app.expectImages(3)
+    await app.selectButton('quadrants.png').click()
+    await expect(app.studiesPanel.getByText('quadrants.png', { exact: true })).toBeVisible()
+    await expect(app.studySlider('Amount')).toHaveValue('70')
     await expect(app.versionChip('Original')).toHaveAttribute('aria-pressed', 'true')
     await expect(app.versionChip('Blurred')).toHaveAttribute('aria-pressed', 'false')
   })

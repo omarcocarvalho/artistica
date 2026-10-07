@@ -331,6 +331,81 @@ describe('remove / clear / select', () => {
     expect(store.getState()).toMatchObject({ images: [], selectedId: null })
   })
 
+  describe('the selection after removing the selected image (owner M2-4)', () => {
+    async function three() {
+      const { store } = setup()
+      await store.getState().addFiles([file('a.jpg'), file('b.jpg'), file('c.jpg')])
+      return store
+    }
+    const ids = (store: Awaited<ReturnType<typeof three>>) =>
+      store.getState().images.map((i) => i.id)
+
+    it('moves to the next image when a middle one is removed', async () => {
+      const store = await three()
+      store.getState().select('id-2' as ImageId)
+      store.getState().remove('id-2' as ImageId)
+      expect(ids(store)).toEqual(['id-1', 'id-3'])
+      expect(store.getState().selectedId).toBe('id-3')
+    })
+
+    it('moves to the next image when the first one is removed', async () => {
+      const store = await three()
+      store.getState().select('id-1' as ImageId)
+      store.getState().remove('id-1' as ImageId)
+      expect(store.getState().selectedId).toBe('id-2')
+    })
+
+    it('moves to the previous image when the last one is removed', async () => {
+      const store = await three()
+      store.getState().select('id-3' as ImageId)
+      store.getState().remove('id-3' as ImageId)
+      expect(store.getState().selectedId).toBe('id-2')
+    })
+
+    it('selects nothing once the only image is removed', async () => {
+      const { store } = setup()
+      await store.getState().addFiles([file('a.jpg')])
+      store.getState().remove('id-1' as ImageId)
+      expect(store.getState().selectedId).toBeNull()
+    })
+
+    it('keeps the selection when another image is removed', async () => {
+      const store = await three()
+      store.getState().select('id-1' as ImageId)
+      store.getState().remove('id-2' as ImageId)
+      expect(store.getState().selectedId).toBe('id-1')
+      store.getState().remove('id-3' as ImageId)
+      expect(store.getState().selectedId).toBe('id-1')
+    })
+
+    it('still hands the selection to an earlier photo that finishes importing later', async () => {
+      const gates = [deferred<DecodedImage>(), deferred<DecodedImage>(), deferred<DecodedImage>()]
+      let i = 0
+      const { store } = setup({
+        decode: () => (gates[i++] as { promise: Promise<DecodedImage> }).promise,
+      })
+      const p = store.getState().addFiles([file('slow.jpg'), file('b.jpg'), file('c.jpg')])
+      gates[1]?.resolve(decoded())
+      gates[2]?.resolve(decoded())
+      await vi.waitFor(() => {
+        expect(store.getState().images).toHaveLength(2)
+      })
+      expect(store.getState().selectedId).toBe('id-2')
+      store.getState().remove('id-2' as ImageId)
+      expect(store.getState().selectedId).toBe('id-3')
+      gates[0]?.resolve(decoded())
+      await p
+      expect(store.getState().selectedId).toBe('id-1')
+    })
+
+    it('keeps nothing selected when nothing was', async () => {
+      const store = await three()
+      store.getState().select(null)
+      store.getState().remove('id-2' as ImageId)
+      expect(store.getState().selectedId).toBeNull()
+    })
+  })
+
   it('clear disposes everything', async () => {
     const { store, revoked } = setup()
     await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
@@ -736,16 +811,32 @@ describe('applyStudyToAll (owner Q6: versions included)', () => {
     expect(store.getState().images[1]?.edits.rotation).toBe(90)
   })
 
-  it('returns 0 and keeps the state object when nothing changes or the source is unknown', async () => {
+  it('returns 0 and keeps the images when nothing changes or the source is unknown', async () => {
     const { store } = setup()
     await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
     const before = store.getState().images
+    expect(store.getState().applyStudyToAll(must(before[0]).id)).toBe(0)
+    expect(store.getState().images).toBe(before)
     const listener = vi.fn()
     store.subscribe(listener)
-    expect(store.getState().applyStudyToAll(must(before[0]).id)).toBe(0)
     expect(store.getState().applyStudyToAll('nope' as ImageId)).toBe(0)
     expect(store.getState().images).toBe(before)
     expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('records every apply as a new appliedStudy, even one that changes nothing (owner M2-1)', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    expect(store.getState().appliedStudy).toBeNull()
+    const [a, b] = store.getState().images
+    store.getState().updateStudy(must(b).id, { blurPct: 70 })
+    store.getState().applyStudyToAll(must(b).id)
+    const first = store.getState().appliedStudy
+    expect(first?.study).toEqual({ ...DEFAULT_STUDY, blurPct: 70 })
+    expect(store.getState().applyStudyToAll(must(a).id)).toBe(0)
+    const second = store.getState().appliedStudy
+    expect(second?.study).toEqual({ ...DEFAULT_STUDY, blurPct: 70 })
+    expect(second).not.toBe(first)
   })
 })
 

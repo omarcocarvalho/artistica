@@ -92,6 +92,57 @@ describe('StudyDefaultsEffect', () => {
     })
   })
 
+  it('"Apply to all" makes the applied study the defaults, versions excepted (owner M2-1)', () => {
+    const spy = vi.spyOn(useImages.getState(), 'setDefaultStudy')
+    render(<StudyDefaultsEffect />)
+    act(() => {
+      useImages.getState().updateStudy(A, { blurPct: 30 })
+    })
+    useImages.setState((s) => ({
+      images: s.images.map((i) =>
+        i.id === B
+          ? {
+              ...i,
+              study: {
+                versions: ['original', 'blurred'],
+                blurPct: 70,
+                values: { count: 7, hue: 120, neutral: true },
+              },
+            }
+          : i,
+      ),
+    }))
+    act(() => {
+      useImages.getState().select(B)
+    })
+    expect(useSettings.getState().studyDefaults.blurPct).toBe(30)
+    act(() => {
+      useImages.getState().applyStudyToAll(B)
+    })
+    expect(useSettings.getState().studyDefaults).toEqual({
+      blurPct: 70,
+      values: { count: 7, hue: 120, neutral: true },
+    })
+    expect(spy).toHaveBeenLastCalledWith({
+      versions: ['original'],
+      blurPct: 70,
+      values: { count: 7, hue: 120, neutral: true },
+    })
+  })
+
+  it('an apply that changes no image still counts as last used (owner M2-1)', () => {
+    useImages.setState((s) => ({
+      images: s.images.map((i) => ({ ...i, study: { ...i.study, blurPct: 70 } })),
+      selectedId: B,
+    }))
+    useSettings.getState().setStudyDefaults({ blurPct: 30, values: DEFAULT_STUDY.values })
+    render(<StudyDefaultsEffect />)
+    act(() => {
+      expect(useImages.getState().applyStudyToAll(B)).toBe(0)
+    })
+    expect(useSettings.getState().studyDefaults.blurPct).toBe(70)
+  })
+
   it('keeps writing nothing image-derived: only numbers reach the settings', () => {
     render(<StudyDefaultsEffect />)
     act(() => {

@@ -24,6 +24,8 @@ export interface ImagesState {
   images: LoadedImage[]
   selectedId: ImageId | null
   importing: number
+  /** The study the last "Apply to all" copied, in a new object on every apply. */
+  appliedStudy: { readonly study: StudySettings } | null
   /** The import methods resolve to null when clear() discarded the batch before it finished. */
   addFiles(files: File[]): Promise<ImportOutcome[] | null>
   addFromClipboard(data: DataTransfer): Promise<ImportOutcome[] | null>
@@ -179,6 +181,7 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
       images: [],
       selectedId: null,
       importing: 0,
+      appliedStudy: null,
 
       addFiles: (files) =>
         run(files.map((file) => ({ kind: 'blob', blob: file, name: file.name }))),
@@ -196,10 +199,14 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
         const img = get().images.find((i) => i.id === id)
         if (!img) return
         dispose(img)
-        set((s) => ({
-          images: s.images.filter((i) => i.id !== id),
-          selectedId: s.selectedId === id ? null : s.selectedId,
-        }))
+        set((s) => {
+          const at = s.images.findIndex((i) => i.id === id)
+          const images = s.images.filter((i) => i.id !== id)
+          if (s.selectedId !== id) return { images }
+          const selectedId = (images[at] ?? images[at - 1])?.id ?? null
+          if (autoSelectedId === id) autoSelectedId = selectedId
+          return { images, selectedId }
+        })
       },
 
       clear: () => {
@@ -255,7 +262,7 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
           count += 1
           return { ...img, study }
         })
-        if (count > 0) set({ images: next })
+        set(count > 0 ? { images: next, appliedStudy: { study } } : { appliedStudy: { study } })
         return count
       },
 

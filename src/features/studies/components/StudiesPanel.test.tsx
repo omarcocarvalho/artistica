@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { useImages } from '../../images'
@@ -18,6 +18,7 @@ function seed(studies: Record<string, StudySettings> = { a: DEFAULT_STUDY, b: DE
       makeLoadedImage({ id: id as ImageId, name: `${id}.jpg`, study }),
     ),
     selectedId: A,
+    importing: 0,
   })
 }
 const study = (id: ImageId) => useImages.getState().images.find((i) => i.id === id)?.study
@@ -387,5 +388,89 @@ describe('StudiesPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Blurred' }))
     expect(study(B)?.versions).toEqual(['original', 'blurred'])
     expect(study(A)).toEqual(DEFAULT_STUDY)
+  })
+  describe('while photos are importing (owner M2-2)', () => {
+    const WAITING = 'Waiting for photos to finish importing…'
+    const controls = () => [...screen.getAllByRole('button'), ...screen.getAllByRole('slider')]
+    const setImporting = (importing: number) => {
+      act(() => {
+        useImages.setState({ importing })
+      })
+    }
+
+    it('P11 disables every control and Apply to all, and says why', () => {
+      useImages.setState({ importing: 2 })
+      render(<StudiesPanel imageId={A} />)
+      const hint = screen.getByText(WAITING)
+      expect(hint).toBeVisible()
+      expect(hint).toHaveAttribute('aria-live', 'polite')
+      expect(controls()).toHaveLength(4 + 8 + 1 + 3)
+      for (const control of controls()) {
+        expect(control).toBeDisabled()
+        expect(control).toHaveAccessibleDescription(expect.stringContaining(WAITING))
+      }
+    })
+
+    it('P11 a disabled control changes nothing', async () => {
+      const user = userEvent.setup()
+      seed({ a: { ...DEFAULT_STUDY, blurPct: 70 }, b: DEFAULT_STUDY })
+      useImages.setState({ importing: 1 })
+      render(<StudiesPanel imageId={A} />)
+      await user.click(screen.getByRole('button', { name: 'Blurred' }))
+      await user.click(screen.getByRole('button', { name: 'Teal' }))
+      await user.click(screen.getByRole('button', { name: 'Apply to all images' }))
+      expect(study(A)).toEqual({ ...DEFAULT_STUDY, blurPct: 70 })
+      expect(study(B)).toEqual(DEFAULT_STUDY)
+    })
+
+    it('P11 enables them again once the last import ends', () => {
+      const { container } = render(<StudiesPanel imageId={A} />)
+      const regions = Array.from(container.querySelectorAll('[aria-live="polite"]'))
+      expect(screen.queryByText(WAITING)).not.toBeInTheDocument()
+      setImporting(1)
+      const region = screen.getByText(WAITING)
+      expect(regions).toContain(region)
+      for (const control of controls()) expect(control).toBeDisabled()
+      setImporting(0)
+      expect(region).toBeEmptyDOMElement()
+      for (const control of controls()) {
+        expect(control).toBeEnabled()
+        expect(control).not.toHaveAccessibleDescription(expect.stringContaining(WAITING))
+      }
+    })
+
+    it('P11 moves focus from a control that becomes disabled to the hint, and back after', () => {
+      render(<StudiesPanel imageId={A} />)
+      const slider = screen.getByRole('slider', { name: 'Amount' })
+      slider.focus()
+      setImporting(1)
+      expect(document.activeElement).toBe(screen.getByText(WAITING))
+      setImporting(2)
+      expect(document.activeElement).toBe(screen.getByText(WAITING))
+      setImporting(0)
+      expect(document.activeElement).toBe(slider)
+    })
+
+    it('P11 does not pull focus back if the user moved it while waiting', () => {
+      const outside = document.createElement('button')
+      document.body.append(outside)
+      render(<StudiesPanel imageId={A} />)
+      screen.getByRole('slider', { name: 'Amount' }).focus()
+      setImporting(1)
+      outside.focus()
+      setImporting(0)
+      expect(document.activeElement).toBe(outside)
+      outside.remove()
+    })
+
+    it('P11 leaves focus elsewhere on the page alone', () => {
+      const outside = document.createElement('button')
+      document.body.append(outside)
+      render(<StudiesPanel imageId={A} />)
+      outside.focus()
+      setImporting(1)
+      expect(document.activeElement).toBe(outside)
+      outside.remove()
+    })
   })
 })
