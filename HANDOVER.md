@@ -35,7 +35,7 @@ Later milestones add AI lines (in the browser), polish, and translations.
 
 **Release:** M2 is released as [`v0.2.0`](https://github.com/omarcocarvalho/artistica/releases/tag/v0.2.0): release PR [#80](https://github.com/omarcocarvalho/artistica/pull/80) merged as `296f15d` on 2026-10-07. The M2 sign-off and the owner's answers are recorded on #80 and in the M2 ledger.
 
-**M3 ("composition lines") is built and in final review, waiting for the owner's real-iPhone sign-off.** Plan: [`2026-10-07-m3-overview.md`](docs/superpowers/plans/2026-10-07-m3-overview.md) and sub-plans A–D, approved by the owner on 2026-10-07 with every recommended default (PR #102). All 13 tasks are merged (#103, #105–#117), then the milestone-wide final review in three parts; its fixes are in #118 (keyboard access to the line colour in WebKit, drafts kept with their image, apply-to-all guarded in the store while importing). The full record — per-task review findings, rulings, deferred items and the owner questions — is in [`docs/superpowers/ledgers/m3.md`](docs/superpowers/ledgers/m3.md).
+**M3 ("composition lines") is built and reviewed, waiting for the owner's real-iPhone sign-off.** Plan: [`2026-10-07-m3-overview.md`](docs/superpowers/plans/2026-10-07-m3-overview.md) and sub-plans A–D, approved by the owner on 2026-10-07 with every recommended default (PR #102). All 13 tasks are merged (#103, #105–#117), then the milestone-wide final review in three parts; its fixes are in #118 (keyboard access to the line colour in WebKit, drafts kept with their image, apply-to-all guarded in the store while importing), merged as `bd3b0b2`. The always-open phone Lines section (owner ruling D1-R1) is #120. The full record — per-task review findings, rulings, deferred items and the owner questions — is in [`docs/superpowers/ledgers/m3.md`](docs/superpowers/ledgers/m3.md).
 
 - **Exit criterion** ("the lines in the PDF match the preview exactly and stay sharp when zoomed"): pinned by E2E test L-X1 in `e2e/lines.spec.ts` on chromium, firefox and webkit — every line a stroked vector path whose geometry equals the pure geometry within 0.01 mm, image XObjects byte-identical with lines on and off, and the preview showing the line colour along every PDF path.
 - **Phone memory** (M3 in `e2e/mobile-flow.spec.ts`, every line on, CI): import 1013 MB, studies 1296 MB, settled 1158 MB, export 1292 MB, against the unchanged budgets of 1500 / 1500 / 1700 MB.
@@ -50,7 +50,7 @@ Later milestones add AI lines (in the browser), polish, and translations.
 
 ## Next steps (in order)
 
-1. **Owner signs off M3** on the iPhone, with the checklist in the M3 overview ("M3 sign-off checklist"), once the always-open phone Lines section (ruling D1-R1) is merged. Record the device, OS version, export time and page count on #104.
+1. **Owner signs off M3** on the iPhone, with the checklist in the M3 overview ("M3 sign-off checklist"), once #120 (the always-open phone Lines section, ruling D1-R1) is merged. Record the device, OS version, export time and page count on #104.
 2. **Release v0.3.0** from release PR #104 (steps for any milestone):
    1. Run `gh pr view 104 --json mergeable` until it isn't `UNKNOWN`.
    2. Close and reopen #104 and wait for the checks to pass.
