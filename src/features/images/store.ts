@@ -47,13 +47,13 @@ export interface ImagesState {
   updateEdits(id: ImageId, patch: Partial<ImageEdits>): void
   /** Patch one image's study settings (sanitized). Keeps the same state when nothing changes. */
   updateStudy(id: ImageId, patch: StudyPatch): void
-  /** Copies `fromId`'s whole StudySettings (versions included) to every image. Returns how many changed. */
+  /** Copies `fromId`'s whole StudySettings (versions included) to every image. Returns how many changed; 0, recording nothing, while an import runs (owner M2-2). */
   applyStudyToAll(fromId: ImageId): number
   /** The study settings images created from now on start with. Not persisted here. */
   setDefaultStudy(study: StudySettings): void
   /** Patch one image's line settings (sanitized). Keeps the same state when nothing changes. */
   updateLines(id: ImageId, patch: LinesPatch): void
-  /** Copies `fromId`'s whole LineSettings (types and style, owner Q8) to every image. Returns how many changed. */
+  /** Copies `fromId`'s whole LineSettings (types and style, owner Q8) to every image. Returns how many changed; 0, recording nothing, while an import runs (owner Q9). */
   applyLinesToAll(fromId: ImageId): number
   /** The line settings images created from now on start with. Not persisted here. */
   setDefaultLines(lines: LineSettings): void
@@ -272,7 +272,8 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
       },
 
       applyStudyToAll: (fromId) => {
-        const { images } = get()
+        const { images, importing } = get()
+        if (importing > 0) return 0
         const study = images.find((i) => i.id === fromId)?.study
         if (study === undefined) return 0
         let count = 0
@@ -304,7 +305,8 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
       },
 
       applyLinesToAll: (fromId) => {
-        const { images } = get()
+        const { images, importing } = get()
+        if (importing > 0) return 0
         const lines = images.find((i) => i.id === fromId)?.lines
         if (lines === undefined) return 0
         let count = 0

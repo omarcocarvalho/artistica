@@ -448,7 +448,7 @@ test('L-P1 phone: the Lines section in the Studies step, lines in the preview an
   await expect(applyButtons.nth(1)).toBeVisible()
 
   await app.linesSection.getByLabel('Colour', { exact: true }).fill('#1f3fbf')
-  await expect(app.linesSection.getByText('#1f3fbf', { exact: true })).toBeVisible()
+  await expect(app.lineHex).toHaveValue('#1f3fbf')
   await app.linesSection.getByRole('slider', { name: 'Thickness' }).fill('2')
   await app.linesSection.getByRole('slider', { name: 'Opacity' }).fill('100')
   await expect(app.linesSection.getByRole('slider', { name: 'Opacity' })).toHaveAttribute(
@@ -479,7 +479,7 @@ test('L-P1 phone: the Lines section in the Studies step, lines in the preview an
   }
 })
 
-test('L-P2 phone: every Lines control is at least 44 x 44 px, with 16 px text in the count fields', async ({
+test('L-P2 phone: every Lines control is at least 44 x 44 px, with 16 px text in the count and hex fields', async ({
   page,
 }) => {
   const app = startApp(page)
@@ -496,6 +496,7 @@ test('L-P2 phone: every Lines control is at least 44 x 44 px, with 16 px text in
   const fields = [
     section.getByRole('textbox', { name: 'Columns', exact: true }),
     section.getByRole('textbox', { name: 'Rows', exact: true }),
+    section.getByRole('textbox', { name: 'Colour hex code', exact: true }),
   ]
   const radios = await section
     .getByRole('radiogroup', { name: 'Spiral starts at' })
@@ -515,7 +516,7 @@ test('L-P2 phone: every Lines control is at least 44 x 44 px, with 16 px text in
     6,
     4,
     2,
-    1 + 6 + 2 + 4 + 1 + 2 + 1,
+    1 + 6 + 3 + 4 + 1 + 2 + 1,
   ])
   await expectTouchTargets(targets)
   await expectNoFocusZoom(fields)
@@ -555,6 +556,15 @@ test('L-P3 phone: the Lines section opens and its controls work from the keyboar
   await expect(corners.getByRole('radio', { name: 'Top left', exact: true })).toBeFocused()
   await page.keyboard.press('ArrowRight', { delay: 50 })
   await expect(corners.getByRole('radio', { name: 'Top right', exact: true })).toBeChecked()
+  await page.keyboard.press(tab)
+  await expect(app.lineSwitch('Centre lines')).toBeFocused()
+  await page.keyboard.press(tab)
+  await expect(app.lineHex).toBeFocused()
+  await page.keyboard.press('ControlOrMeta+a')
+  await page.keyboard.type('#1F3FBF')
+  await page.keyboard.press('Enter')
+  await expect(app.lineHex).toHaveValue('#1f3fbf')
+  await expect(app.linesSection.getByLabel('Colour', { exact: true })).toHaveValue('#1f3fbf')
   await expect(app.linesSummary).toHaveAccessibleName('Lines, 2 on')
   await app.linesSummary.focus()
   await page.keyboard.press('Enter')

@@ -98,6 +98,7 @@ export function LinesPanel({ imageId, announceWait = true }: LinesPanelProps) {
           {lines.grid.on && (
             <div className="lines-pair">
               <CountField
+                key={`${id}-cols`}
                 label={t('grid.columns')}
                 value={lines.grid.cols}
                 min={MIN_GRID}
@@ -113,6 +114,7 @@ export function LinesPanel({ imageId, announceWait = true }: LinesPanelProps) {
                 {t('grid.times')}
               </span>
               <CountField
+                key={`${id}-rows`}
                 label={t('grid.rows')}
                 value={lines.grid.rows}
                 min={MIN_GRID}
@@ -191,7 +193,10 @@ export function LinesPanel({ imageId, announceWait = true }: LinesPanelProps) {
             {t('panel.style')}
           </h3>
           <ColourField
+            key={id}
             label={t('colour.label')}
+            hexLabel={t('colour.hexLabel')}
+            hexHint={t('colour.hexHint')}
             value={lines.style.colour}
             disabled={waiting}
             describedBy={busy}

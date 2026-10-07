@@ -531,30 +531,125 @@ describe('CountField', () => {
 })
 
 describe('ColourField', () => {
-  it('is a labelled native colour input with its hex shown and in its description', () => {
-    render(<ColourField label="Colour" value="#e0457b" onValueChange={vi.fn()} />)
-    const input = screen.getByLabelText('Colour')
+  const HEX_LABEL = 'Colour hex code'
+  const HEX_HINT = 'A # and six hex digits'
+  function Harness({
+    initial = '#e0457b',
+    onValueChange,
+    disabled,
+    describedBy,
+  }: {
+    initial?: string
+    onValueChange?: (hex: string) => void
+    disabled?: boolean
+    describedBy?: string
+  }) {
+    const [value, setValue] = useState(initial)
+    return (
+      <>
+        <ColourField
+          label="Colour"
+          hexLabel={HEX_LABEL}
+          hexHint={HEX_HINT}
+          value={value}
+          disabled={disabled}
+          describedBy={describedBy}
+          onValueChange={(hex) => {
+            onValueChange?.(hex)
+            setValue(hex)
+          }}
+        />
+        <span id="why">Waiting</span>
+      </>
+    )
+  }
+  const swatch = () => screen.getByLabelText('Colour')
+  const hexField = () => screen.getByRole('textbox', { name: HEX_LABEL })
+
+  it('is a labelled native colour input with its hex in its description', () => {
+    render(<Harness />)
+    const input = swatch()
     expect(input).toHaveAttribute('type', 'color')
     expect(input).toHaveValue('#e0457b')
-    expect(screen.getByText('#e0457b')).toBeVisible()
     expect(input).toHaveAccessibleDescription('#e0457b')
   })
 
-  it('sends the lowercase #rrggbb on every input event', () => {
-    const onValueChange = vi.fn()
-    render(<ColourField label="Colour" value="#e0457b" onValueChange={onValueChange} />)
-    const input = screen.getByLabelText('Colour')
-    fireEvent.input(input, { target: { value: '#1F3FBF' } })
-    expect(onValueChange).toHaveBeenLastCalledWith('#1f3fbf')
-    fireEvent.input(input, { target: { value: '#00ff00' } })
-    expect(onValueChange).toHaveBeenLastCalledWith('#00ff00')
-    expect(onValueChange).toHaveBeenCalledTimes(2)
+  it('shows the hex in a labelled text box before the swatch, described by how to type it', () => {
+    render(<Harness />)
+    const field = hexField()
+    expect(field).toHaveAttribute('type', 'text')
+    expect(field).toHaveValue('#e0457b')
+    expect(field).toHaveAccessibleDescription(HEX_HINT)
+    expect(field).toHaveAttribute('autocomplete', 'off')
+    expect(field).toHaveAttribute('spellcheck', 'false')
+    expect(field.compareDocumentPosition(swatch()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('sends only a lowercase #rrggbb whatever the engine reports', () => {
+  it('the hex box commits a typed #rrggbb on Enter, lowercased, and the swatch follows', async () => {
     const onValueChange = vi.fn()
-    render(<ColourField label="Colour" value="#e0457b" onValueChange={onValueChange} />)
-    const input = screen.getByLabelText('Colour')
+    render(<Harness onValueChange={onValueChange} />)
+    await userEvent.clear(hexField())
+    await userEvent.type(hexField(), '#1F3FBF')
+    expect(onValueChange).not.toHaveBeenCalled()
+    await userEvent.keyboard('{Enter}')
+    expect(onValueChange).toHaveBeenCalledExactlyOnceWith('#1f3fbf')
+    expect(hexField()).toHaveValue('#1f3fbf')
+    expect(swatch()).toHaveValue('#1f3fbf')
+    expect(swatch()).toHaveAccessibleDescription('#1f3fbf')
+  })
+
+  it('the hex box commits on blur, and takes the digits without the # or with spaces around', async () => {
+    const onValueChange = vi.fn()
+    render(<Harness onValueChange={onValueChange} />)
+    await userEvent.clear(hexField())
+    await userEvent.type(hexField(), ' 2A9D3C ')
+    await userEvent.tab()
+    expect(onValueChange).toHaveBeenCalledExactlyOnceWith('#2a9d3c')
+    expect(hexField()).toHaveValue('#2a9d3c')
+  })
+
+  it('the hex box keeps the previous colour for anything but six hex digits', async () => {
+    const onValueChange = vi.fn()
+    render(<Harness onValueChange={onValueChange} />)
+    for (const bad of ['', 'red', '#fff', '#1f3fbf80', '#1f3fbg', 'rgb(0, 0, 0)', '##1f3fbf']) {
+      await userEvent.clear(hexField())
+      if (bad !== '') await userEvent.type(hexField(), bad)
+      await userEvent.keyboard('{Enter}')
+      expect(hexField()).toHaveValue('#e0457b')
+    }
+    await userEvent.clear(hexField())
+    await userEvent.type(hexField(), 'nope')
+    await userEvent.tab()
+    expect(hexField()).toHaveValue('#e0457b')
+    expect(onValueChange).not.toHaveBeenCalled()
+    expect(swatch()).toHaveValue('#e0457b')
+  })
+
+  it('the hex box sends nothing when the typed colour is the current one, in any case', async () => {
+    const onValueChange = vi.fn()
+    render(<Harness onValueChange={onValueChange} />)
+    await userEvent.clear(hexField())
+    await userEvent.type(hexField(), '#E0457B{Enter}')
+    expect(onValueChange).not.toHaveBeenCalled()
+    expect(hexField()).toHaveValue('#e0457b')
+  })
+
+  it('the swatch sends the lowercase #rrggbb on every input event, and the hex box follows', () => {
+    const onValueChange = vi.fn()
+    render(<Harness onValueChange={onValueChange} />)
+    fireEvent.input(swatch(), { target: { value: '#1F3FBF' } })
+    expect(onValueChange).toHaveBeenLastCalledWith('#1f3fbf')
+    expect(hexField()).toHaveValue('#1f3fbf')
+    fireEvent.input(swatch(), { target: { value: '#00ff00' } })
+    expect(onValueChange).toHaveBeenLastCalledWith('#00ff00')
+    expect(onValueChange).toHaveBeenCalledTimes(2)
+    expect(hexField()).toHaveValue('#00ff00')
+  })
+
+  it('the swatch sends only a lowercase #rrggbb whatever the engine reports', () => {
+    const onValueChange = vi.fn()
+    render(<Harness onValueChange={onValueChange} />)
+    const input = swatch()
     const report = (raw: string) => {
       Object.defineProperty(input, 'value', { configurable: true, get: () => raw })
       fireEvent.change(input)
@@ -566,30 +661,24 @@ describe('ColourField', () => {
     expect(onValueChange).not.toHaveBeenCalled()
   })
 
-  it('shows the hex of the value it is given, lowercased', () => {
-    const { rerender } = render(
-      <ColourField label="Colour" value="#e0457b" onValueChange={vi.fn()} />,
-    )
-    rerender(<ColourField label="Colour" value="#1F3FBF" onValueChange={vi.fn()} />)
-    expect(screen.getByText('#1f3fbf')).toBeVisible()
-    expect(screen.getByLabelText('Colour')).toHaveValue('#1f3fbf')
+  it('shows the value it is given, lowercased, in both controls', () => {
+    const props = {
+      label: 'Colour',
+      hexLabel: HEX_LABEL,
+      hexHint: HEX_HINT,
+      onValueChange: vi.fn(),
+    }
+    const { rerender } = render(<ColourField {...props} value="#e0457b" />)
+    rerender(<ColourField {...props} value="#1F3FBF" />)
+    expect(hexField()).toHaveValue('#1f3fbf')
+    expect(swatch()).toHaveValue('#1f3fbf')
   })
 
-  it('passes disabled and extra descriptions through', () => {
-    render(
-      <>
-        <ColourField
-          label="Colour"
-          value="#e0457b"
-          onValueChange={vi.fn()}
-          disabled
-          describedBy="why"
-        />
-        <span id="why">Waiting</span>
-      </>,
-    )
-    const input = screen.getByLabelText('Colour')
-    expect(input).toBeDisabled()
-    expect(input).toHaveAccessibleDescription('#e0457b Waiting')
+  it('passes disabled and extra descriptions through to both controls', () => {
+    render(<Harness disabled describedBy="why" />)
+    expect(swatch()).toBeDisabled()
+    expect(swatch()).toHaveAccessibleDescription('#e0457b Waiting')
+    expect(hexField()).toBeDisabled()
+    expect(hexField()).toHaveAccessibleDescription(`${HEX_HINT} Waiting`)
   })
 })

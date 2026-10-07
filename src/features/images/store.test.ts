@@ -879,7 +879,46 @@ describe('applyStudyToAll (owner Q6: versions included)', () => {
     expect(second?.study).toEqual({ ...DEFAULT_STUDY, blurPct: 70 })
     expect(second).not.toBe(first)
   })
+
+  it('does nothing while a photo is importing, and applies once it has arrived (owner M2-2)', async () => {
+    const { store, finishImport } = await withPendingImport()
+    store.getState().updateStudy('id-1' as ImageId, BLUR_VALUES)
+    const before = store.getState().images
+    const listener = vi.fn()
+    const unsubscribe = store.subscribe(listener)
+    expect(store.getState().applyStudyToAll('id-1' as ImageId)).toBe(0)
+    expect(store.getState().images).toBe(before)
+    expect(store.getState().appliedStudy).toBeNull()
+    expect(listener).not.toHaveBeenCalled()
+    unsubscribe()
+    await finishImport()
+    expect(store.getState().applyStudyToAll('id-1' as ImageId)).toBe(2)
+    for (const img of store.getState().images) expect(img.study).toEqual(BLUR_VALUES)
+    expect(store.getState().appliedStudy?.study).toEqual(BLUR_VALUES)
+  })
 })
+
+/** Two imported photos, and a third whose import is still running until `finishImport`. */
+async function withPendingImport() {
+  const gate = deferred<DecodedImage>()
+  const { store } = setup({
+    decode: vi.fn((_b: Blob, name: string) =>
+      name === 'late.jpg' ? gate.promise : Promise.resolve(decoded({ thumbUrl: `blob:${name}` })),
+    ),
+  })
+  await store.getState().addFiles([file('a.jpg', 'a'), file('b.jpg', 'bb')])
+  const pending = store.getState().addFiles([file('late.jpg', 'ccc')])
+  await vi.waitFor(() => {
+    expect(store.getState().importing).toBe(1)
+  })
+  const finishImport = async () => {
+    gate.resolve(decoded({ thumbUrl: 'blob:late.jpg' }))
+    await pending
+    expect(store.getState().importing).toBe(0)
+    expect(store.getState().images).toHaveLength(3)
+  }
+  return { store, finishImport }
+}
 
 describe('setDefaultStudy', () => {
   it('gives the default to images imported afterwards, not to existing ones', async () => {
@@ -1082,6 +1121,23 @@ describe('applyLinesToAll (owner Q8: everything on the Lines tab)', () => {
     const second = store.getState().appliedLines
     expect(second?.lines).toEqual(LINED)
     expect(second).not.toBe(first)
+  })
+
+  it('does nothing while a photo is importing, and applies once it has arrived (owner Q9)', async () => {
+    const { store, finishImport } = await withPendingImport()
+    store.getState().updateLines('id-1' as ImageId, LINED)
+    const before = store.getState().images
+    const listener = vi.fn()
+    const unsubscribe = store.subscribe(listener)
+    expect(store.getState().applyLinesToAll('id-1' as ImageId)).toBe(0)
+    expect(store.getState().images).toBe(before)
+    expect(store.getState().appliedLines).toBeNull()
+    expect(listener).not.toHaveBeenCalled()
+    unsubscribe()
+    await finishImport()
+    expect(store.getState().applyLinesToAll('id-1' as ImageId)).toBe(2)
+    for (const img of store.getState().images) expect(img.lines).toEqual(LINED)
+    expect(store.getState().appliedLines?.lines).toEqual(LINED)
   })
 
   it('never touches study or edits, and applyStudyToAll never touches lines (D7)', async () => {

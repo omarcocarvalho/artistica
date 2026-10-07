@@ -19,6 +19,8 @@ const B = 'b' as ImageId
 const C = 'c' as ImageId
 const APPLY = 'Apply lines to all images'
 const WAITING = 'Waiting for photos to finish importing…'
+const HEX = 'Colour hex code'
+const HEX_HINT = 'Type # and six hex digits, like #1f3fbf.'
 
 const TYPE_NAMES: Record<CompositionLineType, string> = {
   grid: 'Grid',
@@ -216,7 +218,52 @@ describe('LinesPanel', () => {
     expect(colour).toHaveAccessibleDescription('#e0457b')
     fireEvent.input(colour, { target: { value: '#1F3FBF' } })
     expect(lines(A)?.style.colour).toBe('#1f3fbf')
-    expect(screen.getByText('#1f3fbf')).toBeVisible()
+    expect(screen.getByRole('textbox', { name: HEX })).toHaveValue('#1f3fbf')
+  })
+
+  it('colour: the hex is a text box that takes a typed colour, for keyboards that skip the swatch', async () => {
+    const user = userEvent.setup()
+    render(<LinesPanel imageId={A} />)
+    const hex = screen.getByRole('textbox', { name: HEX })
+    expect(hex).toHaveValue('#e0457b')
+    expect(hex).toHaveAccessibleDescription(HEX_HINT)
+    await user.clear(hex)
+    await user.type(hex, '#2A9D3C{Enter}')
+    expect(lines(A)?.style.colour).toBe('#2a9d3c')
+    expect(screen.getByLabelText('Colour')).toHaveValue('#2a9d3c')
+    await user.clear(hex)
+    await user.type(hex, '#abc{Enter}')
+    expect(lines(A)?.style.colour).toBe('#2a9d3c')
+    expect(hex).toHaveValue('#2a9d3c')
+  })
+
+  describe('a typed value not yet committed stays with its image', () => {
+    const grid = (cols: number, rows: number): LineSettings => ({
+      ...DEFAULT_LINES,
+      grid: { on: true, cols, rows },
+    })
+
+    it.each([
+      ['Columns', '9'],
+      ['Rows', '9'],
+      [HEX, '#123456'],
+    ])('%s: the next image shows its own value and never gets the draft', async (name, typed) => {
+      const user = userEvent.setup()
+      seed({ a: grid(3, 4), b: grid(6, 7) })
+      const { rerender } = render(<LinesPanel imageId={A} />)
+      const field = screen.getByRole('textbox', { name })
+      await user.clear(field)
+      await user.type(field, typed)
+      rerender(<LinesPanel imageId={B} />)
+      const next = screen.getByRole('textbox', { name })
+      expect(next).toHaveValue(
+        name === 'Columns' ? '6' : name === 'Rows' ? '7' : DEFAULT_LINES.style.colour,
+      )
+      next.focus()
+      await user.tab()
+      expect(lines(B)).toEqual(grid(6, 7))
+      expect(lines(A)).toEqual(grid(3, 4))
+    })
   })
 
   it('thickness: 0.1–2 mm in 0.05 steps, announced in mm', () => {
@@ -401,7 +448,7 @@ describe('LinesPanel', () => {
       expect(hint).toBeVisible()
       expect(hint).toHaveAttribute('aria-live', 'polite')
       expect(hint).toHaveAttribute('tabindex', '-1')
-      expect(controls()).toHaveLength(6 + 2 + 4 + 1 + 2 + 1)
+      expect(controls()).toHaveLength(6 + 3 + 4 + 1 + 2 + 1)
       for (const control of controls()) {
         expect(control).toBeDisabled()
         expect(control).toHaveAccessibleDescription(expect.stringContaining(WAITING))

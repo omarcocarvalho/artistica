@@ -36,7 +36,11 @@
       "bottomRight": "↘"
     }
   },
-  "colour": { "label": "Colour" },
+  "colour": {
+    "label": "Colour",
+    "hexLabel": "Colour hex code",
+    "hexHint": "Type # and six hex digits, like #1f3fbf."
+  },
   "thickness": { "label": "Thickness", "value": "{{mm}} mm" },
   "opacity": { "label": "Opacity", "value": "{{pct}}%" },
   "applyAll": {

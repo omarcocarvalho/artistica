@@ -5,7 +5,9 @@ import { makeLoadedImage } from '../../features/images/test-utils'
 import { useSettings } from '../../features/settings'
 import type { ImageId } from '../../shared/model/image'
 import { DEFAULT_LINES, type LineSettings } from '../../shared/model/lines'
+import { DEFAULT_STUDY } from '../../shared/model/study'
 import { LineDefaultsEffect } from './LineDefaultsEffect'
+import { StudyDefaultsEffect } from './StudyDefaultsEffect'
 
 const A = 'a' as ImageId
 const B = 'b' as ImageId
@@ -70,7 +72,7 @@ describe('LineDefaultsEffect', () => {
   it('a type toggle alone writes nothing to storage (setLineDefaults is a no-op on equal values)', () => {
     render(<LineDefaultsEffect />)
     const before = useSettings.getState().lineDefaults
-    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+    const setItem = vi.spyOn(localStorage, 'setItem')
     act(() => {
       useImages.getState().updateLines(A, { golden: true })
     })
@@ -146,6 +148,28 @@ describe('LineDefaultsEffect', () => {
     })
     expect(set).not.toHaveBeenCalled()
     expect(useSettings.getState().lineDefaults).toEqual(DEFAULT_LINES)
+  })
+
+  it('"Apply lines to all" leaves the study defaults alone (owner Q8)', () => {
+    render(
+      <>
+        <LineDefaultsEffect />
+        <StudyDefaultsEffect />
+      </>,
+    )
+    useImages.getState().updateStudy(B, { blurPct: 70, values: { count: 7 } })
+    useImages.getState().updateLines(B, { thirds: true, style: STYLE })
+    const studyDefaults = useSettings.getState().studyDefaults
+    const setStudyDefaults = vi.spyOn(useSettings.getState(), 'setStudyDefaults')
+    const setItem = vi.spyOn(localStorage, 'setItem')
+    act(() => {
+      useImages.getState().applyLinesToAll(B)
+    })
+    expect(useSettings.getState().lineDefaults.style).toEqual(STYLE)
+    expect(useSettings.getState().studyDefaults).toBe(studyDefaults)
+    expect(setStudyDefaults).not.toHaveBeenCalled()
+    expect(setItem).toHaveBeenCalledTimes(1)
+    expect(useImages.getState().images.find((i) => i.id === A)?.study).toEqual(DEFAULT_STUDY)
   })
 
   it('an apply that changes no image still counts as last used', () => {
