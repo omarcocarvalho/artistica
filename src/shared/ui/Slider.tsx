@@ -8,7 +8,7 @@ export interface SliderProps {
   max: number
   step?: number
   onValueChange: (value: number) => void
-  /** Text shown in the live output and announced; defaults to the number. */
+  /** Text shown beside the label and announced as the range's value text; defaults to the number. */
   formatValue?: (value: number) => string
   /** Captions under the track ends, e.g. "Fewer" / "More". */
   minLabel?: string
@@ -38,7 +38,9 @@ export function Slider({
   return (
     <div className={cx('ds-slider', className)}>
       <label htmlFor={id}>{label}</label>
-      <output htmlFor={id}>{text}</output>
+      <output htmlFor={id} aria-hidden="true">
+        {text}
+      </output>
       <input
         id={id}
         type="range"
@@ -50,7 +52,9 @@ export function Slider({
         aria-valuetext={text}
         style={{ '--fill': `${String(fill)}%` } as CSSProperties}
         onChange={(e) => {
-          onValueChange(Number(e.currentTarget.value))
+          const raw = e.currentTarget.value
+          const next = Number(raw)
+          if (raw.trim() !== '' && Number.isFinite(next)) onValueChange(next)
         }}
       />
       {minLabel || maxLabel ? (

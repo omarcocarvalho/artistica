@@ -156,6 +156,20 @@
     color: var(--color-on-accent-soft);
     border-color: var(--color-accent);
   }
+  .ds-chip__box {
+    display: inline-flex;
+    flex: none;
+    width: 14px;
+    height: 14px;
+    border: var(--border-width-strong) solid var(--color-line-strong);
+    border-radius: 4px;
+    background: var(--color-surface-raised);
+    color: var(--color-on-accent);
+  }
+  .ds-chip[aria-pressed='true'] .ds-chip__box {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+  }
 
   .ds-note {
     display: flex;
