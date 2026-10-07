@@ -17,4 +17,5 @@ export const FIXTURES = {
   mislabelledHeic: f('mislabelled-heic.jpg'),
   notesPdf: f('notes.pdf'),
   valueRamp: f('value-ramp.png'),
+  flatGrey: f('flat-grey.png'),
 } as const

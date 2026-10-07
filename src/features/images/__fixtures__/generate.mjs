@@ -1,22 +1,29 @@
 // Run once on macOS:  node src/features/images/__fixtures__/generate.mjs
 // Pure node, any OS:  node src/features/images/__fixtures__/generate.mjs --only=value-ramp
+//                     node src/features/images/__fixtures__/generate.mjs --only=flat-grey
 import { execFileSync } from 'node:child_process'
 import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from '@playwright/test'
 import { injectExifOrientation } from '../exif.ts'
+import { flatGreyPng } from './flat-grey.ts'
 import { valueRampPng } from './value-ramp.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const out = (name) => join(here, name)
 mkdirSync(here, { recursive: true })
 
-writeFileSync(out('value-ramp.png'), valueRampPng())
-if (process.argv.includes('--only=value-ramp')) {
-  console.log('value-ramp.png written to', here)
+const pureNode = { 'value-ramp': valueRampPng, 'flat-grey': flatGreyPng }
+const only = process.argv.find((a) => a.startsWith('--only='))?.slice('--only='.length)
+if (only !== undefined) {
+  const write = pureNode[only]
+  if (!write) throw new Error(`--only takes one of: ${Object.keys(pureNode).join(', ')}`)
+  writeFileSync(out(`${only}.png`), write())
+  console.log(`${only}.png written to`, here)
   process.exit(0)
 }
+for (const [name, write] of Object.entries(pureNode)) writeFileSync(out(`${name}.png`), write())
 
 const browser = await chromium.launch()
 const page = await browser.newPage()
