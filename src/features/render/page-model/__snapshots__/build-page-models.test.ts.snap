@@ -139,90 +139,102 @@ exports[`buildPageModels > crop marks never cross another tile’s trim+bleed bo
 }
 `;
 
-exports[`study versions (M2-R4) > snapshot of a 3-version turned group with bleed and crop marks 1`] = `
+exports[`study versions (M2-R4) > a 3-version turned group with bleed and crop marks > matches the snapshot 1`] = `
 {
   "cropMarks": [
     {
-      "x1": 8,
-      "x2": 8,
-      "y1": 10,
-      "y2": 6,
-    },
-    {
-      "x1": 52,
-      "x2": 52,
-      "y1": 10,
-      "y2": 6,
-    },
-    {
-      "x1": 52,
-      "x2": 52,
-      "y1": 84,
-      "y2": 88,
-    },
-    {
-      "x1": 8,
-      "x2": 8,
-      "y1": 84,
-      "y2": 88,
-    },
-    {
-      "x1": 58,
-      "x2": 58,
-      "y1": 10,
-      "y2": 6,
-    },
-    {
-      "x1": 102,
-      "x2": 102,
-      "y1": 10,
-      "y2": 6,
-    },
-    {
-      "x1": 102,
-      "x2": 102,
-      "y1": 84,
-      "y2": 88,
-    },
-    {
-      "x1": 58,
-      "x2": 58,
-      "y1": 84,
-      "y2": 88,
-    },
-    {
-      "x1": 108,
-      "x2": 108,
-      "y1": 10,
-      "y2": 6,
-    },
-    {
-      "x1": 156,
-      "x2": 160,
+      "x1": 9,
+      "x2": 5,
       "y1": 14,
       "y2": 14,
     },
     {
-      "x1": 152,
-      "x2": 152,
+      "x1": 13,
+      "x2": 13,
       "y1": 10,
       "y2": 6,
     },
     {
-      "x1": 156,
-      "x2": 160,
-      "y1": 80,
-      "y2": 80,
+      "x1": 57,
+      "x2": 57,
+      "y1": 10,
+      "y2": 6,
     },
     {
-      "x1": 152,
-      "x2": 152,
+      "x1": 57,
+      "x2": 57,
       "y1": 84,
       "y2": 88,
     },
     {
-      "x1": 108,
-      "x2": 108,
+      "x1": 9,
+      "x2": 5,
+      "y1": 80,
+      "y2": 80,
+    },
+    {
+      "x1": 13,
+      "x2": 13,
+      "y1": 84,
+      "y2": 88,
+    },
+    {
+      "x1": 63,
+      "x2": 63,
+      "y1": 10,
+      "y2": 6,
+    },
+    {
+      "x1": 107,
+      "x2": 107,
+      "y1": 10,
+      "y2": 6,
+    },
+    {
+      "x1": 107,
+      "x2": 107,
+      "y1": 84,
+      "y2": 88,
+    },
+    {
+      "x1": 63,
+      "x2": 63,
+      "y1": 84,
+      "y2": 88,
+    },
+    {
+      "x1": 113,
+      "x2": 113,
+      "y1": 10,
+      "y2": 6,
+    },
+    {
+      "x1": 161,
+      "x2": 165,
+      "y1": 14,
+      "y2": 14,
+    },
+    {
+      "x1": 157,
+      "x2": 157,
+      "y1": 10,
+      "y2": 6,
+    },
+    {
+      "x1": 161,
+      "x2": 165,
+      "y1": 80,
+      "y2": 80,
+    },
+    {
+      "x1": 157,
+      "x2": 157,
+      "y1": 84,
+      "y2": 88,
+    },
+    {
+      "x1": 113,
+      "x2": 113,
       "y1": 84,
       "y2": 88,
     },
@@ -232,7 +244,7 @@ exports[`study versions (M2-R4) > snapshot of a 3-version turned group with blee
       "block": {
         "h": 66,
         "w": 144,
-        "x": 8,
+        "x": 13,
         "y": 14,
       },
       "imageId": "a",
@@ -268,7 +280,7 @@ exports[`study versions (M2-R4) > snapshot of a 3-version turned group with blee
       "trim": {
         "h": 66,
         "w": 44,
-        "x": 8,
+        "x": 13,
         "y": 14,
       },
       "version": "original",
@@ -294,7 +306,7 @@ exports[`study versions (M2-R4) > snapshot of a 3-version turned group with blee
       "trim": {
         "h": 66,
         "w": 44,
-        "x": 58,
+        "x": 63,
         "y": 14,
       },
       "version": "blurred",
@@ -324,7 +336,7 @@ exports[`study versions (M2-R4) > snapshot of a 3-version turned group with blee
       "trim": {
         "h": 66,
         "w": 44,
-        "x": 108,
+        "x": 113,
         "y": 14,
       },
       "version": "values",

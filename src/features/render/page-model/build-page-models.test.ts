@@ -1,6 +1,7 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import type { Rotation } from '../../../shared/model/image'
+import { outerReserveMm } from '../../../shared/model/page-setup'
 import { DEFAULT_STUDY } from '../../../shared/model/study'
 import type { RectMm } from '../../layout/types'
 import {
@@ -12,6 +13,7 @@ import {
   studyDescriptor,
 } from '../test-support/fixtures'
 import { buildPageModels, combineRotation, readingOrder, resolveCrop } from './build-page-models'
+import { idealCropMarks } from './crop-marks'
 import { expandRect, segmentIntersectsRect } from './rect'
 
 describe('resolveCrop', () => {
@@ -312,26 +314,43 @@ describe('study versions (M2-R4)', () => {
     expect(page?.groups).toEqual([])
   })
 
-  it('snapshot of a 3-version turned group with bleed and crop marks', () => {
-    const p = placement('a', [R(108, 14, 44, 66), R(58, 14, 44, 66), R(8, 14, 44, 66)], {
+  describe('a 3-version turned group with bleed and crop marks', () => {
+    const setup = setupWith({ bleed: { enabled: true, mm: 3 }, gutter: { enabled: true, mm: 6 } })
+    const x0 = setup.safeAreaMm + outerReserveMm(setup)
+    const p = placement('a', [R(x0 + 100, 14, 44, 66), R(x0 + 50, 14, 44, 66), R(x0, 14, 44, 66)], {
       turned: true,
-      block: R(8, 14, 144, 66),
+      block: R(x0, 14, 144, 66),
     })
-    const [page] = buildPageModels(
-      layoutOf([[p]]),
-      setupWith({ bleed: { enabled: true, mm: 3 }, gutter: { enabled: true, mm: 6 } }),
-      [three],
-    )
-    expect(page).toMatchSnapshot()
+    const [page] = buildPageModels(layoutOf([[p]]), setup, [three])
+
+    it('matches the snapshot', () => {
+      expect(page).toMatchSnapshot()
+    })
+
+    it("keeps the group's outer crop marks at full length (H4)", () => {
+      const outer = idealCropMarks({ trim: p.block, bleedMm: 3 }).map((m) => ({
+        x1: m.x,
+        y1: m.y,
+        x2: m.x + m.dx * m.length,
+        y2: m.y + m.dy * m.length,
+      }))
+      expect(page?.cropMarks).toEqual(expect.arrayContaining(outer))
+    })
   })
 })
 
 describe('readingOrder', () => {
   it('sorts by y then x, treating y within 1e-6 mm as one row', () => {
-    const a = R(50, 20 + 1e-9)
-    const b = R(10, 20)
+    const a = R(10, 20 + 1e-9)
+    const b = R(50, 20)
     const c = R(10, 90)
-    expect(readingOrder([c, a, b])).toEqual([b, a, c])
+    expect(readingOrder([c, b, a])).toEqual([a, b, c])
+  })
+
+  it('starts a new row when y differs by more than 1e-6 mm', () => {
+    const lower = R(10, 20 + 1e-5)
+    const upper = R(50, 20)
+    expect(readingOrder([lower, upper])).toEqual([upper, lower])
   })
 
   it('does not mutate its input', () => {
