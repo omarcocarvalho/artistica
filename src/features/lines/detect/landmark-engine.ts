@@ -227,6 +227,8 @@ function spawnWorkerBackend(): LandmarkBackend {
   }
 }
 
+let mainThreadCreation: Promise<unknown> = Promise.resolve()
+
 export function createMainThreadBackend(
   env: Partial<Pick<LandmarkApiEnv, 'loadVision' | 'importModule' | 'scope'>> = {},
 ): LandmarkBackend {
@@ -258,8 +260,12 @@ export function createMainThreadBackend(
     init: async () => {
       await (await live()).init()
     },
-    prepare: async (model, runtime, modelBytes) => {
-      await (await live()).prepare(model, runtime, modelBytes)
+    prepare: (model, runtime, modelBytes) => {
+      const mine = mainThreadCreation.then(async () => {
+        await (await live()).prepare(model, runtime, modelBytes)
+      })
+      mainThreadCreation = mine.catch(() => undefined)
+      return mine
     },
     detectFaces: async (bitmap) => (await live(bitmap)).detectFaces(bitmap),
     detectPoses: async (bitmap) => (await live(bitmap)).detectPoses(bitmap),

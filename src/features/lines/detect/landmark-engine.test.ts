@@ -491,6 +491,38 @@ describe('createMainThreadBackend (the WebKit-on-CI path, C1-R1)', () => {
     expect(fake.created[0]?.closed).toBe(1)
   })
 
+  it('a new backend creates nothing until a disposed one has finished its creation and closed it (M4-R5a)', async () => {
+    const fake = fakeVision()
+    const make = () =>
+      createMainThreadBackend({
+        loadVision: () => Promise.resolve(fake.module),
+        importModule: () => Promise.resolve({ default: 'factory' }),
+        scope: fake.scope,
+      })
+    let release: () => void = () => undefined
+    fake.hold = new Promise((r) => {
+      release = () => {
+        r()
+      }
+    })
+    const first = make()
+    const facePrepared = first.prepare('face', runtime(), new ArrayBuffer(1))
+    await vi.waitFor(() => {
+      expect(fake.events).toEqual(['create face'])
+    })
+    first.dispose()
+    const second = make()
+    await second.init()
+    const posePrepared = second.prepare('pose', runtime(), new ArrayBuffer(1))
+    await new Promise((r) => setTimeout(r, 20))
+    expect(fake.events).toEqual(['create face'])
+    release()
+    await expect(facePrepared).rejects.toThrow()
+    await posePrepared
+    expect(fake.events).toEqual(['create face', 'close face', 'create pose'])
+    second.dispose()
+  })
+
   it('the default scope is globalThis', async () => {
     const fake = fakeVision()
     let seen: unknown
