@@ -2,19 +2,13 @@ import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, relative, resolve, sep } from 'node:path'
 import { build, type Plugin } from 'vite'
+import { SHELL_CACHE_PREFIX, type ShellConfig } from '../src/sw/config.ts'
 import { AI_ASSET_PINS, publishedPath } from './vite-ai-assets.ts'
 
 export const SW_FILE = 'sw.js'
 const NEVER_PRECACHED = new Set([SW_FILE, 'og-image.png'])
 const ENTRY_ID = 'virtual:artistica-sw'
 const RESOLVED_ENTRY_ID = `\0${ENTRY_ID}`
-
-export interface ShellConfig {
-  readonly cache: string
-  readonly base: string
-  readonly shell: readonly string[]
-  readonly bypass: readonly string[]
-}
 
 export function aiAssetPaths(): string[] {
   return [
@@ -49,7 +43,7 @@ export function shellConfig(
 ): ShellConfig {
   const shell = shellPaths(files.keys(), bypass)
   return {
-    cache: `artistica-shell-${shellBuildId(new Map(shell.map((p) => [p, files.get(p) ?? new Uint8Array()])))}`,
+    cache: `${SHELL_CACHE_PREFIX}${shellBuildId(new Map(shell.map((p) => [p, files.get(p) ?? new Uint8Array()])))}`,
     base,
     shell: shell.map((p) => `${base}${p}`),
     bypass: bypass.map((p) => `${base}${p}`),
@@ -66,7 +60,7 @@ function readTree(dir: string): Map<string, Uint8Array> {
   return files
 }
 
-async function bundleWorker(root: string, entry: string, config: ShellConfig): Promise<string> {
+async function bundleWorker(root: string, source: string): Promise<string> {
   const output = await build({
     root,
     configFile: false,
@@ -77,10 +71,7 @@ async function bundleWorker(root: string, entry: string, config: ShellConfig): P
       {
         name: 'artistica:sw-entry',
         resolveId: (id) => (id === ENTRY_ID ? RESOLVED_ENTRY_ID : undefined),
-        load: (id) =>
-          id === RESOLVED_ENTRY_ID
-            ? `import { startShellWorker } from ${JSON.stringify(entry)}\nstartShellWorker(self, ${JSON.stringify(config)})\n`
-            : undefined,
+        load: (id) => (id === RESOLVED_ENTRY_ID ? source : undefined),
       },
     ],
     build: {
@@ -101,9 +92,13 @@ async function bundleWorker(root: string, entry: string, config: ShellConfig): P
   throw new Error(`service worker: the bundle has no ${SW_FILE}`)
 }
 
-/** Builds `entry` to `<outDir>/sw.js` with the shell list of the finished build. */
+/**
+ * Builds `<sources>/sw.ts` to `<outDir>/sw.js` with the shell list of the finished build.
+ * `killSwitch` builds `<sources>/kill.ts` instead: a worker that removes the shell caches and
+ * unregisters itself (HANDOVER, "Service worker recovery").
+ */
 export function serviceWorker(
-  options: { entry?: string; bypass?: readonly string[] } = {},
+  options: { sources?: string; bypass?: readonly string[]; killSwitch?: boolean } = {},
 ): Plugin {
   const bypass = options.bypass ?? aiAssetPaths()
   let root = process.cwd()
@@ -118,9 +113,11 @@ export function serviceWorker(
       outDir = resolve(config.root, config.build.outDir)
     },
     async closeBundle() {
-      const config = shellConfig(base, readTree(outDir), bypass)
-      const entry = options.entry ?? resolve(root, 'src/sw/sw.ts')
-      writeFileSync(join(outDir, SW_FILE), await bundleWorker(root, entry, config))
+      const sources = options.sources ?? resolve(root, 'src/sw')
+      const source = options.killSwitch
+        ? `import { startKillSwitch } from ${JSON.stringify(join(sources, 'kill.ts'))}\nstartKillSwitch(self)\n`
+        : `import { startShellWorker } from ${JSON.stringify(join(sources, 'sw.ts'))}\nstartShellWorker(self, ${JSON.stringify(shellConfig(base, readTree(outDir), bypass))})\n`
+      writeFileSync(join(outDir, SW_FILE), await bundleWorker(root, source))
     },
   }
 }

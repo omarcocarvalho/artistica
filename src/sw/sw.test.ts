@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
-import { type ShellConfig, type ShellScope, startShellWorker } from './sw.ts'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { ShellConfig } from './config.ts'
+import { NAVIGATION_TIMEOUT_MS, type ShellScope, startShellWorker } from './sw.ts'
 
 const ORIGIN = 'https://omarcocarvalho.github.io'
 const CONFIG: ShellConfig = {
@@ -37,10 +38,14 @@ class FakeCache {
 
 function setup(config: ShellConfig = CONFIG, existing: string[] = []) {
   const online = { value: true }
+  const stalled = { value: false }
   const release = { value: 'A' }
   const fetched: Request[] = []
+  const held: { resolve: (r: Response) => void; reject: (e: unknown) => void }[] = []
   const fetch = vi.fn((request: Request) => {
     fetched.push(request)
+    if (stalled.value)
+      return new Promise<Response>((resolve, reject) => held.push({ resolve, reject }))
     if (!online.value) return Promise.reject(new TypeError('Failed to fetch'))
     return Promise.resolve(new Response(`${release.value} ${request.url}`))
   })
@@ -92,6 +97,8 @@ function setup(config: ShellConfig = CONFIG, existing: string[] = []) {
   }
   return {
     online,
+    stalled,
+    held,
     release,
     fetch,
     fetched,
@@ -147,6 +154,13 @@ describe('service worker', () => {
     await expect(response).rejects.toThrow('Failed to fetch')
   })
 
+  it('an offline navigation to a shell page that is not cached fails', async () => {
+    const sw = setup()
+    sw.online.value = false
+    const response = sw.dispatch(sw.request(`${ORIGIN}/artistica/app/`, { mode: 'navigate' }))
+    await expect(response).rejects.toThrow('Failed to fetch')
+  })
+
   it('an online navigation never writes the network page into the cache', async () => {
     const sw = setup()
     await sw.lifecycle('install')
@@ -161,6 +175,85 @@ describe('service worker', () => {
     )
     expect(await offline?.text()).toBe(`A ${ORIGIN}/artistica/app/index.html`)
     expect(sw.stores.get('artistica-shell-new')?.entries.size).toBe(CONFIG.shell.length)
+  })
+
+  describe('a navigation on a stalled network', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    const track = (response: Promise<Response> | undefined) => {
+      const state: { text?: string; error?: unknown } = {}
+      response?.then(
+        async (r) => (state.text = await r.text()),
+        (e: unknown) => (state.error = e),
+      )
+      return state
+    }
+
+    it('serves the cached page after 5 s, not before', async () => {
+      expect(NAVIGATION_TIMEOUT_MS).toBe(5000)
+      const sw = setup()
+      await sw.lifecycle('install')
+      vi.useFakeTimers()
+      sw.stalled.value = true
+      const state = track(sw.dispatch(sw.request(`${ORIGIN}/artistica/app/`, { mode: 'navigate' })))
+      await vi.advanceTimersByTimeAsync(NAVIGATION_TIMEOUT_MS - 1)
+      expect(state).toEqual({})
+      await vi.advanceTimersByTimeAsync(1)
+      expect(state).toEqual({ text: `A ${ORIGIN}/artistica/app/index.html` })
+
+      sw.release.value = 'B'
+      sw.held[0]?.resolve(new Response('late network page'))
+      await vi.advanceTimersByTimeAsync(0)
+      expect(state).toEqual({ text: `A ${ORIGIN}/artistica/app/index.html` })
+    })
+
+    it('a network answer before the timeout wins and the cache is never read', async () => {
+      const sw = setup()
+      await sw.lifecycle('install')
+      vi.useFakeTimers()
+      sw.stalled.value = true
+      sw.caches.open.mockClear()
+      const state = track(sw.dispatch(sw.request(`${ORIGIN}/artistica/app/`, { mode: 'navigate' })))
+      await vi.advanceTimersByTimeAsync(NAVIGATION_TIMEOUT_MS - 1)
+      sw.held[0]?.resolve(new Response('network page'))
+      await vi.advanceTimersByTimeAsync(NAVIGATION_TIMEOUT_MS * 2)
+      expect(state).toEqual({ text: 'network page' })
+      expect(sw.caches.open).not.toHaveBeenCalled()
+    })
+
+    it('without a cached page it keeps waiting for the network', async () => {
+      const sw = setup()
+      vi.useFakeTimers()
+      sw.stalled.value = true
+      const inShell = track(
+        sw.dispatch(sw.request(`${ORIGIN}/artistica/app/`, { mode: 'navigate' })),
+      )
+      const outside = track(
+        sw.dispatch(sw.request(`${ORIGIN}/artistica/nope/`, { mode: 'navigate' })),
+      )
+      await vi.advanceTimersByTimeAsync(NAVIGATION_TIMEOUT_MS * 10)
+      expect(inShell).toEqual({})
+      expect(outside).toEqual({})
+      sw.held[0]?.resolve(new Response('app page'))
+      sw.held[1]?.reject(new TypeError('Failed to fetch'))
+      await vi.advanceTimersByTimeAsync(0)
+      expect(inShell).toEqual({ text: 'app page' })
+      expect(outside.error).toBeInstanceOf(TypeError)
+    })
+
+    it('a network failure after the timeout fell back changes nothing', async () => {
+      const sw = setup()
+      await sw.lifecycle('install')
+      vi.useFakeTimers()
+      sw.stalled.value = true
+      const state = track(sw.dispatch(sw.request(`${ORIGIN}/artistica/`, { mode: 'navigate' })))
+      await vi.advanceTimersByTimeAsync(NAVIGATION_TIMEOUT_MS)
+      sw.held[0]?.reject(new TypeError('Failed to fetch'))
+      await vi.advanceTimersByTimeAsync(0)
+      expect(state).toEqual({ text: `A ${ORIGIN}/artistica/index.html` })
+    })
   })
 
   it('hashed assets are cache-first', async () => {

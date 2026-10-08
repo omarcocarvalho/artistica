@@ -1,11 +1,10 @@
-export interface ShellConfig {
-  readonly cache: string
-  readonly base: string
-  readonly shell: readonly string[]
-  readonly bypass: readonly string[]
-}
+import { SHELL_CACHE_PREFIX, type ShellConfig } from './config'
 
-interface ExtendableEventLike {
+export const NAVIGATION_TIMEOUT_MS = 5000
+
+const ignore = () => undefined
+
+export interface ExtendableEventLike {
   waitUntil(promise: Promise<unknown>): void
 }
 
@@ -25,8 +24,6 @@ export interface ShellScope {
   addEventListener(type: 'fetch', listener: (event: FetchEventLike) => void): void
 }
 
-export const SHELL_CACHE_PREFIX = 'artistica-shell-'
-
 export function startShellWorker(scope: ShellScope, config: ShellConfig): void {
   const shell = new Set(config.shell)
   const bypass = new Set(config.bypass)
@@ -39,6 +36,28 @@ export function startShellWorker(scope: ShellScope, config: ShellConfig): void {
     [path, path.endsWith('/') ? `${path}index.html` : `${path}/index.html`].find((p) =>
       shell.has(p),
     )
+
+  const navigate = async (request: Request, page: string | undefined): Promise<Response> => {
+    const network = scope.fetch(request)
+    if (page === undefined) return network
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const stalled = new Promise<Response>((resolve) => {
+      timer = setTimeout(() => {
+        void cached(page).then((hit) => {
+          if (hit !== undefined) resolve(hit)
+        }, ignore)
+      }, NAVIGATION_TIMEOUT_MS)
+    })
+    try {
+      return await Promise.race([network, stalled])
+    } catch (error) {
+      const hit = await cached(page).catch(ignore)
+      if (hit === undefined) throw error
+      return hit
+    } finally {
+      clearTimeout(timer)
+    }
+  }
 
   scope.addEventListener('install', (event) => {
     event.waitUntil(
@@ -72,14 +91,7 @@ export function startShellWorker(scope: ShellScope, config: ShellConfig): void {
     if (bypass.has(url.pathname)) return
 
     if (request.mode === 'navigate') {
-      const page = pageFor(url.pathname)
-      event.respondWith(
-        scope.fetch(request).catch(async (error: unknown) => {
-          const fallback = page === undefined ? undefined : await cached(page)
-          if (fallback === undefined) throw error
-          return fallback
-        }),
-      )
+      event.respondWith(navigate(request, pageFor(url.pathname)))
       return
     }
 

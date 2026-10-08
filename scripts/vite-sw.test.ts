@@ -9,7 +9,7 @@ import { AI_ASSET_PINS, publishedPath } from './vite-ai-assets.ts'
 import { aiAssetPaths, serviceWorker, shellBuildId, shellConfig, shellPaths } from './vite-sw.ts'
 
 const BASE = '/artistica/'
-const ENTRY = fileURLToPath(new URL('../src/sw/sw.ts', import.meta.url))
+const SOURCES = fileURLToPath(new URL('../src/sw', import.meta.url))
 const bytes = (text: string) => new TextEncoder().encode(text)
 
 const DIST = [
@@ -123,7 +123,9 @@ describe('the service worker build', () => {
       configFile: false,
       logLevel: 'silent',
       base: BASE,
-      plugins: [serviceWorker({ entry: ENTRY, bypass: ['models/face_landmarker-float16-1.task'] })],
+      plugins: [
+        serviceWorker({ sources: SOURCES, bypass: ['models/face_landmarker-float16-1.task'] }),
+      ],
       build: {
         outDir,
         sourcemap: true,
@@ -184,5 +186,63 @@ describe('the service worker build', () => {
     expect(expected.some((f) => /\/assets\/lazy-.*\.js$/.test(f))).toBe(true)
     expect(filesUnder(outDir).some((f) => f.endsWith('.map'))).toBe(true)
     expect(installed).toEqual(expected)
+  })
+})
+
+describe('the kill switch build', () => {
+  let root: string
+  const events: string[] = []
+  const calls: string[] = []
+
+  beforeAll(async () => {
+    root = mkdtempSync(join(tmpdir(), 'artistica-sw-kill-'))
+    writeFileSync(join(root, 'index.html'), '<p>kill</p>')
+    await build({
+      root,
+      configFile: false,
+      logLevel: 'silent',
+      base: BASE,
+      plugins: [serviceWorker({ sources: SOURCES, killSwitch: true })],
+      build: { outDir: join(root, 'dist') },
+    })
+    const listeners = new Map<string, (event: unknown) => void>()
+    const scope = {
+      caches: {
+        keys: () => Promise.resolve(['artistica-shell-abc', 'artistica-ai-v1']),
+        delete: (key: string) => {
+          calls.push(`delete ${key}`)
+          return Promise.resolve(true)
+        },
+      },
+      registration: {
+        unregister: () => {
+          calls.push('unregister')
+          return Promise.resolve(true)
+        },
+      },
+      skipWaiting: () => {
+        calls.push('skipWaiting')
+        return Promise.resolve()
+      },
+      addEventListener: (type: string, listener: (event: unknown) => void) => {
+        events.push(type)
+        listeners.set(type, listener)
+      },
+    }
+    runInNewContext(readFileSync(join(root, 'dist', 'sw.js'), 'utf8'), { self: scope })
+    for (const type of ['install', 'activate']) {
+      let pending: unknown
+      listeners.get(type)?.({ waitUntil: (p: unknown) => (pending = p) })
+      await pending
+    }
+  })
+
+  afterAll(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('emits a sw.js that takes over, deletes the shell caches and unregisters, with no fetch handler', () => {
+    expect(events).toEqual(['install', 'activate'])
+    expect(calls).toEqual(['skipWaiting', 'delete artistica-shell-abc', 'unregister'])
   })
 })
