@@ -336,54 +336,78 @@ describe('installFetchGuard: no way around it', () => {
     expect(cached).toEqual([`${PREFIX}ok`])
   })
 
-  it('keeps refusing when URL, URL getters, startsWith or Function.prototype.call change later', async () => {
-    const { scope, fetch } = fullScope()
-    const RealURL = URL
-    const saved = [
-      [URL.prototype, 'origin'],
-      [URL.prototype, 'pathname'],
-      [URL.prototype, 'protocol'],
-      [String.prototype, 'startsWith'],
-      [Function.prototype, 'call'],
-    ] as const
-    const descriptors = saved.map(([o, k]) => Object.getOwnPropertyDescriptor(o, k))
-    const g = globalThis as { URL: unknown }
-    const stolen: unknown[] = []
-    const outcomes: Promise<unknown>[] = []
-    try {
-      const fake = (o: object, k: string, value: unknown, get = false): void => {
-        Object.defineProperty(
-          o,
-          k,
-          get ? { get: () => value, configurable: true } : { value, configurable: true },
-        )
+  const RealURL = URL
+  const tamper = (o: object, k: string, d: PropertyDescriptor): (() => void) => {
+    const saved = Object.getOwnPropertyDescriptor(o, k)
+    Object.defineProperty(o, k, { ...d, configurable: true })
+    return () => {
+      if (saved) Object.defineProperty(o, k, saved)
+    }
+  }
+  const g = globalThis as { URL: unknown }
+  const replaceUrl = (): (() => void) => {
+    g.URL = class extends RealURL {
+      constructor() {
+        super(`${PREFIX}ok`)
       }
-      fake(URL.prototype, 'origin', 'https://app.test', true)
-      fake(URL.prototype, 'pathname', '/artistica/x', true)
-      fake(String.prototype, 'startsWith', () => true)
-      fake(Function.prototype, 'call', function (this: unknown, ...args: unknown[]) {
+    }
+    return () => {
+      g.URL = RealURL
+    }
+  }
+
+  it.each([
+    ['the global URL', 'https://example.com/x', replaceUrl],
+    [
+      'URL.prototype.protocol',
+      'https://example.com/x',
+      () => tamper(RealURL.prototype, 'protocol', { get: () => 'blob:' }),
+    ],
+    [
+      'URL.prototype.origin',
+      'https://example.com/artistica/x',
+      () => tamper(RealURL.prototype, 'origin', { get: () => 'https://app.test' }),
+    ],
+    [
+      'URL.prototype.pathname',
+      'https://app.test/other/x',
+      () => tamper(RealURL.prototype, 'pathname', { get: () => '/artistica/x' }),
+    ],
+    [
+      'String.prototype.startsWith',
+      'https://app.test/other/x',
+      () => tamper(String.prototype, 'startsWith', { value: () => true, writable: true }),
+    ],
+  ] as const)('keeps refusing after %s is replaced', async (_, url, replace) => {
+    const { scope, fetch } = fullScope()
+    const restore = replace()
+    let outcome: Promise<unknown> | undefined
+    try {
+      outcome = scope.fetch?.(url)
+    } finally {
+      restore()
+    }
+    await expect(outcome).rejects.toThrow(/refused/)
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('never hands the native fetch to a replaced Function.prototype.call', async () => {
+    const { scope, fetch } = fullScope()
+    const stolen: unknown[] = []
+    const restore = tamper(Function.prototype, 'call', {
+      writable: true,
+      value: function (this: unknown, ...args: unknown[]) {
         if (this === fetch) stolen.push(this)
         return Reflect.apply(this as (...a: unknown[]) => unknown, args[0], args.slice(1))
-      })
-      outcomes.push(scope.fetch?.(`${PREFIX}during`) ?? Promise.resolve())
-      g.URL = function () {
-        return { protocol: 'blob:', origin: 'https://app.test', pathname: '/artistica/' }
-      }
-      outcomes.push(scope.fetch?.('https://example.com/x') ?? Promise.resolve())
-      fake(URL.prototype, 'protocol', 'blob:', true)
-      outcomes.push(scope.fetch?.('https://example.com/y') ?? Promise.resolve())
+      },
+    })
+    let outcome: Promise<unknown> | undefined
+    try {
+      outcome = scope.fetch?.(`${PREFIX}ok`)
     } finally {
-      g.URL = RealURL
-      saved.forEach(([o, k], i) => {
-        const d = descriptors[i]
-        if (d) Object.defineProperty(o, k, d)
-      })
+      restore()
     }
-    const [during, ...foreign] = outcomes
-    await expect(during).resolves.toBe('fetched')
-    for (const outcome of foreign) await expect(outcome).rejects.toThrow(/refused/)
-    await scope.fetch?.(`${PREFIX}ok`)
+    await expect(outcome).resolves.toBe('fetched')
     expect(stolen).toEqual([])
-    expect(fetch.mock.calls).toEqual([[`${PREFIX}during`], [`${PREFIX}ok`]])
   })
 })
