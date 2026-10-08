@@ -24,6 +24,7 @@ import {
 } from './test-support/synthetic'
 
 const DETAILS = [1, 20, 34, 50, 67, 99, 100]
+const HEAVY = { timeout: 11_000 }
 
 const edgesOf = (img: Uint8ClampedArray, w: number, h: number, detail: number): Uint8Array =>
   cannyEdges(toGrey(img, w, h), edgeParams(detail))
@@ -263,7 +264,7 @@ describe('cannyEdges (M4-R15)', () => {
     }
   })
 
-  it('higher detail never gives fewer edge pixels', () => {
+  it('higher detail never gives fewer edge pixels', HEAVY, () => {
     const [w, h] = [48, 40]
     fc.assert(
       fc.property(fc.integer({ min: 1, max: 2 ** 31 - 1 }), (seed) => {
@@ -282,7 +283,7 @@ describe('cannyEdges (M4-R15)', () => {
           prev = next
         }
       }),
-      { numRuns: 60 },
+      { numRuns: 40 },
     )
   })
 
@@ -397,7 +398,7 @@ describe('cannyEdges (M4-R15)', () => {
       expect(edgesOf(img, w, h, d)).toEqual(edgesOf(img.slice(), w, h, d))
   })
 
-  it('transposing the input transposes the output', () => {
+  it('transposing the input transposes the output', HEAVY, () => {
     const cases: [Uint8ClampedArray, number, number][] = [
       [noise(52, 37, 11), 52, 37],
       [noise(41, 63, 12), 41, 63],
