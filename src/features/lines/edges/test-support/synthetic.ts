@@ -116,3 +116,37 @@ export function transposeMap(d: Uint8Array, w: number, h: number): Uint8Array {
 }
 
 export const countOnes = (d: Uint8Array): number => d.reduce((s, v) => s + v, 0)
+
+/**
+ * A 240 × 180 still life: a shaded wall with four tiles of rising contrast and a faint frame, a
+ * table top with banded grain, a vase, an apple, a pale box and its shadow. Strong, medium and
+ * faint edges, so detail changes what is found.
+ */
+export function stillLife(): { rgba: Uint8ClampedArray; w: number; h: number } {
+  const w = 240
+  const h = 180
+  const rnd = mulberry32(2026)
+  const bands = Array.from({ length: 16 }, () => Math.floor(rnd() * 49) - 24)
+  const data = rgba(w, h, (x, y) => {
+    if (insideDisc(x, y, 175, 128, 26)) return [196, 48, 40]
+    if (insideDisc(x, y, 62, 62, 24) || (x >= 46 && x < 78 && y >= 62 && y < 140)) {
+      return x < 54 ? [70, 84, 120] : [52, 64, 98]
+    }
+    if (x >= 96 && x < 150 && y >= 84 && y < 132) return [178, 170, 160]
+    if (y >= 118) {
+      const g = bands[(y - 118) >> 2] ?? 0
+      const shadow = x >= 150 && x < 172 && y < 132 ? 22 : 0
+      return [132 + g - shadow, 96 + g - shadow, 64 + g - shadow]
+    }
+    const tile = y >= 8 && y < 28 && x >= 8 && x < 108 && (x - 8) % 25 < 20
+    if (tile) {
+      const v = 196 - ([22, 30, 40, 54][Math.floor((x - 8) / 25)] ?? 0)
+      return [v, v - 4, v - 10]
+    }
+    const frame = x >= 120 && x < 210 && y >= 14 && y < 70
+    const inner = x >= 126 && x < 204 && y >= 20 && y < 64
+    const v = 200 - (y >> 3) - (frame ? (inner ? 10 : 24) : 0)
+    return [v, v - 4, v - 10]
+  })
+  return { rgba: data, w, h }
+}
