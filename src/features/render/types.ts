@@ -1,5 +1,5 @@
 import type { CropRect, ImageId, Rotation } from '../../shared/model/image'
-import type { CompositionLineType } from '../../shared/model/lines'
+import type { LineType } from '../../shared/model/lines'
 import type { SizeMm } from '../../shared/model/paper'
 import type { StudyVersion, TileStudy } from '../../shared/model/study'
 import type { Mm } from '../../shared/model/units'
@@ -67,7 +67,7 @@ export interface TileLines {
   readonly opacity: number
   readonly widthMm: Mm
   /** The types drawn, in canonical order. */
-  readonly types: readonly CompositionLineType[]
+  readonly types: readonly LineType[]
   /** The solid batch first, then the dashed batch; an empty batch is omitted (M3-R7). */
   readonly strokes: readonly LineStroke[]
 }

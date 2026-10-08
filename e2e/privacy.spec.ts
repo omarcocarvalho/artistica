@@ -149,6 +149,9 @@ test('P2 nothing from the photos is persisted: storage stays small and a reload 
     spiral: { on: false, corner: 'bottomLeft' },
     centre: false,
     style: { colour: '#2a9d3c', widthMm: 0.8, opacityPct: 45 },
+    edges: { on: false, detailPct: 50 },
+    face: false,
+    pose: false,
   })
   expect(stored.local).toBeLessThan(2_000)
   expect(stored.session).toBe(0)

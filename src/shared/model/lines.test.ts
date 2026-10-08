@@ -4,12 +4,16 @@ import {
   activeLineTypes,
   COMPOSITION_LINE_TYPES,
   DEFAULT_LINES,
+  GUIDE_LINE_TYPES,
+  hasGuides,
+  LINE_TYPES,
   linesEqual,
   linesKey,
   patchLines,
   sanitizeLines,
   SPIRAL_CORNERS,
   withoutLineTypes,
+  type CompositionLineType,
   type LineSettings,
 } from './lines'
 
@@ -36,7 +40,44 @@ const anyLines = fc.record({
     widthMm: anyValue,
     opacityPct: anyValue,
   }),
+  edges: fc.record({ on: anyValue, detailPct: anyValue }),
+  face: anyValue,
+  pose: anyValue,
 }) as fc.Arbitrary<unknown> as fc.Arbitrary<LineSettings>
+
+/** linesKey as released in M3 (v0.3.0), frozen: settings with every guide off must keep this key. */
+function m3LinesKey(lines: LineSettings): string {
+  const on: Record<CompositionLineType, boolean> = {
+    grid: lines.grid.on,
+    thirds: lines.thirds,
+    armature: lines.armature,
+    golden: lines.golden,
+    spiral: lines.spiral.on,
+    centre: lines.centre,
+  }
+  const types = COMPOSITION_LINE_TYPES.filter((t) => on[t])
+  if (types.length === 0) return '-'
+  const part: Record<CompositionLineType, string> = {
+    grid: `g${String(lines.grid.cols)}x${String(lines.grid.rows)}`,
+    thirds: 't',
+    armature: 'a',
+    golden: 'phi',
+    spiral: `s:${lines.spiral.corner}`,
+    centre: 'c',
+  }
+  const { colour, widthMm, opacityPct } = lines.style
+  return `${types.map((t) => part[t]).join(',')}|${colour}|${String(widthMm)}|${String(opacityPct)}`
+}
+
+/** Everything that prints, for comparing keys. */
+const prints = (l: LineSettings) =>
+  JSON.stringify([
+    activeLineTypes(l),
+    l.grid.on ? [l.grid.cols, l.grid.rows] : null,
+    l.spiral.on ? l.spiral.corner : null,
+    l.edges.on ? l.edges.detailPct : null,
+    activeLineTypes(l).length > 0 ? l.style : null,
+  ])
 
 const garbage = fc.oneof(anyValue, fc.array(anyValue), fc.dictionary(fc.string(), anyValue))
 const anyShape = fc.oneof(
@@ -64,6 +105,12 @@ describe('sanitizeLines', () => {
         expect(once.style.widthMm).toBeLessThanOrEqual(2)
         expect(once.style.colour).toMatch(/^#[0-9a-f]{6}$/)
         expect(SPIRAL_CORNERS).toContain(once.spiral.corner)
+        expect(Number.isInteger(once.edges.detailPct)).toBe(true)
+        expect(once.edges.detailPct).toBeGreaterThanOrEqual(1)
+        expect(once.edges.detailPct).toBeLessThanOrEqual(100)
+        expect(typeof once.edges.on).toBe('boolean')
+        expect(typeof once.face).toBe('boolean')
+        expect(typeof once.pose).toBe('boolean')
         expect(
           Math.abs(once.style.widthMm / 0.05 - Math.round(once.style.widthMm / 0.05)),
         ).toBeLessThan(1e-9)
@@ -233,6 +280,9 @@ describe('sanitizeLines', () => {
       spiral: { on: false, corner: 'topLeft' },
       centre: false,
       style: { colour: '#e0457b', widthMm: 0.35, opacityPct: 90 },
+      edges: { on: false, detailPct: 50 },
+      face: false,
+      pose: false,
     })
   })
 })
@@ -258,6 +308,10 @@ describe('linesEqual', () => {
       { ...DEFAULT_LINES, style: { ...DEFAULT_LINES.style, colour: '#000000' } },
       { ...DEFAULT_LINES, style: { ...DEFAULT_LINES.style, widthMm: 1 } },
       { ...DEFAULT_LINES, style: { ...DEFAULT_LINES.style, opacityPct: 50 } },
+      { ...DEFAULT_LINES, edges: { ...DEFAULT_LINES.edges, on: true } },
+      { ...DEFAULT_LINES, edges: { ...DEFAULT_LINES.edges, detailPct: 51 } },
+      { ...DEFAULT_LINES, face: true },
+      { ...DEFAULT_LINES, pose: true },
     ]
     for (const changed of changes) {
       expect(linesEqual(changed, DEFAULT_LINES)).toBe(false)
@@ -326,13 +380,6 @@ describe('keys and helpers', () => {
         const x = sanitizeLines(a)
         const y = sanitizeLines(b)
         if (activeLineTypes(x).length === 0 || activeLineTypes(y).length === 0) return
-        const prints = (l: LineSettings) =>
-          JSON.stringify([
-            activeLineTypes(l),
-            l.grid.on ? [l.grid.cols, l.grid.rows] : null,
-            l.spiral.on ? l.spiral.corner : null,
-            l.style,
-          ])
         expect(linesKey(x) === linesKey(y)).toBe(prints(x) === prints(y))
       }),
     )
@@ -418,11 +465,15 @@ describe('keys and helpers', () => {
       fc
         .constantFrom(...SPIRAL_CORNERS)
         .map((corner) => (l: LineSettings) => patchLines(l, { spiral: { corner } })),
-      fc.constantFrom(...COMPOSITION_LINE_TYPES).map((t) => (l: LineSettings) => {
+      fc.constantFrom(...LINE_TYPES).map((t) => (l: LineSettings) => {
         if (t === 'grid') return patchLines(l, { grid: { on: !l.grid.on } })
         if (t === 'spiral') return patchLines(l, { spiral: { on: !l.spiral.on } })
+        if (t === 'edges') return patchLines(l, { edges: { on: !l.edges.on } })
         return patchLines(l, { [t]: !l[t] })
       }),
+      fc
+        .integer({ min: 1, max: 100 })
+        .map((detailPct) => (l: LineSettings) => patchLines(l, { edges: { detailPct } })),
       fc
         .integer({ min: 0, max: 0xffffff })
         .map(
@@ -436,13 +487,6 @@ describe('keys and helpers', () => {
         .integer({ min: 10, max: 100 })
         .map((opacityPct) => (l: LineSettings) => patchLines(l, { style: { opacityPct } })),
     )
-    const prints = (l: LineSettings) =>
-      JSON.stringify([
-        activeLineTypes(l),
-        l.grid.on ? [l.grid.cols, l.grid.rows] : null,
-        l.spiral.on ? l.spiral.corner : null,
-        activeLineTypes(l).length > 0 ? l.style : null,
-      ])
     fc.assert(
       fc.property(printing, change, (x, f) => {
         const y = f(x)
@@ -460,5 +504,120 @@ describe('keys and helpers', () => {
       'spiral',
       'centre',
     ])
+    expect(GUIDE_LINE_TYPES).toEqual(['edges', 'face', 'pose'])
+    expect(LINE_TYPES).toEqual([...COMPOSITION_LINE_TYPES, ...GUIDE_LINE_TYPES])
+  })
+})
+
+describe('guide settings', () => {
+  it('sanitizes the guide fields field by field', () => {
+    const s = sanitizeLines({
+      ...DEFAULT_LINES,
+      edges: { on: 1, detailPct: 140 },
+      face: 'yes',
+      pose: true,
+    } as unknown as LineSettings)
+    expect(s.edges).toEqual({ on: false, detailPct: 100 })
+    expect(s.face).toBe(false)
+    expect(s.pose).toBe(true)
+  })
+
+  it('clamps and rounds the edge detail, and takes 50 for anything that is not a number', () => {
+    const detail = (detailPct: unknown) =>
+      sanitizeLines({ ...DEFAULT_LINES, edges: { on: true, detailPct } } as unknown as LineSettings)
+        .edges.detailPct
+    expect([detail(0), detail(1), detail(100), detail(101), detail(-5)]).toEqual([
+      1, 1, 100, 100, 1,
+    ])
+    expect([detail(36.5), detail(36.4)]).toEqual([37, 36])
+    for (const bad of [Number.NaN, Number.POSITIVE_INFINITY, '70', null, undefined, true]) {
+      expect(detail(bad)).toBe(50)
+    }
+    for (const edges of [null, 'on', 7, []]) {
+      expect(sanitizeLines({ ...DEFAULT_LINES, edges } as unknown as LineSettings).edges).toEqual({
+        on: false,
+        detailPct: 50,
+      })
+    }
+  })
+
+  it('defaults to every guide off and detail 50', () => {
+    expect(DEFAULT_LINES.edges).toEqual({ on: false, detailPct: 50 })
+    expect([DEFAULT_LINES.face, DEFAULT_LINES.pose]).toEqual([false, false])
+  })
+
+  it('lists guide types after the composition types', () => {
+    const on = patchLines(DEFAULT_LINES, { pose: true, thirds: true, edges: { on: true } })
+    expect(activeLineTypes(on)).toEqual(['thirds', 'edges', 'pose'])
+    const every = patchLines(DEFAULT_LINES, {
+      face: true,
+      pose: true,
+      edges: { on: true },
+      centre: true,
+      grid: { on: true },
+    })
+    expect(activeLineTypes(every)).toEqual(['grid', 'centre', 'edges', 'face', 'pose'])
+  })
+
+  it('linesKey equals the M3 key when no guide is on', () => {
+    fc.assert(
+      fc.property(anyLines, (raw) => {
+        const s = sanitizeLines(raw)
+        const off = patchLines(s, { edges: { on: false }, face: false, pose: false })
+        expect(linesKey(off)).toBe(m3LinesKey(off))
+      }),
+    )
+  })
+
+  it('linesKey adds e<detail>, f and p in that order', () => {
+    const s = patchLines(DEFAULT_LINES, {
+      thirds: true,
+      edges: { on: true, detailPct: 37 },
+      face: true,
+      pose: true,
+    })
+    expect(linesKey(s)).toBe('t,e37,f,p|#e0457b|0.35|90')
+    expect(linesKey(patchLines(DEFAULT_LINES, { face: true }))).toBe('f|#e0457b|0.35|90')
+    expect(linesKey(patchLines(DEFAULT_LINES, { pose: true, edges: { on: true } }))).toBe(
+      'e50,p|#e0457b|0.35|90',
+    )
+  })
+
+  it('linesKey ignores the detail while the edge outline is off', () => {
+    expect(linesKey(patchLines(DEFAULT_LINES, { edges: { detailPct: 9 } }))).toBe('-')
+    expect(linesKey(patchLines(DEFAULT_LINES, { thirds: true, edges: { detailPct: 9 } }))).toBe(
+      't|#e0457b|0.35|90',
+    )
+  })
+
+  it('withoutLineTypes turns guides off and keeps the detail', () => {
+    const s = withoutLineTypes(
+      patchLines(DEFAULT_LINES, { edges: { on: true, detailPct: 80 }, face: true, pose: true }),
+    )
+    expect(s.edges).toEqual({ on: false, detailPct: 80 })
+    expect(s.face).toBe(false)
+    expect(s.pose).toBe(false)
+    expect(activeLineTypes(s)).toEqual([])
+  })
+
+  it('patches the edge outline one level deep and keeps the other guides', () => {
+    const start = patchLines(DEFAULT_LINES, { edges: { on: true, detailPct: 20 }, face: true })
+    expect(patchLines(start, { edges: { detailPct: 30 } }).edges).toEqual({
+      on: true,
+      detailPct: 30,
+    })
+    expect(patchLines(start, { edges: { on: undefined } }).edges).toEqual(start.edges)
+    expect(patchLines(start, { pose: true })).toEqual({ ...start, pose: true })
+    expect(patchLines(start, { face: undefined, pose: undefined, edges: undefined })).toEqual(start)
+  })
+
+  it('hasGuides is true only when a guide is on', () => {
+    expect(hasGuides(DEFAULT_LINES)).toBe(false)
+    expect(hasGuides(patchLines(DEFAULT_LINES, { pose: true }))).toBe(true)
+    expect(hasGuides(patchLines(DEFAULT_LINES, { face: true }))).toBe(true)
+    expect(hasGuides(patchLines(DEFAULT_LINES, { edges: { on: true } }))).toBe(true)
+    expect(hasGuides(patchLines(DEFAULT_LINES, { edges: { detailPct: 99 }, thirds: true }))).toBe(
+      false,
+    )
   })
 })

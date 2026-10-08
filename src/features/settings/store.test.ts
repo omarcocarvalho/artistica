@@ -472,6 +472,7 @@ describe('study defaults (schema v2)', () => {
 
 describe('line defaults (schema v3)', () => {
   const allOn: LineSettings = {
+    ...DEFAULT_LINES,
     grid: { on: true, cols: 3, rows: 2 },
     thirds: true,
     armature: true,

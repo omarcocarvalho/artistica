@@ -34,13 +34,17 @@ function expectNormalisedLines(lines: LineSettings): void {
   expect(Object.keys(lines).sort()).toEqual([
     'armature',
     'centre',
+    'edges',
+    'face',
     'golden',
     'grid',
+    'pose',
     'spiral',
     'style',
     'thirds',
   ])
   expect(Object.keys(lines.grid).sort()).toEqual(['cols', 'on', 'rows'])
+  expect(Object.keys(lines.edges).sort()).toEqual(['detailPct', 'on'])
   expect(Object.keys(lines.spiral).sort()).toEqual(['corner', 'on'])
   expect(Object.keys(lines.style).sort()).toEqual(['colour', 'opacityPct', 'widthMm'])
   expect(activeLineTypes(lines)).toEqual([])
@@ -121,6 +125,9 @@ describe('parseSettings', () => {
         spiral: { on: false, corner: 'bottomRight' },
         centre: false,
         style: { colour: '#112233', widthMm: 1.25, opacityPct: 40 },
+        edges: { on: false, detailPct: 50 },
+        face: false,
+        pose: false,
       },
     }
     expect(parseSettings(valid)).toEqual(valid)
@@ -557,6 +564,9 @@ describe('lineDefaults (v3)', () => {
           golden: false,
           spiral: { ...sanitized.spiral, on: false },
           centre: false,
+          edges: { ...sanitized.edges, on: false },
+          face: false,
+          pose: false,
         })
       }),
     )

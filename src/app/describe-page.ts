@@ -1,6 +1,6 @@
 import type { PageModel } from '../features/render'
 import type { ImageId } from '../shared/model/image'
-import type { CompositionLineType } from '../shared/model/lines'
+import type { LineType } from '../shared/model/lines'
 import type { StudyVersion } from '../shared/model/study'
 
 export interface TileDescription {
@@ -9,7 +9,7 @@ export interface TileDescription {
   version: StudyVersion
   widthMm: number
   heightMm: number
-  lines: readonly CompositionLineType[]
+  lines: readonly LineType[]
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10

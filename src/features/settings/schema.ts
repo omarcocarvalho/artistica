@@ -169,7 +169,7 @@ export function parseSettings(input: unknown): SettingsData {
       ...parsed,
       pageSetup,
       studyDefaults: normalizeStudyDefaults(parsed.studyDefaults),
-      lineDefaults: normalizeLineDefaults(parsed.lineDefaults),
+      lineDefaults: normalizeLineDefaults({ ...L, ...parsed.lineDefaults }),
     }
   } catch (error) {
     warnOnce(error)

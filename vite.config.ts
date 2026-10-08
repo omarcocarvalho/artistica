@@ -25,6 +25,10 @@ export default defineConfig({
       include: [
         'src/features/layout/**',
         'src/features/lines/**',
+        'src/features/lines/guides/**',
+        'src/features/lines/edges/**',
+        'src/features/lines/detect/store.ts',
+        'src/features/lines/detect/schedule.ts',
         'src/features/render/**',
         'src/features/studies/**',
         'src/shared/colour/**',
