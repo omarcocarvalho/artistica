@@ -5,6 +5,8 @@ import {
   gzipBytes,
   INITIAL_JS_LIMIT_BYTES,
   initialScriptPaths,
+  LAZY_ONLY_MARKERS,
+  lazyOnlyViolations,
 } from './bundle-budget.ts'
 
 const html = `<!doctype html><html><head>
@@ -52,5 +54,23 @@ describe('evaluateBudget', () => {
       200,
     )
     expect(r).toEqual({ totalBytes: 150, ok: true })
+  })
+})
+
+describe('lazyOnlyViolations', () => {
+  it('names each initial chunk that contains FaceLandmarker or PoseLandmarker', () => {
+    expect(LAZY_ONLY_MARKERS).toEqual(['FaceLandmarker', 'PoseLandmarker'])
+    expect(
+      lazyOnlyViolations([
+        { file: 'assets/app.js', text: 'const a = 1' },
+        { file: 'assets/vendor.js', text: 'class FaceLandmarker {}' },
+        { file: 'assets/x.js', text: 'x.PoseLandmarker.createFromOptions()' },
+      ]),
+    ).toEqual(['assets/vendor.js: FaceLandmarker', 'assets/x.js: PoseLandmarker'])
+  })
+  it('passes when no initial chunk names them', () => {
+    expect(lazyOnlyViolations([{ file: 'assets/app.js', text: 'createLandmarkEngine()' }])).toEqual(
+      [],
+    )
   })
 })
