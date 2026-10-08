@@ -19,7 +19,7 @@ Later milestones add AI lines (in the browser), polish, and translations.
 - **Everything runs in the browser.** Photos are never uploaded or persisted.
 - **Hosting:** GitHub Pages. The landing page is at `/artistica/` and the tool at `/artistica/app/`.
 - **Product spec:** [docs/spec.md](docs/spec.md). It is the source of truth.
-- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (released), M4 → `v0.4.0` (plan awaiting approval), M5 → `v0.5.0`, M6 → `v1.0.0`.
+- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (released), M4 → `v0.4.0` (in progress), M5 → `v0.5.0`, M6 → `v1.0.0`.
 
 ## Current status
 
@@ -41,7 +41,7 @@ Later milestones add AI lines (in the browser), polish, and translations.
 - **Phone memory** (M3 in `e2e/mobile-flow.spec.ts`, every line on, CI): import 1013 MB, studies 1296 MB, settled 1158 MB, export 1292 MB, against the unchanged budgets of 1500 / 1500 / 1700 MB.
 - **Release:** [#104](https://github.com/omarcocarvalho/artistica/pull/104) (`chore(master): release 0.3.0`) merged as `a9ba6da`, which created the release and deployed it to Pages.
 
-**M4 ("AI-assisted lines" → `v0.4.0`) is planned, waiting for the owner's approval.** Plan: [`2026-10-08-m4-overview.md`](docs/superpowers/plans/2026-10-08-m4-overview.md) and sub-plans A–E (guides core, edge outline, AI runtime and offline, state and render, UI and E2E): 19 tasks in 6 waves, then the final review. It has 14 owner questions plus a budget question. **Q1 blocks the runtime work:** `@mediapipe/tasks-vision` 1.0.0 and later send usage metrics to Google (`odml.pa.googleapis.com`) with no opt-out; the plan recommends pinning 0.10.35, which doesn't.
+**M4 ("AI-assisted lines" → `v0.4.0`) is approved and in progress (owner, 2026-10-08: all recommended defaults accepted; the owner supplies the face and body test photos).** Plan: [`2026-10-08-m4-overview.md`](docs/superpowers/plans/2026-10-08-m4-overview.md) and sub-plans A–E (guides core, edge outline, AI runtime and offline, state and render, UI and E2E): 19 tasks in 6 waves, then the final review. It has 14 owner questions plus a budget question. **Q1 blocks the runtime work:** `@mediapipe/tasks-vision` 1.0.0 and later send usage metrics to Google (`odml.pa.googleapis.com`) with no opt-out; the plan recommends pinning 0.10.35, which doesn't.
 
 ## Branch map
 
@@ -52,7 +52,7 @@ Later milestones add AI lines (in the browser), polish, and translations.
 
 ## Next steps (in order)
 
-1. **Owner approves the M4 plan** (`docs/superpowers/plans/2026-10-08-m4-*.md`) and answers or accepts the questions at the end of the overview. Q1 (MediaPipe version and Google's usage metrics) must be answered before task C2; the other tasks of waves 1–2 can start on approval.
+1. **Owner gate after spike C1:** if the AI runtime is too heavy for phones (the iPhone misses the memory or speed budgets), stop before C2 and C4 and decide another approach with the owner.
 2. **Run M4** subagent-driven, wave by wave, as in M3; record rulings in a new `docs/superpowers/ledgers/m4.md`.
 3. **Release v0.4.0** after the owner's real-phone sign-off (steps for any milestone):
    1. Run `gh pr view <n> --json mergeable` on the release PR until it isn't `UNKNOWN`.
