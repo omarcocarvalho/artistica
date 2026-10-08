@@ -1,23 +1,13 @@
-import type { CropRect, ImageDescriptor, ImageId, Rotation } from '../../../shared/model/image'
+import type { ImageDescriptor, ImageId, Rotation } from '../../../shared/model/image'
 import type { PageSetup } from '../../../shared/model/page-setup'
 import type { SizeMm } from '../../../shared/model/paper'
 import { tileStudyFor } from '../../../shared/model/study'
 import type { Mm } from '../../../shared/model/units'
 import type { LayoutResult, Placement, RectMm } from '../../layout/types'
+import { resolveCrop } from '../crop'
 import type { DrawTile, PageModel, StudyGroupOutline, TileLines } from '../types'
 import { cropMarksForTiles } from './crop-marks'
 import { tileLinesFor } from './tile-lines'
-
-/** `null` → the full image; otherwise clamped to the image and at least 1 px each way. Fractional values are kept as is. */
-export function resolveCrop(img: Pick<ImageDescriptor, 'pxW' | 'pxH' | 'edits'>): CropRect {
-  const c = img.edits.crop
-  if (!c) return { x: 0, y: 0, w: img.pxW, h: img.pxH }
-  const x = Math.min(Math.max(0, c.x), img.pxW - 1)
-  const y = Math.min(Math.max(0, c.y), img.pxH - 1)
-  const w = Math.min(Math.max(1, c.w), img.pxW - x)
-  const h = Math.min(Math.max(1, c.h), img.pxH - y)
-  return { x, y, w, h }
-}
 
 /** edits.rotation, plus 90° clockwise when the layout engine turned the item. */
 export function combineRotation(rotation: Rotation, turned: boolean): Rotation {

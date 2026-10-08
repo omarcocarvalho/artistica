@@ -1,5 +1,5 @@
 import type { CropRect, ImageDescriptor, Rotation } from '../../../shared/model/image'
-import { resolveCrop } from '../../render/page-model/build-page-models'
+import { resolveCrop } from '../../render/crop'
 import { orientMatrix, type PxRect } from '../../render/pixels/tile-plan'
 import type { FrameSize, PathCmd } from '../types'
 import type { SourcePoint } from './types'
