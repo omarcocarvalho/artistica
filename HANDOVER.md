@@ -134,6 +134,14 @@ The spec doesn't answer these. Nothing was changed for them.
 - **macOS has no `timeout` command.**
 - **pnpm bootstrap:** if the global `pnpm` shim fails to bootstrap the pinned pnpm version, run `corepack pnpm …`.
 
+**Service worker recovery**
+
+From E2 on, production registers a service worker (`/artistica/sw.js`, scope `/artistica/`, `src/sw/`; M4-R20). Users keep it after a deploy, so a broken one needs a way out:
+
+- Any later deploy reaches every installed worker. `sw.js` keeps its URL, is registered with `updateViaCache: 'none'` (Pages' `max-age=600` can't pin it), and the browser checks it on each navigation in scope and at least once a day. Navigations are network-first, so an online user gets the deployed HTML even while an old worker is in charge, unless the network takes longer than 5 s (C5-R1).
+- **Kill switch:** in a PR, set `serviceWorker({ killSwitch: true })` in `vite.config.ts`, merge it, then deploy (`gh workflow run deploy-pages.yml --ref master`, or the next release). The deployed `sw.js` takes over at once, deletes every `artistica-shell-*` cache (never the AI models in `artistica-ai-v1`) and unregisters itself. Open tabs fall back to the network; the next load is uncontrolled. While it is on, each app load registers and drops it again; to keep the worker off for longer, also remove the `registerServiceWorker()` call in `src/app/main.tsx`. To restore, revert the flag.
+- Check it locally with `pnpm build && pnpm preview` and a browser that already has the old worker: after one navigation, `navigator.serviceWorker.getRegistration('/artistica/')` resolves to `undefined` and `caches.keys()` lists no `artistica-shell-*`.
+
 **Process**
 
 Plans were executed with subagent-driven development: one worktree and PR per task, an independent review (often with mutation testing), fix rounds, then a squash merge.

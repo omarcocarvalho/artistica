@@ -3,11 +3,12 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { configDefaults, defineConfig } from 'vitest/config'
 import { aiAssets } from './scripts/vite-ai-assets.ts'
+import { serviceWorker } from './scripts/vite-sw.ts'
 
 // Served from https://omarcocarvalho.github.io/artistica/ (GitHub Pages project site).
 export default defineConfig({
   base: '/artistica/',
-  plugins: [react(), tailwindcss(), aiAssets()],
+  plugins: [react(), tailwindcss(), aiAssets(), serviceWorker()],
   // Workers are bundled as ES modules: new Worker(new URL('./x.worker.ts', import.meta.url), { type: 'module' }).
   worker: { format: 'es' },
   build: {
@@ -35,6 +36,7 @@ export default defineConfig({
         'src/shared/colour/**',
         'src/shared/model/lines.ts',
         'src/shared/model/study.ts',
+        'src/sw/**',
       ],
       exclude: ['**/*.test.*', '**/*.worker.ts', '**/components/**', '**/test-support/**'],
       reporter: ['text', 'html'],
