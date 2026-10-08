@@ -1,0 +1,1 @@
+export const EDGE_ANALYSIS_LONG_SIDE = 1024

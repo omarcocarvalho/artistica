@@ -34,6 +34,8 @@ export { applyAffine, cropKey, fromCrop, fromRotated, meetsCrop, sourceToFrame }
 export type { Affine } from './guides/map'
 export { edgePaths } from './guides/edge-paths'
 // --- edges (B) ---
+export { createEdgeEngine } from './edges/edge-client'
+export { EDGE_ANALYSIS_LONG_SIDE } from './edges/limits'
 // --- detect (C, D2) ---
 export {
   detectionKey,
