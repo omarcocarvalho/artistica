@@ -30,6 +30,9 @@ export type {
   SourcePath,
   SourcePoint,
 } from './guides/types'
+export { applyAffine, cropKey, fromCrop, fromRotated, meetsCrop, sourceToFrame } from './guides/map'
+export type { Affine } from './guides/map'
+export { edgePaths } from './guides/edge-paths'
 // --- edges (B) ---
 // --- detect (C, D2) ---
 // --- guides UI (E1) ---
