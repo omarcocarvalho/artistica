@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-As in the overview. E2E ports 63xx. `store.ts` selectors and `schedule.ts` are covered by the 80% gate; the scheduler's timers use injected clocks in tests.
+As in the overview. E2E ports 63xx. `store.ts` selectors and `schedule.ts` are covered by the 80% gate. The scheduler has no timers (D2 ruling): the detection timeouts belong to the engines (B3 10 s, C4 30 s), the landmark worker's idle release to C4, and the 80 ms detail debounce to E1.
 
 ## Review Focus
 
@@ -57,7 +57,7 @@ As in the overview. E2E ports 63xx. `store.ts` selectors and `schedule.ts` are c
 **Branch:** `feat/lines-detections` · **PR title:** `feat(lines): keep detections per photo and schedule them` · **Depends on:** A1, A2
 
 - [ ] **Step 1: Failing tests** `store.test.ts`:
-  - `detectionKey` table: face/pose `hash|r90`; edges `hash|full|d50` and `hash|10,1,100,50|d37`; style, flips, copies, studies and composition lines never change a key;
+  - `detectionKey` table: `face|hash|r90`, `pose|hash|r90`; edges `edges|hash|full|d50` and `edges|hash|10,1,100,50|d37` (kind prefix: overview, Contract change requests → Ruled, D2); style, flips, copies, studies and composition lines never change a key;
   - `guidesFor returns the stored results for the image's current keys, null where missing or not switched on`;
   - `twins (same content hash) share results`;
   - `guidesPending is true while a printed image's detection is downloading or running, false for done, failed and needs-download`;
@@ -105,7 +105,7 @@ As in the overview. E2E ports 63xx. `store.ts` selectors and `schedule.ts` are c
 
 ## Contract change requests
 
-_(empty)_
+D2's are ruled in the overview (Contract change requests → Ruled, D2): the kind prefix in detection keys, the `assets` port, the engine and loader types declared in D2, `bitmapFor(img, kind)`, the re-prepare before every job, and the corrected memory figure.
 
 ## Open questions for the owner
 
