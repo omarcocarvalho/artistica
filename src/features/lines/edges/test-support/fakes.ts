@@ -10,6 +10,8 @@ export function bitmapOf(rgba: Uint8ClampedArray, w: number, h: number): TestBit
     closed: 0,
     close: () => {
       b.closed++
+      b.width = 0
+      b.height = 0
     },
   }
   return b

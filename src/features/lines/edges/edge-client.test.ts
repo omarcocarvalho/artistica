@@ -224,6 +224,71 @@ describe('createEdgeEngineWith', () => {
     await expect(next).resolves.toEqual(line(0.3))
   })
 
+  it.each([
+    ['a worker', false],
+    ['the main thread', true],
+  ])('on %s, a late reply to a timed-out job never settles the next job', async (_, mainOnly) => {
+    vi.useFakeTimers()
+    const backends: FakeBackend[] = []
+    const make = (): FakeBackend => {
+      const b = backend()
+      backends.push(b)
+      return b
+    }
+    const engine = createEdgeEngineWith(
+      mainOnly
+        ? () => {
+            throw new Error('no Worker')
+          }
+        : make,
+      make,
+    )
+    const first = engine.outline(bmp(), 1).catch((e: unknown) => (e as Error).name)
+    await settle()
+    await vi.advanceTimersByTimeAsync(EDGE_TIMEOUT_MS)
+    await expect(first).resolves.toBe('EdgeTimeout')
+    let settled: unknown = 'pending'
+    const second = engine.outline(bmp(), 2)
+    second.then(
+      (v) => (settled = v),
+      (e: unknown) => (settled = e),
+    )
+    await settle()
+    const late = backends[0]?.jobs[0]
+    const next = backends.at(-1)?.jobs.at(-1)
+    expect(late?.detailPct).toBe(1)
+    expect(next?.detailPct).toBe(2)
+    late?.result.resolve(line(0.1))
+    await settle()
+    expect(settled).toBe('pending')
+    next?.result.resolve(line(0.2))
+    await expect(second).resolves.toEqual(line(0.2))
+  })
+
+  it('a worker that finishes starting after its job timed out does not replace the new worker', async () => {
+    vi.useFakeTimers()
+    const hung = deferred<undefined>()
+    const workers: FakeBackend[] = []
+    const fallback = vi.fn(() => backend())
+    const engine = createEdgeEngineWith(() => {
+      const w = backend(workers.length === 0 ? () => hung.promise : undefined)
+      workers.push(w)
+      return w
+    }, fallback)
+    const first = engine.outline(bmp(), 1).catch((e: unknown) => (e as Error).name)
+    await vi.advanceTimersByTimeAsync(EDGE_TIMEOUT_MS)
+    await expect(first).resolves.toBe('EdgeTimeout')
+    const second = engine.outline(bmp(), 2)
+    await settle()
+    hung.resolve(undefined)
+    await settle()
+    expect(fallback).not.toHaveBeenCalled()
+    expect(workers[1]?.disposed).toBe(0)
+    expect(workers[1]?.jobs.map((j) => j.detailPct)).toEqual([2])
+    workers[1]?.jobs[0]?.result.resolve(line(0.2))
+    await expect(second).resolves.toEqual(line(0.2))
+  })
+
   it('a finished job leaves no timer behind', async () => {
     vi.useFakeTimers()
     const worker = backend()

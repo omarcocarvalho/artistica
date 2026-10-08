@@ -4,7 +4,7 @@ import { rdp } from './simplify'
 import { traceChains } from './trace'
 
 export const MAX_EDGE_VERTICES = 4000
-export const EDGE_ANALYSIS_LONG_SIDE = 1024
+export { EDGE_ANALYSIS_LONG_SIDE } from './limits'
 
 const RDP_EPSILON_PX = 1
 

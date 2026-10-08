@@ -132,7 +132,6 @@ export function createEdgeEngineWith(
     },
     dispose() {
       disposed = true
-      generation++
       dropWorker()
     },
   }
