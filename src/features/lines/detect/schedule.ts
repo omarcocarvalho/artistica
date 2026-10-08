@@ -1,3 +1,4 @@
+import type { AiAsset, AiAssets } from 'virtual:ai-assets'
 import type { ImageDescriptor, ImageId } from '../../../shared/model/image'
 import { resolveCrop } from '../../render/crop'
 import { fromCrop, fromRotated } from '../guides/map'
@@ -33,18 +34,7 @@ export interface LandmarkEngine {
   dispose(): void
 }
 
-export interface AiAsset {
-  readonly url: string
-  readonly bytes: number
-  readonly sha256: string
-}
-
-export interface AiAssets {
-  readonly runtimeLoader: AiAsset
-  readonly runtimeWasm: AiAsset
-  readonly face: AiAsset
-  readonly pose: AiAsset
-}
+export type { AiAsset, AiAssets }
 
 export interface Progress {
   readonly loaded: number
