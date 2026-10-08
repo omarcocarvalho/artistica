@@ -127,7 +127,7 @@ function suppress(mag2: Int32Array, dir: Uint8Array, w: number, h: number): Uint
 }
 
 /** `high`: the smallest magnitude among the strongest `keepShare` of survivors, at least MIN_STRONG_MAG2. */
-function thresholds(
+export function edgeThresholds(
   mag2: Int32Array,
   keep: Uint8Array,
   keepShare: number,
@@ -150,7 +150,7 @@ export function cannyEdges(grey: GreyImage, params: EdgeParams): Uint8Array {
   for (let p = 0; p < params.blurPasses; p++) g = binomialBlur(g, w, h)
   const { mag2, dir } = sobel(g, w, h)
   const keep = suppress(mag2, dir, w, h)
-  const { high, low, survivors } = thresholds(mag2, keep, params.keepShare)
+  const { high, low, survivors } = edgeThresholds(mag2, keep, params.keepShare)
 
   const EDGE = 2
   const stack = new Int32Array(survivors)

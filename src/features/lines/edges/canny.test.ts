@@ -2,7 +2,14 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
-import { binomialBlur, cannyEdges, gradientStep, toGrey } from './canny'
+import {
+  MIN_STRONG_MAG2,
+  binomialBlur,
+  cannyEdges,
+  edgeThresholds,
+  gradientStep,
+  toGrey,
+} from './canny'
 import { edgeParams } from './detail'
 import {
   countOnes,
@@ -16,7 +23,7 @@ import {
   transposeRgba,
 } from './test-support/synthetic'
 
-const DETAILS = [1, 20, 33, 34, 50, 66, 67, 99, 100]
+const DETAILS = [1, 20, 34, 50, 67, 99, 100]
 
 const edgesOf = (img: Uint8ClampedArray, w: number, h: number, detail: number): Uint8Array =>
   cannyEdges(toGrey(img, w, h), edgeParams(detail))
@@ -256,30 +263,26 @@ describe('cannyEdges (M4-R15)', () => {
     }
   })
 
-  it('higher detail never gives fewer edge pixels at the same blur', () => {
-    const levels = [
-      [1, 33],
-      [34, 66],
-      [67, 99],
-    ] as const
+  it('higher detail never gives fewer edge pixels', () => {
+    const [w, h] = [48, 40]
     fc.assert(
-      fc.property(
-        fc.integer({ min: 1, max: 2 ** 31 - 1 }),
-        fc.constantFrom(...levels),
-        fc.integer({ min: 0, max: 32 }),
-        fc.integer({ min: 0, max: 32 }),
-        (seed, [first, last], a, b) => {
-          const [w, h] = [48, 40]
-          const img = noise(w, h, seed)
-          const lo = Math.min(first + a, first + b, last)
-          const hi = Math.min(Math.max(first + a, first + b), last)
-          expect(edgeParams(lo).blurPasses).toBe(edgeParams(hi).blurPasses)
-          expect(countOnes(edgesOf(img, w, h, hi))).toBeGreaterThanOrEqual(
-            countOnes(edgesOf(img, w, h, lo)),
-          )
-        },
-      ),
-      { numRuns: 150 },
+      fc.property(fc.integer({ min: 1, max: 2 ** 31 - 1 }), (seed) => {
+        const grey = toGrey(noise(w, h, seed), w, h)
+        let prev = cannyEdges(grey, edgeParams(1))
+        for (let d = 2; d <= 100; d++) {
+          const next = cannyEdges(grey, edgeParams(d))
+          expect(
+            countOnes(next),
+            `seed ${String(seed)}, detail ${String(d)}`,
+          ).toBeGreaterThanOrEqual(countOnes(prev))
+          expect(
+            prev.every((v, i) => !v || next[i] === 1),
+            `seed ${String(seed)}, detail ${String(d)}: an edge pixel was lost`,
+          ).toBe(true)
+          prev = next
+        }
+      }),
+      { numRuns: 60 },
     )
   })
 
@@ -324,7 +327,67 @@ describe('cannyEdges (M4-R15)', () => {
       return pixels(e, w).filter(([x, y]) => x >= 40 && x < w - 2 && (y === 15 || y === 16)).length
     }
     expect(tail(45)).toBe(w - 2 - 40)
+    expect(tail(40)).toBe(w - 2 - 40)
+    expect(tail(39)).toBe(0)
     expect(tail(38)).toBe(0)
+  })
+
+  it('takes high from the strongest max(1, ⌊n · keepShare⌋) survivors, floored, and low = ⌊high · 4/25⌋', () => {
+    const mags = [9000, 2000, 7000, 0, 5000, 3000, 99999, 4000, 6000, 8000, 1500]
+    const keep = Uint8Array.from(mags, (m, i) => (i === 6 || m === 0 ? 0 : 1))
+    const at = (keepShare: number) => edgeThresholds(Int32Array.from(mags), keep, keepShare)
+    expect(at(0.2)).toEqual({ high: 9000, low: 1440, survivors: 9 })
+    expect(at(0.25)).toEqual({ high: 8000, low: 1280, survivors: 9 })
+    expect(at(0.5)).toEqual({ high: 6000, low: 960, survivors: 9 })
+    expect(at(0.03).high).toBe(9000)
+    expect(at(1).high).toBe(1500)
+    const many = new Int32Array(1000).map((_, i) => 2000 + i)
+    const all = new Uint8Array(1000).fill(1)
+    expect(edgeThresholds(many, all, 0.0295).high).toBe(2000 + 1000 - 30)
+    expect(edgeThresholds(Int32Array.from([10, 20]), Uint8Array.from([1, 1]), 1)).toEqual({
+      high: MIN_STRONG_MAG2,
+      low: Math.floor((MIN_STRONG_MAG2 * 4) / 25),
+      survivors: 2,
+    })
+  })
+
+  it('a step needs a Sobel magnitude of 32 to seed an edge: contrast 8 does, 7 does not', () => {
+    const [w, h] = [24, 16]
+    const step = (c: number) =>
+      countOnes(
+        cannyEdges(
+          toGrey(
+            rgba(w, h, (x) => (x < 12 ? [0, 0, 0] : [c, c, c])),
+            w,
+            h,
+          ),
+          {
+            blurPasses: 0,
+            keepShare: 1,
+            minChainPx: 6,
+          },
+        ),
+      )
+    expect(step(8)).toBe(h)
+    expect(step(7)).toBe(0)
+  })
+
+  it('keeps an edge on the outermost column: outside the image counts as magnitude 0', () => {
+    const [w, h] = [12, 10]
+    const e = cannyEdges(
+      toGrey(
+        rgba(w, h, (x) => (x === 0 ? [0, 0, 0] : [200, 200, 200])),
+        w,
+        h,
+      ),
+      {
+        blurPasses: 0,
+        keepShare: 1,
+        minChainPx: 6,
+      },
+    )
+    expect(pixels(e, w).every(([x]) => x === 0)).toBe(true)
+    expect(countOnes(e)).toBe(h)
   })
 
   it('the same input gives the same output', () => {
@@ -349,10 +412,18 @@ describe('cannyEdges (M4-R15)', () => {
       ],
     ]
     for (const [img, w, h] of cases) {
+      const grey = toGrey(img, w, h)
+      const greyT = toGrey(transposeRgba(img, w, h), h, w)
       for (const d of DETAILS) {
-        const e = edgesOf(img, w, h, d)
-        expect(countOnes(e)).toBeGreaterThan(0)
-        expect(edgesOf(transposeRgba(img, w, h), h, w, d)).toEqual(transposeMap(e, w, h))
+        for (const blurPasses of [0, 1, 2, 3]) {
+          const params = { ...edgeParams(d), blurPasses }
+          const e = cannyEdges(grey, params)
+          expect(countOnes(e)).toBeGreaterThan(0)
+          expect(
+            cannyEdges(greyT, params),
+            `detail ${String(d)}, blur ${String(blurPasses)}`,
+          ).toEqual(transposeMap(e, w, h))
+        }
       }
     }
   })
