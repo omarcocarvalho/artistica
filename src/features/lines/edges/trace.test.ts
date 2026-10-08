@@ -158,6 +158,25 @@ describe('traceChains (M4-R15)', () => {
     ])
   })
 
+  it('three pixels that all touch close; two do not', () => {
+    const three = edgeMap(['##.', '#..'])
+    expect(traceChains(three.e, three.w, three.h).map((c) => xy(c, three.w))).toEqual([
+      [
+        [0, 0],
+        [1, 0],
+        [0, 1],
+        [0, 0],
+      ],
+    ])
+    const two = edgeMap(['.#', '#.'])
+    expect(traceChains(two.e, two.w, two.h).map((c) => xy(c, two.w))).toEqual([
+      [
+        [1, 0],
+        [0, 1],
+      ],
+    ])
+  })
+
   it('an empty map gives no chains and a single pixel gives a one-point chain', () => {
     expect(traceChains(new Uint8Array(12), 4, 3)).toEqual([])
     const one = new Uint8Array(12)

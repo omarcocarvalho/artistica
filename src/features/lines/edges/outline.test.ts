@@ -6,7 +6,7 @@ import { cannyEdges, toGrey } from './canny'
 import { edgeParams } from './detail'
 import { EDGE_ANALYSIS_LONG_SIDE, MAX_EDGE_VERTICES, edgeOutline, outlineOfEdges } from './outline'
 import { rdp } from './simplify'
-import { noise, stillLife } from './test-support/synthetic'
+import { noise, square, stillLife } from './test-support/synthetic'
 import { traceChains } from './trace'
 
 const HEAVY = { timeout: 11_000 }
@@ -68,6 +68,10 @@ describe('outlineOfEdges (M4-R16)', () => {
     expect(kept(6)).toEqual([ring, arch])
     expect(kept(8)).toEqual([ring])
     expect(kept(9)).toEqual([])
+
+    const dot = edgeMap(['...', '.#.', '...'])
+    expect(outlineOfEdges(dot.e, dot.w, dot.h, 1)).toEqual([[{ x: 0.5, y: 0.5 }]])
+    expect(outlineOfEdges(dot.e, dot.w, dot.h, 2)).toEqual([])
   })
 
   it('keeps chains longest first, ties by first point, while they fit the budget', () => {
@@ -162,6 +166,18 @@ describe('edgeOutline (M4-R15, M4-R16)', () => {
       ),
       { numRuns: 150 },
     )
+  })
+
+  it("drops chains shorter than the detail's minChainPx", () => {
+    const [w, h] = [24, 20]
+    const small = square(w, h, 8, 8, 13, 13)
+    const ringPx = pixelCount(
+      traceChains(cannyEdges(toGrey(small, w, h), edgeParams(50)), w, h)[0] ?? new Int32Array(),
+    )
+    expect(ringPx).toBeGreaterThanOrEqual(edgeParams(100).minChainPx)
+    expect(ringPx).toBeLessThan(edgeParams(50).minChainPx)
+    expect(edgeOutline(small, w, h, 50)).toEqual([])
+    expect(edgeOutline(small, w, h, 100)).toHaveLength(1)
   })
 
   it('on the still life, more detail gives more kept vertices', () => {
