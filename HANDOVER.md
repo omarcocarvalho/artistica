@@ -19,7 +19,7 @@ Later milestones add AI lines (in the browser), polish, and translations.
 - **Everything runs in the browser.** Photos are never uploaded or persisted.
 - **Hosting:** GitHub Pages. The landing page is at `/artistica/` and the tool at `/artistica/app/`.
 - **Product spec:** [docs/spec.md](docs/spec.md). It is the source of truth.
-- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (built, awaiting sign-off), M4–M5 → `v0.4.0`–`v0.5.0`, M6 → `v1.0.0`.
+- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (released), M4 → `v0.4.0` (in progress), M5 → `v0.5.0`, M6 → `v1.0.0`.
 
 ## Current status
 
@@ -35,11 +35,13 @@ Later milestones add AI lines (in the browser), polish, and translations.
 
 **Release:** M2 is released as [`v0.2.0`](https://github.com/omarcocarvalho/artistica/releases/tag/v0.2.0): release PR [#80](https://github.com/omarcocarvalho/artistica/pull/80) merged as `296f15d` on 2026-10-07. The M2 sign-off and the owner's answers are recorded on #80 and in the M2 ledger.
 
-**M3 ("composition lines") is built and reviewed, waiting for the owner's real-iPhone sign-off.** Plan: [`2026-10-07-m3-overview.md`](docs/superpowers/plans/2026-10-07-m3-overview.md) and sub-plans A–D, approved by the owner on 2026-10-07 with every recommended default (PR #102). All 13 tasks are merged (#103, #105–#117), then the milestone-wide final review in three parts; its fixes are in #118 (keyboard access to the line colour in WebKit, drafts kept with their image, apply-to-all guarded in the store while importing), merged as `bd3b0b2`. The always-open phone Lines section (owner ruling D1-R1) is #120. The full record — per-task review findings, rulings, deferred items and the owner questions — is in [`docs/superpowers/ledgers/m3.md`](docs/superpowers/ledgers/m3.md).
+**M3 ("composition lines") is done, signed off by the owner on the iPhone, and released as [`v0.3.0`](https://github.com/omarcocarvalho/artistica/releases/tag/v0.3.0)** (release PR #104 merged as `a9ba6da` on 2026-10-08). Plan: [`2026-10-07-m3-overview.md`](docs/superpowers/plans/2026-10-07-m3-overview.md) and sub-plans A–D, approved by the owner on 2026-10-07 with every recommended default (PR #102). All 13 tasks are merged (#103, #105–#117), then the milestone-wide final review in three parts; its fixes are in #118 (keyboard access to the line colour in WebKit, drafts kept with their image, apply-to-all guarded in the store while importing), merged as `bd3b0b2`. The always-open phone Lines section (owner ruling D1-R1) is #120. The full record — per-task review findings, rulings, deferred items and the owner questions — is in [`docs/superpowers/ledgers/m3.md`](docs/superpowers/ledgers/m3.md).
 
 - **Exit criterion** ("the lines in the PDF match the preview exactly and stay sharp when zoomed"): pinned by E2E test L-X1 in `e2e/lines.spec.ts` on chromium, firefox and webkit — every line a stroked vector path whose geometry equals the pure geometry within 0.01 mm, image XObjects byte-identical with lines on and off, and the preview showing the line colour along every PDF path.
 - **Phone memory** (M3 in `e2e/mobile-flow.spec.ts`, every line on, CI): import 1013 MB, studies 1296 MB, settled 1158 MB, export 1292 MB, against the unchanged budgets of 1500 / 1500 / 1700 MB.
-- **Release PR:** [#104](https://github.com/omarcocarvalho/artistica/pull/104) (`chore(master): release 0.3.0`). Merge it only after the owner signs off.
+- **Release:** [#104](https://github.com/omarcocarvalho/artistica/pull/104) (`chore(master): release 0.3.0`) merged as `a9ba6da`, which created the release and deployed it to Pages.
+
+**M4 ("AI-assisted lines" → `v0.4.0`) is approved and in progress (owner, 2026-10-08: all recommended defaults accepted; the owner supplies the face and body test photos).** Plan: [`2026-10-08-m4-overview.md`](docs/superpowers/plans/2026-10-08-m4-overview.md) and sub-plans A–E (guides core, edge outline, AI runtime and offline, state and render, UI and E2E): 19 tasks in 6 waves, then the final review. It has 14 owner questions plus a budget question. **Q1 blocks the runtime work:** `@mediapipe/tasks-vision` 1.0.0 and later send usage metrics to Google (`odml.pa.googleapis.com`) with no opt-out; the plan recommends pinning 0.10.35, which doesn't.
 
 ## Branch map
 
@@ -50,12 +52,12 @@ Later milestones add AI lines (in the browser), polish, and translations.
 
 ## Next steps (in order)
 
-1. **Owner signs off M3** on the iPhone, with the checklist in the M3 overview ("M3 sign-off checklist"), once #120 (the always-open phone Lines section, ruling D1-R1) is merged. Record the device, OS version, export time and page count on #104.
-2. **Release v0.3.0** from release PR #104 (steps for any milestone):
-   1. Run `gh pr view 104 --json mergeable` until it isn't `UNKNOWN`.
-   2. Close and reopen #104 and wait for the checks to pass.
-   3. Run `gh pr merge 104 --squash` from the main checkout. This creates the release and deploys to Pages.
-3. **Plan M4** (AI lines) in `docs/superpowers/plans/`, for the owner's approval before any M4 code.
+1. **Owner gate after spike C1:** if the AI runtime is too heavy for phones (the iPhone misses the memory or speed budgets), stop before C2 and C4 and decide another approach with the owner.
+2. **Run M4** subagent-driven, wave by wave, as in M3; record rulings in a new `docs/superpowers/ledgers/m4.md`.
+3. **Release v0.4.0** after the owner's real-phone sign-off (steps for any milestone):
+   1. Run `gh pr view <n> --json mergeable` on the release PR until it isn't `UNKNOWN`.
+   2. Close and reopen it and wait for the checks to pass.
+   3. Run `gh pr merge <n> --squash` from the main checkout. This creates the release and deploys to Pages.
 
 ## Owner answers from M2 (2026-10-07)
 
@@ -210,6 +212,6 @@ Only English ships until M6, so these don't show yet:
 - Live site: https://omarcocarvalho.github.io/artistica/
 - Releases: https://github.com/omarcocarvalho/artistica/releases
 - Spec: [docs/spec.md](docs/spec.md)
-- Plans: [docs/superpowers/plans/](docs/superpowers/plans/) — M1 starts at `2026-10-03-m1-overview.md`, M2 at `2026-10-07-m2-overview.md`, M3 at `2026-10-07-m3-overview.md`
+- Plans: [docs/superpowers/plans/](docs/superpowers/plans/) — M1 starts at `2026-10-03-m1-overview.md`, M2 at `2026-10-07-m2-overview.md`, M3 at `2026-10-07-m3-overview.md`, M4 at `2026-10-08-m4-overview.md`
 - Execution ledgers (progress, rulings, deferred minors per task): [docs/superpowers/ledgers/](docs/superpowers/ledgers/)
 - Design mockups: [design/](design/) (open `design/index.html`)
