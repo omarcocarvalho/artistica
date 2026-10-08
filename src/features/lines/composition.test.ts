@@ -25,6 +25,15 @@ describe('compositionPaths', () => {
     expect(compositionPaths(DEFAULT_LINES, frame)).toEqual([])
   })
 
+  it('draws composition types only, whatever guides are on', () => {
+    const guides = patchLines(DEFAULT_LINES, { edges: { on: true }, face: true, pose: true })
+    expect(compositionPaths(guides, frame)).toEqual([])
+    const both = patchLines(guides, { thirds: true })
+    expect(compositionPaths(both, frame)).toEqual(
+      compositionPaths(patchLines(DEFAULT_LINES, { thirds: true }), frame),
+    )
+  })
+
   it('emits active types in canonical order, centre lines dashed and nothing else', () => {
     const paths = compositionPaths(everyType, frame)
     expect(paths.map((p) => p.type)).toEqual([

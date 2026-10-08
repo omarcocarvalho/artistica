@@ -5,7 +5,10 @@
     "armature": "Diagonals & armature",
     "golden": "Golden ratio",
     "spiral": "Golden spiral",
-    "centre": "Centre lines"
+    "centre": "Centre lines",
+    "edges": "Edge outline",
+    "face": "Face construction",
+    "pose": "Body pose"
   },
   "corner": {
     "topLeft": "Top left",

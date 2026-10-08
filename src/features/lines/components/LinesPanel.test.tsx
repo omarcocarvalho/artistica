@@ -359,6 +359,7 @@ describe('LinesPanel', () => {
     it('copies everything and announces how many images changed', async () => {
       const user = userEvent.setup()
       const mine: LineSettings = {
+        ...DEFAULT_LINES,
         grid: { on: true, cols: 3, rows: 3 },
         thirds: true,
         armature: false,
