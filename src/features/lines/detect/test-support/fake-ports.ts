@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import type { ImageId } from '../../../../shared/model/image'
+import type { ImageDescriptor, ImageId } from '../../../../shared/model/image'
 import type {
   AiAsset,
   AiAssets,
@@ -34,9 +34,11 @@ export class FakeBitmap {
   closed = false
   readonly imageId: ImageId
   readonly kind: GuideKind
-  constructor(imageId: ImageId, kind: GuideKind) {
-    this.imageId = imageId
+  readonly rotation: number
+  constructor(img: ImageDescriptor, kind: GuideKind) {
+    this.imageId = img.id
     this.kind = kind
+    this.rotation = img.edits.rotation
   }
   close(): void {
     this.closed = true
@@ -170,8 +172,8 @@ export function fakePorts(options: { cached?: readonly AiModel[]; manual?: boole
   }
 
   const bitmaps: FakeBitmap[] = []
-  const bitmapFor = vi.fn((imageId: ImageId, kind: GuideKind) => {
-    const b = new FakeBitmap(imageId, kind)
+  const bitmapFor = vi.fn((img: ImageDescriptor, kind: GuideKind) => {
+    const b = new FakeBitmap(img, kind)
     bitmaps.push(b)
     return Promise.resolve(b as unknown as ImageBitmap)
   })
@@ -185,8 +187,10 @@ export function fakePorts(options: { cached?: readonly AiModel[]; manual?: boole
       prepare: vi.fn((...args: Parameters<LandmarkEngine['prepare']>) => {
         const [model] = args
         prepareCalls.push(args)
-        log.push(`prepare ${model}`)
-        engine.prepared.push(model)
+        if (!engine.prepared.includes(model)) {
+          log.push(`prepare ${model}`)
+          engine.prepared.push(model)
+        }
         return Promise.resolve()
       }),
       detectFaces: vi.fn((b: ImageBitmap) => run('face', asFake(b), () => out.faces(asFake(b)))),

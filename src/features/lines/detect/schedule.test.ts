@@ -16,7 +16,7 @@ import {
   INITIAL_DETECTIONS,
   useDetections,
 } from './store'
-import { ASSETS, deferred, fakePorts, flush } from './test-support/fake-ports'
+import { ASSETS, type Deferred, deferred, fakePorts, flush } from './test-support/fake-ports'
 
 function img(
   name: string,
@@ -332,6 +332,32 @@ describe('downloads', () => {
     expect(status(detectionKey('face', a))).toEqual({ state: 'needs-download', bytes: 14_000 })
   })
 
+  it('after an aborted download, the box asks only for what is still missing', async () => {
+    const h = fakePorts()
+    h.loadImpl.current = (asset, _progress, signal) => {
+      if (asset !== ASSETS.face) {
+        h.cachedUrls.add(asset.url)
+        return Promise.resolve(new ArrayBuffer(8))
+      }
+      return new Promise((_, reject) => {
+        signal?.addEventListener('abort', () => {
+          reject(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+        })
+      })
+    }
+    const s = start(h.ports)
+    const a = img('a', FACE)
+    s.sync([a])
+    await flush()
+    s.download('face')
+    await flush()
+    s.sync([img('a')])
+    await flush()
+    s.sync([a])
+    await flush()
+    expect(status(detectionKey('face', a))).toEqual({ state: 'needs-download', bytes: 3_000 })
+  })
+
   it('download is ignored while the model downloads or once it is cached', async () => {
     const h = fakePorts({ cached: ['face'] })
     const s = start(h.ports)
@@ -442,8 +468,8 @@ describe('jobs', () => {
     s.sync([a])
     await flush()
     expect(h.bitmapFor.mock.calls).toEqual([
-      [a.id, 'face'],
-      [a.id, 'pose'],
+      [a, 'face'],
+      [a, 'pose'],
     ])
     const faces = result(detectionKey('face', a)) as FaceLandmarks[]
     expect(faces[0]?.points[0]?.x).toBeCloseTo(0.1, 12)
@@ -458,7 +484,7 @@ describe('jobs', () => {
     const a = img('a', EDGES(37), { crop: { x: 100, y: 50, w: 200, h: 100 }, rotation: 270 })
     s.sync([a])
     await flush()
-    expect(h.bitmapFor.mock.calls).toEqual([[a.id, 'edges']])
+    expect(h.bitmapFor.mock.calls).toEqual([[a, 'edges']])
     expect(h.log).toContain('detail 37')
     const outline = result(detectionKey('edges', a)) as EdgeOutline
     expect(outline.polylines).toEqual([
@@ -480,6 +506,42 @@ describe('jobs', () => {
     await flush()
     const outline = result(detectionKey('edges', a)) as EdgeOutline
     expect(outline.polylines[0]?.[1]).toEqual({ x: 0.95, y: 0.1 })
+  })
+
+  it('a rotation changed while a face job runs stores the old key’s result under the old key, mapped with the old rotation', async () => {
+    const h = fakePorts({ cached: ['face'], manual: true })
+    const s = start(h.ports)
+    const a0 = img('a', FACE)
+    const a90 = { ...a0, edits: { ...a0.edits, rotation: 90 as const } }
+    s.sync([a0])
+    await flush()
+    expect(h.pending.map((j) => j.bitmap.rotation)).toEqual([0])
+    s.sync([a90])
+    await flush()
+    h.pending.shift()?.done.resolve([{ points: [{ x: 0.25, y: 0.1 }] }])
+    await flush()
+    expect(result(detectionKey('face', a0))).toEqual([{ points: [{ x: 0.25, y: 0.1 }] }])
+    expect(h.pending.map((j) => j.bitmap.rotation)).toEqual([90])
+    expect(result(detectionKey('face', a90))).toBeUndefined()
+    h.pending.shift()?.done.resolve([{ points: [{ x: 0.25, y: 0.1 }] }])
+    await flush()
+    expect(result(detectionKey('face', a90))).toEqual([
+      { points: [fromRotated({ x: 0.25, y: 0.1 }, 90)] },
+    ])
+    expect(h.bitmapFor.mock.calls.map(([d, kind]) => [d.edits.rotation, kind])).toEqual([
+      [0, 'face'],
+      [90, 'face'],
+    ])
+  })
+
+  it('a bitmap is made from the descriptor its key came from, even if the image changes before sync', async () => {
+    const h = fakePorts({ cached: ['face'] })
+    const s = start(h.ports)
+    const a0 = img('a', FACE)
+    s.sync([a0])
+    await flush()
+    const [call] = h.bitmapFor.mock.calls
+    expect(call?.[0]).toBe(a0)
   })
 
   it('a timeout or engine error sets failed: error for that key only', async () => {
@@ -700,7 +762,175 @@ describe('jobs', () => {
     s.sync([a, twin])
     h.pending.shift()?.done.resolve([])
     await flush()
-    expect(h.bitmapFor.mock.calls.map(([id]) => id)).toEqual(['a', 'b'])
+    expect(h.bitmapFor.mock.calls.map(([d]) => d.id)).toEqual(['a', 'b'])
+  })
+})
+
+describe('one landmarker at a time (M4-R5a)', () => {
+  function gatedPrepare(h: ReturnType<typeof fakePorts>) {
+    const gates: { model: string; gate: Deferred<undefined> }[] = []
+    const make = h.landmarks.getMockImplementation()
+    if (!make) throw new Error('no landmark factory')
+    h.landmarks.mockImplementation(() => {
+      const engine = make()
+      const prepare = engine.prepare.bind(engine)
+      engine.prepare = (...args) => {
+        const gate = deferred<undefined>()
+        gates.push({ model: args[0], gate })
+        return prepare(...args).then(async () => {
+          await gate.promise
+        })
+      }
+      return engine
+    })
+    return gates
+  }
+
+  const live = (h: ReturnType<typeof fakePorts>) =>
+    h.landmarkEngines.filter((e) => !e.disposed).map((e) => e.prepared.join(','))
+
+  it('a face job cancelled while its landmarker is prepared, then a pose job: face is closed before pose is created', async () => {
+    const h = fakePorts({ cached: ['face', 'pose'], manual: true })
+    const gates = gatedPrepare(h)
+    const s = start(h.ports)
+    const a = img('a', FACE)
+    const p = img('p', POSE)
+    s.sync([a, p])
+    await flush()
+    expect(gates.map((g) => g.model)).toEqual(['face'])
+    s.sync([img('a'), p])
+    gates[0]?.gate.resolve(undefined)
+    await flush()
+    expect(h.log.filter((l) => l.startsWith('detect'))).toEqual([])
+    expect(gates.map((g) => g.model)).toEqual(['face', 'pose'])
+    expect(live(h)).toEqual(['pose'])
+    gates[1]?.gate.resolve(undefined)
+    await flush()
+    h.pending.shift()?.done.resolve([])
+    await flush()
+    expect(h.log.filter((l) => /^(prepare|dispose|detect)/.test(l))).toEqual([
+      'prepare face',
+      'dispose face',
+      'prepare pose',
+      'detect pose p',
+    ])
+    expect(h.stats().maxLiveLandmarkEngines).toBe(1)
+    expect(status(detectionKey('face', a))).toBeUndefined()
+  })
+
+  it('every job prepares the loaded landmarker again with the same bytes, so the engine can restart after its idle release', async () => {
+    const h = fakePorts({ cached: ['face'] })
+    const s = start(h.ports)
+    s.sync([img('a', FACE), img('b', FACE), img('c', FACE)])
+    await flush()
+    expect(h.landmarks).toHaveBeenCalledTimes(1)
+    expect(h.loader.loadAiAsset).toHaveBeenCalledTimes(3)
+    expect(h.prepareCalls).toHaveLength(3)
+    const [first] = h.prepareCalls
+    for (const call of h.prepareCalls) {
+      expect(call[0]).toBe('face')
+      expect(call[1].loader).toBe(first?.[1].loader)
+      expect(call[1].wasm).toBe(first?.[1].wasm)
+      expect(call[2]).toBe(first?.[2])
+    }
+  })
+
+  it('a landmarker that fails to prepare again is closed, and the next job loads a new one', async () => {
+    const h = fakePorts({ cached: ['face'] })
+    const s = start(h.ports)
+    const a = img('a', FACE)
+    s.sync([a])
+    await flush()
+    const engine = h.landmarkEngines[0]
+    if (!engine) throw new Error('no engine')
+    vi.spyOn(engine, 'prepare').mockRejectedValueOnce(new Error('worker restart failed'))
+    const b = img('b', FACE)
+    s.sync([a, b])
+    await flush()
+    expect(status(detectionKey('face', b))).toEqual({ state: 'failed', reason: 'error' })
+    expect(engine.disposed).toBe(true)
+    const c = img('c', FACE)
+    s.sync([a, b, c])
+    await flush()
+    expect(status(detectionKey('face', c))).toEqual({ state: 'done', found: 1 })
+    expect(h.landmarks).toHaveBeenCalledTimes(2)
+    expect(h.stats().maxLiveLandmarkEngines).toBe(1)
+  })
+
+  it('a face landmarker that fails to prepare is closed before the pose one is created', async () => {
+    const h = fakePorts({ cached: ['face', 'pose'], manual: true })
+    const gates = gatedPrepare(h)
+    const s = start(h.ports)
+    const a = img('a', FACE)
+    const p = img('p', POSE)
+    s.sync([a, p])
+    await flush()
+    gates[0]?.gate.reject(new Error('wasm'))
+    await flush()
+    expect(status(detectionKey('face', a))).toEqual({ state: 'failed', reason: 'error' })
+    expect(live(h)).toEqual(['pose'])
+    expect(h.landmarkEngines[0]?.disposed).toBe(true)
+    expect(h.stats().maxLiveLandmarkEngines).toBe(1)
+  })
+
+  it('a face detection that fails mid-flight, then a pose job: face is closed before pose is created', async () => {
+    const h = fakePorts({ cached: ['face', 'pose'], manual: true })
+    const s = start(h.ports)
+    const a = img('a', FACE)
+    const p = img('p', POSE)
+    s.sync([a, p])
+    await flush()
+    h.pending.shift()?.done.reject(Object.assign(new Error('slow'), { name: 'LandmarkTimeout' }))
+    await flush()
+    expect(status(detectionKey('face', a))).toEqual({ state: 'failed', reason: 'error' })
+    expect(h.log.filter((l) => /^(prepare|dispose)/.test(l))).toEqual([
+      'prepare face',
+      'dispose face',
+      'prepare pose',
+    ])
+    expect(live(h)).toEqual(['pose'])
+    expect(h.stats().maxLiveLandmarkEngines).toBe(1)
+  })
+
+  it('a pose download that overlaps a face detection creates no landmarker; pose waits for the face job and replaces it', async () => {
+    const h = fakePorts({ cached: ['face'], manual: true })
+    const s = start(h.ports)
+    const a = img('a', FACE)
+    const p = img('p', POSE)
+    s.sync([a, p])
+    await flush()
+    expect(status(detectionKey('pose', p))).toEqual({ state: 'needs-download', bytes: 9_000 })
+    s.download('pose')
+    await flush()
+    expect(useDetections.getState().models.pose).toBe('cached')
+    expect(h.landmarks).toHaveBeenCalledTimes(1)
+    expect(live(h)).toEqual(['face'])
+    expect(status(detectionKey('pose', p))).toEqual({ state: 'running' })
+    h.pending.shift()?.done.resolve([])
+    await flush()
+    h.pending.shift()?.done.resolve([])
+    await flush()
+    expect(h.log.filter((l) => /^(prepare|dispose|detect)/.test(l))).toEqual([
+      'prepare face',
+      'detect face a',
+      'dispose face',
+      'prepare pose',
+      'detect pose p',
+    ])
+    expect(h.stats().maxLiveLandmarkEngines).toBe(1)
+  })
+
+  it('dispose while a landmarker is prepared closes it once ready and creates no other', async () => {
+    const h = fakePorts({ cached: ['face', 'pose'], manual: true })
+    const gates = gatedPrepare(h)
+    const s = start(h.ports)
+    s.sync([img('a', FACE), img('p', POSE)])
+    await flush()
+    s.dispose()
+    gates[0]?.gate.resolve(undefined)
+    await flush()
+    expect(live(h)).toEqual([])
+    expect(h.landmarks).toHaveBeenCalledTimes(1)
   })
 })
 

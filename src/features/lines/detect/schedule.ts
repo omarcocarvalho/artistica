@@ -66,8 +66,8 @@ export interface DetectionPorts {
   readonly landmarks: () => LandmarkEngine
   readonly loader: AiLoader
   readonly assets: AiAssets
-  /** The image's preview rotated (face, pose) or cropped and scaled (edges); the caller takes ownership. */
-  readonly bitmapFor: (imageId: ImageId, kind: GuideKind) => Promise<ImageBitmap>
+  /** The preview of `img.id` rotated by `img.edits.rotation` (face, pose), or cropped by `resolveCrop(img)` and scaled (edges), from this descriptor, never a newer one; the caller takes ownership. */
+  readonly bitmapFor: (img: ImageDescriptor, kind: GuideKind) => Promise<ImageBitmap>
 }
 
 export interface DetectionScheduler {
@@ -201,6 +201,7 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
         progress.delete(m)
         clicked.delete(m)
         setModel(m, 'absent')
+        void refreshNeeded(m).catch(() => undefined)
       }
     }
 
@@ -416,7 +417,7 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
   ): Promise<{ bitmap: ImageBitmap; img: ImageDescriptor }> {
     const img = wanted.get(key)?.images[0]
     if (!img) throw new Cancelled()
-    const bitmap = await ports.bitmapFor(img.id, kind)
+    const bitmap = await ports.bitmapFor(img, kind)
     if (disposed || !wanted.has(key)) {
       bitmap.close()
       throw new Cancelled()
@@ -434,7 +435,21 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
   }
 
   async function engineFor(m: AiModel): Promise<LandmarkEngine> {
-    if (loaded?.model === m) return loaded.engine
+    if (loaded?.model === m) {
+      const held = loaded
+      const { engine, bytes } = held
+      try {
+        await engine.prepare(m, { loader: bytes.loader, wasm: bytes.wasm }, bytes.model)
+      } catch (error) {
+        if (loaded === held) {
+          engine.dispose()
+          loaded = null
+        }
+        throw error
+      }
+      if (disposed) throw new Cancelled()
+      return engine
+    }
     if (loaded) {
       loaded.engine.dispose()
       loaded = null
