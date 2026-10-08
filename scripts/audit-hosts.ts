@@ -2,7 +2,8 @@ import { appendFileSync, readdirSync, readFileSync } from 'node:fs'
 import { extname, join, relative, sep } from 'node:path'
 
 /**
- * Links a shipped file may name: each is `host[:port]/path` and allows itself and anything below it.
+ * Links a shipped file may name, as `host[:port]/path`. An entry ending in `/` allows itself and
+ * anything below it; any other entry allows only itself, with or without a `#fragment`.
  * None is requested by the app. Adding one needs a reason it is never fetched.
  */
 export const ALLOWED_LINKS: readonly string[] = [
@@ -16,34 +17,40 @@ export const ALLOWED_LINKS: readonly string[] = [
   'www.w3.org/XML/1998/namespace',
   'www.sitemaps.org/schemas/sitemap/0.9',
   'schema.org',
-  'json-schema.org/',
+  'json-schema.org/draft/2020-12/schema',
+  'json-schema.org/draft-07/schema',
+  'json-schema.org/draft-04/schema',
   // Library error and licence text.
   'react.dev/errors/',
   'react.i18next.com/latest/usetranslation-hook',
   'github.com/Hopding/pdf-lib',
   'tailwindcss.com',
   // Reserved example domain (RFC 2606): the URL field's placeholder.
-  'example.com/',
+  'example.com/photo.jpg',
   // Comments and error strings in the MediaPipe runtime (vision_wasm_module_internal.{js,wasm}).
   'en.wikipedia.org/wiki/UTF-8',
-  'kripken.github.io/emscripten-site/',
-  'pubs.opengroup.org/onlinepubs/',
-  'server.com:4324',
-  'unicode.org/faq/',
-  'www.w3.org/TR/',
+  'kripken.github.io/emscripten-site/docs/api_reference/preamble.js.html',
+  'pubs.opengroup.org/onlinepubs/009695399/functions/tzset.html',
+  'server.com:4324:12',
+  'unicode.org/faq/utf_bom.html',
+  'www.w3.org/TR/2013/WD-cssom-view-20131217/',
   'bugzil.la/1328882',
-  'developer.mozilla.org/en-US/docs/',
+  'developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/getTimezoneOffset',
   'github.com/github/fetch/pull/92',
-  'github.com/google/closure-compiler/',
-  'github.com/emscripten-core/emscripten/',
+  'github.com/google/closure-compiler/issues/3193',
+  'github.com/google/closure-compiler/pull/3913',
+  'github.com/emscripten-core/emscripten/issues/13295',
+  'github.com/emscripten-core/emscripten/issues/23697',
+  'github.com/emscripten-core/emscripten/pull/8236',
   'github.com/libsdl-org/SDL/pull/6304',
   'github.com/nodejs/help/issues/2136',
   'github.com/opencv/opencv/issues/16739',
   'tools.ietf.org/html/rfc3629',
   'webkit.org/b/222758',
   'www.ietf.org/rfc/rfc2279.txt',
-  'www.khronos.org/registry/webgl/specs/',
-  'www.tensorflow.org/lite/guide/',
+  'www.khronos.org/registry/webgl/specs/latest/2.0/',
+  'www.tensorflow.org/lite/guide/ops_custom',
+  'www.tensorflow.org/lite/guide/ops_select',
   'go/lsc_proto3_utf8',
   'goto/weakfields',
 ]
@@ -68,14 +75,15 @@ const UNSCANNED = new Set(['.md', '.txt'])
 const URL_PATTERN = /\b(?:https?|wss?):\/\/([A-Za-z0-9][A-Za-z0-9.-]*(?::\d+)?)([^\s"'`<>()\\\0]*)/g
 
 export function remoteLinks(text: string): string[] {
-  return [...text.matchAll(URL_PATTERN)].map((m) => `${m[1].toLowerCase()}${m[2]}`)
+  return [...text.matchAll(URL_PATTERN)].map(
+    (m) => `${m[1].toLowerCase()}${m[2].replace(/[.,;]+$/, '')}`,
+  )
 }
 
 function isAllowed(link: string, allowed: readonly string[]): boolean {
   return allowed.some((prefix) => {
     if (!link.startsWith(prefix)) return false
-    if (link.length === prefix.length || prefix.endsWith('/')) return true
-    return '/?#:'.includes(link.charAt(prefix.length))
+    return link.length === prefix.length || prefix.endsWith('/') || link[prefix.length] === '#'
   })
 }
 

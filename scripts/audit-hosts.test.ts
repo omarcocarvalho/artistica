@@ -59,6 +59,37 @@ describe('auditText', () => {
     expect(auditText('"https://schema.org.attacker.io/"')).toEqual(['schema.org.attacker.io/'])
   })
 
+  it('allows an entry without a trailing slash only as itself or with a fragment', () => {
+    expect(
+      auditText(
+        [
+          '"https://schema.org"',
+          'https://github.com/nodejs/help/issues/2136#issuecomment-523649904',
+          'see https://github.com/emscripten-core/emscripten/issues/13295.',
+        ].join('\n'),
+      ),
+    ).toEqual([])
+    expect(
+      auditText(
+        [
+          '"https://schema.org/x.js"',
+          '"https://tailwindcss.com/collect"',
+          '"https://example.com/collect"',
+          '"https://server.com:4324/x"',
+          '"https://github.com/omarcocarvalho/artistica/releases/download/v1/x.wasm"',
+          '"https://www.tensorflow.org/lite/guide/ops_select/x"',
+        ].join(' '),
+      ),
+    ).toEqual([
+      'schema.org/x.js',
+      'tailwindcss.com/collect',
+      'example.com/collect',
+      'server.com:4324/x',
+      'github.com/omarcocarvalho/artistica/releases/download/v1/x.wasm',
+      'www.tensorflow.org/lite/guide/ops_select/x',
+    ])
+  })
+
   it('fails on odml.pa.googleapis.com', () => {
     expect(auditText(METRICS_1X)).toEqual(['odml.pa.googleapis.com/v1/log'])
   })
