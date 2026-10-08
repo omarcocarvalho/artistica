@@ -35,4 +35,30 @@ export type { Affine } from './guides/map'
 export { edgePaths } from './guides/edge-paths'
 // --- edges (B) ---
 // --- detect (C, D2) ---
+export {
+  detectionKey,
+  guidesFor,
+  guidesPending,
+  INITIAL_DETECTIONS,
+  useDetections,
+} from './detect/store'
+export type {
+  AiModel,
+  DetectionResult,
+  DetectionsState,
+  DetectionStatus,
+  GuideKind,
+  ModelState,
+} from './detect/store'
+export { createDetectionScheduler, MAX_EDGE_ENTRIES_PER_HASH } from './detect/schedule'
+export type {
+  AiAsset,
+  AiAssets,
+  AiLoader,
+  DetectionPorts,
+  DetectionScheduler,
+  EdgeEngine,
+  LandmarkEngine,
+  Progress,
+} from './detect/schedule'
 // --- guides UI (E1) ---
