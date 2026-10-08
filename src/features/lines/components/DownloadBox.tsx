@@ -1,0 +1,61 @@
+import { useId } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Button, ProgressBar } from '../../../shared/ui'
+import type { AiModel } from '../detect/store'
+import { formatMb, type GuideView } from './use-guide-status'
+
+export interface DownloadBoxProps {
+  readonly model: AiModel
+  readonly state: Extract<GuideView, { view: 'box' | 'downloading' }>
+  readonly onDownload: () => void
+  readonly disabled: boolean
+  readonly describedBy: string | undefined
+}
+
+/** The one-time model download (M4-R19): nothing is fetched until the button is pressed. */
+export function DownloadBox({ model, state, onDownload, disabled, describedBy }: DownloadBoxProps) {
+  const { t } = useTranslation('lines')
+  const sizeId = useId()
+
+  if (state.view === 'downloading') {
+    const { loaded, total } = state
+    const text =
+      total > 0
+        ? t('guides.progress', {
+            loaded: formatMb(Math.min(loaded, total)),
+            total: formatMb(total),
+          })
+        : undefined
+    return (
+      <div className="lines-ai-box">
+        <p className="text-sm">{t(`guides.${model}.downloading`)}</p>
+        <ProgressBar
+          value={total > 0 ? loaded / total : null}
+          label={t(`guides.${model}.progressLabel`)}
+          valueText={text}
+        />
+        {text !== undefined && <p className="ds-field-hint tabular-nums">{text}</p>}
+      </div>
+    )
+  }
+
+  return (
+    <div className="lines-ai-box">
+      <p id={sizeId} className="text-sm">
+        <strong>{t('guides.size', { mb: formatMb(state.bytes) })}</strong>
+      </p>
+      <p className="ds-field-hint">{t(`guides.${model}.why`)}</p>
+      <div>
+        <Button
+          variant="secondary"
+          icon="download"
+          disabled={disabled}
+          aria-describedby={[sizeId, describedBy].filter(Boolean).join(' ')}
+          onClick={onDownload}
+        >
+          {t('guides.download')}
+        </Button>
+      </div>
+    </div>
+  )
+}

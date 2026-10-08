@@ -64,3 +64,8 @@ export type {
   Progress,
 } from './detect/schedule'
 // --- guides UI (E1) ---
+export { GuidesSection } from './components/GuidesSection'
+export type { GuidesSectionProps } from './components/GuidesSection'
+export { DetectionsProvider } from './components/detections-context'
+export { pageHasWebGL } from './components/detection-actions'
+export type { DetectionActions } from './components/detection-actions'

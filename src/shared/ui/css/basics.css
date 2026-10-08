@@ -137,6 +137,11 @@
     background: var(--color-success-soft);
     color: var(--color-success);
   }
+  @media (forced-colors: active) {
+    .ds-badge {
+      border: 1px solid CanvasText;
+    }
+  }
 
   .ds-chip {
     display: inline-flex;
