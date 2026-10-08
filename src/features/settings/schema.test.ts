@@ -390,6 +390,9 @@ const anyLines = fc.record({
     }),
     anyValue,
   ),
+  edges: fc.oneof(fc.record({ on: anyValue, detailPct: anyValue }), anyValue),
+  face: anyValue,
+  pose: anyValue,
 }) as fc.Arbitrary<unknown> as fc.Arbitrary<LineSettings>
 
 describe('lineDefaults (v3)', () => {
@@ -582,5 +585,126 @@ describe('lineDefaults (v3)', () => {
         expect({ ...parsed, lineDefaults: null }).toEqual({ ...others, lineDefaults: null })
       }),
     )
+  })
+})
+
+describe('lineDefaults (v4): the edge detail', () => {
+  const v3 = {
+    pageSetup: { ...DEFAULT_SETTINGS.pageSetup, paper: 'Letter', safeAreaMm: 7 },
+    unit: 'in',
+    language: 'ja',
+    theme: 'dark',
+    studyDefaults: { blurPct: 70, values: { count: 7, hue: 200, neutral: true } },
+    lineDefaults: {
+      grid: { on: false, cols: 3, rows: 2 },
+      thirds: false,
+      armature: false,
+      golden: false,
+      spiral: { on: false, corner: 'bottomRight' },
+      centre: false,
+      style: { colour: '#1f3fbf', widthMm: 1.35, opacityPct: 56 },
+    },
+  } as const
+
+  it('a v3 envelope loads with every field and the default edge detail 50', () => {
+    expect(parseSettings(v3)).toEqual({
+      ...v3,
+      lineDefaults: {
+        ...v3.lineDefaults,
+        edges: { on: false, detailPct: 50 },
+        face: false,
+        pose: false,
+      },
+    })
+  })
+
+  it('v2 and v1 envelopes still load', () => {
+    const { pageSetup, unit, language, theme, studyDefaults } = v3
+    const v2 = { pageSetup, unit, language, theme, studyDefaults }
+    expect(parseSettings(v2)).toEqual({ ...v2, lineDefaults: DEFAULT_LINES })
+    const v1 = { pageSetup, unit, language, theme }
+    expect(parseSettings(v1)).toEqual({
+      ...v1,
+      studyDefaults: DEFAULT_SETTINGS.studyDefaults,
+      lineDefaults: DEFAULT_LINES,
+    })
+  })
+
+  it('a stored detail is kept', () => {
+    const lineDefaults = { ...v3.lineDefaults, edges: { on: false, detailPct: 73 } }
+    expect(parseSettings({ ...v3, lineDefaults }).lineDefaults).toEqual({
+      ...DEFAULT_LINES,
+      ...lineDefaults,
+    })
+  })
+
+  it.each([
+    ['below the range', 0, 1],
+    ['negative', -40, 1],
+    ['above the range', 250, 100],
+    ['fractional', 37.6, 38],
+    ['fractional, rounding down', 12.4, 12],
+  ])('a stored detail %s is clamped to 1–100 and rounded', (_name, stored, want) => {
+    const s = parseSettings({
+      ...v3,
+      lineDefaults: { ...v3.lineDefaults, edges: { on: false, detailPct: stored } },
+    })
+    expect(s.lineDefaults.edges).toEqual({ on: false, detailPct: want })
+    expect(s.lineDefaults.style).toEqual(v3.lineDefaults.style)
+  })
+
+  it.each([
+    ['a numeric string', '70'],
+    ['NaN', Number.NaN],
+    ['Infinity', Number.POSITIVE_INFINITY],
+    ['null', null],
+    ['a boolean', true],
+    ['an array', [70]],
+  ])('a bad detail alone falls back to 50: %s', (_name, bad) => {
+    const lineDefaults = { ...v3.lineDefaults, edges: { on: false, detailPct: bad }, face: false }
+    const s = parseSettings({ ...v3, lineDefaults })
+    expect(s.lineDefaults).toEqual({ ...DEFAULT_LINES, ...v3.lineDefaults })
+    expect(s.studyDefaults).toEqual(v3.studyDefaults)
+  })
+
+  it.each([
+    ['a string', 'x'],
+    ['a number', 70],
+    ['an array', [false, 70]],
+  ])('a bad edges object alone falls back to the default: %s', (_name, edges) => {
+    const s = parseSettings({ ...v3, lineDefaults: { ...v3.lineDefaults, edges } })
+    expect(s.lineDefaults).toEqual({ ...DEFAULT_LINES, ...v3.lineDefaults })
+  })
+
+  it('stored guide switches are turned off on load; the detail is kept (owner Q8, default)', () => {
+    const lineDefaults = {
+      ...v3.lineDefaults,
+      edges: { on: true, detailPct: 80 },
+      face: true,
+      pose: true,
+    }
+    const s = parseSettings({ ...v3, lineDefaults })
+    expect(activeLineTypes(s.lineDefaults)).toEqual([])
+    expect(s.lineDefaults).toEqual({
+      ...lineDefaults,
+      edges: { on: false, detailPct: 80 },
+      face: false,
+      pose: false,
+    })
+  })
+
+  it.each([
+    ['face', { face: 'yes' }],
+    ['pose', { pose: 1 }],
+    ['edges.on', { edges: { on: 'true', detailPct: 64 } }],
+  ])('a bad guide switch alone keeps the detail and the other fields: %s', (_name, bad) => {
+    const lineDefaults = { ...v3.lineDefaults, edges: { on: false, detailPct: 64 }, ...bad }
+    const s = parseSettings({ ...v3, lineDefaults })
+    expect(s.lineDefaults).toEqual({
+      ...v3.lineDefaults,
+      edges: { on: false, detailPct: 64 },
+      face: false,
+      pose: false,
+    })
   })
 })
