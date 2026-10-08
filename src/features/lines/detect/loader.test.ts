@@ -63,8 +63,19 @@ const href = (url: string | URL | Request) =>
 class FakeCache {
   readonly entries = new Map<string, { body: Uint8Array; type: string | null }>()
   readonly puts: string[] = []
+  readonly unreadable = new Map<string, 'match' | 'body'>()
   failPut = false
   match(url: string | Request): Promise<Response | undefined> {
+    const broken = this.unreadable.get(href(url))
+    if (broken === 'match') return Promise.reject(new DOMException('gone', 'NotFoundError'))
+    if (broken === 'body') {
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          controller.error(new TypeError('entry body missing'))
+        },
+      })
+      return Promise.resolve(new Response(body))
+    }
     const e = this.entries.get(href(url))
     return Promise.resolve(
       e
@@ -79,6 +90,7 @@ class FakeCache {
     this.entries.set(href(url), { body, type: res.headers.get('content-type') })
   }
   delete(url: string | Request): Promise<boolean> {
+    this.unreadable.delete(href(url))
     return Promise.resolve(this.entries.delete(href(url)))
   }
   keys(): Promise<Request[]> {
@@ -135,6 +147,7 @@ interface Served {
 
 function fakeFetch(serve: (url: string) => Served = () => ({})) {
   const gates: Gate[] = []
+  const cancelled: string[] = []
   const fn = vi.fn<typeof fetch>((input, init) => {
     const url = urlOf(input)
     const s = serve(url)
@@ -150,6 +163,9 @@ function fakeFetch(serve: (url: string) => Served = () => ({})) {
     let offset = 0
     let index = 0
     const stream = new ReadableStream<Uint8Array>({
+      cancel() {
+        cancelled.push(url)
+      },
       start(controller) {
         if (s.ignoreAbort) return
         signal?.addEventListener('abort', () => {
@@ -182,7 +198,7 @@ function fakeFetch(serve: (url: string) => Served = () => ({})) {
     if (signal?.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'))
     return Promise.resolve(new Response(stream, { status: s.status ?? 200 }))
   })
-  return { fn, gates }
+  return { fn, gates, cancelled }
 }
 
 function setup(opts: { caches?: FakeCaches | null; serve?: (url: string) => Served } = {}) {
@@ -202,7 +218,7 @@ function setup(opts: { caches?: FakeCaches | null; serve?: (url: string) => Serv
     await g.reached
     return g
   }
-  return { loader: createAiLoader(deps), storage, fetch: net.fn, gate }
+  return { loader: createAiLoader(deps), storage, fetch: net.fn, gate, cancelled: net.cancelled }
 }
 
 function bytesEqual(buf: ArrayBuffer, body: Uint8Array): void {
@@ -236,10 +252,11 @@ describe('loadAiAsset', () => {
     expect(urlOf(url)).not.toContain('?')
     expect(init?.method).toBe('GET')
     expect(init?.body).toBeUndefined()
-    expect(init?.credentials).toBeUndefined()
+    expect(init?.credentials).toBe('omit')
+    expect(init?.redirect).toBe('error')
     expect(init?.headers).toBeUndefined()
     expect(init?.mode).toBeUndefined()
-    expect(Object.keys(init ?? {}).sort()).toEqual(['method', 'signal'])
+    expect(Object.keys(init ?? {}).sort()).toEqual(['credentials', 'method', 'redirect', 'signal'])
     const stored = must(storage.ai().entries.get(href(ASSETS.pose.url)))
     expect(stored.type).toBe('application/octet-stream')
     expect(Buffer.from(stored.body).equals(Buffer.from(BODIES.pose))).toBe(true)
@@ -335,7 +352,9 @@ describe('loadAiAsset', () => {
   })
 
   it('aborting stops reading a body that keeps arriving, and stores nothing', async () => {
-    const { loader, storage, gate } = setup({ serve: () => ({ gateAt: 1, ignoreAbort: true }) })
+    const { loader, storage, gate, cancelled } = setup({
+      serve: () => ({ gateAt: 1, ignoreAbort: true }),
+    })
     const controller = new AbortController()
     const load = loader.loadAiAsset(ASSETS.face, undefined, controller.signal)
     const g = await gate(0)
@@ -343,17 +362,57 @@ describe('loadAiAsset', () => {
     g.release()
     await expect(load).rejects.toMatchObject({ name: 'AbortError' })
     await flush()
+    expect(cancelled).toEqual([ASSETS.face.url])
     expect(storage.ai().puts).toEqual([])
   })
 
-  it('an already aborted signal rejects without a fetch', async () => {
+  it('an already aborted signal rejects with its reason, without a fetch', async () => {
     const { loader, fetch } = setup()
     const controller = new AbortController()
     controller.abort()
     await expect(
       loader.loadAiAsset(ASSETS.face, undefined, controller.signal),
     ).rejects.toMatchObject({ name: 'AbortError' })
+    const reason = new Error('panel closed')
+    const custom = new AbortController()
+    custom.abort(reason)
+    await expect(loader.loadAiAsset(ASSETS.face, undefined, custom.signal)).rejects.toBe(reason)
     expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('aborting while a cached entry is checked makes no request', async () => {
+    const { loader, storage, fetch } = setup()
+    const tampered = BODIES.face.slice()
+    tampered[0] = (tampered[0] ?? 0) ^ 1
+    storage.ai().seed(ASSETS.face.url, tampered)
+    const controller = new AbortController()
+    const digest = crypto.subtle.digest.bind(crypto.subtle)
+    const spy = vi.spyOn(crypto.subtle, 'digest').mockImplementationOnce((alg, data) => {
+      controller.abort()
+      return digest(alg, data)
+    })
+    try {
+      await expect(
+        loader.loadAiAsset(ASSETS.face, undefined, controller.signal),
+      ).rejects.toMatchObject({ name: 'AbortError' })
+      await flush()
+      expect(fetch).not.toHaveBeenCalled()
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('a settled load lets go of the caller signal and progress callback', async () => {
+    const { loader } = setup()
+    const controller = new AbortController()
+    const removed = vi.spyOn(controller.signal, 'removeEventListener')
+    const progress = vi.fn()
+    await loader.loadAiAsset(ASSETS.face, progress, controller.signal)
+    expect(removed).toHaveBeenCalledWith('abort', expect.any(Function))
+    const calls = progress.mock.calls.length
+    controller.abort()
+    await loader.loadAiAsset(ASSETS.pose)
+    expect(progress).toHaveBeenCalledTimes(calls)
   })
 
   it('two calls for the same asset share one download', async () => {
@@ -446,6 +505,54 @@ describe('loadAiAsset', () => {
     expect(Buffer.from(stored.body).equals(Buffer.from(BODIES.face))).toBe(true)
   })
 
+  it('an unreadable cached entry is deleted and downloaded again', async () => {
+    for (const broken of ['match', 'body'] as const) {
+      const { loader, storage, fetch } = setup()
+      storage.ai().seed(ASSETS.face.url, BODIES.face)
+      storage.ai().unreadable.set(href(ASSETS.face.url), broken)
+      bytesEqual(await loader.loadAiAsset(ASSETS.face), BODIES.face)
+      expect(fetch).toHaveBeenCalledTimes(1)
+      expect(storage.ai().unreadable.size).toBe(0)
+      bytesEqual(await loader.loadAiAsset(ASSETS.face), BODIES.face)
+      expect(fetch).toHaveBeenCalledTimes(1)
+    }
+  })
+
+  it('aborting while the download is hashed stores nothing', async () => {
+    const { loader, storage } = setup()
+    const controller = new AbortController()
+    const digest = crypto.subtle.digest.bind(crypto.subtle)
+    const spy = vi.spyOn(crypto.subtle, 'digest').mockImplementationOnce((alg, data) => {
+      controller.abort()
+      return digest(alg, data)
+    })
+    try {
+      await expect(
+        loader.loadAiAsset(ASSETS.face, undefined, controller.signal),
+      ).rejects.toMatchObject({ name: 'AbortError' })
+      await flush()
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(storage.ai().puts).toEqual([])
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('callers sharing one progress callback keep it when one of them aborts', async () => {
+    const { loader, gate } = setup({ serve: () => ({ gateAt: 1, chunk: 1_000 }) })
+    const seen: number[] = []
+    const report = (p: Progress) => seen.push(p.loaded)
+    const first = new AbortController()
+    const p1 = loader.loadAiAsset(ASSETS.face, report, first.signal)
+    const p2 = loader.loadAiAsset(ASSETS.face, report)
+    const g = await gate(0)
+    first.abort()
+    g.release()
+    await expect(p1).rejects.toMatchObject({ name: 'AbortError' })
+    bytesEqual(await p2, BODIES.face)
+    expect(seen).toEqual([1_000, 1_000, 2_000, 3_000])
+  })
+
   it('a failed store still resolves, and the bytes stay in memory for the session', async () => {
     const storage = new FakeCaches()
     storage.ai().failPut = true
@@ -477,6 +584,9 @@ describe('only same-origin manifest assets, never photo data', () => {
       'models/face.task',
       '/models/face.task?v=1',
       '/models/face.task#x',
+      '/\\cdn.example.com/face.task',
+      '/\t/cdn.example.com/face.task',
+      '/models/face task',
     ]) {
       const storage = new FakeCaches()
       const net = fakeFetch()

@@ -29,10 +29,14 @@ interface Download {
   waiters: number
 }
 
-const isSameOriginPath = (url: string) => /^\/(?!\/)[^?#]*$/.test(url)
+const isSameOriginPath = (url: string) => /^\/(?!\/)[\w.~/-]*$/.test(url)
 
 function abortReason(signal: AbortSignal): Error {
   return signal.reason instanceof Error ? signal.reason : new DOMException('Aborted', 'AbortError')
+}
+
+function throwIfAborted(signal: AbortSignal): void {
+  if (signal.aborted) throw abortReason(signal)
 }
 
 async function sha256Hex(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
@@ -89,11 +93,14 @@ export function createAiLoader(deps: AiLoaderDeps): AiAssetLoader {
     const kept = memory.get(asset.url)
     if (kept) return kept
     const cache = await openCache()
-    const response = await cache?.match(asset.url)
-    if (!cache || !response) return null
-    const bytes = new Uint8Array(await response.arrayBuffer())
-    if (await matches(asset, bytes)) return bytes.buffer
-    await cache.delete(asset.url)
+    if (!cache) return null
+    const bytes = await cache
+      .match(asset.url)
+      .then(async (r) => (r ? new Uint8Array(await r.arrayBuffer()) : undefined))
+      .catch(() => null)
+    if (bytes === undefined) return null
+    if (bytes && (await matches(asset, bytes))) return bytes.buffer
+    await cache.delete(asset.url).catch(() => false)
     return null
   }
 
@@ -118,7 +125,12 @@ export function createAiLoader(deps: AiLoaderDeps): AiAssetLoader {
   ): Promise<ArrayBuffer> {
     let response: Response
     try {
-      response = await deps.fetch(asset.url, { method: 'GET', signal })
+      response = await deps.fetch(asset.url, {
+        method: 'GET',
+        credentials: 'omit',
+        redirect: 'error',
+        signal,
+      })
     } catch (error) {
       if (signal.aborted) throw abortReason(signal)
       throw new AiDownloadError(`Download failed: ${asset.url}`, { cause: error })
@@ -154,6 +166,7 @@ export function createAiLoader(deps: AiLoaderDeps): AiAssetLoader {
     if (!(await matches(asset, bytes))) {
       throw new AiIntegrityError(`Checksum mismatch: ${asset.url}`)
     }
+    throwIfAborted(signal)
     await store(asset, bytes)
     return bytes.buffer
   }
@@ -188,10 +201,15 @@ export function createAiLoader(deps: AiLoaderDeps): AiAssetLoader {
     signal: AbortSignal | undefined,
   ): Promise<ArrayBuffer> {
     shared.waiters++
-    if (onProgress) shared.listeners.add(onProgress)
+    const listener =
+      onProgress &&
+      ((p: Progress) => {
+        onProgress(p)
+      })
+    if (listener) shared.listeners.add(listener)
     return new Promise<ArrayBuffer>((resolve, reject) => {
       const leave = () => {
-        if (onProgress) shared.listeners.delete(onProgress)
+        if (listener) shared.listeners.delete(listener)
         signal?.removeEventListener('abort', onAbort)
       }
       function onAbort(this: AbortSignal) {
