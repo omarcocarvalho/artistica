@@ -5,6 +5,7 @@ import {
   gzipBytes,
   INITIAL_JS_LIMIT_BYTES,
   initialScriptPaths,
+  lazyOnlyViolations,
 } from './bundle-budget.ts'
 
 const BASE = '/artistica/'
@@ -33,6 +34,15 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     process.env.GITHUB_STEP_SUMMARY,
     `### Initial app JS\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n`,
   )
+}
+const eager = lazyOnlyViolations(
+  files.map((file) => ({ file, text: readFileSync(join(distDir, file), 'utf8') })),
+)
+if (eager.length > 0) {
+  console.error(
+    `MediaPipe is in an initial chunk; import it only from the landmark worker or a dynamic import():\n  ${eager.join('\n  ')}`,
+  )
+  process.exit(1)
 }
 if (!ok) {
   console.error(

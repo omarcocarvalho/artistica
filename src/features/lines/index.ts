@@ -53,6 +53,7 @@ export type {
   ModelState,
 } from './detect/store'
 export { createDetectionScheduler, MAX_EDGE_ENTRIES_PER_HASH } from './detect/schedule'
+export { createLandmarkEngine } from './detect/landmark-engine'
 export type {
   AiAsset,
   AiAssets,

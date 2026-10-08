@@ -26,6 +26,14 @@ export function gzipBytes(data: Uint8Array): number {
   return gzipSync(data, { level: 9 }).length
 }
 
+export const LAZY_ONLY_MARKERS = ['FaceLandmarker', 'PoseLandmarker']
+
+export function lazyOnlyViolations(entries: readonly { file: string; text: string }[]): string[] {
+  return entries.flatMap(({ file, text }) =>
+    LAZY_ONLY_MARKERS.filter((m) => text.includes(m)).map((m) => `${file}: ${m}`),
+  )
+}
+
 export function evaluateBudget(
   entries: readonly { file: string; gzipBytes: number }[],
   limit: number = INITIAL_JS_LIMIT_BYTES,
