@@ -707,4 +707,21 @@ describe('lineDefaults (v4): the edge detail', () => {
       pose: false,
     })
   })
+
+  it.each(Object.keys(DEFAULT_LINES) as (keyof LineSettings)[])(
+    'a missing %s alone takes its default and keeps the other stored fields',
+    (key) => {
+      const stored: LineSettings = {
+        ...v3.lineDefaults,
+        edges: { on: false, detailPct: 64 },
+        face: false,
+        pose: false,
+      }
+      const lineDefaults = Object.fromEntries(Object.entries(stored).filter(([k]) => k !== key))
+      expect(parseSettings({ ...v3, lineDefaults }).lineDefaults).toEqual({
+        ...stored,
+        [key]: DEFAULT_LINES[key],
+      })
+    },
+  )
 })
