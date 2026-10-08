@@ -195,15 +195,15 @@ describe('actions', () => {
 })
 
 describe('persistence', () => {
-  it('writes version 3 under artistica:settings, without notes or actions', () => {
+  it('writes version 4 under artistica:settings, without notes or actions', () => {
     const storage = memoryStorage()
     const store = createSettingsStore(storage)
     store.getState().setTheme('light')
     store.getState().setPageSetup({ safeAreaMm: 1 })
     const { version, state } = saved(storage)
     expect(SETTINGS_STORAGE_KEY).toBe('artistica:settings')
-    expect(version).toBe(3)
-    expect(SETTINGS_VERSION).toBe(3)
+    expect(version).toBe(4)
+    expect(SETTINGS_VERSION).toBe(4)
     expect(Object.keys(state).sort()).toEqual([
       'language',
       'lineDefaults',
@@ -495,10 +495,6 @@ describe('line defaults (schema v3)', () => {
     studyDefaults: { blurPct: 70, values: { count: 7, hue: 200, neutral: true } },
   }
 
-  it('is version 3', () => {
-    expect(SETTINGS_VERSION).toBe(3)
-  })
-
   it('starts from DEFAULT_LINES', () => {
     expect(createSettingsStore(memoryStorage()).getState().lineDefaults).toEqual(DEFAULT_LINES)
   })
@@ -533,11 +529,11 @@ describe('line defaults (schema v3)', () => {
     expect(store.getState().lineDefaults).toEqual(remembered)
   })
 
-  it('persists lineDefaults under version 3, with every on flag false', () => {
+  it('persists lineDefaults under the current version, with every on flag false', () => {
     const storage = memoryStorage()
     createSettingsStore(storage).getState().setLineDefaults(allOn)
     const env = saved(storage)
-    expect(env.version).toBe(3)
+    expect(env.version).toBe(SETTINGS_VERSION)
     expect(env.state.lineDefaults).toEqual(remembered)
     expect(JSON.stringify(env.state.lineDefaults)).not.toMatch(/true/)
   })
@@ -617,6 +613,9 @@ describe('line defaults (schema v3)', () => {
       widthMm: anyValue,
       opacityPct: anyValue,
     }),
+    edges: fc.oneof(fc.record({ on: anyValue, detailPct: anyValue }), anyValue),
+    face: anyValue,
+    pose: anyValue,
   }) as fc.Arbitrary<unknown> as fc.Arbitrary<LineSettings>
 
   it('ranges are owned by sanitizeLines: load and setLineDefaults give identical values (property)', () => {
@@ -634,5 +633,155 @@ describe('line defaults (schema v3)', () => {
         expect(store.getState().lineDefaults).toEqual(loaded)
       }),
     )
+  })
+})
+
+describe('guide defaults (schema v4)', () => {
+  const v3 = {
+    pageSetup: { ...DEFAULT_SETTINGS.pageSetup, paper: 'Letter', safeAreaMm: 7 },
+    unit: 'in',
+    language: 'ja',
+    theme: 'dark',
+    studyDefaults: { blurPct: 70, values: { count: 7, hue: 200, neutral: true } },
+    lineDefaults: {
+      grid: { on: false, cols: 3, rows: 2 },
+      thirds: false,
+      armature: false,
+      golden: false,
+      spiral: { on: false, corner: 'bottomRight' },
+      centre: false,
+      style: { colour: '#1f3fbf', widthMm: 1.35, opacityPct: 56 },
+    },
+  }
+  const guidesOn: LineSettings = {
+    ...DEFAULT_LINES,
+    style: { colour: '#1f3fbf', widthMm: 1.35, opacityPct: 56 },
+    edges: { on: true, detailPct: 72.6 },
+    face: true,
+    pose: true,
+  }
+  const rememberedGuides: LineSettings = {
+    ...guidesOn,
+    edges: { on: false, detailPct: 73 },
+    face: false,
+    pose: false,
+  }
+
+  it('SETTINGS_VERSION is 4', () => {
+    expect(SETTINGS_VERSION).toBe(4)
+  })
+
+  it('a v3 envelope loads with every field and the default edge detail 50', () => {
+    const s = createSettingsStore(
+      memoryStorage(JSON.stringify({ version: 3, state: v3 })),
+      'mm',
+    ).getState()
+    expect({
+      pageSetup: s.pageSetup,
+      unit: s.unit,
+      language: s.language,
+      theme: s.theme,
+      studyDefaults: s.studyDefaults,
+      lineDefaults: s.lineDefaults,
+    }).toEqual({
+      ...v3,
+      lineDefaults: {
+        ...v3.lineDefaults,
+        edges: { on: false, detailPct: 50 },
+        face: false,
+        pose: false,
+      },
+    })
+  })
+
+  it('v2 and v1 envelopes still load', () => {
+    const { pageSetup, unit, language, theme, studyDefaults } = v3
+    const v2 = { pageSetup, unit, language, theme, studyDefaults }
+    const fromV2 = createSettingsStore(
+      memoryStorage(JSON.stringify({ version: 2, state: v2 })),
+    ).getState()
+    expect(fromV2).toMatchObject({ ...v2, lineDefaults: DEFAULT_LINES })
+    const v1 = { pageSetup, unit, language, theme }
+    const fromV1 = createSettingsStore(
+      memoryStorage(JSON.stringify({ version: 1, state: v1 })),
+    ).getState()
+    expect(fromV1).toMatchObject({
+      ...v1,
+      studyDefaults: DEFAULT_SETTINGS.studyDefaults,
+      lineDefaults: DEFAULT_LINES,
+    })
+  })
+
+  it('setLineDefaults keeps the detail and turns guides off', () => {
+    const store = createSettingsStore(memoryStorage())
+    store.getState().setLineDefaults(guidesOn)
+    expect(store.getState().lineDefaults).toEqual(rememberedGuides)
+  })
+
+  it('partialize persists lineDefaults with the detail', () => {
+    const storage = memoryStorage()
+    createSettingsStore(storage).getState().setLineDefaults(guidesOn)
+    const env = saved(storage)
+    expect(env.version).toBe(4)
+    expect(env.state.lineDefaults).toEqual(rememberedGuides)
+  })
+
+  it('the detail is remembered across a reload', () => {
+    const storage = memoryStorage()
+    createSettingsStore(storage).getState().setLineDefaults(guidesOn)
+    expect(createSettingsStore(storage).getState().lineDefaults).toEqual(rememberedGuides)
+  })
+
+  it('stored guide switches are turned off on load', () => {
+    const state = { ...v3, lineDefaults: guidesOn }
+    const s = createSettingsStore(memoryStorage(JSON.stringify({ version: 4, state }))).getState()
+    expect(s.lineDefaults).toEqual(rememberedGuides)
+    expect(s.studyDefaults).toEqual(v3.studyDefaults)
+  })
+
+  it.each([
+    ['above the range', 400, 100],
+    ['below the range', -3, 1],
+    ['fractional', 9.5, 10],
+  ])('a stored detail %s is clamped and rounded on load', (_name, stored, want) => {
+    const state = {
+      ...v3,
+      lineDefaults: { ...v3.lineDefaults, edges: { on: false, detailPct: stored } },
+    }
+    const s = createSettingsStore(memoryStorage(JSON.stringify({ version: 4, state }))).getState()
+    expect(s.lineDefaults.edges).toEqual({ on: false, detailPct: want })
+  })
+
+  it('a bad detail alone falls back to 50', () => {
+    const state = {
+      ...v3,
+      lineDefaults: { ...v3.lineDefaults, edges: { on: false, detailPct: 'x' } },
+    }
+    const s = createSettingsStore(memoryStorage(JSON.stringify({ version: 4, state }))).getState()
+    expect(s.lineDefaults).toEqual({ ...DEFAULT_LINES, ...v3.lineDefaults })
+  })
+
+  it('a new detail writes storage once; an equal value does not write it', () => {
+    const storage = countingStorage()
+    const store = createSettingsStore(storage)
+    store.getState().setLineDefaults(guidesOn)
+    const writes = storage.writes()
+    expect(writes).toBeGreaterThan(0)
+    const listened: unknown[] = []
+    store.subscribe((s) => listened.push(s))
+    store.getState().setLineDefaults({
+      ...guidesOn,
+      edges: { on: false, detailPct: 73.2 },
+      face: false,
+      pose: true,
+    })
+    expect(storage.writes()).toBe(writes)
+    expect(listened).toEqual([])
+    store.getState().setLineDefaults({ ...guidesOn, edges: { on: true, detailPct: 20 } })
+    expect(storage.writes()).toBe(writes + 1)
+    expect(saved(storage).state.lineDefaults).toEqual({
+      ...rememberedGuides,
+      edges: { on: false, detailPct: 20 },
+    })
   })
 })

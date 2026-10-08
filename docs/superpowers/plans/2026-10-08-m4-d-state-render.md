@@ -20,7 +20,7 @@ As in the overview. E2E ports 63xx. `store.ts` selectors and `schedule.ts` are c
 2. **Keys** (M4-R8): style changes never change a key; rotation changes face/pose keys only; crop and detail change edge keys only. Pinned in D2 (table test).
 3. **M3 output unchanged without guides:** `buildPageModels` with no `guides` argument and with `() => NO_GUIDES` both give byte-identical page models to master (D3 snapshot equality with the M3 snapshots).
 4. **One stroke** (M4-R11): guides never add a third batch; dashed batch unchanged.
-5. **Persisted data stay numbers and booleans:** settings v4 adds only `edges.detailPct` (plus the off switches normalised away).
+5. **Persisted data hold nothing derived from a photo, only settings values:** settings v4 adds only `edges.detailPct` (plus the off switches normalised away).
 
 ## File map
 

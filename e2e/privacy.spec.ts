@@ -126,7 +126,7 @@ test('P2 nothing from the photos is persisted: storage stays small and a reload 
     version: number
     state: Record<string, unknown>
   }
-  expect(envelope.version).toBe(3)
+  expect(envelope.version).toBe(4)
   expect(Object.keys(envelope.state).sort()).toEqual([
     'language',
     'lineDefaults',

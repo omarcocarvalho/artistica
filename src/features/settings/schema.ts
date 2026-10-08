@@ -127,9 +127,17 @@ const lineDefaultsSchema = z.object({
       opacityPct: z.number().catch(L.style.opacityPct),
     })
     .catch(L.style),
+  edges: z
+    .object({
+      on: z.boolean().catch(L.edges.on),
+      detailPct: z.number().catch(L.edges.detailPct),
+    })
+    .catch(L.edges),
+  face: z.boolean().catch(L.face),
+  pose: z.boolean().catch(L.pose),
 })
 
-/** The one normalisation for line defaults, on load and in `setLineDefaults` (owner Q7, default: types are not remembered). */
+/** The one normalisation for line defaults, on load and in `setLineDefaults` (M3 owner Q7 and M4 owner Q8, default: types and guide switches are not remembered; the edge detail is). */
 export function normalizeLineDefaults(lines: LineSettings): LineSettings {
   return withoutLineTypes(sanitizeLines(lines))
 }
@@ -169,7 +177,7 @@ export function parseSettings(input: unknown): SettingsData {
       ...parsed,
       pageSetup,
       studyDefaults: normalizeStudyDefaults(parsed.studyDefaults),
-      lineDefaults: normalizeLineDefaults({ ...L, ...parsed.lineDefaults }),
+      lineDefaults: normalizeLineDefaults(parsed.lineDefaults),
     }
   } catch (error) {
     warnOnce(error)

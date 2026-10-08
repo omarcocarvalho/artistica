@@ -20,7 +20,7 @@ import {
 } from './schema'
 
 export const SETTINGS_STORAGE_KEY = 'artistica:settings'
-export const SETTINGS_VERSION = 3
+export const SETTINGS_VERSION = 4
 
 /** Nested objects are merged one level deep, so callers can change one gutter field. */
 export interface PageSetupPatch {
@@ -42,7 +42,7 @@ export interface SettingsState extends SettingsData {
   setTheme(theme: Theme): void
   /** Remember the last-used study settings (owner Q5, default). Normalised; no state change or storage write when equal. */
   setStudyDefaults(defaults: StudyDefaults): void
-  /** Remember the last-used line settings, every type off (owner Q7, default). Normalised; no state change or storage write when equal. */
+  /** Remember the last-used line settings and edge detail, every type and guide off (owner Q7 and M4 Q8, default). Normalised; no state change or storage write when equal. */
   setLineDefaults(lines: LineSettings): void
   reset(): void
 }
@@ -173,8 +173,8 @@ export function createSettingsStore(
           studyDefaults,
           lineDefaults,
         }),
-        // Runs for v1, v2 and any other version. parseSettings keeps every stored field and fills
-        // a missing studyDefaults or lineDefaults with its default; there is no other format to convert.
+        // Runs for v1–v3 and any other version. parseSettings keeps every stored field and fills a
+        // missing studyDefaults, lineDefaults or edge detail with its default; there is no other format to convert.
         migrate: (persisted) => parseSettings(persisted),
         // Runs for every load, including current-version data that was edited by hand.
         // Nothing saved (or unreadable JSON, which storage reports as null) keeps the initial
