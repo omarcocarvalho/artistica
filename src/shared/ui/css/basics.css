@@ -271,6 +271,12 @@
       margin-left: 60%;
     }
   }
+  @media (forced-colors: active) {
+    .ds-progress__fill {
+      forced-color-adjust: none;
+      background: Highlight;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .ds-progress__fill,
     .ds-progress__fill--indeterminate {

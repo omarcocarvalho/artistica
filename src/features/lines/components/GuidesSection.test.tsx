@@ -304,6 +304,18 @@ describe('GuidesSection', () => {
       expect(within(section()).getByText('Outline traced.')).toBeVisible()
     })
 
+    it('says when the outline finds no edges at this Detail (owner Q16, default)', () => {
+      seed(EDGES_ON)
+      renderPanel()
+      const region = liveRegion()
+      setStatus('edges', { state: 'running' })
+      setStatus('edges', { state: 'done', found: 0 })
+      const none = 'No edges found at this Detail. Try a higher Detail.'
+      expect(within(section()).getByText(none)).toBeVisible()
+      expect(within(section()).queryByText('Outline traced.')).not.toBeInTheDocument()
+      expect(region).toHaveTextContent(none)
+    })
+
     it('a failure is an alert, "Couldn\'t trace the outline.", with Try again', async () => {
       const user = userEvent.setup()
       seed(EDGES_ON)
@@ -721,6 +733,54 @@ describe('GuidesSection', () => {
       setStatus('edges', { state: 'running' })
       expect(region).toHaveTextContent('Tracing the outline…')
       expect(region).not.toHaveTextContent('copied')
+    })
+  })
+
+  describe('focus', () => {
+    it('moves to the switch when "Download & turn on" gives way to the progress', async () => {
+      const user = userEvent.setup()
+      seed(FACE_ON)
+      renderPanel()
+      setStatus('face', { state: 'needs-download', bytes: 15_200_000 })
+      await user.click(within(section()).getByRole('button', { name: DOWNLOAD }))
+      setStatus('face', { state: 'downloading', loaded: 0, total: 15_200_000 })
+      expect(document.activeElement).toBe(screen.getByRole('switch', { name: 'Face construction' }))
+    })
+
+    it.each([
+      ['Try again', true],
+      ['Turn off pose guides', false],
+    ] as const)('moves to the switch when "%s" disappears', async (name, on) => {
+      const user = userEvent.setup()
+      seed(POSE_ON)
+      renderPanel()
+      setStatus('pose', { state: 'failed', reason: 'download' })
+      await user.click(within(section()).getByRole('button', { name }))
+      if (on) setStatus('pose', { state: 'running' })
+      expect(lines(A).pose).toBe(on)
+      expect(document.activeElement).toBe(screen.getByRole('switch', { name: 'Body pose' }))
+    })
+
+    it('moves to the Edge outline switch when its Try again disappears', async () => {
+      const user = userEvent.setup()
+      seed(EDGES_ON)
+      renderPanel()
+      setStatus('edges', { state: 'failed', reason: 'error' })
+      await user.click(within(section()).getByRole('button', { name: 'Try again' }))
+      setStatus('edges', { state: 'running' })
+      expect(document.activeElement).toBe(screen.getByRole('switch', { name: 'Edge outline' }))
+    })
+
+    it('stays where it is when the user has moved on', async () => {
+      const user = userEvent.setup()
+      seed(FACE_ON)
+      renderPanel()
+      setStatus('face', { state: 'needs-download', bytes: 15_200_000 })
+      await user.click(within(section()).getByRole('button', { name: DOWNLOAD }))
+      const apply = screen.getByRole('button', { name: 'Apply lines to all images' })
+      apply.focus()
+      setStatus('face', { state: 'downloading', loaded: 0, total: 15_200_000 })
+      expect(document.activeElement).toBe(apply)
     })
   })
 

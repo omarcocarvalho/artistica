@@ -53,6 +53,7 @@
     "edges": {
       "running": "Tracing the outline…",
       "done": "Outline traced.",
+      "none": "No edges found at this Detail. Try a higher Detail.",
       "failed": "Couldn't trace the outline."
     },
     "face": {

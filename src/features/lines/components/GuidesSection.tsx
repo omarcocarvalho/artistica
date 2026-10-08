@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FocusEvent,
+  type ReactNode,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import { useImages } from '../../images'
 import type { ImageDescriptor, ImageId } from '../../../shared/model/image'
@@ -38,7 +47,7 @@ function announcement(t: Translate, kind: GuideKind, view: GuideView): string | 
       return kind === 'edges' ? t('guides.edges.done') : t(`guides.${kind}.found`)
     case 'none-found':
       return kind === 'edges'
-        ? t('guides.edges.done')
+        ? t('guides.edges.none')
         : `${t(`guides.${kind}.none`)} ${t(`guides.${kind}.noneHint`)}`
     case 'unsupported':
       return t('guides.noWebGL')
@@ -97,30 +106,32 @@ function Guides({
         </Badge>
       </div>
 
-      <Switch
-        label={t('type.edges')}
-        checked={lines.edges.on}
-        disabled={waiting}
-        describedBy={describedBy}
-        onCheckedChange={(on) => {
-          patch({ edges: { on } })
-        }}
-      />
-      {lines.edges.on && (
-        <>
-          <Slider
-            label={t('guides.detail.label')}
-            value={detail.value}
-            min={MIN_EDGE_DETAIL}
-            max={MAX_EDGE_DETAIL}
-            disabled={waiting}
-            describedBy={describedBy}
-            onValueChange={detail.change}
-            formatValue={(pct) => t('guides.detail.value', { pct })}
-          />
-          <EdgeStatus view={views.edges} {...shared} />
-        </>
-      )}
+      <GuideGroup>
+        <Switch
+          label={t('type.edges')}
+          checked={lines.edges.on}
+          disabled={waiting}
+          describedBy={describedBy}
+          onCheckedChange={(on) => {
+            patch({ edges: { on } })
+          }}
+        />
+        {lines.edges.on && (
+          <>
+            <Slider
+              label={t('guides.detail.label')}
+              value={detail.value}
+              min={MIN_EDGE_DETAIL}
+              max={MAX_EDGE_DETAIL}
+              disabled={waiting}
+              describedBy={describedBy}
+              onValueChange={detail.change}
+              formatValue={(pct) => t('guides.detail.value', { pct })}
+            />
+            <EdgeStatus view={views.edges} {...shared} />
+          </>
+        )}
+      </GuideGroup>
 
       {MODELS.map((model) => (
         <LandmarkGuide key={model} model={model} view={views[model]} {...shared} />
@@ -144,8 +155,9 @@ function EdgeStatus({ image, actions, view, waiting, describedBy }: PartProps) {
     case 'running':
       return <p className="text-ink-muted text-sm">{t('guides.edges.running')}</p>
     case 'found':
-    case 'none-found':
       return <p className="text-ink-muted text-sm">{t('guides.edges.done')}</p>
+    case 'none-found':
+      return <p className="text-ink-muted text-sm">{t('guides.edges.none')}</p>
     case 'failed':
       return (
         <Callout
@@ -263,7 +275,7 @@ function LandmarkGuide({
   }
 
   return (
-    <>
+    <GuideGroup>
       <Switch
         label={t(`type.${model}`)}
         checked={on}
@@ -274,7 +286,31 @@ function LandmarkGuide({
         }}
       />
       {below}
-    </>
+    </GuideGroup>
+  )
+}
+
+function GuideGroup({ children }: { readonly children: ReactNode }) {
+  const group = useRef<HTMLDivElement>(null)
+  const focused = useRef<Element | null>(null)
+  useLayoutEffect(() => {
+    const last = focused.current
+    if (!last || last.isConnected) return
+    focused.current = null
+    const active = document.activeElement
+    if (active !== null && active !== document.body) return
+    group.current?.querySelector<HTMLElement>('[role="switch"]')?.focus()
+  })
+  return (
+    <div
+      ref={group}
+      className="flex flex-col gap-3"
+      onFocus={(e: FocusEvent) => {
+        focused.current = e.target
+      }}
+    >
+      {children}
+    </div>
   )
 }
 
