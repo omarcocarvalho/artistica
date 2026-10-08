@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useCallback, useId, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useImages } from '../../images'
 import type { ImageId } from '../../../shared/model/image'
@@ -25,6 +25,7 @@ import {
   useImportWait,
   VisuallyHidden,
 } from '../../../shared/ui'
+import { GuidesSection } from './GuidesSection'
 import './lines.css'
 
 export interface LinesPanelProps {
@@ -60,6 +61,9 @@ export function LinesPanel({ imageId, announceWait = true, headingLevel = 3 }: L
   const compositionId = `${baseId}-composition`
   const styleId = `${baseId}-style`
   const busy = waiting ? hintId : undefined
+  const announce = useCallback((text: string) => {
+    setAnnouncement((prev) => ({ text, seq: (prev?.seq ?? 0) + 1 }))
+  }, [])
 
   let content
   if (!image) {
@@ -191,6 +195,14 @@ export function LinesPanel({ imageId, announceWait = true, headingLevel = 3 }: L
           />
         </section>
 
+        <GuidesSection
+          imageId={id}
+          headingLevel={headingLevel}
+          waiting={waiting}
+          describedBy={busy}
+          onAnnounce={announce}
+        />
+
         <section className={SECTION} aria-labelledby={styleId}>
           <Heading id={styleId} className="font-display text-base">
             {t('panel.style')}
@@ -248,10 +260,7 @@ export function LinesPanel({ imageId, announceWait = true, headingLevel = 3 }: L
             aria-describedby={busy}
             onClick={() => {
               const n = useImages.getState().applyLinesToAll(id)
-              setAnnouncement((prev) => ({
-                text: n === 0 ? t('applyAll.nothingChanged') : t('applyAll.done', { count: n }),
-                seq: (prev?.seq ?? 0) + 1,
-              }))
+              announce(n === 0 ? t('applyAll.nothingChanged') : t('applyAll.done', { count: n }))
             }}
           >
             {t('applyAll.button')}

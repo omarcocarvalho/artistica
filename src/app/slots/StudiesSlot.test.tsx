@@ -117,6 +117,25 @@ describe('StudiesSlot', () => {
     })
     expect(linesCount()).toHaveTextContent('1 on')
   })
+  it('phone: the count includes the guides that are on', () => {
+    render(<StudiesSlot variant="phone" />)
+    act(() => {
+      useImages.getState().updateLines('a' as ImageId, { thirds: true })
+    })
+    expect(linesCount()).toHaveTextContent('1 on')
+    act(() => {
+      useImages.getState().updateLines('a' as ImageId, { face: true })
+    })
+    expect(linesCount()).toHaveTextContent('2 on')
+    act(() => {
+      useImages.getState().updateLines('a' as ImageId, { edges: { on: true }, pose: true })
+    })
+    expect(linesCount()).toHaveTextContent('4 on')
+    act(() => {
+      useImages.getState().updateLines('a' as ImageId, { thirds: false, edges: { on: false } })
+    })
+    expect(linesCount()).toHaveTextContent('2 on')
+  })
   it('phone: each panel keeps its own import wait hint', () => {
     useImages.setState({ importing: 1 })
     render(<StudiesSlot variant="phone" />)

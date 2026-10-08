@@ -137,6 +137,11 @@
     background: var(--color-success-soft);
     color: var(--color-success);
   }
+  @media (forced-colors: active) {
+    .ds-badge {
+      border: 1px solid CanvasText;
+    }
+  }
 
   .ds-chip {
     display: inline-flex;
@@ -264,6 +269,12 @@
     }
     to {
       margin-left: 60%;
+    }
+  }
+  @media (forced-colors: active) {
+    .ds-progress__fill {
+      forced-color-adjust: none;
+      background: Highlight;
     }
   }
   @media (prefers-reduced-motion: reduce) {

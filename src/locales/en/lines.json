@@ -39,6 +39,48 @@
       "bottomRight": "↘"
     }
   },
+  "guides": {
+    "heading": "Guides from the photo",
+    "onDevice": "On device",
+    "detail": { "label": "Detail", "value": "{{pct}}%" },
+    "size": "One-time download: {{mb}} MB",
+    "download": "Download & turn on",
+    "progress": "{{loaded}} of {{total}} MB",
+    "failedHint": "Check your connection and try again. Other lines still work.",
+    "errorHint": "Try again. Other lines still work.",
+    "tryAgain": "Try again",
+    "noWebGL": "Face and pose guides need WebGL, which this browser has turned off.",
+    "edges": {
+      "running": "Tracing the outline…",
+      "done": "Outline traced.",
+      "none": "No edges found at this Detail. Try a higher Detail.",
+      "failed": "Couldn't trace the outline."
+    },
+    "face": {
+      "why": "Face guides use a small AI model. It's saved on this device and runs offline. Your photos are never uploaded.",
+      "progressLabel": "Face model download",
+      "downloading": "Downloading face model…",
+      "running": "Finding faces…",
+      "found": "Face guides on. Brow, eye, nose and chin lines added.",
+      "none": "No face found in this image.",
+      "noneHint": "Face guides work best with a clear front or ¾ view.",
+      "downloadFailed": "Couldn't download the face model",
+      "error": "Couldn't look for faces in this image",
+      "turnOff": "Turn off face guides"
+    },
+    "pose": {
+      "why": "Pose lines use a small AI model. It's saved on this device and runs offline. Your photos are never uploaded.",
+      "progressLabel": "Pose model download",
+      "downloading": "Downloading pose model…",
+      "running": "Finding the pose…",
+      "found": "Pose lines on.",
+      "none": "No person found in this image.",
+      "noneHint": "Pose lines work best when the whole body is in view.",
+      "downloadFailed": "Couldn't download the pose model",
+      "error": "Couldn't look for a person in this image",
+      "turnOff": "Turn off pose guides"
+    }
+  },
   "colour": {
     "label": "Colour",
     "hexLabel": "Colour hex code",
