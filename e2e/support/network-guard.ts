@@ -14,8 +14,8 @@ export interface NetworkGuard {
  *  - same-origin, GET/HEAD, with no body, or
  *  - an exact GET/HEAD to a URL the test registered as typed by the user (a failed CORS import
  *    makes two requests to that URL, a GET and a HEAD). The FULL URL, query included, must match.
- * Any WebSocket is a violation. Service workers are out of scope (the app has none); fetches from
- * dedicated workers are visible to `page.on('request')` in Chromium.
+ * Any WebSocket is a violation. Playwright blocks service workers in every spec except the offline
+ * spec; fetches from dedicated workers are visible to `page.on('request')` in Chromium.
  * Install it before navigating so nothing is missed. The app origin is `options.origin` or, by
  * default, the origin of the first http(s) main-frame navigation.
  */
