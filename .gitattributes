@@ -1,0 +1,3 @@
+# Models and WebAssembly: never diff, merge or normalise line endings.
+*.task binary
+*.wasm binary

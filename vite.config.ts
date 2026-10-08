@@ -2,11 +2,12 @@ import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { configDefaults, defineConfig } from 'vitest/config'
+import { aiAssets } from './scripts/vite-ai-assets.ts'
 
 // Served from https://omarcocarvalho.github.io/artistica/ (GitHub Pages project site).
 export default defineConfig({
   base: '/artistica/',
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), aiAssets()],
   // Workers are bundled as ES modules: new Worker(new URL('./x.worker.ts', import.meta.url), { type: 'module' }).
   worker: { format: 'es' },
   build: {

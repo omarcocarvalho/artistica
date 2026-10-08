@@ -33,6 +33,7 @@
     "@fontsource-variable/atkinson-hyperlegible-next": "5.3.0",
     "@fontsource-variable/caveat": "5.3.0",
     "@fontsource-variable/fraunces": "5.3.0",
+    "@mediapipe/tasks-vision": "0.10.35",
     "@pdfme/pdf-lib": "6.2.2",
     "comlink": "4.4.2",
     "heic-to": "1.5.2",
