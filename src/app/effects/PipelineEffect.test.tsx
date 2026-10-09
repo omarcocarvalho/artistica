@@ -231,6 +231,25 @@ describe('PipelineEffect with guides (M4)', () => {
     expect(layoutAsync).toHaveBeenCalledTimes(1)
   })
 
+  it('a detection result marks the pages as updating in the same store update, so Export never sees the result before the page model has it', async () => {
+    layoutAsync.mockImplementation((setup, items) => Promise.resolve(computeLayout(setup, items)))
+    edgesOn()
+    render(<PipelineEffect />)
+    await waitFor(() => {
+      expect(usePages.getState().pages).toHaveLength(1)
+    })
+    expect(usePages.getState().status).toBe('idle')
+    const key = keyOfA()
+    useDetections.setState({
+      results: new Map([[key, { polylines: [] }]]),
+      status: new Map([[key, { state: 'done', found: 0 }]]),
+    })
+    expect(usePages.getState().status).toBe('computing')
+    await waitFor(() => {
+      expect(usePages.getState().status).toBe('idle')
+    })
+  })
+
   it('a status change alone (download progress) does not reschedule the pipeline', async () => {
     layoutAsync.mockImplementation((setup, items) => Promise.resolve(computeLayout(setup, items)))
     edgesOn()

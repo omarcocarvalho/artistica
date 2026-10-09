@@ -101,7 +101,8 @@ describe('App export gate (Review Focus 5)', () => {
     usePages.setState({ status: 'idle', layout: {} as never, pages: [{ index: 0 }] as never })
     render(<App />)
     const button = () => screen.getByRole('button', { name: 'Export PDF' })
-    expect(button()).not.toHaveAttribute('aria-disabled', 'true')
+    expect(button()).toHaveAttribute('aria-disabled', 'true')
+    expect(button()).toHaveAccessibleDescription('Finding guides in your photos…')
     act(() => {
       useDetections.setState({
         status: new Map([[detectionKey('pose', img), { state: 'running' }]]),

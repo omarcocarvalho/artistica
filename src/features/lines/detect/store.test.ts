@@ -193,18 +193,32 @@ describe('guidesPending', () => {
     [{ state: 'failed', reason: 'error' }, false],
     [{ state: 'needs-download', bytes: 10 }, false],
   ])('%j → %s', (status, pending) => {
-    expect(guidesPending(state([], [[key, status]]), [a, b])).toBe(pending)
+    expect(guidesPending(state([], [[key, status]]), [a])).toBe(pending)
   })
 
-  it('is false without a status, and for images not in the list', () => {
-    expect(guidesPending(state(), [a, b])).toBe(false)
-    expect(guidesPending(state([], [[key, { state: 'running' }]]), [b])).toBe(false)
+  it('a switched-on guide with no status yet waits (just switched on, or its model being checked)', () => {
+    expect(guidesPending(state(), [a])).toBe(true)
+    expect(guidesPending(state(), [b])).toBe(true)
+    expect(guidesPending(state(), [img('c')])).toBe(false)
+  })
+
+  it('is false for images not in the list', () => {
+    expect(guidesPending(state([], [[key, { state: 'running' }]]), [img('c')])).toBe(false)
   })
 
   it('ignores a running key the image no longer prints (switched off or rotated)', () => {
     const s = state([], [[key, { state: 'running' }]])
     expect(guidesPending(s, [{ ...a, lines: patchLines(a.lines, { face: false }) }])).toBe(false)
-    expect(guidesPending(s, [{ ...a, edits: { ...a.edits, rotation: 90 } }])).toBe(false)
+    const turned = { ...a, edits: { ...a.edits, rotation: 90 as const } }
+    expect(guidesPending(s, [turned])).toBe(true)
+    const settled = state(
+      [],
+      [
+        [key, { state: 'running' }],
+        [detectionKey('face', turned), { state: 'done', found: 1 }],
+      ],
+    )
+    expect(guidesPending(settled, [turned])).toBe(false)
   })
 
   it('sees edge and pose detections too', () => {

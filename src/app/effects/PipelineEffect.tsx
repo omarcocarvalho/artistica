@@ -12,7 +12,6 @@ import { useNotices } from '../state/useNotices'
 export function PipelineEffect(): null {
   const pageSetup = useSettings((s) => s.pageSetup)
   const images = useImages(selectImageDescriptors)
-  const results = useDetections((s) => s.results)
   const pipelineRef = useRef<Pipeline | null>(null)
 
   useEffect(() => {
@@ -42,7 +41,20 @@ export function PipelineEffect(): null {
   useEffect(() => {
     const detections = useDetections.getState()
     pipelineRef.current?.schedule(pageSetup, images, (img) => guidesFor(detections, img))
-  }, [pageSetup, images, results])
+  }, [pageSetup, images])
+
+  useEffect(
+    () =>
+      useDetections.subscribe((detections, previous) => {
+        if (detections.results === previous.results) return
+        pipelineRef.current?.schedule(
+          useSettings.getState().pageSetup,
+          selectImageDescriptors(useImages.getState()),
+          (img) => guidesFor(detections, img),
+        )
+      }),
+    [],
+  )
 
   return null
 }
