@@ -1,0 +1,114 @@
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { describe, expect, it } from 'vitest'
+
+const WORKFLOWS = fileURLToPath(new URL('../.github/workflows/', import.meta.url))
+const BUILD = 'pnpm build'
+const UPLOAD = 'actions/upload-pages-artifact@'
+const DEPLOY = 'actions/deploy-pages@'
+const CHECKS = [
+  'node scripts/check-bundle-budget.ts dist/app/index.html dist',
+  'node scripts/audit-hosts.ts dist',
+]
+
+interface Job {
+  readonly file: string
+  readonly name: string
+  readonly text: string
+  readonly steps: readonly string[]
+}
+
+function workflowFiles(): string[] {
+  return readdirSync(WORKFLOWS)
+    .filter((f) => /\.ya?ml$/.test(f))
+    .sort()
+}
+
+function jobsOf(file: string, yaml: string): Job[] {
+  const body = yaml.slice(yaml.indexOf('\njobs:\n') + '\njobs:\n'.length)
+  return body
+    .split(/^(?= {2}[\w-]+:\s*$)/m)
+    .filter((chunk) => /^ {2}[\w-]+:/.test(chunk))
+    .map((text) => ({
+      file,
+      name: /^ {2}([\w-]+):/.exec(text)?.[1] ?? '',
+      text,
+      steps: text.split(/^(?= {6}- )/m).slice(1),
+    }))
+}
+
+function allJobs(): Job[] {
+  return workflowFiles().flatMap((f) => jobsOf(f, readFileSync(join(WORKFLOWS, f), 'utf8')))
+}
+
+/** Problems with the steps that build, check and upload the Pages artifact in one job. */
+function deployChecksMissing(job: Pick<Job, 'steps'>): string[] {
+  const at = (needle: string) => job.steps.findIndex((s) => s.includes(needle))
+  const build = at(BUILD)
+  const upload = at(UPLOAD)
+  return CHECKS.flatMap((check) => {
+    const i = at(check)
+    if (i < 0) return [`no step runs "${check}"`]
+    const step = job.steps[i]
+    if (/^\s+(if|continue-on-error):/m.test(step)) return [`"${check}" is conditional`]
+    if (!(build < i && i < upload))
+      return [`"${check}" does not run between the build and the upload`]
+    return []
+  })
+}
+
+describe('every workflow that deploys to Pages', () => {
+  const jobs = allJobs()
+
+  it('reads the workflow files', () => {
+    expect(workflowFiles()).toEqual(
+      expect.arrayContaining(['ci.yml', 'deploy-pages.yml', 'release.yml']),
+    )
+    expect(jobs.map((j) => `${j.file}:${j.name}`)).toEqual(
+      expect.arrayContaining(['deploy-pages.yml:build', 'release.yml:deploy', 'ci.yml:build']),
+    )
+  })
+
+  it('runs the bundle budget and the host audit on dist before it uploads the artifact', () => {
+    const uploads = jobs.filter((j) => j.text.includes(UPLOAD))
+    expect(uploads.map((j) => `${j.file}:${j.name}`)).toEqual(['deploy-pages.yml:build'])
+    for (const job of uploads) expect(deployChecksMissing(job), job.file).toEqual([])
+  })
+
+  it('deploys only an artifact built in the same workflow, and the release reuses that workflow', () => {
+    const deployers = jobs.filter((j) => j.text.includes(DEPLOY))
+    expect(deployers.map((j) => j.file)).toEqual(['deploy-pages.yml'])
+    const release = jobs.find((j) => j.file === 'release.yml' && j.name === 'deploy')
+    expect(release?.text).toMatch(/^ {4}uses: \.\/\.github\/workflows\/deploy-pages\.yml$/m)
+    const callers = jobs.filter((j) => j.text.includes('uses: ./.github/workflows/'))
+    expect(callers.map((j) => `${j.file}:${j.name}`)).toEqual(['release.yml:deploy'])
+  })
+})
+
+describe('deployChecksMissing', () => {
+  const step = (run: string, extra = '') => `      - run: ${run}\n${extra}`
+  const upload = `      - uses: ${UPLOAD}v5\n`
+  const good = [step(BUILD), step(CHECKS[0]), step(CHECKS[1]), upload]
+
+  it('accepts both checks between the build and the upload', () => {
+    expect(deployChecksMissing({ steps: good })).toEqual([])
+  })
+
+  it('fails a missing check, a check after the upload or before the build, and a conditional one', () => {
+    expect(deployChecksMissing({ steps: [good[0], good[1], good[3]] })).toEqual([
+      `no step runs "${CHECKS[1]}"`,
+    ])
+    expect(deployChecksMissing({ steps: [good[0], good[1], good[3], good[2]] })).toEqual([
+      `"${CHECKS[1]}" does not run between the build and the upload`,
+    ])
+    expect(deployChecksMissing({ steps: [good[1], good[0], good[2], good[3]] })).toEqual([
+      `"${CHECKS[0]}" does not run between the build and the upload`,
+    ])
+    expect(
+      deployChecksMissing({
+        steps: [good[0], step(CHECKS[0], '        continue-on-error: true\n'), good[2], good[3]],
+      }),
+    ).toEqual([`"${CHECKS[0]}" is conditional`])
+  })
+})

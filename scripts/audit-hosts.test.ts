@@ -100,6 +100,92 @@ describe('auditText', () => {
     expect(auditText('h="www.Google-Analytics.com"')).toEqual(['www.google-analytics.com'])
   })
 
+  it('matches a scheme in any case', () => {
+    expect(auditText('"HTTPS://evil.com/x" "Http://a.io/p" "WSS://live.io/s" "wS://b.io"')).toEqual(
+      ['evil.com/x', 'a.io/p', 'live.io/s', 'b.io'],
+    )
+  })
+
+  it('finds a link with any scheme, not only http(s) and ws(s)', () => {
+    expect(auditText('"ftp://files.evil.com/a" "FTP://f.io" "gopher://g.io/x"')).toEqual([
+      'files.evil.com/a',
+      'f.io',
+      'g.io/x',
+    ])
+  })
+
+  it('finds a JSON-escaped link, and keeps its path for the allow-list', () => {
+    expect(auditText('{"u":"https:\\/\\/evil.com\\/collect"}')).toEqual(['evil.com/collect'])
+    expect(auditText('{"u":"HTTPS:\\/\\/evil.com"}')).toEqual(['evil.com'])
+    expect(auditText('{"u":"https:\\/\\/react.dev\\/errors\\/418"}')).toEqual([])
+  })
+
+  it('finds a link whose slashes are backslashes, which browsers read as slashes', () => {
+    expect(auditText('"https:\\\\evil.com\\\\x" "WSS:/\\live.io"')).toEqual(['evil.com', 'live.io'])
+  })
+
+  it('does not read a regex literal after an object key as a link', () => {
+    expect(auditText('aa=[{name:`thai`,test:/\\p{Script=Thai}/u}]')).toEqual([])
+  })
+
+  it('finds a quoted protocol-relative link', () => {
+    expect(
+      auditText(
+        [
+          'fetch("//evil.com/x")',
+          "s='//cdn.Evil.io:8443/a.js'",
+          'i=`//t.co`',
+          '@import url(//fonts.example.net/a.css);',
+          '"\\/\\/esc.evil.com\\/p"',
+        ].join('\n'),
+      ),
+    ).toEqual([
+      'evil.com/x',
+      'cdn.evil.io:8443/a.js',
+      't.co',
+      'fonts.example.net/a.css',
+      'esc.evil.com/p',
+    ])
+  })
+
+  it('applies the path-scoped allow-list to protocol-relative links', () => {
+    expect(auditText('"//react.dev/errors/1" "//github.com/someone/else"')).toEqual([
+      'github.com/someone/else',
+    ])
+  })
+
+  it('does not take a comment, a regex or a same-origin path for a protocol-relative link', () => {
+    expect(
+      auditText(
+        [
+          '// see the note below',
+          'x=a//b.c',
+          'r=/\\/\\//g',
+          '"/artistica/models/x.task"',
+          '"//"',
+          'u.startsWith("//")',
+        ].join('\n'),
+      ),
+    ).toEqual([])
+  })
+
+  it("needs a dot or a port in a protocol-relative host, so a model file's bytes are not links", () => {
+    const bytes = Buffer.from([0xb5, 0x27, 0x2f, 0x2f, 0x6d, 0xa8, 0x28, 0x2f, 0x2f, 0x4e, 0xb0])
+    expect(auditText(bytes.toString('latin1'))).toEqual([])
+  })
+
+  it('finds a forbidden name in a link with an uppercase or other scheme', () => {
+    expect(auditText('"HTTPS://odml.pa.googleapis.com/v1/log"')).toEqual([
+      'odml.pa.googleapis.com/v1/log',
+    ])
+    expect(auditText('"//www.google-analytics.com/collect"')).toEqual([
+      'www.google-analytics.com/collect',
+    ])
+    expect(auditText('"\\/\\/www.google-analytics.com\\/collect"')).toEqual([
+      'www.google-analytics.com/collect',
+    ])
+  })
+
   it('allows protobuf type URLs, which name a type and are never requested', () => {
     expect(auditText('"type.googleapis.com/mediapipe.tasks.vision.Options"')).toEqual([])
     expect(auditText('"api.type.googleapis.com/x"')).toEqual(['api.type.googleapis.com'])
