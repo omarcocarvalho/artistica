@@ -22,7 +22,7 @@ export const JAW = [
   454,
 ] as const
 
-const HALF_LENGTH = 0.6
+const OVERHANG = 0.1
 
 interface V {
   readonly x: number
@@ -71,7 +71,9 @@ export function facePaths(
     maxX = Math.max(maxX, p.x)
     maxY = Math.max(maxY, p.y)
   }
-  if (!meetsCrop({ x: minX, y: minY, w: maxX - minX, h: maxY - minY }, img)) return []
+  const w = maxX - minX
+  const h = maxY - minY
+  if (!Number.isFinite(w + h) || !meetsCrop({ x: minX, y: minY, w, h }, img)) return []
 
   const eyes = sub(at(263), at(33))
   const eyeDist = Math.hypot(eyes.x, eyes.y)
@@ -80,17 +82,20 @@ export function facePaths(
   const n = dot(sub(at(152), at(10)), turned) > 0 ? turned : { x: u.y, y: -u.x }
 
   const midline = MIDLINE.map(at)
-  const brow = across(mid(at(105), at(334)), n, midline)
-  const eye = across(mid(at(468), at(473)), n, midline)
-  const nose = across(at(NOSE_BASE), n, midline)
-  const chin = across(at(152), n, midline)
-
-  const r = dot(sub(nose, brow), n)
+  const browMid = mid(at(105), at(334))
+  const brow = across(browMid, n, midline)
+  const r = dot(sub(at(NOSE_BASE), brow), n)
   if (!(r > 0)) return []
-  const half = HALF_LENGTH * Math.abs(dot(sub(at(454), at(234)), u))
+  let lo = Infinity
+  let hi = -Infinity
+  for (const p of pts) {
+    lo = Math.min(lo, dot(p, u))
+    hi = Math.max(hi, dot(p, u))
+  }
+  const pad = OVERHANG * (hi - lo)
   const straight = (c: V): PathCmd[] => {
-    const a = add(c, u, -half)
-    const b = add(c, u, half)
+    const a = add(c, u, lo - pad - dot(c, u))
+    const b = add(c, u, hi + pad - dot(c, u))
     return [
       { op: 'M', x: a.x, y: a.y },
       { op: 'L', x: b.x, y: b.y },
@@ -102,10 +107,10 @@ export function facePaths(
   return [
     ...circlePath(brow.x, brow.y, r),
     ...polyline([add(brow, n, -r), ...midline]),
-    ...straight(brow),
-    ...straight(eye),
-    ...straight(nose),
-    ...straight(chin),
+    ...straight(browMid),
+    ...straight(mid(at(468), at(473))),
+    ...straight(at(NOSE_BASE)),
+    ...straight(at(152)),
     ...polyline(JAW.map(at)),
   ]
 }

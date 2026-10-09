@@ -124,29 +124,30 @@ export const MIRROR: readonly number[] = [
   472,
 ]
 
-function centroid(ring: readonly number[]): { x: number; y: number } {
-  const pts = ring.map((i) => CANONICAL[i] ?? { x: NaN, y: NaN })
-  return {
-    x: pts.reduce((s, p) => s + p.x, 0) / pts.length,
-    y: pts.reduce((s, p) => s + p.y, 0) / pts.length,
-  }
+interface P3 {
+  readonly x: number
+  readonly y: number
+  readonly z: number
+}
+
+function centroid(ring: readonly number[]): P3 {
+  const pts = ring.map((i) => CANONICAL[i] ?? { x: NaN, y: NaN, z: NaN })
+  const mean = (f: (p: P3) => number) => pts.reduce((s, p) => s + f(p), 0) / pts.length
+  return { x: mean((p) => p.x), y: mean((p) => p.y), z: mean((p) => p.z) }
 }
 
 /** 468 mesh points, then each iris as its centre (468, 473) and four points around it. */
-function withIrises(): { x: number; y: number }[] {
-  const out: { x: number; y: number }[] = [...CANONICAL]
+function withIrises(): P3[] {
+  const out: P3[] = [...CANONICAL]
   for (const ring of [RIGHT_EYE_RING, LEFT_EYE_RING]) {
     const c = centroid(ring)
     const r = 0.5
     out.push(
       c,
-      { x: c.x + r, y: c.y },
-      { x: c.x, y: c.y + r },
-      { x: c.x - r, y: c.y },
-      {
-        x: c.x,
-        y: c.y - r,
-      },
+      { x: c.x + r, y: c.y, z: c.z },
+      { x: c.x, y: c.y + r, z: c.z },
+      { x: c.x - r, y: c.y, z: c.z },
+      { x: c.x, y: c.y - r, z: c.z },
     )
   }
   return out
@@ -157,19 +158,22 @@ const FRONTAL = withIrises()
 /**
  * A frontal face (MediaPipe's canonical mesh, irises added at the eye rings' centres) in a
  * SYNTH_W × SYNTH_H image: `scale` px per mesh centimetre, the nose bridge (168) at `center`,
- * turned clockwise on screen by `rollDeg`.
+ * the head turned by `yawDeg` about its vertical axis (orthographic), then turned clockwise on
+ * screen by `rollDeg`.
  */
 export function syntheticFace(
   center: { x: number; y: number },
   scale: number,
   rollDeg: number,
+  yawDeg = 0,
 ): FaceLandmarks {
   const a = (rollDeg * Math.PI) / 180
   const cos = Math.cos(a)
   const sin = Math.sin(a)
-  const bridge = FRONTAL[168] ?? { x: 0, y: 0 }
+  const yaw = (yawDeg * Math.PI) / 180
+  const bridge = FRONTAL[168] ?? { x: 0, y: 0, z: 0 }
   const points: SourcePoint[] = FRONTAL.map((p) => {
-    const x = (p.x - bridge.x) * scale
+    const x = ((p.x - bridge.x) * Math.cos(yaw) + (p.z - bridge.z) * Math.sin(yaw)) * scale
     const y = -(p.y - bridge.y) * scale
     return {
       x: (center.x + x * cos - y * sin) / SYNTH_W,

@@ -160,7 +160,7 @@ it('stays within 0.03% of the true radius (sampled)', () => { /* sample t in [0,
   - `the eye line passes through the iris midpoint`, `the chin line through 152`;
   - `the circle's centre lies on the brow line and the centre line; its radius is the brow-to-nose distance`;
   - `the centre line passes through 10 and 152 and reaches the top of the circle`;
-  - `each line's half-length is 0.6 × the face width`;
+  - `each line spans the landmarks along the eye axis, overhanging a tenth of that on each side` (M4-R13 as ruled in the A3 review);
   - `the jaw runs from 234 through 152 to 454 along the face oval`;
   - `a face rotated by 20°, 90° and 180° gives the same construction rotated likewise` (property over roll ∈ [0, 360));
   - `a mirrored face gives the mirrored construction` (swap left/right indices);

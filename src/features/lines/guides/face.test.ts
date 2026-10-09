@@ -38,6 +38,13 @@ const CASES: [string, Case][] = [
   ['synthetic face', SYNTH],
   ['recorded fixture', FIXTURE],
 ]
+const SHAPES: [string, Case][] = [
+  ...CASES,
+  ...[40, -40].map((yaw): [string, Case] => [
+    `synthetic face turned ${String(yaw)}°`,
+    { face: syntheticFace({ x: 300, y: 380 }, 20, 0, yaw), img: SYNTH.img },
+  ]),
+]
 
 const sub = (a: Pt, b: Pt): Pt => ({ x: a.x - b.x, y: a.y - b.y })
 const dot = (a: Pt, b: Pt) => a.x * b.x + a.y * b.y
@@ -57,6 +64,12 @@ function axes(c: Case): { u: Pt; n: Pt; width: number } {
   const turned = { x: -u.y, y: u.x }
   const n = dot(sub(px(c, 152), px(c, 10)), turned) > 0 ? turned : { x: u.y, y: -u.x }
   return { u, n, width: Math.abs(dot(sub(px(c, 454), px(c, 234)), u)) }
+}
+
+function extentAlongU(c: Case): { lo: number; hi: number } {
+  const { u } = axes(c)
+  const along = c.face.points.map((_, i) => dot(px(c, i), u))
+  return { lo: Math.min(...along), hi: Math.max(...along) }
 }
 
 const level = (c: Case, p: Pt) => dot(sub(p, px(c, 10)), axes(c).n)
@@ -301,7 +314,7 @@ describe('facePaths', () => {
     expect(MAX_FACES).toBe(LIMIT_FACES)
   })
 
-  it.each(CASES)('%s: the eye, brow, nose and chin lines are parallel to the eye axis', (_, c) => {
+  it.each(SHAPES)('%s: the eye, brow, nose and chin lines are parallel to the eye axis', (_, c) => {
     const k = build(c)
     const { u } = axes(c)
     for (const name of STRAIGHT) {
@@ -310,7 +323,7 @@ describe('facePaths', () => {
     }
   })
 
-  it.each(CASES)(
+  it.each(SHAPES)(
     '%s: they are ordered down the face: brow above eye above nose above chin',
     (_, c) => {
       const k = build(c)
@@ -320,7 +333,7 @@ describe('facePaths', () => {
     },
   )
 
-  it.each(CASES)('%s: each line passes through its landmarks', (_, c) => {
+  it.each(SHAPES)('%s: each line passes through its landmarks', (_, c) => {
     const k = build(c)
     const w = axes(c).width
     expect(offLine(mid(px(c, 468), px(c, 473)), k.eye)).toBeLessThan(1e-9 * w)
@@ -329,20 +342,29 @@ describe('facePaths', () => {
     expect(offLine(px(c, 152), k.chin)).toBeLessThan(1e-9 * w)
   })
 
-  it.each(CASES)(
-    '%s: each line is centred on the centre line, half-length 0.6 × the face width',
+  it.each(SHAPES)(
+    '%s: each line spans the landmarks along the eye axis, overhanging a tenth of that on each side',
     (_, c) => {
       const k = build(c)
-      const w = axes(c).width
+      const { u, width } = axes(c)
+      const { lo, hi } = extentAlongU(c)
       for (const name of STRAIGHT) {
         const [a, b] = k[name]
-        expect(len(sub(b, a)) / 2, name).toBeCloseTo(0.6 * w, 9)
-        expect(offPolyline(mid(a, b), k.centre), name).toBeLessThan(1e-9 * w)
+        expect(dot(a, u), name).toBeCloseTo(lo - 0.1 * (hi - lo), 9)
+        expect(dot(b, u), name).toBeCloseTo(hi + 0.1 * (hi - lo), 9)
+        const sides = k.centre.map((p) => cross(u, sub(p, a)))
+        expect(Math.min(...sides), `${name} meets the centre line`).toBeLessThan(1e-9 * width)
+        expect(Math.max(...sides), `${name} meets the centre line`).toBeGreaterThan(-1e-9 * width)
+      }
+      for (const i of [234, 454, 1, 152]) {
+        const s = dot(px(c, i), u)
+        expect(s - dot(k.eye[0], u)).toBeGreaterThan(0.09 * width)
+        expect(dot(k.eye[1], u) - s).toBeGreaterThan(0.09 * width)
       }
     },
   )
 
-  it.each(CASES)(
+  it.each(SHAPES)(
     '%s: the circle’s centre lies on the brow line and the centre line; its radius is the brow-to-nose distance',
     (_, c) => {
       const k = build(c)
@@ -355,7 +377,7 @@ describe('facePaths', () => {
     },
   )
 
-  it.each(CASES)(
+  it.each(SHAPES)(
     '%s: the centre line runs from the top of the circle through the midline, 10 to 152',
     (_, c) => {
       const k = build(c)
@@ -368,11 +390,11 @@ describe('facePaths', () => {
     },
   )
 
-  it.each(CASES)('%s: the jaw runs from 234 through 152 to 454 along the face oval', (_, c) => {
+  it.each(SHAPES)('%s: the jaw runs from 234 through 152 to 454 along the face oval', (_, c) => {
     expect(build(c).jaw).toEqual(JAW.map((i) => px(c, i)))
   })
 
-  it.each(CASES)(
+  it.each(SHAPES)(
     '%s: a face rotated by 20°, 90° and 180° gives the same construction rotated likewise',
     (_, c) => {
       for (const deg of [20, 90, 180]) {
@@ -382,7 +404,7 @@ describe('facePaths', () => {
     },
   )
 
-  it.each(CASES)('%s: any roll gives the construction rolled likewise', (_, c) => {
+  it.each(SHAPES)('%s: any roll gives the construction rolled likewise', (_, c) => {
     fc.assert(
       fc.property(fc.double({ min: 0, max: 360, noNaN: true, maxExcluded: true }), (deg) => {
         const turn = rotation(c, deg)
@@ -391,13 +413,13 @@ describe('facePaths', () => {
     )
   })
 
-  it.each(CASES)('%s: a mirrored face gives the mirrored construction', (_, c) => {
+  it.each(SHAPES)('%s: a mirrored face gives the mirrored construction', (_, c) => {
     const flip = (p: Pt): Pt => ({ x: c.img.pxW - p.x, y: p.y })
     const mirrored = mapFace(c, flip, (i) => MIRROR[i] ?? -1)
     expectClose(build(mirrored), mapConstruction(build(c), flip, true), 1e-5)
   })
 
-  it.each(CASES)(
+  it.each(SHAPES)(
     '%s: a mirrored face with its labels kept still builds down towards the chin',
     (_, c) => {
       const flip = (p: Pt): Pt => ({ x: c.img.pxW - p.x, y: p.y })
@@ -424,7 +446,7 @@ describe('facePaths', () => {
     img: { ...c.img, edits: { ...c.img.edits, crop } },
   })
 
-  it.each(CASES)('%s: a face outside the crop draws nothing', (_, c) => {
+  it.each(SHAPES)('%s: a face outside the crop draws nothing', (_, c) => {
     const b = box(c)
     const crops: CropRect[] = [
       { x: 0, y: 0, w: b.x0 - 1, h: c.img.pxH },
@@ -435,7 +457,7 @@ describe('facePaths', () => {
     for (const crop of crops) expect(facePaths(c.face, cropped(c, crop).img)).toEqual([])
   })
 
-  it.each(CASES)('%s: a face half inside the crop is drawn whole', (_, c) => {
+  it.each(SHAPES)('%s: a face half inside the crop is drawn whole', (_, c) => {
     const b = box(c)
     const half = Math.round((b.x0 + b.x1) / 2)
     const whole = facePaths(c.face, c.img)
@@ -446,7 +468,7 @@ describe('facePaths', () => {
     ).toEqual(whole)
   })
 
-  it.each(CASES)('%s: command order is circle, centre, brow, eye, nose, chin, jaw', (_, c) => {
+  it.each(SHAPES)('%s: command order is circle, centre, brow, eye, nose, chin, jaw', (_, c) => {
     const ops = facePaths(c.face, c.img)
       .map((cmd) => cmd.op)
       .join('')
@@ -493,20 +515,28 @@ describe('facePaths', () => {
     )
   })
 
-  it('centres a line beyond the midline’s ends level with its nearest end', () => {
-    const { n, width } = axes(SYNTH)
+  it('centres the circle level with the midline’s nearest end when the brows are beyond it', () => {
+    const { u, n, width } = axes(SYNTH)
     const lift = level(SYNTH, mid(px(SYNTH, 105), px(SYNTH, 334))) + 0.1 * width
+    const move = { x: 0.2 * width * u.x - lift * n.x, y: 0.2 * width * u.y - lift * n.y }
     const points = SYNTH.face.points.map((p, i) =>
-      i === 105 || i === 334
-        ? { x: p.x - (lift * n.x) / SYNTH_W, y: p.y - (lift * n.y) / SYNTH_H }
-        : p,
+      i === 105 || i === 334 ? { x: p.x + move.x / SYNTH_W, y: p.y + move.y / SYNTH_H } : p,
     )
     const c: Case = { face: { points }, img: SYNTH.img }
     const k = build(c)
-    const centre = mid(...k.brow)
-    expect(level(c, centre)).toBeCloseTo(-0.1 * width, 9)
-    expect(Math.abs(cross(sub(centre, px(c, 10)), n))).toBeLessThan(1e-9 * width)
+    expect(level(c, k.circle.c)).toBeCloseTo(-0.1 * width, 9)
+    expect(Math.abs(cross(sub(k.circle.c, px(c, 10)), n))).toBeLessThan(1e-9 * width)
     expect(offLine(mid(px(c, 105), px(c, 334)), k.brow)).toBeLessThan(1e-9 * width)
+  })
+
+  it.each([
+    [10, NaN],
+    [468, NaN],
+    [200, Infinity],
+    [454, -Infinity],
+  ])('draws nothing when landmark %i has x = %f', (index, x) => {
+    const points = SYNTH.face.points.map((p, i) => (i === index ? { x, y: p.y } : p))
+    expect(facePaths({ points }, SYNTH.img)).toEqual([])
   })
 
   it('draws nothing when the nose base is not below the brows', () => {
