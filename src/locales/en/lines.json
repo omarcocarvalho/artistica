@@ -46,6 +46,7 @@
     "size": "One-time download: {{mb}} MB",
     "download": "Download & turn on",
     "progress": "{{loaded}} of {{total}} MB",
+    "progressSpoken": "{{loaded}} of {{total}} megabytes",
     "failedHint": "Check your connection and try again. Other lines still work.",
     "errorHint": "Try again. Other lines still work.",
     "tryAgain": "Try again",

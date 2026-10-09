@@ -587,6 +587,38 @@ export async function failModelOnce(page: Page, model: GuideModel): Promise<void
   )
 }
 
+/**
+ * Logs, in the page, each text a live region announces (every non-empty content it takes), in
+ * order. Read the log with `announcements`.
+ */
+export async function watchAnnouncements(region: Locator): Promise<void> {
+  await region.evaluate((el) => {
+    interface Node {
+      textContent: string | null
+      firstChild: unknown
+    }
+    const g = globalThis as unknown as {
+      MutationObserver: new (cb: () => void) => {
+        observe(target: unknown, options: Record<string, boolean>): void
+      }
+      __announced: string[]
+    }
+    const node = el as unknown as Node
+    const log: string[] = []
+    g.__announced = log
+    new g.MutationObserver(() => {
+      const text = (node.textContent ?? '').trim()
+      if (text !== '' && node.firstChild !== null) log.push(text)
+    }).observe(el, { childList: true, subtree: true, characterData: true })
+  })
+}
+
+export async function announcements(page: Page): Promise<string[]> {
+  return page.evaluate(
+    () => (globalThis as unknown as { __announced?: string[] }).__announced ?? [],
+  )
+}
+
 export interface TextEvent {
   readonly text: string
   /** `performance.now()` in the page when the text appeared. */

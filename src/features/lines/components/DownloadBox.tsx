@@ -19,22 +19,23 @@ export function DownloadBox({ model, state, onDownload, disabled, describedBy }:
 
   if (state.view === 'downloading') {
     const { loaded, total } = state
-    const text =
-      total > 0
-        ? t('guides.progress', {
-            loaded: formatMb(Math.min(loaded, total)),
-            total: formatMb(total),
-          })
-        : undefined
+    const mb =
+      total > 0 ? { loaded: formatMb(Math.min(loaded, total)), total: formatMb(total) } : undefined
+    // The bar speaks the amount in words; the visible "MB" line repeats it, so it is hidden from
+    // screen readers. Neither is a live region: no continuous announcement (owner Q18, default).
     return (
       <div className="lines-ai-box">
         <p className="text-sm">{t(`guides.${model}.downloading`)}</p>
         <ProgressBar
           value={total > 0 ? loaded / total : null}
           label={t(`guides.${model}.progressLabel`)}
-          valueText={text}
+          valueText={mb && t('guides.progressSpoken', mb)}
         />
-        {text !== undefined && <p className="ds-field-hint tabular-nums">{text}</p>}
+        {mb && (
+          <p className="ds-field-hint tabular-nums" aria-hidden="true">
+            {t('guides.progress', mb)}
+          </p>
+        )}
       </div>
     )
   }
