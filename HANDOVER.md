@@ -1,4 +1,4 @@
-# Handover: Artistica (state as of 2026-10-08)
+# Handover: Artistica (state as of 2026-10-10)
 
 This is for the next developer and their AI agent. Read it first, then [CLAUDE.md](CLAUDE.md) for conventions. The default branch is **`master`**. There is no `main` branch.
 
@@ -13,13 +13,14 @@ Artistica is a free, static web app for artists:
 
 - Print study versions of each photo: blurred (a squint study), values (2–20 tones of one hue), or blur + values, next to the original.
 - Draw composition lines on each photo (grid, rule of thirds, diagonals and armature, golden ratio lines, golden spiral, centre lines), as vector paths in the PDF.
+- Draw guides from the photo (an edge outline, face construction lines, a body pose figure), found in the browser; face and pose use MediaPipe models downloaded once on request.
 
-Later milestones add AI lines (in the browser), polish, and translations.
+Later milestones add polish and translations.
 
 - **Everything runs in the browser.** Photos are never uploaded or persisted.
 - **Hosting:** GitHub Pages. The landing page is at `/artistica/` and the tool at `/artistica/app/`.
 - **Product spec:** [docs/spec.md](docs/spec.md). It is the source of truth.
-- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (released), M4 → `v0.4.0` (in progress), M5 → `v0.5.0`, M6 → `v1.0.0`.
+- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (released), M4 → `v0.4.0` (built, waiting for the owner's sign-off), M5 → `v0.5.0`, M6 → `v1.0.0`.
 
 ## Current status
 
@@ -41,23 +42,29 @@ Later milestones add AI lines (in the browser), polish, and translations.
 - **Phone memory** (M3 in `e2e/mobile-flow.spec.ts`, every line on, CI): import 1013 MB, studies 1296 MB, settled 1158 MB, export 1292 MB, against the unchanged budgets of 1500 / 1500 / 1700 MB.
 - **Release:** [#104](https://github.com/omarcocarvalho/artistica/pull/104) (`chore(master): release 0.3.0`) merged as `a9ba6da`, which created the release and deployed it to Pages.
 
-**M4 ("AI-assisted lines" → `v0.4.0`) is approved and in progress (owner, 2026-10-08: all recommended defaults accepted; the owner supplies the face and body test photos).** Plan: [`2026-10-08-m4-overview.md`](docs/superpowers/plans/2026-10-08-m4-overview.md) and sub-plans A–E (guides core, edge outline, AI runtime and offline, state and render, UI and E2E): 19 tasks in 6 waves, then the final review. It has 14 owner questions plus a budget question. **Q1 blocks the runtime work:** `@mediapipe/tasks-vision` 1.0.0 and later send usage metrics to Google (`odml.pa.googleapis.com`) with no opt-out; the plan recommends pinning 0.10.35, which doesn't.
+**M4 ("AI-assisted lines" → `v0.4.0`) is built and through its final review, and waits for the owner's sign-off on the iPhone.** Plan: [`2026-10-08-m4-overview.md`](docs/superpowers/plans/2026-10-08-m4-overview.md) and sub-plans A–E (guides core, edge outline, AI runtime and offline, state and render, UI and E2E), PR #121, approved by the owner on 2026-10-08 with every recommended default. All 19 tasks are merged (#122, #123, #125–#135 and #137–#144, with the owner's answers to Q15 and Q16 in #136), plus the memory fix, PR #145. The milestone-wide final review ran in three parts (geometry and edges; runtime, privacy and offline; UI and accessibility) and found no blockers; its fixes are PRs #146, #147, #148 and #149. The full record — per-task review findings, rulings, the final review with its mutation results, memory evidence and triage of deferred items, and the owner questions — is in [`docs/superpowers/ledgers/m4.md`](docs/superpowers/ledgers/m4.md).
+
+- **Guides from the photo:** an edge outline (our own integer Canny, in a worker, with a Detail slider), face construction lines and a body pose figure (MediaPipe `@mediapipe/tasks-vision` 0.10.35, in a worker on the CPU delegate). Off by default, per image, in the image's line style; vector paths in the same page model as the M3 lines, so preview = PDF. The runtime and models are self-hosted under `/artistica/`, downloaded only after a tap on "Download & turn on", and kept in Cache Storage (`artistica-ai-v1`).
+- **Exit criterion 1, offline once the models are cached:** E2E G-X1 in `e2e/offline.spec.ts` (chromium and firefox). WebKit offline is checked only on the owner's iPhone (see Gotchas).
+- **Exit criterion 2, nothing is uploaded:** E2E G-X2 in `e2e/guides.spec.ts` (every engine), the host audit at build and deploy, and the landmark worker's fetch guard. The final review's privacy probe through a logging proxy saw 178 requests across four browser setups, all same-origin GETs with no body and nothing off-origin.
+- **Phone memory** (M3 in `e2e/mobile-flow.spec.ts`, every line and guide on, CI mobile-chromium, master `8202465`): studies 1354, guides 1368, preview with guides 1270, settled after guides −46 against settled after studies, export 1328 MB, against budgets of 1500 / 1500 / 1500 / +100 / 1700 MB. The figures of the five master runs after #145 are in the ledger.
+- **Release:** release-please's PR [#124](https://github.com/omarcocarvalho/artistica/pull/124) (`chore(master): release 0.4.0`) is open. **It must stay unmerged until the owner signs off** (Next steps).
 
 ## Branch map
 
 | Branch | Use |
 |---|---|
-| `master` | all M1, M2 and M3 work; base for new work |
+| `master` | all M1–M4 work; base for new work |
 | `release-please--branches--master--components--artistica` | bot-managed; release-please opens the next release PR here. Don't touch it; merge only after the owner signs off a milestone |
 
 ## Next steps (in order)
 
-1. **Owner gate after spike C1:** if the AI runtime is too heavy for phones (the iPhone misses the memory or speed budgets), stop before C2 and C4 and decide another approach with the owner.
-2. **Run M4** subagent-driven, wave by wave, as in M3; record rulings in a new `docs/superpowers/ledgers/m4.md`.
-3. **Release v0.4.0** after the owner's real-phone sign-off (steps for any milestone):
-   1. Run `gh pr view <n> --json mergeable` on the release PR until it isn't `UNKNOWN`.
-   2. Close and reopen it and wait for the checks to pass.
-   3. Run `gh pr merge <n> --squash` from the main checkout. This creates the release and deploys to Pages.
+1. **The owner signs off M4 on the iPhone** with the "M4 sign-off checklist" in the [M4 overview](docs/superpowers/plans/2026-10-08-m4-overview.md) (deploy a demo first: `gh workflow run deploy-pages.yml --ref master`), and answers **Q17, Q18 and Q19** (below). Record the device, OS version, export time and page count, the detection timings and the offline result in #124. If the run finds a problem, fix it in a normal PR first; #124 stays unmerged.
+2. **Release v0.4.0** after the sign-off, and not before:
+   1. Run `gh pr view 124 --json mergeable` until it isn't `UNKNOWN`, so the merge ref is fresh.
+   2. Close and reopen #124 (CI doesn't run on a PR opened by `GITHUB_TOKEN`) and wait for every check to pass.
+   3. Run `gh pr merge 124 --squash` **from the main checkout**, not a worktree. This creates the release and deploys to Pages; then check that the deploy run and master CI are green.
+3. **Plan M5** (polish), starting with its own implementation plan in `docs/superpowers/plans/`, approved by the owner. The M5 items deferred so far are in the M2, M3 and M4 ledgers and under "Known issues" below.
 
 ## Owner answers from M2 (2026-10-07)
 
@@ -80,14 +87,24 @@ The owner tested M3 on the iPhone and accepted all four recommendations for the 
 
 The owner also ruled, from the same iPhone run, that **the phone Lines section is always open** (ruling D1-R1 in the M3 overview, "Contract change requests → Ruled"): a normal card below the Studies panel with an h3 "Lines" and the "N on" badge, no expand or collapse. The desktop Lines tab is unchanged.
 
+## Owner answers from M4 (2026-10-08 and 2026-10-09)
+
+The owner accepted every recommended default of the M4 plan (Q1–Q14 and the budget question), then Q15 (a browser without WebGL shows a note and offers no download) and Q16 (copy the plan didn't give). Q12 changed on 2026-10-09: the face and body test photos are public-domain photos (credits in `src/features/images/__fixtures__/README.md`), not the owner's. Details in the [M4 overview](docs/superpowers/plans/2026-10-08-m4-overview.md), "Questions for the owner". Q1 is the one to remember: MediaPipe stays on 0.10.35 because 1.x sends usage metrics to Google (see Gotchas).
+
 ## Owner questions (open)
 
-The spec doesn't answer these. Nothing was changed for them.
+**Open from M4** (raised by the final review; each has its recommended default built, so "ok" changes nothing; details and the full wording in the M4 overview):
 
-**Left open from M1** (Q1 was answered in M2 as H1: phone controls are now 44 px; for Q5 and Q6 the owner accepted the M3 defaults H1 and H2 — unchanged in M3, cancelling to be decided in M5 — so both stay open):
+- **Q17 Small faces in full-body photos:** face construction finds no face in a full-length photo whose face is small (about 6% of the width in `figure.jpg`); the pose is found. Default: accept it for M4, as Q5 says ("very small or distant faces may not be found"), with no second search on a crop around the pose's head.
+- **Q18 Download progress for screen readers:** default: no running announcement. "Downloading … model…" is said once; the bar reads its amount in words ("4.1 of 15.2 megabytes") when the user moves to it.
+- **Q19 Announcements after a Detail change:** default: only the result ("Outline traced." or the no-edges text), not "Tracing the outline…" each time; both messages when the outline is first switched on.
+
+The spec doesn't answer the questions below. Nothing was changed for them.
+
+**Left open from M1** (Q1 was answered in M2 as H1: phone controls are now 44 px; for Q5 and Q6 the owner accepted the M3 defaults H1 and H2 — unchanged in M3, cancelling to be decided in M5 — so both stay open; the M4 defaults H1–H3, accepted on 2026-10-08, again leave Q5, Q6 and Q7 unchanged, with cancelling still for M5):
 
 2. **Phone export:** export opens the same centred dialog as on desktop (ruling Q10). `design/mobile-flow.html` shows it inline in the Export step, and the user currently meets two "Create PDF" buttons in a row. Keep it, make it a bottom sheet, or put it inline?
-3. **Disabled Export button:** should the reason it is disabled be visible? Today it is only announced to screen readers.
+3. **Disabled Export button:** should the reason it is disabled be visible? Today it is only announced to screen readers. M4 adds one more reason, "Finding guides in your photos…" (owner Q13), shown the same way.
 4. **Export file name:** `artistica-A4-…` (as in the spec's D10 example) or `artistica-a4-…` (as in the mockup)?
 5. **Cancelling imports:** should the user be able to cancel a pending import, such as a slow link? "Remove all" is hidden while no image has loaded yet. Since M2-2, a pending import also keeps the Studies controls disabled until it ends (a link stalls out after 30 s without progress).
 6. **Duplicate photos:** the same file added twice is kept as two images. Keep that, merge them, or flag them?
@@ -116,6 +133,7 @@ The spec doesn't answer these. Nothing was changed for them.
   - Every E2E spec installs a strict network guard (`e2e/support/network-guard.ts`). It flags any non-same-origin request and any WebSocket.
   - `e2e/privacy.spec.ts` also checks that storage holds only the settings.
   - A leave-page warning appears while images exist.
+  - Guides (M4): photos are analysed on the device only. The AI runtime and models come from our own site, are downloaded only after a tap ("Download & turn on"), and are verified by size and SHA-256 against the build's manifest; loads without a tap read the cache only and show the download box again if a copy is missing or corrupt (M4-R19). The landmark worker's fetch guard (`installFetchGuard`, M4-R4) allows only the worker's own `blob:` URLs, locked on every prototype that has the API. The build and every deploy run the host audit (`scripts/audit-hosts.ts`), which fails if a shipped file names another host. Guide switches are never persisted; only the edge Detail is, with the line style (settings v4).
 
 **Gotchas**
 
@@ -134,6 +152,17 @@ The spec doesn't answer these. Nothing was changed for them.
 - **macOS has no `timeout` command.**
 - **pnpm bootstrap:** if the global `pnpm` shim fails to bootstrap the pinned pnpm version, run `corepack pnpm …`.
 
+**M4 gotchas**
+
+- **MediaPipe stays pinned at exactly `0.10.35` (M4-R1, owner Q1).** Versions 1.0.0 and later POST usage metrics to `odml.pa.googleapis.com` every 60 s while a detector is open, with no opt-out, which breaks "no analytics, ever". `pnpm up --latest` or `pnpm outdated` will offer 1.x: don't take it. Upgrade only to a version whose shipped files pass the host audit, and never auto-merge a bump of this package. pnpm 12 also refuses versions younger than its release-age window (24 h by default; a local `minimum-release-age` can be longer), so a fresh release may not install at all.
+- **The host audit runs at build and at deploy.** `node scripts/audit-hosts.ts dist` runs in CI's required `build` job and in `deploy-pages.yml` between the build and the upload (the release deploys through that workflow); `scripts/deploy-workflows.test.ts` fails if either check is removed, made conditional or moved after the upload. It flags any link to another host in any `scheme://` form (any case, `\/`-escaped, quoted protocol-relative `//host`) and any name under `googleapis.com` except the exact protobuf name `type.googleapis.com`. Allow-list entries are exact shipped strings (or path prefixes ending in `/`) that the app never requests; a dependency bump that changes them fails the build until the new string is checked and listed.
+- **Service worker:** see "Service worker recovery" below for the kill switch. New versions take over only after every Artistica tab has closed (no `skipWaiting`).
+- **Playwright's WebKit can't test offline.** It fails an offline reload through a service worker ("WebKit encountered an internal error", `C1-R1`), so G-X1 runs on chromium and firefox only, and WebKit offline is checked on the owner's iPhone. Its ephemeral contexts also lose Cache Storage entries on a reload, so a WebKit test can't expect a cached model to survive one.
+- **Real face and pose detection runs in CI on chromium and mobile-chromium only.** MediaPipe needs WebGL even on the CPU delegate: CI's Linux Firefox has none (it covers the "needs WebGL" path, owner Q15), and CI's Linux WebKit has it on the page only (the main-thread engine, covered by unit tests). The pose fixture recorded on macOS differs from Linux chromium by up to 1.44e-3 mm, so E2E compares it within `POSE_RECORDING_TOL_MM` (0.01 mm).
+- **Memory: CI Linux is the gate, not your Mac.** The memory test M3 fails locally on macOS arm64 (settled after guides about +155 to +185 MB, sometimes over 1500 MB in the guides phase) because RSS there counts reclaimable pages the browser has already given back; the renderer's footprint shows dirty memory flat while reclaimable memory grows. CI's Linux meets every budget. A local macOS failure of that test alone is not a regression; a CI failure is.
+- **Release on drain.** The scheduler closes the landmark worker and drops the model bytes as soon as the landmark queue drains (and the edge worker likewise), so every detection after an idle moment starts a worker and reads the model from Cache Storage again: about 0.5 s on CI for a later face as well as the first. A guide switched off during a job keeps the engine for 2 s, so quick toggles don't churn workers.
+- **The WebKit CI job sometimes hangs in "Install OS deps only (cache hit)".** The hang is in that setup step, before any test runs; re-run the failed job (`gh run rerun <run-id> --failed`) and it clears.
+
 **Service worker recovery**
 
 From E2 on, production registers a service worker (`/artistica/sw.js`, scope `/artistica/`, `src/sw/`; M4-R20). Users keep it after a deploy, so a broken one needs a way out:
@@ -146,7 +175,7 @@ From E2 on, production registers a service worker (`/artistica/sw.js`, scope `/a
 
 Plans were executed with subagent-driven development: one worktree and PR per task, an independent review (often with mutation testing), fix rounds, then a squash merge.
 
-- Every ruling made during execution is recorded in the ledgers (`docs/superpowers/ledgers/m1-*.md`, `m2.md`, `m3.md`).
+- Every ruling made during execution is recorded in the ledgers (`docs/superpowers/ledgers/m1-*.md`, `m2.md`, `m3.md`, [`m4.md`](docs/superpowers/ledgers/m4.md)).
 - Contract changes are in the overview's "Ruled" section (CR-*/CCR-*).
 
 **Rejected or overridden approaches**
@@ -180,7 +209,7 @@ pnpm build && pnpm preview     # production build → http://localhost:4173/arti
 - `gh` CLI, logged in.
 - Merging the release PR needs maintainer rights.
 
-**CI** has 8 required checks: `lint`, `typecheck`, `unit`, `build` (with a bundle budget), `e2e (chromium)`, `e2e (firefox)`, `e2e (webkit)` and `pr-title`. The webkit leg also runs the `mobile-webkit` project. Merges are squash-only, with Conventional Commit PR titles.
+**CI** has 8 required checks: `lint`, `typecheck`, `unit`, `build` (with the bundle budget and the host audit), `e2e (chromium)`, `e2e (firefox)`, `e2e (webkit)` and `pr-title`. The webkit leg also runs the `mobile-webkit` project. Merges are squash-only, with Conventional Commit PR titles.
 
 ## Known issues (deferred)
 
@@ -213,6 +242,14 @@ Only English ships until M6, so these don't show yet:
 **Layout quality**
 
 - **B3:** the fresh-page fallback can cost a page under the wide/tall policies. The `free` policy is always tried too, and the best result wins.
+
+**Guides (M4)**
+
+The M4 final review triaged every deferred item; the table is in the [M4 ledger](docs/superpowers/ledgers/m4.md), "Final review (task F)". The ones to know:
+
+- **Known limit of the worker guard:** native `import()` syntax and the imports of a `blob:` module are fetched by the browser, not through the worker's APIs, so no guard can refuse them. MediaPipe 0.10.35 uses neither; the exact pin and the host audit are the controls.
+- **E2E gaps that CI can't close:** Firefox with WebGL (face and pose there were checked by hand in the final review) and WebKit offline (the owner's iPhone run).
+- **M5:** merge the two E2E worker probes (`installWorkerProbe`, `installWorkerPostCounter`); "Updating layout…" is announced in the same moment as a guide's result on desktop (as for M3 lines); with reduced motion the brief indeterminate progress bar looks like a fixed 40% fill.
 
 ## Related links
 
