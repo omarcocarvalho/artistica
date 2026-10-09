@@ -381,15 +381,25 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
     return queues.landmarks.splice(Math.max(i, 0), 1)[0]
   }
 
+  function releaseLandmarks(): void {
+    loaded?.engine.dispose()
+    loaded = null
+  }
+
   function pump(): void {
     if (disposed) return
     if (!busy.landmarks) {
       const key = nextLandmarkKey()
       if (key !== undefined) runJob('landmarks', key)
+      else releaseLandmarks()
     }
     if (!busy.edges) {
       const key = queues.edges.shift()
       if (key !== undefined) runJob('edges', key)
+      else {
+        edgeEngine?.dispose()
+        edgeEngine = null
+      }
     }
   }
 
@@ -546,8 +556,7 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
     disposed = true
     for (const controller of downloads.values()) controller.abort()
     downloads.clear()
-    loaded?.engine.dispose()
-    loaded = null
+    releaseLandmarks()
     edgeEngine?.dispose()
     edgeEngine = null
   }

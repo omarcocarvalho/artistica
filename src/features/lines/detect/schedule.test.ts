@@ -505,10 +505,10 @@ describe('jobs', () => {
     expect(h.log.filter((l) => l.startsWith('detect') && !l.includes('edges'))).toEqual([
       'detect face x',
       'detect pose x',
-      'detect pose a',
-      'detect pose b',
       'detect face a',
       'detect face b',
+      'detect pose a',
+      'detect pose b',
     ])
     expect(h.log.filter((l) => /^(prepare|dispose)/.test(l))).toEqual([
       'prepare face',
@@ -516,8 +516,16 @@ describe('jobs', () => {
       'prepare pose',
       'dispose pose',
       'prepare face',
+      'dispose face',
+      'prepare pose',
+      'dispose pose',
     ])
-    expect(h.landmarkEngines.map((e) => e.prepared)).toEqual([['face'], ['pose'], ['face']])
+    expect(h.landmarkEngines.map((e) => e.prepared)).toEqual([
+      ['face'],
+      ['pose'],
+      ['face'],
+      ['pose'],
+    ])
     expect(h.stats()).toEqual({
       maxActiveLandmarks: 1,
       maxActiveEdges: 1,
@@ -919,6 +927,7 @@ describe('one landmarker at a time (M4-R5a)', () => {
       'dispose face',
       'prepare pose',
       'detect pose p',
+      'dispose pose',
     ])
     expect(h.stats().maxLiveLandmarkEngines).toBe(1)
     expect(status(detectionKey('face', a))).toBeUndefined()
@@ -941,22 +950,75 @@ describe('one landmarker at a time (M4-R5a)', () => {
     }
   })
 
-  it('a landmarker that fails to prepare again is closed, and the next job loads a new one', async () => {
-    const h = fakePorts({ cached: ['face'] })
+  it('the landmarker is closed and its bytes dropped when the landmark queue drains; the next job reads them again', async () => {
+    const h = fakePorts({ cached: ['face'], manual: true })
     const s = start(h.ports)
     const a = img('a', FACE)
-    s.sync([a])
+    const b = img('b', FACE)
+    s.sync([a, b])
+    await flush()
+    h.pending.shift()?.done.resolve([])
+    await flush()
+    expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([false])
+    h.pending.shift()?.done.resolve([])
+    await flush()
+    expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([true])
+    expect(h.loader.loadAiAsset).toHaveBeenCalledTimes(3)
+
+    const c = img('c', FACE)
+    s.sync([a, b, c])
+    await flush()
+    expect(h.loader.loadAiAsset).toHaveBeenCalledTimes(6)
+    expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([true, false])
+    const [first, , , again] = h.prepareCalls
+    expect(again?.[2]).not.toBe(first?.[2])
+    expect(again?.[1].wasm).not.toBe(first?.[1].wasm)
+    h.pending.shift()?.done.resolve([])
+    await flush()
+    expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([true, true])
+    expect(status(detectionKey('face', c))).toEqual({ state: 'done', found: 0 })
+  })
+
+  it('the edge engine is closed when the edge queue drains, and the next job starts a new one', async () => {
+    const h = fakePorts({ manual: true })
+    const s = start(h.ports)
+    const a = img('a', EDGES())
+    const b = img('b', EDGES())
+    s.sync([a, b])
+    await flush()
+    h.pending.shift()?.done.resolve([])
+    await flush()
+    expect(h.edgeEngines.map((e) => e.disposed)).toEqual([false])
+    h.pending.shift()?.done.resolve([])
+    await flush()
+    expect(h.edgeEngines.map((e) => e.disposed)).toEqual([true])
+
+    s.sync([a, img('b', EDGES(60))])
+    await flush()
+    expect(h.edgeEngines.map((e) => e.disposed)).toEqual([true, false])
+    h.pending.shift()?.done.resolve([])
+    await flush()
+    expect(h.edgeEngines.map((e) => e.disposed)).toEqual([true, true])
+  })
+
+  it('a landmarker that fails to prepare again is closed, and the next job loads a new one', async () => {
+    const h = fakePorts({ cached: ['face'], manual: true })
+    const s = start(h.ports)
+    const a = img('a', FACE)
+    const b = img('b', FACE)
+    s.sync([a, b])
     await flush()
     const engine = h.landmarkEngines[0]
     if (!engine) throw new Error('no engine')
     vi.spyOn(engine, 'prepare').mockRejectedValueOnce(new Error('worker restart failed'))
-    const b = img('b', FACE)
-    s.sync([a, b])
+    h.pending.shift()?.done.resolve([{ points: [{ x: 0.25, y: 0.1 }] }])
     await flush()
     expect(status(detectionKey('face', b))).toEqual({ state: 'failed', reason: 'error' })
     expect(engine.disposed).toBe(true)
     const c = img('c', FACE)
     s.sync([a, b, c])
+    await flush()
+    h.pending.shift()?.done.resolve([{ points: [{ x: 0.25, y: 0.1 }] }])
     await flush()
     expect(status(detectionKey('face', c))).toEqual({ state: 'done', found: 1 })
     expect(h.landmarks).toHaveBeenCalledTimes(2)
@@ -1022,6 +1084,7 @@ describe('one landmarker at a time (M4-R5a)', () => {
       'dispose face',
       'prepare pose',
       'detect pose p',
+      'dispose pose',
     ])
     expect(h.stats().maxLiveLandmarkEngines).toBe(1)
   })
