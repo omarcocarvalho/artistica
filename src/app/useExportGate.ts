@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { selectImageDescriptors, useImages } from '../features/images'
-import { guidesPending, useDetections } from '../features/lines'
+import { guidesPending, useDetailDraft, useDetections } from '../features/lines'
 import { exportBlock, type ExportBlock } from './exportState'
 import { usePages } from './pages-store'
 import { useImageCount } from './state/hasImages'
@@ -21,7 +21,8 @@ export function useExportGate(): { block: ExportBlock; reason: string | null } {
   const hasLayout = usePages((s) => s.layout !== null && !s.empty)
   const pageCount = usePages((s) => s.pages.length)
   const images = useImages(selectImageDescriptors)
-  const pending = useDetections((s) => guidesPending(s, images))
-  const block = exportBlock(imageCount, status, hasLayout, pageCount, pending)
+  const detecting = useDetections((s) => guidesPending(s, images))
+  const draft = useDetailDraft((s) => s.pending)
+  const block = exportBlock(imageCount, status, hasLayout, pageCount, detecting || draft)
   return { block, reason: block === null ? null : t(REASON_KEYS[block]) }
 }

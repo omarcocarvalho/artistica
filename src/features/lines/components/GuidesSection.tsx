@@ -14,6 +14,7 @@ import type { ImageDescriptor, ImageId } from '../../../shared/model/image'
 import { MAX_EDGE_DETAIL, MIN_EDGE_DETAIL, type LinesPatch } from '../../../shared/model/lines'
 import { Badge, Button, Callout, Slider, Switch } from '../../../shared/ui'
 import type { AiModel, GuideKind } from '../detect/store'
+import { useDetailDraft } from './detail-draft'
 import { useDetectionActions, type DetectionActions } from './detection-actions'
 import { DownloadBox } from './DownloadBox'
 import { formatMb, guideView, useGuideStatus, type GuideView } from './use-guide-status'
@@ -343,6 +344,7 @@ function useSettledDetail(imageId: ImageId, detailPct: number) {
     clearTimeout(p.timer)
     pending.current = null
     useImages.getState().updateLines(p.id, { edges: { detailPct: p.pct } })
+    useDetailDraft.setState({ pending: false })
     setDraft(null)
   }, [])
   useEffect(() => commit, [commit])
@@ -352,6 +354,7 @@ function useSettledDetail(imageId: ImageId, detailPct: number) {
     if (pending.current && pending.current.id !== imageId) commit()
     if (pending.current) clearTimeout(pending.current.timer)
     pending.current = { id: imageId, pct, timer: setTimeout(commit, DETAIL_SETTLE_MS) }
+    useDetailDraft.setState({ pending: true })
     setDraft({ id: imageId, pct })
   }
   return { value: draft?.id === imageId ? draft.pct : detailPct, change }

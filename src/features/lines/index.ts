@@ -18,6 +18,7 @@ export { goldenSpiral, KAPPA, SPIRAL_ARCS } from './spiral'
 export { compositionPaths } from './composition'
 // --- components (D1) ---
 export { LinesPanel } from './components/LinesPanel'
+export { useDetailDraft } from './components/detail-draft'
 export type { LinesPanelProps } from './components/LinesPanel'
 // --- guides (A1–A4) ---
 export { circlePath } from './guides/curves'

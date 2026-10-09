@@ -15,6 +15,7 @@ import {
 } from '../detect/store'
 import type { DetectionActions } from './detection-actions'
 import { DetectionsProvider } from './detections-context'
+import { useDetailDraft } from './detail-draft'
 import { LinesPanel, type LinesPanelProps } from './LinesPanel'
 
 const A = 'a' as ImageId
@@ -106,6 +107,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.useRealTimers()
+  useDetailDraft.setState({ pending: false })
 })
 
 describe('GuidesSection', () => {
@@ -232,6 +234,31 @@ describe('GuidesSection', () => {
       expect(spy).toHaveBeenCalledTimes(2)
       expect(spy).toHaveBeenLastCalledWith(A, { edges: { detailPct: 30 } })
       spy.mockRestore()
+    })
+
+    it('marks the detail as a draft from the change until its commit, and on unmount', () => {
+      vi.useFakeTimers()
+      seed(EDGES_ON)
+      const { unmount } = renderPanel()
+      const detail = screen.getByRole('slider', { name: 'Detail' })
+      expect(useDetailDraft.getState().pending).toBe(false)
+      fireEvent.change(detail, { target: { value: '60' } })
+      expect(useDetailDraft.getState().pending).toBe(true)
+      act(() => {
+        vi.advanceTimersByTime(79)
+      })
+      expect(useDetailDraft.getState().pending).toBe(true)
+      act(() => {
+        vi.advanceTimersByTime(1)
+      })
+      expect(lines(A).edges.detailPct).toBe(60)
+      expect(useDetailDraft.getState().pending).toBe(false)
+
+      fireEvent.change(detail, { target: { value: '70' } })
+      expect(useDetailDraft.getState().pending).toBe(true)
+      unmount()
+      expect(lines(A).edges.detailPct).toBe(70)
+      expect(useDetailDraft.getState().pending).toBe(false)
     })
 
     it('a pending detail goes to the image it was set on, even if another is selected meanwhile', () => {
