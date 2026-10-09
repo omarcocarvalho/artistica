@@ -18,5 +18,15 @@ describe('exportBlock', () => {
   })
   it('allows export when images, pages and idle', () => {
     expect(exportBlock(2, 'idle', true, 1)).toBeNull()
+    expect(exportBlock(2, 'idle', true, 1, false)).toBeNull()
+  })
+  it('guides pending blocks export with reason "guides" (M4-R18)', () => {
+    expect(exportBlock(2, 'idle', true, 1, true)).toBe('guides')
+  })
+  it('the layout reasons come before "guides"', () => {
+    expect(exportBlock(0, 'idle', true, 0, true)).toBe('no-images')
+    expect(exportBlock(2, 'error', true, 1, true)).toBe('error')
+    expect(exportBlock(2, 'computing', true, 1, true)).toBe('updating')
+    expect(exportBlock(2, 'idle', true, 0, true)).toBe('no-room')
   })
 })

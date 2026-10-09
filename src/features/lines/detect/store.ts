@@ -60,12 +60,13 @@ export function guidesFor(state: DetectionsState, img: ImageDescriptor): ImageGu
 
 const KINDS: readonly GuideKind[] = ['face', 'pose', 'edges']
 
+/** Whether a switched-on guide of a printed image is unsettled (M4-R18): only done, failed and needs-download are settled. */
 export function guidesPending(state: DetectionsState, images: readonly ImageDescriptor[]): boolean {
   return images.some((img) =>
     KINDS.some((kind) => {
       if (!isOn(kind, img)) return false
       const s = state.status.get(detectionKey(kind, img))?.state
-      return s === 'downloading' || s === 'running'
+      return s !== 'done' && s !== 'failed' && s !== 'needs-download'
     }),
   )
 }

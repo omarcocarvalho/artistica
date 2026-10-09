@@ -4,6 +4,7 @@ import '../shared/styles.css'
 import { useSettings } from '../features/settings'
 import { pageTitle } from '../shared/app-info'
 import { initI18n } from '../shared/i18n'
+import { registerServiceWorker } from '../sw/register'
 import { App } from './App'
 
 document.title = pageTitle('App')
@@ -19,3 +20,5 @@ void initI18n({ savedLanguage: useSettings.getState().language }).then(() => {
     </StrictMode>,
   )
 })
+
+void registerServiceWorker()

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ImageId } from '../shared/model/image'
+import { DEFAULT_LINES } from '../shared/model/lines'
 import type { PageModel } from '../features/render'
 import { describePage } from './describe-page'
 
@@ -59,5 +60,39 @@ describe('describePage', () => {
       [],
       ['grid', 'centre'],
     ])
+  })
+  it('lists switched-on guide types after the composition types, found or not (M4-R22)', () => {
+    const withGuides = {
+      ...model,
+      lines: [
+        { tileIndex: 0, types: ['thirds', 'edges'] },
+        { tileIndex: 1, types: ['centre', 'face'] },
+      ],
+    } as unknown as PageModel
+    const lines = new Map([
+      [a, { ...DEFAULT_LINES, thirds: true, edges: { on: true, detailPct: 50 }, pose: true }],
+      [b, { ...DEFAULT_LINES, centre: true, face: true }],
+    ])
+    expect(describePage(withGuides, new Map(), lines).map((d) => d.lines)).toEqual([
+      ['thirds', 'edges', 'pose'],
+      ['centre', 'face'],
+    ])
+  })
+  it('names a guide that found nothing on a tile with no line entry at all', () => {
+    const lines = new Map([
+      [b, { ...DEFAULT_LINES, face: true, edges: { on: true, detailPct: 9 } }],
+    ])
+    expect(describePage(model, new Map(), lines).map((d) => d.lines)).toEqual([
+      [],
+      ['edges', 'face'],
+    ])
+  })
+  it('never names a guide type the image has switched off, even if the model drew it', () => {
+    const stale = {
+      ...model,
+      lines: [{ tileIndex: 0, types: ['grid', 'face'] }],
+    } as unknown as PageModel
+    const lines = new Map([[a, { ...DEFAULT_LINES, grid: { on: true, cols: 4, rows: 5 } }]])
+    expect(describePage(stale, new Map(), lines)[0]?.lines).toEqual(['grid'])
   })
 })

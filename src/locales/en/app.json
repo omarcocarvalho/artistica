@@ -8,7 +8,8 @@
     "exportNoImages": "Add at least one image to export.",
     "exportUpdating": "The layout is updating. Export is available in a moment.",
     "exportNoRoom": "Export is unavailable: the page setup leaves no room for images.",
-    "exportError": "The layout could not be computed. Change a setting or reload the page."
+    "exportError": "The layout could not be computed. Change a setting or reload the page.",
+    "exportGuides": "Finding guides in your photos…"
   },
   "theme": {
     "change": "Change theme",

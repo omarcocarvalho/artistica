@@ -183,7 +183,7 @@ test.describe('studies wait for imports in progress (phone)', () => {
       ...(await app.linesSection.getByRole('slider').all()),
       app.linesApplyButton,
     ]
-    expect(linesControls).toHaveLength(6 + 4 + 2 + 1)
+    expect(linesControls).toHaveLength(6 + 3 + 4 + 2 + 1)
     for (const c of linesControls) {
       await expect(c).toBeDisabled()
       await expect(c).toHaveAccessibleDescription(new RegExp(WAITING))
