@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.4.0](https://github.com/omarcocarvalho/artistica/compare/v0.3.0...v0.4.0) (2026-10-09)
+
+
+### Features
+
+* **app:** keep the app available offline with a service worker ([#134](https://github.com/omarcocarvalho/artistica/issues/134)) ([3dfeb41](https://github.com/omarcocarvalho/artistica/commit/3dfeb413f8d1887df15e477d6ef88d105a391b58))
+* **app:** wire guides, downloads and the export gate ([#142](https://github.com/omarcocarvalho/artistica/issues/142)) ([35df867](https://github.com/omarcocarvalho/artistica/commit/35df8670a5f1fe50a4b58640b48f2f231c80741e))
+* **lines:** add the edge, face and pose line settings ([#122](https://github.com/omarcocarvalho/artistica/issues/122)) ([00f8aad](https://github.com/omarcocarvalho/artistica/commit/00f8aad12cc497b06a583d70ccf932381fd96cc0))
+* **lines:** add the Guides from the photo section ([#132](https://github.com/omarcocarvalho/artistica/issues/132)) ([7b91058](https://github.com/omarcocarvalho/artistica/commit/7b91058e1e044438fcd42808beaa16a26beb3087))
+* **lines:** build face construction lines from landmarks ([#139](https://github.com/omarcocarvalho/artistica/issues/139)) ([88541bb](https://github.com/omarcocarvalho/artistica/commit/88541bb805e61154f50a80ada78d5e84ad9d75e3))
+* **lines:** build the pose figure from landmarks ([#138](https://github.com/omarcocarvalho/artistica/issues/138)) ([9833a32](https://github.com/omarcocarvalho/artistica/commit/9833a329fe48e9e7c7ce748ef3323dda8ee2b443))
+* **lines:** download AI assets once, with progress, into the cache ([#133](https://github.com/omarcocarvalho/artistica/issues/133)) ([a0f66e6](https://github.com/omarcocarvalho/artistica/commit/a0f66e6d8c6135dd6ff807b1c19c6b81503e21e3))
+* **lines:** find faces and poses in a worker ([#135](https://github.com/omarcocarvalho/artistica/issues/135)) ([19f7cd4](https://github.com/omarcocarvalho/artistica/commit/19f7cd48a627d721f0b59c95eae3eda1412a79e7))
+* **lines:** map source pixels onto the picture frame ([#126](https://github.com/omarcocarvalho/artistica/issues/126)) ([fef95cb](https://github.com/omarcocarvalho/artistica/commit/fef95cbc3779bdc876a52399b3f81499912d6c36))
+* **lines:** self-host the MediaPipe runtime and models ([#130](https://github.com/omarcocarvalho/artistica/issues/130)) ([4c02af2](https://github.com/omarcocarvalho/artistica/commit/4c02af2c3d6d00f644bd233be9091a1020f7ca96))
+* **lines:** trace and simplify edges into a budgeted outline ([#128](https://github.com/omarcocarvalho/artistica/issues/128)) ([fd21207](https://github.com/omarcocarvalho/artistica/commit/fd21207bdbe37fef9aaa6e38e46916dc2d247b23))
+* **render:** carry edge, face and pose lines in the page model ([#141](https://github.com/omarcocarvalho/artistica/issues/141)) ([63137a5](https://github.com/omarcocarvalho/artistica/commit/63137a580b47fe30ea91c4f926a17a4bfa0c85fa))
+
+
+### Bug Fixes
+
+* **lines:** centre the pose head circle on the cranium in profile ([#140](https://github.com/omarcocarvalho/artistica/issues/140)) ([6450c13](https://github.com/omarcocarvalho/artistica/commit/6450c13405e6e1262e6528fad42b01ff101b3daf))
+* **lines:** close fetch-guard and silent re-download gaps ([#149](https://github.com/omarcocarvalho/artistica/issues/149)) ([8202465](https://github.com/omarcocarvalho/artistica/commit/8202465a9a624ef9b3f57bb00949d42232b6451a))
+* **lines:** pin the edge seed floor and keep the pose head size near frontal ([#146](https://github.com/omarcocarvalho/artistica/issues/146)) ([ae4f4ec](https://github.com/omarcocarvalho/artistica/commit/ae4f4ec42f95b836906c5533fda439fad1ad948e))
+* **lines:** tidy guide announcements and pin their copy ([#148](https://github.com/omarcocarvalho/artistica/issues/148)) ([3677357](https://github.com/omarcocarvalho/artistica/commit/36773577d0c967f9d5861041132b0e814f78510c))
+
+
+### Performance Improvements
+
+* **lines:** release face and pose memory sooner ([#145](https://github.com/omarcocarvalho/artistica/issues/145)) ([fb71f74](https://github.com/omarcocarvalho/artistica/commit/fb71f74a76243c73841ee32261e85f84190ff9b3))
+
 ## [0.3.0](https://github.com/omarcocarvalho/artistica/compare/v0.2.0...v0.3.0) (2026-10-07)
 
 
