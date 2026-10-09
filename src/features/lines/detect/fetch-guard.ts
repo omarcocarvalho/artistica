@@ -55,6 +55,8 @@ export function installFetchGuard(scope: GuardScope, options: FetchGuardOptions 
   const defineProperty = Object.defineProperty
   const ownDescriptor = Object.getOwnPropertyDescriptor
   const prototypeOf = Object.getPrototypeOf
+  const nullObject = Object.create as (proto: null) => Record<PropertyKey, unknown>
+  const iteratorKey = Symbol.iterator
   const NativeURL = URL
   const toText = String
   const urlProtocol = getter(URL.prototype, 'protocol')
@@ -108,11 +110,31 @@ export function installFetchGuard(scope: GuardScope, options: FetchGuardOptions 
     options.onRefused?.(api, url)
     throw refused(api, url)
   }
+  // An argument list for a native: own elements only, so an index accessor or iterator added
+  // to Array.prototype later can neither drop a checked URL nor put another one in its place.
+  const put = (target: object, key: PropertyKey, value: unknown): void => {
+    const descriptor = nullObject(null)
+    descriptor.value = value
+    descriptor.writable = true
+    descriptor.enumerable = true
+    descriptor.configurable = true
+    defineProperty(target, key, descriptor)
+  }
+  const ownIterable = (list: unknown[]): unknown[] => {
+    let next = 0
+    const iterator = nullObject(null)
+    iterator.next = () => {
+      const step = nullObject(null)
+      step.done = next >= list.length
+      step.value = step.done ? undefined : list[next++]
+      return step
+    }
+    put(list, iteratorKey, () => iterator)
+    return list
+  }
   const withFirst = (first: unknown, args: readonly unknown[], from = 1): unknown[] => {
     const list: unknown[] = []
-    for (let i = 0; i < from; i++) list[i] = args[i]
-    list[from - 1] = first
-    for (let i = from; i < args.length; i++) list[i] = args[i]
+    for (let i = 0; i < args.length || i < from; i++) put(list, i, i === from - 1 ? first : args[i])
     return list
   }
   const replaceCtor = (name: keyof GuardScope, Original: object, Guarded: object): void => {
@@ -148,11 +170,11 @@ export function installFetchGuard(scope: GuardScope, options: FetchGuardOptions 
   const xhr = scope.XMLHttpRequest?.prototype
   if (xhr) {
     const open = xhr.open
-    const guarded: typeof open = function (this: unknown, method, url, ...rest) {
-      const href = toText(url)
+    const guarded = function (this: unknown, ...args: unknown[]) {
+      const href = toText(args[1])
       check('XMLHttpRequest', href)
-      apply(open, this, withFirst(href, [method, url, ...rest], 2))
-    }
+      apply(open, this, withFirst(href, args, 2))
+    } as typeof open
     lock(xhr, 'open', guarded)
   }
 
@@ -163,7 +185,7 @@ export function installFetchGuard(scope: GuardScope, options: FetchGuardOptions 
       for (let i = 0; i < urls.length; i++) {
         const href = toText(urls[i])
         check('importScripts', href)
-        hrefs[i] = href
+        put(hrefs, i, href)
       }
       apply(importScripts, scope, hrefs)
     }
@@ -221,8 +243,8 @@ export function installFetchGuard(scope: GuardScope, options: FetchGuardOptions 
     }
     const guardedAddAll: typeof addAll = async function (this: unknown, requests) {
       const targets: unknown[] = []
-      for (let i = 0; i < requests.length; i++) targets[i] = cacheTarget(requests[i])
-      return (await apply(addAll, this, [targets])) as unknown
+      for (let i = 0; i < requests.length; i++) put(targets, i, cacheTarget(requests[i]))
+      return (await apply(addAll, this, [ownIterable(targets)])) as unknown
     }
     lock(cache, 'add', guardedAdd)
     lock(cache, 'addAll', guardedAddAll)

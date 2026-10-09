@@ -412,6 +412,92 @@ describe('installFetchGuard: no way around it', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
+  it('hands each native the URL it checked, whatever Array.prototype gains later', async () => {
+    // The fakes record into a string: an index accessor on Array.prototype would swallow a push.
+    let log = ''
+    class Xhr {
+      open(...args: unknown[]): void {
+        log += `open ${String(args[1])}|`
+      }
+    }
+    class Cache {
+      add(): Promise<unknown> {
+        return Promise.resolve()
+      }
+      addAll(requests: Iterable<unknown>): Promise<unknown> {
+        for (const r of requests) log += `addAll ${String(r)}|`
+        return Promise.resolve()
+      }
+    }
+    const ctor = (name: string) =>
+      function Native(this: object, ...args: unknown[]) {
+        log += `${name} ${String(args[0])}|`
+      } as unknown as GuardScope['WebSocket']
+    const scope: GuardScope = {
+      location: { href: `${PREFIX}assets/landmark.worker-abc.js` },
+      XMLHttpRequest: Xhr,
+      importScripts: (...urls) => {
+        // Indexed, like the native: for-of would use the replaced Array.prototype iterator.
+        // eslint-disable-next-line @typescript-eslint/prefer-for-of
+        for (let i = 0; i < urls.length; i++) log += `importScripts ${String(urls[i])}|`
+      },
+      WebSocket: ctor('WebSocket'),
+      EventSource: ctor('EventSource'),
+      FontFace: function FontFace(this: object, ...args: unknown[]) {
+        log += `FontFace ${typeof args[1]}|`
+      } as unknown as GuardScope['FontFace'],
+      Cache,
+    }
+    installFetchGuard(scope)
+    const polluted = 'https://example.com/polluted'
+    const accessor = { get: () => polluted, set: () => undefined, configurable: true }
+    const iterator = Object.getOwnPropertyDescriptor(Array.prototype, Symbol.iterator)
+    const RealSymbol = Symbol
+    const make = (C: unknown) => C as new (a: unknown, b: unknown, c?: unknown) => unknown
+    let addAll: Promise<unknown> | undefined
+    try {
+      Object.defineProperty(Array.prototype, '0', accessor)
+      Object.defineProperty(Array.prototype, '1', accessor)
+      Object.defineProperty(Array.prototype, Symbol.iterator, {
+        configurable: true,
+        writable: true,
+        value: function* () {
+          yield polluted
+        },
+      })
+      ;(globalThis as { Symbol: unknown }).Symbol = { iterator: '@@iterator' }
+      new (make(scope.XMLHttpRequest) as unknown as new () => XMLHttpRequest)().open(
+        'GET',
+        BLOB,
+        true,
+      )
+      scope.importScripts?.(BLOB, BLOB)
+      new (make(scope.WebSocket))(BLOB, [])
+      new (make(scope.EventSource))(BLOB, {})
+      new (make(scope.FontFace))('f', new ArrayBuffer(4), {})
+      addAll = new (scope.Cache as unknown as new () => Cache)().addAll([BLOB, BLOB])
+    } finally {
+      Reflect.deleteProperty(Array.prototype, '0')
+      Reflect.deleteProperty(Array.prototype, '1')
+      ;(globalThis as { Symbol: unknown }).Symbol = RealSymbol
+      if (iterator) Object.defineProperty(Array.prototype, Symbol.iterator, iterator)
+    }
+    await addAll
+    expect(log).toBe(
+      [
+        `open ${BLOB}`,
+        `importScripts ${BLOB}`,
+        `importScripts ${BLOB}`,
+        `WebSocket ${BLOB}`,
+        `EventSource ${BLOB}`,
+        'FontFace object',
+        `addAll ${BLOB}`,
+        `addAll ${BLOB}`,
+        '',
+      ].join('|'),
+    )
+  })
+
   it('never hands the native fetch to a replaced Function.prototype.call', async () => {
     const { scope, fetch } = fullScope()
     const stolen: unknown[] = []

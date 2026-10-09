@@ -261,6 +261,39 @@ describe('downloads', () => {
     expect(h.landmarks).not.toHaveBeenCalled()
   })
 
+  it('a cache read that fails for another reason fails the detection even if the copy is gone', async () => {
+    const h = fakePorts({ cached: ['face'] })
+    const ok = h.loadImpl.current
+    h.loadImpl.current = () => {
+      h.loadImpl.current = ok
+      h.cachedUrls.delete(ASSETS.face.url)
+      return Promise.reject(new DOMException('read failed', 'UnknownError'))
+    }
+    const s = start(h.ports)
+    const a = img('a', FACE)
+    s.sync([a])
+    await flush()
+    expect(status(detectionKey('face', a))).toEqual({ state: 'failed', reason: 'error' })
+    expect(h.landmarks).not.toHaveBeenCalled()
+  })
+
+  it('a copy that stays listed but never reads back fails the detection instead of looping', async () => {
+    const h = fakePorts({ cached: ['face'] })
+    h.loadImpl.current = (asset) => {
+      const e = new Error(`Not cached: ${asset.url}`)
+      e.name = 'AiNotCachedError'
+      return Promise.reject(e)
+    }
+    const s = start(h.ports)
+    const a = img('a', FACE)
+    s.sync([a])
+    await flush()
+    await flush()
+    expect(status(detectionKey('face', a))).toEqual({ state: 'failed', reason: 'error' })
+    expect(h.loader.loadAiAsset.mock.calls.length).toBeLessThanOrEqual(3)
+    expect(h.landmarks).not.toHaveBeenCalled()
+  })
+
   it('every load of a model that was cached before the session passes { network: false }', async () => {
     const h = fakePorts({ cached: ['face', 'pose'] })
     const s = start(h.ports)

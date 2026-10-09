@@ -526,8 +526,11 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
         load(ports.assets[m]),
       ])
     } catch (error) {
-      if (error instanceof Error && error.name === 'AiNotCachedError') throw notCached()
-      throw error
+      if (!(error instanceof Error) || error.name !== 'AiNotCachedError') throw error
+      // A copy still listed after a failed read was not removed: the probe would find it cached
+      // again and rerun this load forever, so the detection fails instead.
+      if ((await ports.loader.bytesToDownload(m)) === 0) throw error
+      throw notCached()
     }
     const [loader, wasm, modelBytes] = files
     if (disposed) throw new Cancelled()
