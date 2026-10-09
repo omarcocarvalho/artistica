@@ -424,7 +424,7 @@ test('L-P1 phone: the always-open Lines section in the Studies step, lines in th
   await expect(app.linesHeading).toBeVisible()
   await expect(app.linesCount).toHaveCount(0)
   await expect(page.getByText('Lines for quadrants.jpg')).toBeVisible()
-  await expect(app.linesSection.getByRole('switch')).toHaveCount(6)
+  await expect(app.linesSection.getByRole('switch')).toHaveCount(6 + 3)
   for (const s of await app.linesSection.getByRole('switch').all()) await expect(s).toBeVisible()
   await expect(app.linesSection.getByLabel('Colour', { exact: true })).toBeVisible()
   await expect(app.lineHex).toBeVisible()
@@ -508,10 +508,10 @@ test('L-P2 phone: every Lines control is at least 44 x 44 px, with 16 px text in
     app.linesApplyButton,
   ]
   expect([switches.length, radios.length, sliders.length, targets.length]).toEqual([
-    6,
+    6 + 3,
     4,
     2,
-    6 + 3 + 4 + 1 + 2 + 1,
+    6 + 3 + 3 + 4 + 1 + 2 + 1,
   ])
   await expectTouchTargets(targets)
   await expectNoFocusZoom(fields)
@@ -557,6 +557,10 @@ test('L-P3 phone: every Lines control is reached and works from the keyboard, wi
   await expect(corners.getByRole('radio', { name: 'Top right', exact: true })).toBeChecked()
   await page.keyboard.press(tab)
   await expect(app.lineSwitch('Centre lines')).toBeFocused()
+  for (const name of ['Edge outline', 'Face construction', 'Body pose']) {
+    await page.keyboard.press(tab)
+    await expect(app.linesSection.getByRole('switch', { name, exact: true })).toBeFocused()
+  }
   await page.keyboard.press(tab)
   await expect(app.lineHex).toBeFocused()
   await page.keyboard.press('ControlOrMeta+a')
