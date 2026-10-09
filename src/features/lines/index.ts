@@ -33,6 +33,8 @@ export type {
 export { applyAffine, cropKey, fromCrop, fromRotated, meetsCrop, sourceToFrame } from './guides/map'
 export type { Affine } from './guides/map'
 export { edgePaths } from './guides/edge-paths'
+export { MAX_CMDS_PER_POSE, MAX_POSES, MIN_POSE_VISIBILITY, poseFigure } from './guides/pose'
+export type { PoseFigure } from './guides/pose'
 // --- edges (B) ---
 export { createEdgeEngine } from './edges/edge-client'
 export { EDGE_ANALYSIS_LONG_SIDE } from './edges/limits'
