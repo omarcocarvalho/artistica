@@ -20,7 +20,7 @@ Later milestones add polish and translations.
 - **Everything runs in the browser.** Photos are never uploaded or persisted.
 - **Hosting:** GitHub Pages. The landing page is at `/artistica/` and the tool at `/artistica/app/`.
 - **Product spec:** [docs/spec.md](docs/spec.md). It is the source of truth.
-- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (released), M4 → `v0.4.0` (built, waiting for the owner's sign-off), M5 → `v0.5.0`, M6 → `v1.0.0`.
+- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (released), M4 → `v0.4.0` (released), M5 → `v0.5.0`, M6 → `v1.0.0`.
 
 ## Current status
 
@@ -42,13 +42,13 @@ Later milestones add polish and translations.
 - **Phone memory** (M3 in `e2e/mobile-flow.spec.ts`, every line on, CI): import 1013 MB, studies 1296 MB, settled 1158 MB, export 1292 MB, against the unchanged budgets of 1500 / 1500 / 1700 MB.
 - **Release:** [#104](https://github.com/omarcocarvalho/artistica/pull/104) (`chore(master): release 0.3.0`) merged as `a9ba6da`, which created the release and deployed it to Pages.
 
-**M4 ("AI-assisted lines" → `v0.4.0`) is built and through its final review, and waits for the owner's sign-off on the iPhone.** Plan: [`2026-10-08-m4-overview.md`](docs/superpowers/plans/2026-10-08-m4-overview.md) and sub-plans A–E (guides core, edge outline, AI runtime and offline, state and render, UI and E2E), PR #121, approved by the owner on 2026-10-08 with every recommended default. All 19 tasks are merged (#122, #123, #125–#135 and #137–#144, with the owner's answers to Q15 and Q16 in #136), plus the memory fix, PR #145. The milestone-wide final review ran in three parts (geometry and edges; runtime, privacy and offline; UI and accessibility) and found no blockers; its fixes are PRs #146, #147, #148 and #149. The full record — per-task review findings, rulings, the final review with its mutation results, memory evidence and triage of deferred items, and the owner questions — is in [`docs/superpowers/ledgers/m4.md`](docs/superpowers/ledgers/m4.md).
+**M4 ("AI-assisted lines" → `v0.4.0`) is released.** The owner signed it off on the iPhone on 2026-10-10 and accepted Q17–Q19. Plan: [`2026-10-08-m4-overview.md`](docs/superpowers/plans/2026-10-08-m4-overview.md) and sub-plans A–E (guides core, edge outline, AI runtime and offline, state and render, UI and E2E), PR #121, approved by the owner on 2026-10-08 with every recommended default. All 19 tasks are merged (#122, #123, #125–#135 and #137–#144, with the owner's answers to Q15 and Q16 in #136), plus the memory fix, PR #145. The milestone-wide final review ran in three parts (geometry and edges; runtime, privacy and offline; UI and accessibility) and found no blockers; its fixes are PRs #146, #147, #148 and #149. The full record — per-task review findings, rulings, the final review with its mutation results, memory evidence and triage of deferred items, and the owner questions — is in [`docs/superpowers/ledgers/m4.md`](docs/superpowers/ledgers/m4.md).
 
 - **Guides from the photo:** an edge outline (our own integer Canny, in a worker, with a Detail slider), face construction lines and a body pose figure (MediaPipe `@mediapipe/tasks-vision` 0.10.35, in a worker on the CPU delegate). Off by default, per image, in the image's line style; vector paths in the same page model as the M3 lines, so preview = PDF. The runtime and models are self-hosted under `/artistica/`, downloaded only after a tap on "Download & turn on", and kept in Cache Storage (`artistica-ai-v1`).
 - **Exit criterion 1, offline once the models are cached:** E2E G-X1 in `e2e/offline.spec.ts` (chromium and firefox). WebKit offline is checked only on the owner's iPhone (see Gotchas).
 - **Exit criterion 2, nothing is uploaded:** E2E G-X2 in `e2e/guides.spec.ts` (every engine), the host audit at build and deploy, and the landmark worker's fetch guard. The final review's privacy probe through a logging proxy saw 178 requests across four browser setups, all same-origin GETs with no body and nothing off-origin.
 - **Phone memory** (M3 in `e2e/mobile-flow.spec.ts`, every line and guide on, CI mobile-chromium, master `8202465`): studies 1354, guides 1368, preview with guides 1270, settled after guides −46 against settled after studies, export 1328 MB, against budgets of 1500 / 1500 / 1500 / +100 / 1700 MB. The figures of the five master runs after #145 are in the ledger.
-- **Release:** release-please's PR [#124](https://github.com/omarcocarvalho/artistica/pull/124) (`chore(master): release 0.4.0`) is open. **It must stay unmerged until the owner signs off** (Next steps).
+- **Release:** [#124](https://github.com/omarcocarvalho/artistica/pull/124) (`chore(master): release 0.4.0`) merged as `2f0054f`, which created the [`v0.4.0`](https://github.com/omarcocarvalho/artistica/releases/tag/v0.4.0) release and deployed it to Pages.
 
 ## Branch map
 
@@ -59,12 +59,7 @@ Later milestones add polish and translations.
 
 ## Next steps (in order)
 
-1. **The owner signs off M4 on the iPhone** with the "M4 sign-off checklist" in the [M4 overview](docs/superpowers/plans/2026-10-08-m4-overview.md) (deploy a demo first: `gh workflow run deploy-pages.yml --ref master`), and answers **Q17, Q18 and Q19** (below). Record the device, OS version, export time and page count, the detection timings and the offline result in #124. If the run finds a problem, fix it in a normal PR first; #124 stays unmerged.
-2. **Release v0.4.0** after the sign-off, and not before:
-   1. Run `gh pr view 124 --json mergeable` until it isn't `UNKNOWN`, so the merge ref is fresh.
-   2. Close and reopen #124 (CI doesn't run on a PR opened by `GITHUB_TOKEN`) and wait for every check to pass.
-   3. Run `gh pr merge 124 --squash` **from the main checkout**, not a worktree. This creates the release and deploys to Pages; then check that the deploy run and master CI are green.
-3. **Plan M5** (polish), starting with its own implementation plan in `docs/superpowers/plans/`, approved by the owner. The M5 items deferred so far are in the M2, M3 and M4 ledgers and under "Known issues" below.
+1. **Plan M5** (polish), starting with its own implementation plan in `docs/superpowers/plans/`, approved by the owner. The M5 items deferred so far are in the M2, M3 and M4 ledgers and under "Known issues" below.
 
 ## Owner answers from M2 (2026-10-07)
 
@@ -93,11 +88,7 @@ The owner accepted every recommended default of the M4 plan (Q1–Q14 and the bu
 
 ## Owner questions (open)
 
-**Open from M4** (raised by the final review; each has its recommended default built, so "ok" changes nothing; details and the full wording in the M4 overview):
-
-- **Q17 Small faces in full-body photos:** face construction finds no face in a full-length photo whose face is small (about 6% of the width in `figure.jpg`); the pose is found. Default: accept it for M4, as Q5 says ("very small or distant faces may not be found"), with no second search on a crop around the pose's head.
-- **Q18 Download progress for screen readers:** default: no running announcement. "Downloading … model…" is said once; the bar reads its amount in words ("4.1 of 15.2 megabytes") when the user moves to it.
-- **Q19 Announcements after a Detail change:** default: only the result ("Outline traced." or the no-edges text), not "Tracing the outline…" each time; both messages when the outline is first switched on.
+**Answered from M4 (2026-10-10):** Q17 (small faces in full-body photos may not be found), Q18 (no running progress announcement) and Q19 (only the result is announced after a Detail change), each with its recommended default, already built. Details in the M4 overview.
 
 The spec doesn't answer the questions below. Nothing was changed for them.
 
