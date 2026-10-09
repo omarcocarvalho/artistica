@@ -41,7 +41,6 @@ const on = (lines: LineSettings, edits: Partial<ImageEdits> = {}) => ({
   lines,
 })
 
-/** Composition lines only (M3's call). */
 const compo = (lines: LineSettings, t: RectMm, turned: boolean, tileIndex: number) =>
   tileLinesFor(on(lines), NO_GUIDES, t, turned, tileIndex)
 

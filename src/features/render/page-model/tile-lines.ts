@@ -21,7 +21,6 @@ export const MAX_GUIDE_CMDS_PER_TILE = 6000
 
 type TileImage = Pick<ImageDescriptor, 'pxW' | 'pxH' | 'edits' | 'lines'>
 
-/** Edges, face and pose paths in page mm (M4-R10, R12), each type left out when it drew nothing. */
 function guidePaths(
   img: TileImage,
   guides: ImageGuides,
@@ -51,10 +50,7 @@ function guidePaths(
   return out.filter((g) => g.cmds.length > 0)
 }
 
-/**
- * One tile's lines in page mm, clipped to its trim (M3-R4); null when nothing would be drawn.
- * Guides follow the composition paths in the solid batch (M4-R11).
- */
+/** One tile's lines in page mm, clipped to its trim (M3-R4); null when nothing would be drawn. */
 export function tileLinesFor(
   img: TileImage,
   guides: ImageGuides,

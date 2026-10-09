@@ -72,7 +72,6 @@ export function linesDescriptor(
   return { ...base, lines: patchLines(DEFAULT_LINES, patch) }
 }
 
-/** A tile's lines without guides (M3's call). */
 export function compositionLinesFor(
   lines: LineSettings,
   trim: RectMm,
@@ -328,10 +327,8 @@ export function worstCaseGuides(): ImageGuides {
   }
 }
 
-/** Every guide from the fixtures (the face, the pose) and a small synthetic outline. */
 export function guidesFixture(): ImageGuides {
   return { faces: [FIXTURE_FACE], poses: [FIXTURE_POSE], edges: syntheticOutline(3, 5) }
 }
 
-/** The patch that switches every guide on. */
 export const EVERY_GUIDE: LinesPatch = { edges: { on: true }, face: true, pose: true }

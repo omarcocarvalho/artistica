@@ -635,7 +635,6 @@ describe('drawPage guides (M4-R11, R12)', () => {
     cropMarks: [{ x1: 16, y1: 30, x2: 12, y2: 30 }],
   })
 
-  /** Path calls with their exact arguments, strokes and images in order. */
   function exactCtx() {
     const rec = recordingCtx()
     const calls: (string | number)[][] = []
