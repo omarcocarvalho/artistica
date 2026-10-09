@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { crc32, deflateSync } from 'node:zlib'
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page, type Request, type Route } from '@playwright/test'
 import { aiAssetsManifest } from '../../scripts/vite-ai-assets.ts'
 import { applyAffine, sourceToFrame } from '../../src/features/lines/guides/map.ts'
 import type {
@@ -461,4 +461,295 @@ export async function maxLiveWorkers(page: Page, name: string): Promise<number> 
 
 export async function workerPosts(page: Page, name: string): Promise<number> {
   return page.evaluate((n) => (globalThis as unknown as PostWindow).__workerPosts?.[n] ?? 0, name)
+}
+
+// --- The phone guides section, model holds, text timings and the landmark worker probe ---
+
+const photo = (name: string) =>
+  fileURLToPath(new URL(`../../src/features/images/__fixtures__/${name}`, import.meta.url))
+
+/** The public-domain photos with a face and a full figure (owner Q12; credits in that folder). */
+export const GUIDE_PHOTOS = {
+  portrait: photo('portrait.jpg'),
+  figure: photo('figure.jpg'),
+} as const
+
+export type GuideName = 'Edge outline' | 'Face construction' | 'Body pose'
+export type GuideModel = 'face' | 'pose'
+
+const MODEL_GUIDE: Record<GuideModel, GuideName> = {
+  face: 'Face construction',
+  pose: 'Body pose',
+}
+
+/** The model file of each landmark guide, as `virtual:ai-assets` names it. */
+export const MODEL_FILE: Record<GuideModel, RegExp> = {
+  face: /\/models\/face_landmarker-[^/]+\.task$/,
+  pose: /\/models\/pose_landmarker_full-[^/]+\.task$/,
+}
+
+/** Any AI asset: the shared runtime or a model. */
+export const AI_ASSET_URL = /\/(models\/[^/]+\.task|assets\/vision_wasm_module_internal-[^/]+)$/
+
+/**
+ * The "Guides from the photo" section inside a Lines panel or the phone Lines card. Selectors that
+ * depend on the section's markup live here (roles and accessible names from the en locale).
+ */
+export class GuidesSection {
+  readonly page: Page
+  readonly section: Locator
+  constructor(page: Page, scope: Locator = page.locator('body')) {
+    this.page = page
+    this.section = scope.getByRole('region', { name: 'Guides from the photo', exact: true })
+  }
+
+  switch(name: GuideName): Locator {
+    return this.section.getByRole('switch', { name, exact: true })
+  }
+  /** The switch and everything shown below it (box, progress, status, alert). */
+  group(name: GuideName): Locator {
+    return this.section
+      .locator(':scope > div')
+      .filter({ has: this.page.getByRole('switch', { name, exact: true }) })
+  }
+  async set(name: GuideName, on: boolean): Promise<void> {
+    const s = this.switch(name)
+    if ((await s.getAttribute('aria-checked')) !== String(on)) await s.click()
+    await expect(s).toHaveAttribute('aria-checked', String(on))
+  }
+  get detail(): Locator {
+    return this.section.getByRole('slider', { name: 'Detail', exact: true })
+  }
+  downloadButton(model: GuideModel): Locator {
+    return this.group(MODEL_GUIDE[model]).getByRole('button', {
+      name: 'Download & turn on',
+      exact: true,
+    })
+  }
+  progress(model: GuideModel): Locator {
+    const name = model === 'face' ? 'Face model download' : 'Pose model download'
+    return this.group(MODEL_GUIDE[model]).getByRole('progressbar', { name, exact: true })
+  }
+  /** Presses "Download & turn on" and waits until the progress has gone. */
+  async download(model: GuideModel, timeout = 60_000): Promise<void> {
+    await this.downloadButton(model).click()
+    await expect(this.downloadButton(model)).toHaveCount(0)
+    await expect(this.progress(model)).toHaveCount(0, { timeout })
+  }
+  /** A status line, note or alert text below a switch. */
+  status(name: GuideName, text: string | RegExp): Locator {
+    return this.group(name).getByText(text)
+  }
+}
+
+/** Every request for an AI asset (runtime or model) from now on, in order. */
+export function recordAiRequests(page: Page): string[] {
+  const urls: string[] = []
+  page.on('request', (r: Request) => {
+    if (AI_ASSET_URL.test(new URL(r.url()).pathname)) urls.push(r.url())
+  })
+  return urls
+}
+
+/**
+ * Holds the next request for one model's file until `release()`, so the download box's progress
+ * and the export gate can be seen. A hold must stay well under the scheduler's 30 s stall timeout.
+ */
+export async function holdModel(
+  page: Page,
+  model: GuideModel,
+): Promise<{ release: () => void; held: () => number }> {
+  let open!: () => void
+  const gate = new Promise<void>((resolve) => {
+    open = resolve
+  })
+  let held = 0
+  await page.route(
+    MODEL_FILE[model],
+    async (route: Route) => {
+      held++
+      await gate
+      await route.continue()
+    },
+    { times: 1 },
+  )
+  return { release: open, held: () => held }
+}
+
+/** Aborts the next request for one model's file (a failed download), then lets later ones through. */
+export async function failModelOnce(page: Page, model: GuideModel): Promise<void> {
+  await page.route(
+    MODEL_FILE[model],
+    async (route) => {
+      await route.abort('failed')
+    },
+    { times: 1 },
+  )
+}
+
+export interface TextEvent {
+  readonly text: string
+  /** `performance.now()` in the page when the text appeared. */
+  readonly t: number
+}
+
+/**
+ * Logs, in the page, each time one of `texts` appears in the document (absent, then present), as
+ * the DOM changes. Read the log with `textLog`.
+ */
+export async function watchTexts(page: Page, texts: readonly string[]): Promise<void> {
+  await page.evaluate((watched) => {
+    interface Doc {
+      body: { textContent: string | null }
+    }
+    const g = globalThis as unknown as {
+      document: Doc
+      performance: { now(): number }
+      MutationObserver: new (cb: () => void) => {
+        observe(target: unknown, options: Record<string, boolean>): void
+      }
+      __textLog: { text: string; t: number }[]
+    }
+    const log: { text: string; t: number }[] = []
+    g.__textLog = log
+    let present = new Set<string>()
+    const check = () => {
+      const now = g.performance.now()
+      const body = g.document.body.textContent ?? ''
+      const next = new Set(watched.filter((w) => body.includes(w)))
+      for (const w of next) if (!present.has(w)) log.push({ text: w, t: now })
+      present = next
+    }
+    check()
+    new g.MutationObserver(check).observe(g.document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    })
+  }, texts)
+}
+
+export async function textLog(page: Page): Promise<TextEvent[]> {
+  return page.evaluate(() => (globalThis as unknown as { __textLog?: TextEvent[] }).__textLog ?? [])
+}
+
+/** Milliseconds from the n-th appearance of `from` to the first appearance of `to` after it. */
+export function interval(log: readonly TextEvent[], from: string, to: string, n = 0): number {
+  const start = log.filter((e) => e.text === from).at(n)
+  if (!start) throw new Error(`"${from}" appeared fewer than ${String(n + 1)} times`)
+  const end = log.find((e) => e.text === to && e.t >= start.t)
+  if (!end) throw new Error(`"${to}" never appeared after "${from}"`)
+  return Math.round(end.t - start.t)
+}
+
+export interface WorkerEvent {
+  readonly t: number
+  readonly ev: 'new' | 'terminate' | 'prepare'
+  readonly id: number
+  readonly url: string
+  readonly model?: string
+}
+
+/**
+ * Logs, in the page, each dedicated worker the app creates or terminates and each Comlink
+ * `prepare(model, …)` call posted to it, synchronously and in order. Install before navigating.
+ */
+export async function installWorkerProbe(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    interface Entry {
+      t: number
+      ev: 'new' | 'terminate' | 'prepare'
+      id: number
+      url: string
+      model?: string
+    }
+    interface WorkerLike {
+      postMessage(...args: unknown[]): void
+      terminate(): void
+    }
+    type WorkerCtor = new (url: unknown, options?: unknown) => WorkerLike
+    const g = globalThis as unknown as {
+      Worker: WorkerCtor
+      __workerLog: Entry[]
+      performance: { now(): number }
+    }
+    const log: Entry[] = []
+    g.__workerLog = log
+    const Native = g.Worker
+    let n = 0
+    g.Worker = class extends Native {
+      readonly probeId: number
+      readonly probeUrl: string
+      constructor(url: unknown, options?: unknown) {
+        super(url, options)
+        this.probeId = ++n
+        this.probeUrl = String(url)
+        log.push({ t: g.performance.now(), ev: 'new', id: this.probeId, url: this.probeUrl })
+      }
+      postMessage(...args: unknown[]): void {
+        const msg = args[0] as {
+          type?: unknown
+          path?: unknown
+          argumentList?: { value?: unknown }[]
+        } | null
+        if (
+          msg?.type === 'APPLY' &&
+          Array.isArray(msg.path) &&
+          msg.path[0] === 'prepare' &&
+          typeof msg.argumentList?.[0]?.value === 'string'
+        )
+          log.push({
+            t: g.performance.now(),
+            ev: 'prepare',
+            id: this.probeId,
+            url: this.probeUrl,
+            model: msg.argumentList[0].value,
+          })
+        super.postMessage(...args)
+      }
+      terminate(): void {
+        log.push({ t: g.performance.now(), ev: 'terminate', id: this.probeId, url: this.probeUrl })
+        super.terminate()
+      }
+    }
+  })
+}
+
+export async function workerLog(page: Page): Promise<WorkerEvent[]> {
+  return page.evaluate(
+    () => (globalThis as unknown as { __workerLog?: WorkerEvent[] }).__workerLog ?? [],
+  )
+}
+
+export interface LandmarkWorkerSummary {
+  /** Landmark workers created. */
+  readonly workers: number
+  /** Most landmark workers alive at once. */
+  readonly maxAlive: number
+  /** Landmark workers alive at the end of the log. */
+  readonly alive: number
+  /** The models prepared in each landmark worker, in creation order. */
+  readonly modelsPerWorker: string[][]
+}
+
+/** One landmark worker holds one landmarker; never two workers, or two models in one, at once. */
+export function summarizeLandmarkWorkers(log: readonly WorkerEvent[]): LandmarkWorkerSummary {
+  const landmark = log.filter((e) => e.url.includes('landmark'))
+  const alive = new Set<number>()
+  const models = new Map<number, Set<string>>()
+  let maxAlive = 0
+  for (const e of landmark) {
+    if (e.ev === 'new') {
+      alive.add(e.id)
+      models.set(e.id, new Set())
+    } else if (e.ev === 'terminate') alive.delete(e.id)
+    else if (e.model !== undefined) models.get(e.id)?.add(e.model)
+    maxAlive = Math.max(maxAlive, alive.size)
+  }
+  return {
+    workers: models.size,
+    maxAlive,
+    alive: alive.size,
+    modelsPerWorker: [...models.values()].map((s) => [...s]),
+  }
 }

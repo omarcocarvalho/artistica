@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import type { Browser } from '@playwright/test'
+import type { Browser, Page } from '@playwright/test'
 
 /** Every process of a Chromium browser (browser, renderers, GPU, utilities), from Chromium itself. */
 async function chromiumProcesses(browser: Browser): Promise<{ id: number; type: string }[]> {
@@ -83,5 +83,85 @@ export function sampleBrowserMemory(browser: Browser, intervalMs = 250): MemoryS
       await chain
       if (failure !== null) throw failure
     },
+  }
+}
+
+export interface ContextHeap {
+  readonly kind: 'page' | 'worker'
+  readonly url: string
+  /** Used JavaScript heap, MB. */
+  readonly jsMb: number
+  /** ArrayBuffer backing stores and external strings, MB. */
+  readonly buffersMb: number
+}
+
+interface HeapUsage {
+  usedSize: number
+  backingStorageSize?: number
+}
+
+const toHeap = (kind: ContextHeap['kind'], url: string, h: HeapUsage): ContextHeap => ({
+  kind,
+  url: url.replace(/^.*\//, ''),
+  jsMb: Math.round(h.usedSize / 2 ** 20),
+  buffersMb: Math.round((h.backingStorageSize ?? 0) / 2 ** 20),
+})
+
+/**
+ * V8 heap use of a Chromium page and of each of its dedicated workers, from the DevTools protocol.
+ * A worker that ends while it is read (the landmark worker's idle release) is left out.
+ */
+export async function heapByContext(page: Page): Promise<ContextHeap[]> {
+  const cdp = await page.context().newCDPSession(page)
+  try {
+    const out = [toHeap('page', page.url(), await cdp.send('Runtime.getHeapUsage'))]
+    const workers: { sessionId: string; url: string }[] = []
+    const replies = new Map<number, (r: HeapUsage | null) => void>()
+    const gone = new Map<string, () => void>()
+    cdp.on('Target.attachedToTarget', (e) => {
+      if (e.targetInfo.type === 'worker')
+        workers.push({ sessionId: e.sessionId, url: e.targetInfo.url })
+    })
+    cdp.on('Target.detachedFromTarget', (e) => {
+      gone.get(e.sessionId)?.()
+    })
+    cdp.on('Target.receivedMessageFromTarget', (e) => {
+      const m = JSON.parse(e.message) as { id?: number; result?: HeapUsage }
+      if (m.id !== undefined) replies.get(m.id)?.(m.result ?? null)
+    })
+    await cdp.send('Target.setAutoAttach', {
+      autoAttach: true,
+      waitForDebuggerOnStart: false,
+      flatten: false,
+    })
+    let id = 0
+    for (const w of workers) {
+      const mine = ++id
+      const usage = await new Promise<HeapUsage | null>((resolve) => {
+        const timer = setTimeout(() => {
+          done(null)
+        }, 5000)
+        function done(r: HeapUsage | null) {
+          clearTimeout(timer)
+          resolve(r)
+        }
+        replies.set(mine, done)
+        gone.set(w.sessionId, () => {
+          done(null)
+        })
+        cdp
+          .send('Target.sendMessageToTarget', {
+            sessionId: w.sessionId,
+            message: JSON.stringify({ id: mine, method: 'Runtime.getHeapUsage' }),
+          })
+          .catch(() => {
+            done(null)
+          })
+      })
+      if (usage) out.push(toHeap('worker', w.url, usage))
+    }
+    return out
+  } finally {
+    await cdp.detach()
   }
 }
