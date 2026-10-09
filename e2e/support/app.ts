@@ -514,13 +514,15 @@ export class AppPage {
   get detailSlider(): Locator {
     return this.guidesSection.getByRole('slider', { name: 'Detail', exact: true })
   }
-  /** Native range input (fill fires input and change); the edge outline must be on. */
+  /**
+   * Native range input (fill fires input and change); the edge outline must be on. Returns once the
+   * desktop Export is enabled again: it stays disabled from the change until the new outline is in
+   * the pages (M4-R18).
+   */
   async setDetail(pct: number): Promise<void> {
     await this.detailSlider.fill(String(pct))
     await expect(this.detailSlider).toHaveAttribute('aria-valuetext', `${String(pct)}%`)
-    // The section commits the detail 80 ms after the last change (DETAIL_SETTLE_MS); until then
-    // the old outline still shows as settled.
-    await this.page.waitForTimeout(250)
+    await expect(this.exportButton).toBeEnabled({ timeout: 60_000 })
   }
   /** What the guide shows now, read from its group's text (en locale). */
   async guideStatus(kind: GuideKind): Promise<GuideStatus> {

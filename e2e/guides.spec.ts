@@ -116,6 +116,30 @@ async function pdfPage(bytes: Buffer): Promise<PdfPageSummary> {
 const pathOf = (url: string) => new URL(url).pathname
 const isHttp = (url: string) => /^https?:/.test(url)
 
+/** A build file no app code requests, fetched by the test from inside a dedicated worker. */
+const CANARY = '/artistica/robots.txt'
+
+interface WorkerWindow {
+  location: { origin: string }
+  Blob: new (parts: string[], opts: { type: string }) => unknown
+  URL: { createObjectURL(b: unknown): string; revokeObjectURL(u: string): void }
+  Worker: new (url: string) => { onmessage: (() => void) | null; terminate(): void }
+}
+
+async function fetchFromWorker(path: string): Promise<void> {
+  const w = globalThis as unknown as WorkerWindow
+  const src = `fetch(${JSON.stringify(w.location.origin + path)}).then(() => postMessage(0))`
+  const url = w.URL.createObjectURL(new w.Blob([src], { type: 'text/javascript' }))
+  const worker = new w.Worker(url)
+  await new Promise<void>((resolve) => {
+    worker.onmessage = () => {
+      resolve()
+    }
+  })
+  worker.terminate()
+  w.URL.revokeObjectURL(url)
+}
+
 async function editSheet(app: AppPage, name: string, act: (sheet: Locator) => Promise<void>) {
   await app.editButton(name).click()
   const sheet = app.page.getByRole('dialog')
@@ -183,10 +207,18 @@ test.describe('exit criterion 2 and unsupported (desktop)', () => {
     const landmarkWorkers = await maxLiveWorkers(page, 'landmark.worker')
     expect(landmarkWorkers).toBeLessThanOrEqual(1)
     if (browserName === 'chromium') expect(landmarkWorkers).toBe(1)
-    // A blind spot is not a pass: the guard must see requests made inside the workers.
-    const workerSeen = (guard?.seen('edges.worker-') ?? 0) + (guard?.seen('landmark') ?? 0) > 0
-    test.skip(!workerSeen, 'worker requests are invisible to Playwright on this engine')
     if (browserName === 'chromium') expect(guard?.seen('landmark.worker-')).toBeGreaterThan(0)
+    // A blind spot is not a pass: a request made inside a dedicated worker must reach the guard.
+    const canaries = guard?.seen(CANARY) ?? 0
+    await page.evaluate(fetchFromWorker, CANARY)
+    const visible = await expect
+      .poll(() => (guard?.seen(CANARY) ?? 0) > canaries, { timeout: 5000 })
+      .toBe(true)
+      .then(
+        () => true,
+        () => false,
+      )
+    test.skip(!visible, 'worker requests are invisible to Playwright on this engine')
   })
 
   test('G-U1 without WebGL: the Q15 note, no download offered, no detection request; the edge outline still works', async ({
@@ -351,22 +383,36 @@ interface RangeWindow {
   Event: new (type: string, init: { bubbles: boolean }) => unknown
   HTMLInputElement: { prototype: object }
 }
+interface ButtonEl {
+  getAttribute(name: string): string | null
+}
 
-/** Sets a range input to each value in turn, 10 ms apart (a drag faster than the 80 ms settle). */
-async function dragTo(slider: Locator, values: readonly number[]): Promise<void> {
-  await slider.evaluate(
-    async (el: RangeEl, list: number[]) => {
+/**
+ * Sets a range input to each value in turn, 10 ms apart (a drag faster than the 80 ms settle), and
+ * returns Export's `aria-disabled` read after each step.
+ */
+async function dragTo(
+  slider: Locator,
+  values: readonly number[],
+  exportButton: Locator,
+): Promise<(string | null)[]> {
+  const button = await exportButton.elementHandle()
+  return slider.evaluate(
+    async (el: RangeEl, arg: { list: number[]; button: ButtonEl | null }) => {
       const w = globalThis as unknown as RangeWindow
       // React tracks a range's value through the prototype setter, so a plain assignment is ignored.
       // eslint-disable-next-line @typescript-eslint/unbound-method
       const setter = Object.getOwnPropertyDescriptor(w.HTMLInputElement.prototype, 'value')?.set
-      for (const v of list) {
+      const exportDisabled: (string | null)[] = []
+      for (const v of arg.list) {
         setter?.call(el, String(v))
         el.dispatchEvent(new w.Event('input', { bubbles: true }))
         await new Promise((resolve) => setTimeout(resolve, 10))
+        exportDisabled.push(arg.button ? arg.button.getAttribute('aria-disabled') : 'no button')
       }
+      return exportDisabled
     },
-    [...values],
+    { list: [...values], button: button as unknown as ButtonEl | null },
   )
 }
 
@@ -405,10 +451,13 @@ test.describe('edge outline (desktop)', () => {
     await countAppearances(page, ['Tracing the outline…'])
     const before = await workerPosts(page, 'edges.worker')
     expect(before).toBeGreaterThanOrEqual(3)
-    await dragTo(app.detailSlider, [31, 32, 33, 34, 35, 36, 37, 38, 39, 40])
+    await expect(app.exportButton).toBeEnabled()
+    const drag = [31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
+    // Export closes with the first change, before the detail settles (M4-R18).
+    expect(await dragTo(app.detailSlider, drag, app.exportButton)).toEqual(drag.map(() => 'true'))
     await expect(app.detailSlider).toHaveAttribute('aria-valuetext', '40%')
+    await expect(app.exportButton).toBeEnabled({ timeout: 60_000 })
     expect(await app.expectGuideSettled('edges')).toBe('found')
-    await page.waitForTimeout(300)
     expect(await appearances(page, 'Tracing the outline…')).toBe(1)
     // One outline for the settled value: one message to the edge worker.
     expect((await workerPosts(page, 'edges.worker')) - before).toBe(1)
