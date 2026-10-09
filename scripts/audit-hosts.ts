@@ -75,16 +75,23 @@ const UNSCANNED = new Set(['.md', '.txt'])
 
 const PATH = String.raw`([^\s"'${'`'}<>()\\\0]*)`
 
-/** `scheme://host` with any scheme in any case; after a special scheme browsers read `\` as `/`. */
+/**
+ * `scheme://host` with any scheme in any case. After a special scheme browsers read `\` as `/`
+ * and take the host after any number of separators, so `wss:/host` is another host even from
+ * this https page.
+ */
 const SCHEME_LINK = new RegExp(
-  String.raw`\b(?:[a-z][a-z0-9+.-]*:\/\/|(?:https?|wss?|ftp):[/\\]{2,})([a-z0-9][a-z0-9.-]*(?::\d+)?)` +
+  String.raw`\b(?:[a-z][a-z0-9+.-]*:\/\/|(?:https?|wss?|ftp):[/\\]+)([a-z0-9][a-z0-9.-]*(?::\d+)?)` +
     PATH,
   'gi',
 )
 
-/** A protocol-relative `//host.tld` or `//host:port` at the start of a string or a CSS `url(`. */
+/**
+ * A protocol-relative `//host.tld` or `//host:port` at the start of a string, a CSS `url(` or an
+ * unquoted HTML attribute value, after optional whitespace (URL parsing strips it).
+ */
 const RELATIVE_LINK = new RegExp(
-  String.raw`(?<=["'${'`'}(])//([a-z0-9-]+(?:\.[a-z0-9-]+)+(?::\d+)?|[a-z0-9-]+:\d+)` + PATH,
+  String.raw`(?<=["'${'`'}(=]\s*)//([a-z0-9-]+(?:\.[a-z0-9-]+)+(?::\d+)?|[a-z0-9-]+:\d+)` + PATH,
   'gi',
 )
 

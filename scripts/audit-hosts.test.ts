@@ -124,6 +124,14 @@ describe('auditText', () => {
     expect(auditText('"https:\\\\evil.com\\\\x" "WSS:/\\live.io"')).toEqual(['evil.com', 'live.io'])
   })
 
+  it('finds a special-scheme link with one separator, which resolves to that host from this page', () => {
+    expect(auditText('new WebSocket("wss:/live.io/s") i.src="http:\\\\t.co/p"')).toEqual([
+      'live.io/s',
+      't.co/p',
+    ])
+    expect(auditText('"gopher:/g.io/x"')).toEqual([])
+  })
+
   it('does not read a regex literal after an object key as a link', () => {
     expect(auditText('aa=[{name:`thai`,test:/\\p{Script=Thai}/u}]')).toEqual([])
   })
@@ -137,6 +145,9 @@ describe('auditText', () => {
           'i=`//t.co`',
           '@import url(//fonts.example.net/a.css);',
           '"\\/\\/esc.evil.com\\/p"',
+          '<script src=//attr.evil.com/a.js>',
+          'fetch(" //space.evil.com")',
+          'url( //css.evil.com/b.css)',
         ].join('\n'),
       ),
     ).toEqual([
@@ -145,6 +156,9 @@ describe('auditText', () => {
       't.co',
       'fonts.example.net/a.css',
       'esc.evil.com/p',
+      'attr.evil.com/a.js',
+      'space.evil.com',
+      'css.evil.com/b.css',
     ])
   })
 
