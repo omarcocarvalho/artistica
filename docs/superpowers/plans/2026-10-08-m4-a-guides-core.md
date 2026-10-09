@@ -182,7 +182,8 @@ it('stays within 0.03% of the true radius (sampled)', () => { /* sample t in [0,
   - `a landmark below MIN_POSE_VISIBILITY drops its segments and its dot only` (property: hide any one landmark);
   - `a landmark outside the image drops its segments`;
   - `the head circle sits between the ears with radius 0.75 × their distance`; `with an ear hidden it is centred on the nose with radius a quarter of the shoulder width`; `with the nose and an ear hidden there is no head`;
-  - `the neck runs from the head circle's lowest point to mid-shoulders`;
+  - `a head turned to profile keeps its size` (the radius is at least `TURNED_HEAD_RADIUS` × the nose-to-farther-ear distance; strict profile, 3/4, frontal unchanged; ruled in the A4 review);
+  - `the neck runs from the head circle towards mid-shoulders, ending at mid-shoulders` (from the lowest point for an upright figure; ruled in the A4 review);
   - `a pose outside the crop draws nothing`;
   - `never more than MAX_CMDS_PER_POSE commands` (joints are not commands here; D3 adds 5 commands per joint and A4's bound already includes them: assert `cmds + 5 × joints ≤ 160`).
 - [ ] **Step 2: RED, implement (M4-R14), GREEN.**
@@ -192,7 +193,7 @@ it('stays within 0.03% of the true radius (sampled)', () => { /* sample t in [0,
 
 ## Contract change requests
 
-_(empty)_
+- **A4 (reviewer, 2026-10-09):** the neck's start point and the head radius in profile. Ruled in the overview ("Contract change requests → Ruled", A4) and M4-R14.
 
 ## Open questions for the owner
 
