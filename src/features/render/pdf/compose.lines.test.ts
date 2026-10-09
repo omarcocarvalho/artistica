@@ -429,16 +429,19 @@ describe('composePdf guides (M4-R11, R12, R16)', () => {
   })
 
   it('round-trips the guide geometry within 0.001 mm: joints as stroked circles, no fill', async () => {
-    const tl = guided({ ...EVERY_GUIDE, style: { widthMm: 0.8 } }, guidesFixture())
+    const tl = guided({ ...EVERY_GUIDE, ...EVERY_TYPE, style: { widthMm: 0.8 } }, worstCaseGuides())
     const pages = [pageModel([drawTile({ trim })], { lines: [tl] })]
     const report = await inspectPdf(await composePdf(pages, encodedFor(pages)))
     const strokes = at(report.pages, 0).strokes
-    expect(strokes).toHaveLength(1)
-    expect(at(strokes, 0).widthPt).toBe(pt(0.8))
-    expectCmdsClose(
-      at(strokes, 0).path.map((op) => toMm(op, 297)),
-      at(tl.strokes, 0).cmds,
-    )
+    expect(strokes).toHaveLength(2)
+    tl.strokes.forEach((s, k) => {
+      expect(at(strokes, k).widthPt).toBe(pt(0.8))
+      expectCmdsClose(
+        at(strokes, k).path.map((op) => toMm(op, 297)),
+        s.cmds,
+      )
+    })
+    expect(at(tl.strokes, 0).cmds.length).toBeGreaterThan(4000)
     expect(at(report.pages, 0).content).not.toMatch(/(^|\s)(f|f\*|B|B\*|b|b\*)(\s|$)/)
   })
 

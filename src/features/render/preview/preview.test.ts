@@ -7,10 +7,10 @@ import {
   descriptor,
   drawTile,
   EVERY_GUIDE,
-  guidesFixture,
   id,
   pageModel,
   PORTRAIT_PX,
+  worstCaseGuides,
 } from '../test-support/fixtures'
 import type { PageModel, TileLines } from '../types'
 import { DEFAULT_PAGE_DRAW_COLORS, drawPage, type PageCtx } from './draw-page'
@@ -624,7 +624,7 @@ describe('drawPage guides (M4-R11, R12)', () => {
       ...descriptor('a', PORTRAIT_PX.w, PORTRAIT_PX.h),
       lines: patchLines(DEFAULT_LINES, { ...EVERY_GUIDE, thirds: true, centre: true }),
     },
-    guidesFixture(),
+    worstCaseGuides(),
     trim,
     false,
     0,
@@ -667,6 +667,7 @@ describe('drawPage guides (M4-R11, R12)', () => {
       ['stroke'],
     ])
     expect(tl.strokes).toHaveLength(2)
+    expect(want.length).toBeGreaterThan(4000)
     expect(calls).toEqual([
       ['drawImage'],
       ['rect', trim.x * k, trim.y * k, trim.w * k, trim.h * k],
