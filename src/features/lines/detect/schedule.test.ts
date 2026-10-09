@@ -245,6 +245,22 @@ describe('downloads', () => {
     },
   )
 
+  it('a cache read that fails for another reason fails the detection and keeps the model cached', async () => {
+    const h = fakePorts({ cached: ['face'] })
+    const ok = h.loadImpl.current
+    h.loadImpl.current = () => {
+      h.loadImpl.current = ok
+      return Promise.reject(new DOMException('read failed', 'UnknownError'))
+    }
+    const s = start(h.ports)
+    const a = img('a', FACE)
+    s.sync([a])
+    await flush()
+    expect(status(detectionKey('face', a))).toEqual({ state: 'failed', reason: 'error' })
+    expect(useDetections.getState().models.face).toBe('cached')
+    expect(h.landmarks).not.toHaveBeenCalled()
+  })
+
   it('every load of a model that was cached before the session passes { network: false }', async () => {
     const h = fakePorts({ cached: ['face', 'pose'] })
     const s = start(h.ports)

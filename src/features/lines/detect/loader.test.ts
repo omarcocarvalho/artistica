@@ -631,6 +631,15 @@ describe('loadAiAsset without the network (every load but a click, Q10)', () => 
     ).rejects.toMatchObject({ name: 'AbortError' })
   })
 
+  it('an abort while the cache is read rejects with its reason', async () => {
+    const { loader, storage } = setup()
+    storage.ai().seed(ASSETS.face.url, BODIES.face)
+    const controller = new AbortController()
+    const read = loader.loadAiAsset(ASSETS.face, undefined, controller.signal, CACHE_ONLY)
+    controller.abort()
+    await expect(read).rejects.toMatchObject({ name: 'AbortError' })
+  })
+
   it('never joins or fails a download a click started for the same asset', async () => {
     const { loader, fetch, gate } = setup({ serve: () => ({ gateAt: 1, chunk: 1_000 }) })
     const clicked = loader.loadAiAsset(ASSETS.face)
