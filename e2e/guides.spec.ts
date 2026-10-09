@@ -717,6 +717,7 @@ test.describe('guides with real detections (chromium)', () => {
   }) => {
     test.setTimeout(180_000)
     const app = startApp(page)
+    await installWorkerPostCounter(page)
     await app.goto()
     const sideways = await sidewaysPortrait(page)
     await page.getByRole('radio', { name: 'mm', exact: true }).click()
@@ -766,6 +767,8 @@ test.describe('guides with real detections (chromium)', () => {
     expect(strokeMismatches(rotated.p.lineStrokes, rotated.want, rotated.p.heightPt, 1e-6)).toEqual(
       [],
     )
+    const landmarkPosts = await workerPosts(page, 'landmark.worker')
+    expect(landmarkPosts).toBeGreaterThan(0)
 
     await editSheet(app, sideways.name, async (sheet) => {
       await sheet.getByRole('button', { name: 'Flip horizontal' }).click()
@@ -805,6 +808,8 @@ test.describe('guides with real detections (chromium)', () => {
     expect(await appearances(page, 'Finding faces…')).toBe(1)
     const cropped = await pdfPage(await exportSettled(app, ['face']))
     expect(cropped.lineStrokes).toEqual([])
+    // Neither the flip nor the crop sent the landmark worker anything.
+    expect(await workerPosts(page, 'landmark.worker')).toBe(landmarkPosts)
   })
 })
 
