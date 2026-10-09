@@ -143,14 +143,15 @@ function headCircle(landmark: (i: number) => Pt | null): { c: Pt; r: number } | 
   if (!nose) return null
   const ls = landmark(LEFT_SHOULDER)
   const rs = landmark(RIGHT_SHOULDER)
+  const le = landmark(LEFT_EYE)
+  const re = landmark(RIGHT_EYE)
   const ear = ears[0]
-  const r = ls && rs ? Math.max(0.25 * dist(ls, rs), turned) : turned
+  const earHalf = ear && le && re ? EAR_HALF_PER_EYE_SPREAD * dist(le, re) : 0
+  const r = Math.max(ls && rs ? 0.25 * dist(ls, rs) : 0, turned, earHalf)
   if (!r) return null
   const d = ear ? dist(nose, ear) : 0
   if (!ear || d === 0) return { c: nose, r }
-  const le = landmark(LEFT_EYE)
-  const re = landmark(RIGHT_EYE)
-  const frontal = le && re ? (EAR_HALF_PER_EYE_SPREAD * dist(le, re)) / d : 0
+  const frontal = earHalf / d
   const w = Math.min(Math.max(frontal, 1 - r / d), 1)
   return {
     c: { x: ear.x + w * (nose.x - ear.x), y: ear.y + w * (nose.y - ear.y) },

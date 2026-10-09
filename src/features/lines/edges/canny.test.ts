@@ -352,6 +352,30 @@ describe('cannyEdges (M4-R15)', () => {
     })
   })
 
+  it('floors high at 32²: a lone survivor of 31² still needs 32², one of 32² + 1 sets it', () => {
+    const one = (m: number) => edgeThresholds(Int32Array.of(m), Uint8Array.of(1), 1).high
+    expect(one(31 * 31)).toBe(1024)
+    expect(one(32 * 32)).toBe(1024)
+    expect(one(32 * 32 + 1)).toBe(1025)
+  })
+
+  it('a blurred diagonal step peaking between magnitude 30 and 32 seeds nothing; one past 32 does', () => {
+    const [w, h] = [32, 32]
+    const step = (c: number) =>
+      countOnes(
+        cannyEdges(
+          toGrey(
+            rgba(w, h, (x, y) => (x + y < 32 ? [0, 0, 0] : [c, c, c])),
+            w,
+            h,
+          ),
+          { blurPasses: 1, keepShare: 1, minChainPx: 6 },
+        ),
+      )
+    expect(step(12)).toBe(0)
+    expect(step(14)).toBeGreaterThan(w)
+  })
+
   it('a step needs a Sobel magnitude of 32 to seed an edge: contrast 8 does, 7 does not', () => {
     const [w, h] = [24, 16]
     const step = (c: number) =>
