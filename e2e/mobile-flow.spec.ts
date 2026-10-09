@@ -1,14 +1,29 @@
 import { readFileSync } from 'node:fs'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { AppPage, colourDistance } from './support/app.ts'
 import { FIXTURES } from './support/fixtures.ts'
+import { expectNoAxeViolations } from './support/axe.ts'
+import {
+  failModelOnce,
+  GUIDE_PHOTOS,
+  GuidesSection,
+  holdModel,
+  installWorkerProbe,
+  interval,
+  recordAiRequests,
+  summarizeLandmarkWorkers,
+  textLog,
+  watchTexts,
+  workerLog,
+  type LandmarkWorkerSummary,
+} from './support/guides.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
-import { summarizePdf } from './support/pdf.ts'
+import { summarizePdf, type PdfStroke, type PdfSummary } from './support/pdf.ts'
 import { inspectPdf } from '../src/features/render/pdf/inspect.ts'
 import { compositionPaths } from '../src/features/lines/composition.ts'
 import { DEFAULT_LINES, patchLines } from '../src/shared/model/lines.ts'
 import { runOnly } from './support/projects.ts'
-import { sampleBrowserMemory } from './support/memory.ts'
+import { heapByContext, sampleBrowserMemory, type ContextHeap } from './support/memory.ts'
 import { syntheticJpegs } from './support/synthetic.ts'
 import { expectNoFocusZoom, expectTouchTargets, settled } from './support/targets.ts'
 
@@ -135,8 +150,12 @@ function pointsClearOfLines(w: number, h: number, pictureLandscape: boolean): [n
 /** Total RSS of the browser's process tree, in MB. */
 const AFTER_IMPORT_BUDGET_MB = 1500
 const EXPORT_PEAK_BUDGET_MB = 1700
+/** The settled phase after the landmark worker's idle release, over the M3 settled phase (M4 overview). */
+const SETTLED_GUIDES_GROWTH_MB = 100
+/** The landmark worker ends 30 s after its queue empties (M4-R6). */
+const IDLE_RELEASE_WAIT_MS = 35_000
 
-test('M3 @slow 22 x 24 MP photos x 3 study versions with every line on import, preview and export on a phone within a memory budget', async ({
+test('M3 @slow 22 x 24 MP photos x 3 study versions with every line and guide on import, preview and export on a phone within a memory budget', async ({
   page,
   browser,
 }, testInfo) => {
@@ -148,6 +167,7 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line on import, p
   const crashed: string[] = []
   page.on('crash', () => crashed.push('page crashed'))
   const app = startApp(page)
+  await installWorkerProbe(page)
   await app.goto()
   const photos = await syntheticJpegs(page, 22, PHOTO.w, PHOTO.h, { noisy: true })
   const memory = sampleBrowserMemory(browser)
@@ -159,6 +179,19 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line on import, p
   const clearPoints: number[] = []
   const valuesOnRamp: number[] = []
   let settledBreakdown: Record<string, number>
+  const checkpoints: Record<
+    string,
+    { rssMb: number; byProcess: Record<string, number>; heaps: ContextHeap[] }
+  > = {}
+  const checkpoint = async (name: string) => {
+    checkpoints[name] = {
+      rssMb: await memory.sample(),
+      byProcess: await memory.breakdown(),
+      heaps: await heapByContext(page),
+    }
+  }
+  let guidesMs: number
+  let workers: LandmarkWorkerSummary
   try {
     await page.waitForTimeout(1000)
     memory.phase('import')
@@ -209,6 +242,60 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line on import, p
     memory.phase('settled after studies')
     await page.waitForTimeout(2000)
     settledBreakdown = await memory.breakdown()
+    await checkpoint('settled after studies')
+
+    // Guides: edges at detail 100, face and pose on every photo, both models downloaded.
+    memory.phase('guides')
+    const guidesStart = Date.now()
+    await app.goToStep('Studies')
+    await app.pickStudiesImage('synthetic-01.jpg')
+    const guides = new GuidesSection(page, app.linesSection)
+    await guides.set('Edge outline', true)
+    await guides.detail.focus()
+    await page.keyboard.press('End')
+    await expect(guides.detail).toHaveAttribute('aria-valuetext', '100%')
+    await guides.set('Face construction', true)
+    await guides.set('Body pose', true)
+    await guides.download('face')
+    await guides.download('pose')
+    await expect(guides.status('Body pose', 'No person found in this image.')).toBeVisible({
+      timeout: 60_000,
+    })
+    await checkpoint('one photo')
+    await app.applyLinesToAll()
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Line settings copied to 21 images.' }),
+    ).toBeAttached()
+    await app.goToStep('Export')
+    await expect(page.getByRole('button', { name: 'Create PDF' })).not.toHaveAttribute(
+      'aria-disabled',
+      'true',
+      { timeout: 300_000 },
+    )
+    guidesMs = Date.now() - guidesStart
+    await checkpoint('guides done')
+    memory.phase('preview with guides')
+    await app.goToStep('Studies')
+    await app.pickStudiesImage('synthetic-22.jpg')
+    await expect(guides.status('Edge outline', 'Outline traced.')).toBeVisible()
+    await expect(guides.status('Face construction', 'No face found in this image.')).toBeVisible()
+    await expect(guides.status('Body pose', 'No person found in this image.')).toBeVisible()
+    await app.goToStep('Preview')
+    await app.expectPreviewPages(3)
+    await app.expectPreviewSettled(300_000)
+    await checkpoint('preview with guides')
+
+    memory.phase('idle release')
+    await page.waitForTimeout(IDLE_RELEASE_WAIT_MS)
+    const gc = await page.context().newCDPSession(page)
+    await gc.send('HeapProfiler.collectGarbage')
+    await gc.detach()
+    await page.waitForTimeout(1000)
+    memory.phase('settled after guides')
+    await page.waitForTimeout(2000)
+    await checkpoint('settled after guides')
+    workers = summarizeLandmarkWorkers(await workerLog(page))
+
     await page.getByRole('button', { name: 'Next' }).click()
     await expect(page.getByText('22 images are ready to print.')).toBeVisible()
     memory.phase('export')
@@ -226,6 +313,9 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line on import, p
     ramp,
     peaksMb: peaks,
     settledBreakdown,
+    checkpoints,
+    guidesMs,
+    workers,
   })
   console.log(`memory: ${report}`)
   testInfo.annotations.push({ type: 'memory', description: report })
@@ -242,12 +332,31 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line on import, p
   expect(previewTilesWithLines).toBe(66)
   const lineStrokes = info.pages.flatMap((p) => p.lineStrokes)
   expect(lineStrokes).toHaveLength(66 * 2)
-  expect(lineStrokes.filter((s) => s.dashPt.length === 0)).toHaveLength(66)
+  const solid = lineStrokes.filter((s) => s.dashPt.length === 0)
+  expect(solid).toHaveLength(66)
+  // The edge outline at detail 100 nears MAX_EDGE_VERTICES on every noisy photo; composition alone is a few hundred ops.
+  expect(Math.min(...solid.map((s) => s.path.length))).toBeGreaterThan(2000)
   await expect(page.getByRole('alert')).toHaveCount(0)
   expect(crashed).toEqual([])
-  expect(peaks.studies).toBeLessThan(AFTER_IMPORT_BUDGET_MB)
-  expect(peaks['settled after studies']).toBeLessThan(AFTER_IMPORT_BUDGET_MB)
-  expect(peaks.export).toBeLessThan(EXPORT_PEAK_BUDGET_MB)
+  // M4-R5a: one landmarker at a time; M4-R6: the worker is released when idle.
+  expect(workers.maxAlive).toBe(1)
+  expect(workers.modelsPerWorker.map((m) => m.length)).toEqual(
+    Array<number>(workers.workers).fill(1),
+  )
+  expect(new Set(workers.modelsPerWorker.flat())).toEqual(new Set(['face', 'pose']))
+  expect(workers.alive).toBe(0)
+  expect.soft(peaks.studies, 'studies').toBeLessThan(AFTER_IMPORT_BUDGET_MB)
+  expect
+    .soft(peaks['settled after studies'], 'settled after studies')
+    .toBeLessThan(AFTER_IMPORT_BUDGET_MB)
+  expect.soft(peaks.guides, 'guides').toBeLessThan(AFTER_IMPORT_BUDGET_MB)
+  expect
+    .soft(peaks['preview with guides'], 'preview with guides')
+    .toBeLessThan(AFTER_IMPORT_BUDGET_MB)
+  expect
+    .soft(peaks['settled after guides'], 'settled after guides')
+    .toBeLessThanOrEqual((peaks['settled after studies'] ?? NaN) + SETTLED_GUIDES_GROWTH_MB)
+  expect.soft(peaks.export, 'export').toBeLessThan(EXPORT_PEAK_BUDGET_MB)
 })
 
 test('M2 touch targets in the step bar and footer are at least 44px tall', async ({ page }) => {
@@ -590,4 +699,367 @@ test('L-P3 phone: every Lines control is reached and works from the keyboard, wi
   await expect(
     page.getByRole('status').filter({ hasText: 'Line settings copied to 1 image.' }),
   ).toBeAttached()
+})
+
+// --- M4: guides from the photo on the phone ---
+
+const GUIDE_COLOUR = '#ff00ff'
+const GUIDE_RGB = [0xff, 0x00, 0xff]
+const PORTRAIT_PX_W = 1361
+/** Real face and pose detection runs on CI only in mobile-chromium (C1-R1). */
+const detectsLandmarks = (project: string) => project === 'mobile-chromium'
+
+/** Share (0..1) of a preview tile's canvas pixels drawn in the guide colour (within 60 of it). */
+async function guideColourShare(tile: Locator): Promise<number> {
+  const box = await tile.boundingBox()
+  const canvas = tile.locator('xpath=ancestor::figure').locator('canvas')
+  const cbox = await canvas.boundingBox()
+  if (!box || !cbox) throw new Error('tile or canvas not laid out')
+  const rect: [number, number, number, number] = [
+    (box.x - cbox.x) / cbox.width,
+    (box.y - cbox.y) / cbox.height,
+    box.width / cbox.width,
+    box.height / cbox.height,
+  ]
+  return canvas.evaluate(
+    (
+      c: {
+        width: number
+        height: number
+        getContext(id: '2d'): {
+          getImageData(x: number, y: number, w: number, h: number): { data: ArrayLike<number> }
+        } | null
+      },
+      [[fx, fy, fw, fh], [r, g, b]]: [number[], number[]],
+    ) => {
+      const ctx = c.getContext('2d')
+      if (!ctx) throw new Error('canvas is not 2d')
+      const x = Math.ceil(c.width * fx)
+      const y = Math.ceil(c.height * fy)
+      const w = Math.floor(c.width * fw) - 1
+      const h = Math.floor(c.height * fh) - 1
+      const d = ctx.getImageData(x, y, w, h).data
+      let hits = 0
+      for (let i = 0; i < d.length; i += 4)
+        if (Math.hypot(d[i] - r, d[i + 1] - g, d[i + 2] - b) < 60) hits++
+      return hits / (w * h)
+    },
+    [rect, GUIDE_RGB] as [number[], number[]],
+  )
+}
+
+type GuidePhoto = 'portrait' | 'figure' | 'grey'
+
+/**
+ * The PDF's non-registration strokes clipped to each of G-P1's photos. The grey PNG is the one
+ * Flate image; portrait.jpg is the JPEG whose long side is 2048 / 1361 of its short side.
+ */
+function strokesByPhoto(info: PdfSummary): Record<GuidePhoto, PdfStroke[]> {
+  const out: Record<GuidePhoto, PdfStroke[]> = { portrait: [], figure: [], grey: [] }
+  for (const p of info.pages)
+    for (const d of p.draws) {
+      const aspect = Math.max(d.wPt, d.hPt) / Math.min(d.wPt, d.hPt)
+      const photo: GuidePhoto =
+        d.filter === 'FlateDecode'
+          ? 'grey'
+          : Math.abs(aspect - 2048 / PORTRAIT_PX_W) < 0.02
+            ? 'portrait'
+            : 'figure'
+      out[photo].push(
+        ...p.lineStrokes.filter(
+          (s) =>
+            s.clip !== null &&
+            Math.abs(s.clip.x - d.xPt) < 0.5 &&
+            Math.abs(s.clip.y - d.yPt) < 0.5 &&
+            Math.abs(s.clip.w - d.wPt) < 0.5 &&
+            Math.abs(s.clip.h - d.hPt) < 0.5,
+        ),
+      )
+    }
+  return out
+}
+
+test('G-P1 phone: guides in the always-open Lines card, the download, statuses, Export waiting, the preview and the PDF', async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(180_000)
+  const real = detectsLandmarks(testInfo.project.name)
+  const app = startApp(page)
+  const ai = recordAiRequests(page)
+  await app.goto()
+  await app.upload([GUIDE_PHOTOS.portrait, GUIDE_PHOTOS.figure, FIXTURES.flatGrey])
+  await app.expectImages(3)
+  await app.goToStep('Studies')
+  await app.pickStudiesImage('portrait.jpg')
+  const guides = new GuidesSection(page, app.linesSection)
+  await expect(guides.section).toBeVisible()
+  await expect(
+    guides.section.getByRole('heading', { level: 4, name: 'Guides from the photo' }),
+  ).toBeVisible()
+  await expect(guides.section.getByText('On device', { exact: true })).toBeVisible()
+  await app.setLineStyle({ colour: GUIDE_COLOUR, widthMm: 2, opacityPct: 100 })
+  await app.applyLinesToAll()
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Line settings copied to 2 images.' }),
+  ).toBeAttached()
+
+  await guides.set('Face construction', true)
+  await expect(guides.status('Face construction', 'One-time download: 15.2 MB')).toBeVisible()
+  await expect(guides.downloadButton('face')).toBeVisible()
+  expect(ai).toEqual([])
+
+  const hold = await holdModel(page, 'face')
+  await guides.downloadButton('face').click()
+  await expect(guides.progress('face')).toBeVisible()
+  await expect(guides.status('Face construction', /^\d+\.\d of 15\.2 MB$/)).toBeVisible()
+  await expect(guides.progress('face')).toHaveAttribute('aria-valuetext', /^\d+\.\d of 15\.2 MB$/)
+  await expect.poll(hold.held).toBe(1)
+
+  await app.goToStep('Export')
+  const create = page.getByRole('button', { name: 'Create PDF' })
+  await expect(create).toHaveAttribute('aria-disabled', 'true')
+  await expect(create).toHaveAccessibleDescription('Finding guides in your photos…')
+  await expect(
+    page
+      .getByRole('region', { name: 'Step 5 of 5: Export' })
+      .getByText('Finding guides in your photos…'),
+  ).toBeVisible()
+  hold.release()
+  await app.goToStep('Studies')
+  await expect(guides.progress('face')).toHaveCount(0, { timeout: 60_000 })
+  await expect(guides.downloadButton('face')).toHaveCount(0)
+
+  if (real) {
+    await expect(
+      guides.status('Face construction', 'Face guides on. Brow, eye, nose and chin lines added.'),
+    ).toBeVisible({ timeout: 60_000 })
+    await app.pickStudiesImage('figure.jpg')
+    await guides.set('Body pose', true)
+    await expect(guides.status('Body pose', /^One-time download: \d+\.\d MB$/)).toBeVisible()
+    await guides.download('pose')
+    await expect(guides.status('Body pose', 'Pose lines on.')).toBeVisible({ timeout: 60_000 })
+    await app.pickStudiesImage('flat-grey.png')
+    await guides.set('Face construction', true)
+    await expect(guides.status('Face construction', 'No face found in this image.')).toBeVisible({
+      timeout: 60_000,
+    })
+    await expect(
+      guides.status('Face construction', 'Face guides work best with a clear front or ¾ view.'),
+    ).toBeVisible()
+    await expect(guides.switch('Face construction')).toHaveAttribute('aria-checked', 'true')
+  } else {
+    // CI's WebKit has no WebGL in a worker: the flow stops after the download and exports the edge outline.
+    await guides.set('Face construction', false)
+    await guides.set('Edge outline', true)
+    await expect(guides.status('Edge outline', 'Outline traced.')).toBeVisible({ timeout: 60_000 })
+  }
+
+  await page.getByRole('button', { name: 'Next' }).click()
+  await expect(page.getByRole('region', { name: 'Step 4 of 5: Preview' })).toBeVisible()
+  await app.expectPreviewPages(1)
+  await app.expectPreviewSettled(60_000)
+  const portraitGuide = real ? 'Face construction' : 'Edge outline'
+  await expect(
+    page
+      .getByRole('listitem')
+      .filter({ hasText: new RegExp(`^portrait\\.jpg, .*, lines: ${portraitGuide}$`) }),
+  ).toHaveCount(1)
+  expect(await guideColourShare(app.tile('portrait.jpg'))).toBeGreaterThan(0.002)
+  expect(await guideColourShare(app.tile('flat-grey.png'))).toBe(0)
+  if (real) expect(await guideColourShare(app.tile('figure.jpg'))).toBeGreaterThan(0.002)
+
+  await page.getByRole('button', { name: 'Next' }).click()
+  await expect(create).not.toHaveAttribute('aria-disabled', 'true', { timeout: 60_000 })
+  const { bytes } = await app.exportPdf('step')
+  const strokes = strokesByPhoto(await summarizePdf(bytes))
+  expect(strokes.portrait).toHaveLength(1)
+  expect(strokes.portrait[0]?.dashPt).toEqual([])
+  expect(strokes.portrait[0]?.path.length ?? 0).toBeGreaterThan(60)
+  expect(strokes.figure).toHaveLength(real ? 1 : 0)
+  expect(strokes.grey).toHaveLength(0)
+  expect(new Set(ai).size).toBe(ai.length)
+  expect(ai).toHaveLength(real ? 4 : 3)
+})
+
+test('G-P3 phone: every Guides control is at least 44 x 44 px, and the section has no text field to zoom', async ({
+  page,
+}) => {
+  const app = startApp(page)
+  await app.goto()
+  await app.upload([GUIDE_PHOTOS.portrait])
+  await app.expectImages(1)
+  await app.goToStep('Studies')
+  const guides = new GuidesSection(page, app.linesSection)
+  for (const name of ['Edge outline', 'Face construction', 'Body pose'] as const)
+    await guides.set(name, true)
+  const switches = await guides.section.getByRole('switch').all()
+  expect(switches).toHaveLength(3)
+  await expectTouchTargets([
+    ...switches,
+    guides.detail,
+    guides.downloadButton('face'),
+    guides.downloadButton('pose'),
+  ])
+
+  await failModelOnce(page, 'face')
+  await guides.downloadButton('face').click()
+  const failed = guides.group('Face construction').getByRole('alert')
+  await expect(failed).toContainText("Couldn't download the face model")
+  await expect(failed).toContainText('Check your connection and try again. Other lines still work.')
+  const tryAgain = failed.getByRole('button', { name: 'Try again', exact: true })
+  const turnOff = failed.getByRole('button', { name: 'Turn off face guides', exact: true })
+  await expectTouchTargets([tryAgain, turnOff])
+  // iOS zooms on focus only into a text control under 16 px (MIN_INPUT_FONT_PX); the section has none.
+  await expect(
+    guides.section.getByRole('textbox').or(guides.section.getByRole('spinbutton')),
+  ).toHaveCount(0)
+  await expect(guides.section.getByRole('combobox')).toHaveCount(0)
+  await turnOff.click()
+  await expect(guides.switch('Face construction')).toHaveAttribute('aria-checked', 'false')
+})
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`G-P4 phone: axe on the Studies step with the guides in the box, progress and found states (${scheme})`, async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(120_000)
+    await page.emulateMedia({ colorScheme: scheme })
+    const app = startApp(page)
+    await app.goto()
+    await app.upload([GUIDE_PHOTOS.portrait])
+    await app.expectImages(1)
+    await app.goToStep('Studies')
+    const guides = new GuidesSection(page, app.linesSection)
+    await guides.set('Edge outline', true)
+    await guides.set('Face construction', true)
+    await expect(guides.downloadButton('face')).toBeVisible()
+    await expect(guides.status('Edge outline', 'Outline traced.')).toBeVisible({ timeout: 30_000 })
+    await expectNoAxeViolations(page)
+
+    const hold = await holdModel(page, 'face')
+    await guides.downloadButton('face').click()
+    await expect(guides.progress('face')).toBeVisible()
+    await expect.poll(hold.held).toBe(1)
+    await expectNoAxeViolations(page)
+    hold.release()
+    await expect(guides.progress('face')).toHaveCount(0, { timeout: 60_000 })
+
+    if (detectsLandmarks(testInfo.project.name)) {
+      await expect(
+        guides.status('Face construction', 'Face guides on. Brow, eye, nose and chin lines added.'),
+      ).toBeVisible({ timeout: 60_000 })
+      await expectNoAxeViolations(page)
+    }
+  })
+}
+
+test('G-P5 phone: the Guides controls work from the keyboard, and focus stays on the switch when its box goes', async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(120_000)
+  // WebKit on macOS moves Tab focus to buttons only with Alt held (no "full keyboard access").
+  const tab = testInfo.project.name === 'mobile-webkit' ? 'Alt+Tab' : 'Tab'
+  const app = startApp(page)
+  await app.goto()
+  await app.upload([GUIDE_PHOTOS.portrait])
+  await app.expectImages(1)
+  await app.goToStep('Studies')
+  const guides = new GuidesSection(page, app.linesSection)
+  await app.lineSwitch('Centre lines').focus()
+
+  await page.keyboard.press(tab)
+  await expect(guides.switch('Edge outline')).toBeFocused()
+  await page.keyboard.press('Space')
+  await expect(guides.switch('Edge outline')).toHaveAttribute('aria-checked', 'true')
+  await page.keyboard.press(tab)
+  await expect(guides.detail).toBeFocused()
+  await page.keyboard.press('ArrowRight')
+  await expect(guides.detail).toHaveAttribute('aria-valuetext', '51%')
+  await expect(guides.status('Edge outline', 'Outline traced.')).toBeVisible({ timeout: 30_000 })
+
+  await page.keyboard.press(tab)
+  await expect(guides.switch('Face construction')).toBeFocused()
+  await page.keyboard.press('Space')
+  await expect(guides.switch('Face construction')).toHaveAttribute('aria-checked', 'true')
+  await expect(guides.downloadButton('face')).toBeVisible()
+  await page.keyboard.press(tab)
+  await expect(guides.downloadButton('face')).toBeFocused()
+  const hold = await holdModel(page, 'face')
+  await page.keyboard.press('Enter')
+  await expect(guides.progress('face')).toBeVisible()
+  await expect(guides.switch('Face construction')).toBeFocused()
+  hold.release()
+  await expect(guides.progress('face')).toHaveCount(0, { timeout: 60_000 })
+
+  await page.keyboard.press(tab)
+  await expect(guides.switch('Body pose')).toBeFocused()
+  await page.keyboard.press('Space')
+  await expect(guides.switch('Body pose')).toHaveAttribute('aria-checked', 'true')
+  await expect(guides.downloadButton('pose')).toBeVisible()
+  await page.keyboard.press(tab)
+  await expect(guides.downloadButton('pose')).toBeFocused()
+  await failModelOnce(page, 'pose')
+  await page.keyboard.press('Enter')
+  const failed = guides.group('Body pose').getByRole('alert')
+  await expect(failed).toContainText("Couldn't download the pose model")
+  await expect(guides.switch('Body pose')).toBeFocused()
+  await page.keyboard.press(tab)
+  await expect(failed.getByRole('button', { name: 'Try again', exact: true })).toBeFocused()
+  await page.keyboard.press(tab)
+  const turnOff = failed.getByRole('button', { name: 'Turn off pose guides', exact: true })
+  await expect(turnOff).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(guides.switch('Body pose')).toHaveAttribute('aria-checked', 'false')
+  await expect(guides.switch('Body pose')).toBeFocused()
+})
+
+const TRACING = 'Tracing the outline…'
+const TRACED = 'Outline traced.'
+const FINDING_FACES = 'Finding faces…'
+const FACE_FOUND = 'Face guides on. Brow, eye, nose and chin lines added.'
+const NO_FACE = 'No face found in this image.'
+/** CI bound for one photo's edge outline on the phone (budget < 1500 ms, M4 overview). */
+const EDGE_OUTLINE_CI_BOUND_MS = 3000
+
+test('G-P6 phone timing: one 24 MP photo’s edge outline (CI bound 3000 ms) and face detection, recorded', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !detectsLandmarks(testInfo.project.name),
+    'recorded on mobile-chromium, the phone project with real face detection on CI (C1-R1)',
+  )
+  test.setTimeout(180_000)
+  const app = startApp(page)
+  await app.goto()
+  const [photo] = await syntheticJpegs(page, 1, PHOTO.w, PHOTO.h, { noisy: true })
+  await app.upload([
+    photo,
+    { name: 'portrait.jpg', mimeType: 'image/jpeg', buffer: readFileSync(GUIDE_PHOTOS.portrait) },
+    { name: 'flat-grey.png', mimeType: 'image/png', buffer: readFileSync(FIXTURES.flatGrey) },
+  ])
+  await app.expectImages(3)
+  await app.goToStep('Studies')
+  await app.pickStudiesImage('synthetic-01.jpg')
+  const guides = new GuidesSection(page, app.linesSection)
+  await watchTexts(page, [TRACING, TRACED, FINDING_FACES, FACE_FOUND, NO_FACE])
+
+  await guides.set('Edge outline', true)
+  await expect(guides.status('Edge outline', TRACED)).toBeVisible({ timeout: 30_000 })
+
+  await app.pickStudiesImage('portrait.jpg')
+  await guides.set('Face construction', true)
+  await guides.download('face')
+  await expect(guides.status('Face construction', FACE_FOUND)).toBeVisible({ timeout: 60_000 })
+  await app.pickStudiesImage('flat-grey.png')
+  await guides.set('Face construction', true)
+  await expect(guides.status('Face construction', NO_FACE)).toBeVisible({ timeout: 60_000 })
+
+  const log = await textLog(page)
+  const edgeMs = interval(log, TRACING, TRACED)
+  const firstFaceMs = interval(log, FINDING_FACES, FACE_FOUND, 0)
+  const nextFaceMs = interval(log, FINDING_FACES, NO_FACE, 1)
+  const report = JSON.stringify({ edgeMs, firstFaceMs, nextFaceMs })
+  console.log(`guide timings (${testInfo.project.name}): ${report}`)
+  testInfo.annotations.push({ type: 'guide-timings', description: report })
+  expect(edgeMs).toBeLessThan(EDGE_OUTLINE_CI_BOUND_MS)
 })
