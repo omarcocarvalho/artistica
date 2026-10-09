@@ -41,6 +41,11 @@ export interface Progress {
   readonly total: number
 }
 
+export interface LoadOptions {
+  /** `false`: memory and Cache Storage only; rejects with name 'AiNotCachedError' instead of fetching. Every load but the user's click (M4-R19). */
+  readonly network?: boolean
+}
+
 export interface AiLoader {
   isCached(model: AiModel): Promise<boolean>
   bytesToDownload(model: AiModel): Promise<number>
@@ -48,6 +53,7 @@ export interface AiLoader {
     asset: AiAsset,
     onProgress?: (p: Progress) => void,
     signal?: AbortSignal,
+    options?: LoadOptions,
   ): Promise<ArrayBuffer>
 }
 
@@ -501,19 +507,32 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
       loaded.engine.dispose()
       loaded = null
     }
-    // `bytesToDownload`, not `isCached`: it also counts the loader's in-memory copies (no Cache Storage).
-    if ((await ports.loader.bytesToDownload(m)) > 0) {
+    const notCached = (): Cancelled => {
       setModel(m, 'unknown')
       queues.landmarks = queues.landmarks.filter((k) => wanted.get(k)?.kind !== m)
       setStatuses(keysOf(m).map((k) => [k, null] as const))
-      throw new Cancelled()
+      return new Cancelled()
     }
-    const load = (asset: AiAsset) => ports.loader.loadAiAsset(asset)
-    const [loader, wasm, modelBytes] = await Promise.all([
-      load(ports.assets.runtimeLoader),
-      load(ports.assets.runtimeWasm),
-      load(ports.assets[m]),
-    ])
+    // `bytesToDownload`, not `isCached`: it also counts the loader's in-memory copies (no Cache Storage).
+    if ((await ports.loader.bytesToDownload(m)) > 0) throw notCached()
+    // Only a click downloads (M4-R19): a copy that fails verification sends the model back to the box.
+    const load = (asset: AiAsset) =>
+      ports.loader.loadAiAsset(asset, undefined, undefined, { network: false })
+    let files: [ArrayBuffer, ArrayBuffer, ArrayBuffer]
+    try {
+      files = await Promise.all([
+        load(ports.assets.runtimeLoader),
+        load(ports.assets.runtimeWasm),
+        load(ports.assets[m]),
+      ])
+    } catch (error) {
+      if (!(error instanceof Error) || error.name !== 'AiNotCachedError') throw error
+      // A copy still listed after a failed read was not removed: the probe would find it cached
+      // again and rerun this load forever, so the detection fails instead.
+      if ((await ports.loader.bytesToDownload(m)) === 0) throw error
+      throw notCached()
+    }
+    const [loader, wasm, modelBytes] = files
     if (disposed) throw new Cancelled()
     const engine = ports.landmarks()
     try {

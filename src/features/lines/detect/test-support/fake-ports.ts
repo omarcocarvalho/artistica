@@ -6,6 +6,7 @@ import type {
   DetectionPorts,
   EdgeEngine,
   LandmarkEngine,
+  LoadOptions,
   Progress,
 } from '../schedule'
 import type { AiModel, GuideKind } from '../store'
@@ -71,10 +72,19 @@ export type LoadImpl = (
   asset: AiAsset,
   onProgress: ((p: Progress) => void) | undefined,
   signal: AbortSignal | undefined,
+  options?: LoadOptions,
 ) => Promise<ArrayBuffer>
+
+const notCached = (url: string): Error => {
+  const e = new Error(`Not cached: ${url}`)
+  e.name = 'AiNotCachedError'
+  return e
+}
 
 export function fakePorts(options: { cached?: readonly AiModel[]; manual?: boolean } = {}) {
   const cachedUrls = new Set<string>()
+  /** Present in the cache (so `isCached` and `bytesToDownload` count them) but failing verification when read. */
+  const corruptUrls = new Set<string>()
   for (const m of options.cached ?? []) {
     cachedUrls.add(ASSETS.runtimeLoader.url)
     cachedUrls.add(ASSETS.runtimeWasm.url)
@@ -145,7 +155,13 @@ export function fakePorts(options: { cached?: readonly AiModel[]; manual?: boole
   }
 
   const loadImpl: { current: LoadImpl } = {
-    current: (asset, onProgress) => {
+    current: (asset, onProgress, _signal, loadOptions) => {
+      if (corruptUrls.delete(asset.url)) cachedUrls.delete(asset.url)
+      if (loadOptions?.network === false) {
+        return cachedUrls.has(asset.url)
+          ? Promise.resolve(new ArrayBuffer(8))
+          : Promise.reject(notCached(asset.url))
+      }
       if (!cachedUrls.has(asset.url)) {
         onProgress?.({ loaded: asset.bytes / 2, total: asset.bytes })
         onProgress?.({ loaded: asset.bytes, total: asset.bytes })
@@ -166,8 +182,13 @@ export function fakePorts(options: { cached?: readonly AiModel[]; manual?: boole
           .reduce((n, a) => n + a.bytes, 0),
       ),
     ),
-    loadAiAsset: vi.fn((asset: AiAsset, onProgress?: (p: Progress) => void, signal?: AbortSignal) =>
-      loadImpl.current(asset, onProgress, signal),
+    loadAiAsset: vi.fn(
+      (
+        asset: AiAsset,
+        onProgress?: (p: Progress) => void,
+        signal?: AbortSignal,
+        loadOptions?: LoadOptions,
+      ) => loadImpl.current(asset, onProgress, signal, loadOptions),
     ),
   }
 
@@ -240,6 +261,7 @@ export function fakePorts(options: { cached?: readonly AiModel[]; manual?: boole
     out,
     log,
     cachedUrls,
+    corruptUrls,
     stats: () => ({ maxActiveLandmarks, maxActiveEdges, maxLiveLandmarkEngines }),
   }
 }

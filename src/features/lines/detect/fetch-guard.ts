@@ -38,52 +38,55 @@ function refused(api: string, url: string): Error {
 
 type Getter = (this: unknown) => unknown
 
-function own(proto: object | undefined, name: string, key: 'get' | 'value'): unknown {
-  const descriptor = proto ? Object.getOwnPropertyDescriptor(proto, name) : undefined
-  return descriptor ? Reflect.get(descriptor, key) : undefined
-}
-
 function getter(proto: object | undefined, name: string): Getter | undefined {
-  const get = own(proto, name, 'get')
+  const descriptor = proto ? Object.getOwnPropertyDescriptor(proto, name) : undefined
+  const get: unknown = descriptor ? Reflect.get(descriptor, 'get') : undefined
   return typeof get === 'function' ? (get as Getter) : undefined
 }
 
-export function installFetchGuard(
-  scope: GuardScope,
-  allowedPrefix: string,
-  options: FetchGuardOptions = {},
-): void {
+/**
+ * Lets the scope's network APIs reach only `blob:` URLs of the scope's own origin (M4-R4).
+ * Each guarded API replaces the native on its holder and on every prototype above it,
+ * read-only and not configurable, so no native stays reachable from the scope.
+ */
+export function installFetchGuard(scope: GuardScope, options: FetchGuardOptions = {}): void {
   const apply = Reflect.apply
   const construct = Reflect.construct
+  const defineProperty = Object.defineProperty
+  const ownDescriptor = Object.getOwnPropertyDescriptor
+  const prototypeOf = Object.getPrototypeOf
+  const nullObject = Object.create as (proto: null) => Record<PropertyKey, unknown>
+  const iteratorKey = Symbol.iterator
   const NativeURL = URL
   const toText = String
-  const startsWith = own(String.prototype, 'startsWith', 'value') as Getter
   const urlProtocol = getter(URL.prototype, 'protocol')
   const urlOrigin = getter(URL.prototype, 'origin')
-  const urlPathname = getter(URL.prototype, 'pathname')
   const requestUrl = getter(
     (globalThis as { Request?: { prototype: object } }).Request?.prototype,
     'url',
   )
-  if (!urlProtocol || !urlOrigin || !urlPathname) throw new Error('fetch-guard: no URL getters')
+  if (!urlProtocol || !urlOrigin) throw new Error('fetch-guard: no URL getters')
   const read = (url: URL, get: Getter): string => toText(apply(get, url, []))
-
-  const prefix = new NativeURL(allowedPrefix)
-  if (prefix.href !== allowedPrefix || !allowedPrefix.endsWith('/')) {
-    throw new Error(`fetch-guard: the prefix must be an absolute URL ending in /: ${allowedPrefix}`)
-  }
-  const prefixOrigin = prefix.origin
-  const prefixPath = prefix.pathname
+  const origin = read(new NativeURL(scope.location.href), urlOrigin)
 
   const allowed = (raw: string): boolean => {
     try {
-      const url = new NativeURL(raw, scope.location.href)
-      const protocol = read(url, urlProtocol)
-      if (protocol === 'blob:' || protocol === 'data:') return true
-      const underPrefix: unknown = apply(startsWith, read(url, urlPathname), [prefixPath])
-      return read(url, urlOrigin) === prefixOrigin && underPrefix === true
+      const url = new NativeURL(raw)
+      return read(url, urlProtocol) === 'blob:' && read(url, urlOrigin) === origin
     } catch {
       return false
+    }
+  }
+  const lock = (holder: object, name: string, value: unknown): void => {
+    for (let o: object | null = holder; o !== null; o = prototypeOf(o) as object | null) {
+      const own = ownDescriptor(o, name)
+      if (o !== holder && !own) continue
+      defineProperty(o, name, {
+        value,
+        writable: false,
+        enumerable: own?.enumerable ?? false,
+        configurable: false,
+      })
     }
   }
   const nativeRequestUrl = (input: unknown): string | null => {
@@ -107,29 +110,50 @@ export function installFetchGuard(
     options.onRefused?.(api, url)
     throw refused(api, url)
   }
+  // An argument list for a native: own elements only, so an index accessor or iterator added
+  // to Array.prototype later can neither drop a checked URL nor put another one in its place.
+  const put = (target: object, key: PropertyKey, value: unknown): void => {
+    const descriptor = nullObject(null)
+    descriptor.value = value
+    descriptor.writable = true
+    descriptor.enumerable = true
+    descriptor.configurable = true
+    defineProperty(target, key, descriptor)
+  }
+  const ownIterable = (list: unknown[]): unknown[] => {
+    let next = 0
+    const iterator = nullObject(null)
+    iterator.next = () => {
+      const step = nullObject(null)
+      step.done = next >= list.length
+      step.value = step.done ? undefined : list[next++]
+      return step
+    }
+    put(list, iteratorKey, () => iterator)
+    return list
+  }
   const withFirst = (first: unknown, args: readonly unknown[], from = 1): unknown[] => {
     const list: unknown[] = []
-    for (let i = 0; i < from; i++) list[i] = args[i]
-    list[from - 1] = first
-    for (let i = from; i < args.length; i++) list[i] = args[i]
+    for (let i = 0; i < args.length || i < from; i++) put(list, i, i === from - 1 ? first : args[i])
     return list
   }
   const replaceCtor = (name: keyof GuardScope, Original: object, Guarded: object): void => {
     const proto = (Original as { prototype?: object }).prototype
-    Object.defineProperty(Guarded, 'prototype', { value: proto })
+    defineProperty(Guarded, 'prototype', { value: proto })
     if (proto) {
-      Object.defineProperty(proto, 'constructor', {
+      defineProperty(proto, 'constructor', {
         value: Guarded,
-        writable: true,
-        configurable: true,
+        writable: false,
+        enumerable: false,
+        configurable: false,
       })
     }
-    ;(scope as unknown as Record<string, unknown>)[name] = Guarded
+    lock(scope, name, Guarded)
   }
 
   const fetch = scope.fetch
   if (fetch) {
-    scope.fetch = async (input, init) => {
+    const guarded: typeof fetch = async (input, init) => {
       const requestHref = nativeRequestUrl(input)
       const target = requestHref === null ? toText(input) : input
       check('fetch', requestHref ?? toText(target))
@@ -140,38 +164,42 @@ export function installFetchGuard(
       )
       return response
     }
+    lock(scope, 'fetch', guarded)
   }
 
   const xhr = scope.XMLHttpRequest?.prototype
   if (xhr) {
     const open = xhr.open
-    xhr.open = function (this: unknown, method, url, ...rest) {
-      const href = toText(url)
+    const guarded = function (this: unknown, ...args: unknown[]) {
+      const href = toText(args[1])
       check('XMLHttpRequest', href)
-      apply(open, this, withFirst(href, [method, url, ...rest], 2))
-    }
+      apply(open, this, withFirst(href, args, 2))
+    } as typeof open
+    lock(xhr, 'open', guarded)
   }
 
   const importScripts = scope.importScripts
   if (importScripts) {
-    scope.importScripts = (...urls) => {
+    const guarded: typeof importScripts = (...urls) => {
       const hrefs: string[] = []
       for (let i = 0; i < urls.length; i++) {
         const href = toText(urls[i])
         check('importScripts', href)
-        hrefs[i] = href
+        put(hrefs, i, href)
       }
       apply(importScripts, scope, hrefs)
     }
+    lock(scope, 'importScripts', guarded)
   }
 
   const importModule = options.importModule ?? ((url: string) => import(/* @vite-ignore */ url))
-  scope.import = (url) => {
+  const guardedImport = (url: string): Promise<unknown> => {
     const href = toText(url)
     const error = refusal('import', href)
     if (error) return Promise.reject(error)
     return importModule(href)
   }
+  lock(scope, 'import', guardedImport)
 
   for (const name of ['WebSocket', 'EventSource', 'WebTransport', 'WebSocketStream'] as const) {
     const Original = scope[name]
@@ -210,23 +238,26 @@ export function installFetchGuard(
       check('Cache', requestHref ?? toText(target))
       return target
     }
-    cache.add = async function (this: unknown, request) {
+    const guardedAdd: typeof add = async function (this: unknown, request) {
       return (await apply(add, this, [cacheTarget(request)])) as unknown
     }
-    cache.addAll = async function (this: unknown, requests) {
+    const guardedAddAll: typeof addAll = async function (this: unknown, requests) {
       const targets: unknown[] = []
-      for (let i = 0; i < requests.length; i++) targets[i] = cacheTarget(requests[i])
-      return (await apply(addAll, this, [targets])) as unknown
+      for (let i = 0; i < requests.length; i++) put(targets, i, cacheTarget(requests[i]))
+      return (await apply(addAll, this, [ownIterable(targets)])) as unknown
     }
+    lock(cache, 'add', guardedAdd)
+    lock(cache, 'addAll', guardedAddAll)
   }
 
   const navigator = scope.navigator
   const sendBeacon = navigator?.sendBeacon
   if (navigator && sendBeacon) {
-    navigator.sendBeacon = (url, data) => {
+    const guarded: typeof sendBeacon = (url, data) => {
       const href = toText(url)
       check('sendBeacon', href)
       return apply(sendBeacon, navigator, [href, data])
     }
+    lock(navigator, 'sendBeacon', guarded)
   }
 }

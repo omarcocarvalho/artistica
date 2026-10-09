@@ -2,6 +2,7 @@ import { describe, expect, it, vi, type Mock } from 'vitest'
 import { installFetchGuard, type GuardScope } from './fetch-guard'
 
 const PREFIX = 'https://app.test/artistica/'
+const BLOB = 'blob:https://app.test/0b5e3c7c-1111-2222-3333-444455556666'
 
 type Spy = Mock<(...args: unknown[]) => unknown>
 
@@ -57,7 +58,7 @@ function moduleWorkerScope(): { scope: GuardScope; spies: Spies } {
 
 function install(onRefused = vi.fn()) {
   const { scope, spies } = moduleWorkerScope()
-  installFetchGuard(scope, PREFIX, { onRefused, importModule: spies.importModule })
+  installFetchGuard(scope, { onRefused, importModule: spies.importModule })
   return { scope, spies, onRefused }
 }
 
@@ -71,6 +72,14 @@ const FOREIGN = [
   'wss://example.com/s',
   '/elsewhere',
   '../../elsewhere',
+  `${PREFIX}models/face_landmarker-float16-1.task`,
+  '/artistica/assets/vision_wasm_module_internal-1f1d6215.wasm',
+  './vision_bundle-x.js',
+  `${PREFIX}x?photo=AAAA`,
+  'data:application/octet-stream;base64,AAAA',
+  'data:text/javascript,import "https://example.com/x.js"',
+  'blob:https://example.com/0b5e3c7c-1111-2222-3333-444455556666',
+  'blob:null/0b5e3c7c-1111-2222-3333-444455556666',
 ]
 
 describe('installFetchGuard (M4-R4)', () => {
@@ -107,14 +116,14 @@ describe('installFetchGuard (M4-R4)', () => {
 
   it('passes an allowed Request object through unchanged', async () => {
     const { scope, spies } = install()
-    const request = new Request(`${PREFIX}models/a.task`)
+    const request = new Request(BLOB)
     await expect(scope.fetch?.(request)).resolves.toBe('fetched')
     expect(spies.fetch).toHaveBeenCalledWith(request)
   })
 
   it('checks the URL the browser would use, not a spoofed url or href', async () => {
     const { scope, spies } = install()
-    const allowedUrl = `${PREFIX}models/a.task`
+    const allowedUrl = BLOB
     class SpoofUrl extends URL {
       override get href(): string {
         return allowedUrl
@@ -141,7 +150,7 @@ describe('installFetchGuard (M4-R4)', () => {
     const flip = (): string => {
       let reads = 0
       const value = {
-        toString: () => (reads++ === 0 ? `${PREFIX}ok` : 'https://example.com/flip'),
+        toString: () => (reads++ === 0 ? BLOB : 'https://example.com/flip'),
       }
       return value as unknown as string
     }
@@ -152,35 +161,66 @@ describe('installFetchGuard (M4-R4)', () => {
     new (scope.WebSocket as unknown as new (u: string) => object)(flip())
     scope.navigator?.sendBeacon?.(flip())
     for (const spy of [spies.fetch, spies.importScripts, spies.importModule, spies.webSocket]) {
-      expect(spy).toHaveBeenCalledWith(`${PREFIX}ok`)
+      expect(spy).toHaveBeenCalledWith(BLOB)
     }
-    expect(spies.open).toHaveBeenCalledWith('GET', `${PREFIX}ok`)
-    expect(spies.sendBeacon).toHaveBeenCalledWith(`${PREFIX}ok`, undefined)
+    expect(spies.open).toHaveBeenCalledWith('GET', BLOB)
+    expect(spies.sendBeacon).toHaveBeenCalledWith(BLOB, undefined)
   })
 
-  it.each([
-    'blob:https://app.test/0b5e3c7c-1111-2222-3333-444455556666',
-    'data:application/octet-stream;base64,AAAA',
-    `${PREFIX}models/face_landmarker-float16-1.task`,
-    '/artistica/assets/vision_wasm_module_internal-1f1d6215.wasm',
-    './vision_bundle-x.js',
-  ])('allows blob:, data: and same-origin under the base: %s', async (url) => {
-    const { scope, spies, onRefused } = install()
-    await expect(scope.fetch?.(url, { method: 'GET' })).resolves.toBe('fetched')
-    expect(spies.fetch).toHaveBeenCalledWith(url, { method: 'GET' })
-    new (scope.XMLHttpRequest as unknown as new () => XMLHttpRequest)().open('GET', url)
-    expect(spies.open).toHaveBeenCalledWith('GET', url)
-    await expect(scope.import?.(url)).resolves.toEqual({ default: 'module' })
-    expect(spies.importModule).toHaveBeenCalledWith(url)
-    new (scope.WebSocket as unknown as new (u: string) => object)(url)
-    expect(spies.webSocket).toHaveBeenCalledWith(url)
-    expect(scope.navigator?.sendBeacon?.(url)).toBe(true)
-    expect(onRefused).not.toHaveBeenCalled()
+  it.each([BLOB, 'blob:https://app.test/another-object-url'])(
+    'allows only blob: URLs of its own origin: %s',
+    async (url) => {
+      const { scope, spies, onRefused } = install()
+      await expect(scope.fetch?.(url, { method: 'GET' })).resolves.toBe('fetched')
+      expect(spies.fetch).toHaveBeenCalledWith(url, { method: 'GET' })
+      new (scope.XMLHttpRequest as unknown as new () => XMLHttpRequest)().open('GET', url)
+      expect(spies.open).toHaveBeenCalledWith('GET', url)
+      await expect(scope.import?.(url)).resolves.toEqual({ default: 'module' })
+      expect(spies.importModule).toHaveBeenCalledWith(url)
+      new (scope.WebSocket as unknown as new (u: string) => object)(url)
+      expect(spies.webSocket).toHaveBeenCalledWith(url)
+      expect(scope.navigator?.sendBeacon?.(url)).toBe(true)
+      expect(onRefused).not.toHaveBeenCalled()
+    },
+  )
+
+  it('refuses same-origin requests whatever their method, body or query', async () => {
+    const { scope, spies } = install()
+    await expect(
+      scope.fetch?.(`${PREFIX}__post`, { method: 'POST', body: new Uint8Array([1, 2, 3]) }),
+    ).rejects.toThrow(/refused/)
+    await expect(scope.fetch?.(`${PREFIX}robots.txt?photo=AAAA`)).rejects.toThrow(/refused/)
+    await expect(scope.fetch?.(`${PREFIX}models/a.task`, { method: 'GET' })).rejects.toThrow(
+      /refused/,
+    )
+    expect(spies.fetch).not.toHaveBeenCalled()
+  })
+
+  it('refuses a data: module in self.import, whose own imports could reach any origin', async () => {
+    const { scope, spies } = install()
+    for (const url of [
+      'data:text/javascript,import "https://example.com/static.js"',
+      'data:text/javascript,await import("https://example.com/dynamic.js")',
+      'data:text/javascript,export default 1',
+    ]) {
+      await expect(scope.import?.(url)).rejects.toThrow(/refused/)
+    }
+    expect(spies.importModule).not.toHaveBeenCalled()
+  })
+
+  it('judges the origin from the location at install time, not a location shadowed later', async () => {
+    const { scope, spies } = install()
+    Object.defineProperty(scope, 'location', { value: { href: 'https://example.com/artistica/' } })
+    await expect(
+      scope.fetch?.('blob:https://example.com/0b5e3c7c-1111-2222-3333-444455556666'),
+    ).rejects.toThrow(/refused/)
+    await expect(scope.fetch?.(BLOB)).resolves.toBe('fetched')
+    expect(spies.fetch).toHaveBeenCalledTimes(1)
   })
 
   it('importScripts in a module worker still throws TypeError for an allowed blob: URL', () => {
     const { scope, spies } = install()
-    const url = 'blob:https://app.test/0b5e3c7c-1111-2222-3333-444455556666'
+    const url = BLOB
     expect(() => scope.importScripts?.(url)).toThrow(TypeError)
     expect(spies.importScripts).toHaveBeenCalledWith(url)
   })
@@ -209,7 +249,7 @@ describe('installFetchGuard (M4-R4)', () => {
   it('guards self.import as well, defining it when the scope has none', async () => {
     const { scope, spies } = moduleWorkerScope()
     expect(scope.import).toBeUndefined()
-    installFetchGuard(scope, PREFIX, { importModule: spies.importModule })
+    installFetchGuard(scope, { importModule: spies.importModule })
     expect(typeof scope.import).toBe('function')
     await expect(scope.import?.('https://example.com/m.js')).rejects.toThrow(/refused/)
     expect(spies.importModule).not.toHaveBeenCalled()
@@ -231,19 +271,10 @@ describe('installFetchGuard (M4-R4)', () => {
 
   it('skips the APIs a scope does not have', () => {
     const scope: GuardScope = { location: { href: PREFIX } }
-    installFetchGuard(scope, PREFIX)
+    installFetchGuard(scope)
     expect(scope.fetch).toBeUndefined()
     expect(scope.importScripts).toBeUndefined()
     expect(typeof scope.import).toBe('function')
-  })
-
-  it('rejects a prefix that is not an absolute URL ending in /', () => {
-    expect(() => {
-      installFetchGuard({ location: { href: PREFIX } }, '/artistica/')
-    }).toThrow()
-    expect(() => {
-      installFetchGuard({ location: { href: PREFIX } }, 'https://app.test/artistica')
-    }).toThrow()
   })
 })
 
@@ -282,7 +313,7 @@ describe('installFetchGuard: no way around it', () => {
       Cache,
     }
     const onRefused = vi.fn()
-    installFetchGuard(scope, PREFIX, { onRefused })
+    installFetchGuard(scope, { onRefused })
     return { scope, made, cached, fetch, onRefused }
   }
   const make = (C: unknown, ...args: unknown[]): unknown =>
@@ -292,7 +323,7 @@ describe('installFetchGuard: no way around it', () => {
     'refuses every %s, even from blob:, data: or the base, since it would run unguarded',
     (name) => {
       const { scope, made, onRefused } = fullScope()
-      for (const url of ['blob:https://app.test/x', 'data:text/javascript,1', `${PREFIX}w.js`]) {
+      for (const url of [BLOB, 'data:text/javascript,1', `${PREFIX}w.js`]) {
         expect(() => make(scope[name], url)).toThrow(/refused/)
       }
       expect(made).toEqual([])
@@ -308,8 +339,8 @@ describe('installFetchGuard: no way around it', () => {
       expect(() => make(Guarded, 'https://example.com/s')).toThrow(/refused/)
       expect(Guarded.prototype.constructor).toBe(Guarded)
       expect(() => make(Guarded.prototype.constructor, 'https://example.com/s')).toThrow(/refused/)
-      make(Guarded, `${PREFIX}s`, { x: 1 })
-      expect(made).toEqual([`${name} ${PREFIX}s`])
+      make(Guarded, BLOB, { x: 1 })
+      expect(made).toEqual([`${name} ${BLOB}`])
     },
   )
 
@@ -330,10 +361,10 @@ describe('installFetchGuard: no way around it', () => {
     )()
     await expect(cache.add('https://example.com/a')).rejects.toThrow(/refused/)
     await expect(cache.add(new Request('https://example.com/b'))).rejects.toThrow(/refused/)
-    await expect(cache.addAll([`${PREFIX}ok`, 'https://example.com/c'])).rejects.toThrow(/refused/)
+    await expect(cache.addAll([BLOB, 'https://example.com/c'])).rejects.toThrow(/refused/)
     expect(cached).toEqual([])
-    await cache.addAll([`${PREFIX}ok`])
-    expect(cached).toEqual([`${PREFIX}ok`])
+    await cache.addAll([BLOB])
+    expect(cached).toEqual([BLOB])
   })
 
   const RealURL = URL
@@ -348,7 +379,7 @@ describe('installFetchGuard: no way around it', () => {
   const replaceUrl = (): (() => void) => {
     g.URL = class extends RealURL {
       constructor() {
-        super(`${PREFIX}ok`)
+        super(BLOB)
       }
     }
     return () => {
@@ -365,18 +396,8 @@ describe('installFetchGuard: no way around it', () => {
     ],
     [
       'URL.prototype.origin',
-      'https://example.com/artistica/x',
+      'blob:https://example.com/0b5e3c7c-1111-2222-3333-444455556666',
       () => tamper(RealURL.prototype, 'origin', { get: () => 'https://app.test' }),
-    ],
-    [
-      'URL.prototype.pathname',
-      'https://app.test/other/x',
-      () => tamper(RealURL.prototype, 'pathname', { get: () => '/artistica/x' }),
-    ],
-    [
-      'String.prototype.startsWith',
-      'https://app.test/other/x',
-      () => tamper(String.prototype, 'startsWith', { value: () => true, writable: true }),
     ],
   ] as const)('keeps refusing after %s is replaced', async (_, url, replace) => {
     const { scope, fetch } = fullScope()
@@ -391,6 +412,92 @@ describe('installFetchGuard: no way around it', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
+  it('hands each native the URL it checked, whatever Array.prototype gains later', async () => {
+    // The fakes record into a string: an index accessor on Array.prototype would swallow a push.
+    let log = ''
+    class Xhr {
+      open(...args: unknown[]): void {
+        log += `open ${String(args[1])}|`
+      }
+    }
+    class Cache {
+      add(): Promise<unknown> {
+        return Promise.resolve()
+      }
+      addAll(requests: Iterable<unknown>): Promise<unknown> {
+        for (const r of requests) log += `addAll ${String(r)}|`
+        return Promise.resolve()
+      }
+    }
+    const ctor = (name: string) =>
+      function Native(this: object, ...args: unknown[]) {
+        log += `${name} ${String(args[0])}|`
+      } as unknown as GuardScope['WebSocket']
+    const scope: GuardScope = {
+      location: { href: `${PREFIX}assets/landmark.worker-abc.js` },
+      XMLHttpRequest: Xhr,
+      importScripts: (...urls) => {
+        // Indexed, like the native: for-of would use the replaced Array.prototype iterator.
+        // eslint-disable-next-line @typescript-eslint/prefer-for-of
+        for (let i = 0; i < urls.length; i++) log += `importScripts ${String(urls[i])}|`
+      },
+      WebSocket: ctor('WebSocket'),
+      EventSource: ctor('EventSource'),
+      FontFace: function FontFace(this: object, ...args: unknown[]) {
+        log += `FontFace ${typeof args[1]}|`
+      } as unknown as GuardScope['FontFace'],
+      Cache,
+    }
+    installFetchGuard(scope)
+    const polluted = 'https://example.com/polluted'
+    const accessor = { get: () => polluted, set: () => undefined, configurable: true }
+    const iterator = Object.getOwnPropertyDescriptor(Array.prototype, Symbol.iterator)
+    const RealSymbol = Symbol
+    const make = (C: unknown) => C as new (a: unknown, b: unknown, c?: unknown) => unknown
+    let addAll: Promise<unknown> | undefined
+    try {
+      Object.defineProperty(Array.prototype, '0', accessor)
+      Object.defineProperty(Array.prototype, '1', accessor)
+      Object.defineProperty(Array.prototype, Symbol.iterator, {
+        configurable: true,
+        writable: true,
+        value: function* () {
+          yield polluted
+        },
+      })
+      ;(globalThis as { Symbol: unknown }).Symbol = { iterator: '@@iterator' }
+      new (make(scope.XMLHttpRequest) as unknown as new () => XMLHttpRequest)().open(
+        'GET',
+        BLOB,
+        true,
+      )
+      scope.importScripts?.(BLOB, BLOB)
+      new (make(scope.WebSocket))(BLOB, [])
+      new (make(scope.EventSource))(BLOB, {})
+      new (make(scope.FontFace))('f', new ArrayBuffer(4), {})
+      addAll = new (scope.Cache as unknown as new () => Cache)().addAll([BLOB, BLOB])
+    } finally {
+      Reflect.deleteProperty(Array.prototype, '0')
+      Reflect.deleteProperty(Array.prototype, '1')
+      ;(globalThis as { Symbol: unknown }).Symbol = RealSymbol
+      if (iterator) Object.defineProperty(Array.prototype, Symbol.iterator, iterator)
+    }
+    await addAll
+    expect(log).toBe(
+      [
+        `open ${BLOB}`,
+        `importScripts ${BLOB}`,
+        `importScripts ${BLOB}`,
+        `WebSocket ${BLOB}`,
+        `EventSource ${BLOB}`,
+        'FontFace object',
+        `addAll ${BLOB}`,
+        `addAll ${BLOB}`,
+        '',
+      ].join('|'),
+    )
+  })
+
   it('never hands the native fetch to a replaced Function.prototype.call', async () => {
     const { scope, fetch } = fullScope()
     const stolen: unknown[] = []
@@ -403,11 +510,155 @@ describe('installFetchGuard: no way around it', () => {
     })
     let outcome: Promise<unknown> | undefined
     try {
-      outcome = scope.fetch?.(`${PREFIX}ok`)
+      outcome = scope.fetch?.(BLOB)
     } finally {
       restore()
     }
     await expect(outcome).resolves.toBe('fetched')
     expect(stolen).toEqual([])
+  })
+})
+
+describe('installFetchGuard: the natives on the prototype chain', () => {
+  const EVIL = 'https://example.com/x'
+
+  // A worker keeps fetch and importScripts on WorkerGlobalScope.prototype, two levels up, and
+  // the interface objects as own properties of the scope.
+  function protoScope() {
+    const natives = {
+      fetch: vi.fn<(...args: unknown[]) => unknown>(() => Promise.resolve('fetched')),
+      upperFetch: vi.fn<(...args: unknown[]) => unknown>(() => Promise.resolve('upper')),
+      importScripts: vi.fn<(...args: unknown[]) => unknown>(),
+      open: vi.fn<(...args: unknown[]) => unknown>(),
+      add: vi.fn<(...args: unknown[]) => unknown>(() => Promise.resolve()),
+      addAll: vi.fn<(...args: unknown[]) => unknown>(() => Promise.resolve()),
+      sendBeacon: vi.fn<(...args: unknown[]) => unknown>(() => true),
+      webSocket: vi.fn<(...args: unknown[]) => unknown>(),
+    }
+    const upper = { fetch: natives.upperFetch }
+    const workerGlobalScope = Object.create(upper) as Record<string, unknown>
+    workerGlobalScope.fetch = natives.fetch
+    workerGlobalScope.importScripts = natives.importScripts
+    const dedicated = Object.create(workerGlobalScope) as object
+    class Xhr {
+      open(...args: unknown[]): void {
+        natives.open(...args)
+      }
+    }
+    class Cache {
+      add(...args: unknown[]): unknown {
+        return natives.add(...args)
+      }
+      addAll(...args: unknown[]): unknown {
+        return natives.addAll(...args)
+      }
+    }
+    const navigatorProto = { sendBeacon: natives.sendBeacon }
+    const scope = Object.create(dedicated) as GuardScope & Record<string, unknown>
+    Object.assign(scope, {
+      location: { href: `${PREFIX}assets/landmark.worker-abc.js` },
+      XMLHttpRequest: Xhr,
+      Cache,
+      WebSocket: function WebSocket(url: unknown) {
+        natives.webSocket(url)
+      },
+      navigator: Object.create(navigatorProto) as object,
+    })
+    installFetchGuard(scope)
+    const chain = (start: object): object[] => {
+      const list: object[] = []
+      for (let o: object | null = start; o !== null; o = Object.getPrototypeOf(o) as object | null)
+        list.push(o)
+      return list
+    }
+    return { scope, natives, upper, workerGlobalScope, chain }
+  }
+
+  const holders = (s: ReturnType<typeof protoScope>) =>
+    [
+      [s.scope, 'fetch'],
+      [s.scope, 'importScripts'],
+      [s.scope, 'import'],
+      [s.scope, 'WebSocket'],
+      [(s.scope.XMLHttpRequest as { prototype: object }).prototype, 'open'],
+      [(s.scope.Cache as { prototype: object }).prototype, 'add'],
+      [(s.scope.Cache as { prototype: object }).prototype, 'addAll'],
+      [s.scope.navigator as object, 'sendBeacon'],
+    ] as const
+
+  it('a native reached through the prototype chain is the guard', async () => {
+    const s = protoScope()
+    for (const proto of [s.workerGlobalScope, s.upper]) {
+      const native = Object.getOwnPropertyDescriptor(proto, 'fetch')?.value as typeof fetch
+      await expect(Reflect.apply(native, s.scope, [EVIL])).rejects.toThrow(/refused/)
+    }
+    const importScripts = Object.getOwnPropertyDescriptor(s.workerGlobalScope, 'importScripts')
+      ?.value as (u: string) => void
+    expect(() => {
+      Reflect.apply(importScripts, s.scope, [EVIL])
+    }).toThrow(/refused/)
+    const beacon = Object.getOwnPropertyDescriptor(
+      Object.getPrototypeOf(s.scope.navigator) as object,
+      'sendBeacon',
+    )?.value as (u: string) => boolean
+    expect(() => Reflect.apply(beacon, s.scope.navigator, [EVIL])).toThrow(/refused/)
+    for (const spy of Object.values(s.natives)) expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('every guarded API is the guard on each object of its chain, read-only and not configurable', () => {
+    const s = protoScope()
+    for (const [holder, name] of holders(s)) {
+      const guard = (holder as Record<string, unknown>)[name]
+      expect(Object.getOwnPropertyDescriptor(holder, name), name).toMatchObject({
+        value: guard,
+        writable: false,
+        configurable: false,
+      })
+      for (const o of s.chain(holder)) {
+        const d = Object.getOwnPropertyDescriptor(o, name)
+        if (!d) continue
+        expect(d, name).toMatchObject({ value: guard, writable: false, configurable: false })
+      }
+    }
+  })
+
+  it('a guard cannot be deleted or overwritten to expose the native below it', async () => {
+    const s = protoScope()
+    for (const [holder, name] of holders(s)) {
+      const target = holder as Record<string, unknown>
+      const guard = target[name]
+      expect(Reflect.deleteProperty(target, name), name).toBe(false)
+      expect(() => {
+        target[name] = () => 'replaced'
+      }, name).toThrow(TypeError)
+      expect(() => {
+        Object.defineProperty(holder, name, { value: () => 'replaced' })
+      }, name).toThrow(TypeError)
+      expect(target[name], name).toBe(guard)
+    }
+    await expect(s.scope.fetch?.(EVIL)).rejects.toThrow(/refused/)
+    expect(s.natives.fetch).not.toHaveBeenCalled()
+  })
+
+  it("a guarded constructor's prototype keeps pointing at the guard", () => {
+    const s = protoScope()
+    const Guarded = s.scope.WebSocket as unknown as { prototype: object }
+    expect(Object.getOwnPropertyDescriptor(Guarded.prototype, 'constructor')).toMatchObject({
+      value: Guarded,
+      writable: false,
+      configurable: false,
+    })
+    expect(Object.getOwnPropertyDescriptor(Object.prototype, 'constructor')).toMatchObject({
+      value: Object,
+      writable: true,
+      configurable: true,
+    })
+  })
+
+  it('still calls the nearest native for an allowed URL', async () => {
+    const s = protoScope()
+    await expect(s.scope.fetch?.(BLOB)).resolves.toBe('fetched')
+    expect(s.natives.fetch).toHaveBeenCalledWith(BLOB)
+    expect(s.natives.upperFetch).not.toHaveBeenCalled()
   })
 })

@@ -1,5 +1,5 @@
 import { AI_ASSETS, type AiAsset, type AiAssets } from 'virtual:ai-assets'
-import type { AiLoader, Progress } from './schedule'
+import type { AiLoader, LoadOptions, Progress } from './schedule'
 import type { AiModel } from './store'
 
 export const AI_CACHE = 'artistica-ai-v1'
@@ -10,6 +10,11 @@ export class AiDownloadError extends Error {
 
 export class AiIntegrityError extends Error {
   override readonly name = 'AiIntegrityError'
+}
+
+/** A load with `{ network: false }` found no verified copy in memory or Cache Storage. */
+export class AiNotCachedError extends Error {
+  override readonly name = 'AiNotCachedError'
 }
 
 export interface AiLoaderDeps {
@@ -226,15 +231,24 @@ export function createAiLoader(deps: AiLoaderDeps): AiAssetLoader {
     })
   }
 
+  async function readOnly(asset: AiAsset, signal: AbortSignal | undefined): Promise<ArrayBuffer> {
+    const cached = await readCached(asset)
+    if (signal?.aborted) throw abortReason(signal)
+    if (!cached) throw new AiNotCachedError(`Not cached: ${asset.url}`)
+    return cached
+  }
+
   function loadAiAsset(
     asset: AiAsset,
     onProgress?: (p: Progress) => void,
     signal?: AbortSignal,
+    options?: LoadOptions,
   ): Promise<ArrayBuffer> {
     if (!isManifestAsset(asset)) {
       return Promise.reject(new AiDownloadError(`Not an AI asset: ${asset.url}`))
     }
     if (signal?.aborted) return Promise.reject(abortReason(signal))
+    if (options?.network === false) return readOnly(asset, signal)
     let shared = downloads.get(asset.url)
     if (!shared) {
       shared = start(asset)
@@ -279,8 +293,9 @@ export function loadAiAsset(
   asset: AiAsset,
   onProgress?: (p: Progress) => void,
   signal?: AbortSignal,
+  options?: LoadOptions,
 ): Promise<ArrayBuffer> {
-  return defaultLoader.loadAiAsset(asset, onProgress, signal)
+  return defaultLoader.loadAiAsset(asset, onProgress, signal, options)
 }
 
 export function isCached(model: AiModel): Promise<boolean> {
