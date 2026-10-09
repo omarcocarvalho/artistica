@@ -18,4 +18,6 @@ export const FIXTURES = {
   notesPdf: f('notes.pdf'),
   valueRamp: f('value-ramp.png'),
   flatGrey: f('flat-grey.png'),
+  portraitJpg: f('portrait.jpg'),
+  figureJpg: f('figure.jpg'),
 } as const

@@ -148,6 +148,14 @@ export function strokeToMm(stroke: PdfStroke, pageHeightPt: number): MmPathOp[] 
   )
 }
 
+/**
+ * The guide strokes of a page: every stroke that is not registration black (guides join the solid
+ * line batch, M4-R11), each with its path ops in page mm.
+ */
+export function guideStrokes(page: PdfPageSummary): { stroke: PdfStroke; ops: MmPathOp[] }[] {
+  return page.lineStrokes.map((stroke) => ({ stroke, ops: strokeToMm(stroke, page.heightPt) }))
+}
+
 /** A rect in PDF pt (origin bottom left) as page mm, origin top left. */
 export function rectPtToMm(
   r: { x: number; y: number; w: number; h: number },

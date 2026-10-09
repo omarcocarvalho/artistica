@@ -480,7 +480,113 @@ export class AppPage {
     const width = await this.pageCanvases.nth(n).evaluate((c: SheetCanvas) => c.width)
     return { pxPerMm: width / pageWidthMm }
   }
+
+  // --- Guides from the photo (E3) ---
+  /** The section labelled "Guides from the photo" in the open Lines panel or card. */
+  get guidesSection(): Locator {
+    return this.page.getByRole('region', { name: 'Guides from the photo', exact: true })
+  }
+  /** Opens the desktop Lines tab and waits for the guides section of the selected photo. */
+  async openGuides(): Promise<void> {
+    await this.openLinesTab()
+    await expect(this.guidesSection).toBeVisible()
+  }
+  guideSwitch(kind: GuideKind): Locator {
+    return this.guidesSection.getByRole('switch', { name: GUIDE_SWITCH_NAMES[kind], exact: true })
+  }
+  /** The guide's switch and everything shown under it (box, progress, status, alert). */
+  guideGroup(kind: GuideKind): Locator {
+    return this.guideSwitch(kind).locator('xpath=../..')
+  }
+  async setGuide(kind: GuideKind, on: boolean): Promise<void> {
+    const s = this.guideSwitch(kind)
+    if ((await s.getAttribute('aria-checked')) !== String(on)) await s.click()
+    await expect(s).toHaveAttribute('aria-checked', String(on))
+  }
+  /** "Download & turn on" under a switched-on guide; waits until the download has ended. */
+  async downloadModel(model: 'face' | 'pose', timeout = 120_000): Promise<void> {
+    const group = this.guideGroup(model)
+    await group.getByRole('button', { name: 'Download & turn on', exact: true }).click()
+    await expect
+      .poll(() => this.guideStatus(model), { timeout })
+      .not.toMatch(/^(box|downloading|idle)$/)
+  }
+  get detailSlider(): Locator {
+    return this.guidesSection.getByRole('slider', { name: 'Detail', exact: true })
+  }
+  /** Native range input (fill fires input and change); the edge outline must be on. */
+  async setDetail(pct: number): Promise<void> {
+    await this.detailSlider.fill(String(pct))
+    await expect(this.detailSlider).toHaveAttribute('aria-valuetext', `${String(pct)}%`)
+    // The section commits the detail 80 ms after the last change (DETAIL_SETTLE_MS); until then
+    // the old outline still shows as settled.
+    await this.page.waitForTimeout(250)
+  }
+  /** What the guide shows now, read from its group's text (en locale). */
+  async guideStatus(kind: GuideKind): Promise<GuideStatus> {
+    const sw = this.guideSwitch(kind)
+    if ((await sw.getAttribute('aria-checked')) !== 'true') return 'off'
+    const group = this.guideGroup(kind)
+    if ((await group.getByRole('progressbar').count()) > 0) return 'downloading'
+    const text = (await group.innerText()).replace(/\s+/g, ' ')
+    for (const [status, texts] of GUIDE_STATUS_TEXT)
+      if (texts.some((t) => text.includes(t))) return status
+    return 'idle'
+  }
+  /** Waits until the guide shows a settled state: found, none found, failed, unsupported or the box. */
+  async expectGuideSettled(kind: GuideKind, timeout = 60_000): Promise<GuideStatus> {
+    await expect
+      .poll(() => this.guideStatus(kind), { timeout })
+      .toMatch(/^(found|none|failed|download-failed|unsupported|box|off)$/)
+    return this.guideStatus(kind)
+  }
 }
+
+export type GuideKind = 'edges' | 'face' | 'pose'
+export const GUIDE_SWITCH_NAMES: Readonly<Record<GuideKind, string>> = {
+  edges: 'Edge outline',
+  face: 'Face construction',
+  pose: 'Body pose',
+}
+export type GuideStatus =
+  | 'off'
+  | 'idle'
+  | 'box'
+  | 'downloading'
+  | 'running'
+  | 'found'
+  | 'none'
+  | 'download-failed'
+  | 'failed'
+  | 'unsupported'
+
+/** Text that identifies each state in the en locale (`lines.json`, `guides.*`), checked in this order. */
+const GUIDE_STATUS_TEXT: readonly (readonly [GuideStatus, readonly string[]])[] = [
+  ['unsupported', ['Face and pose guides need WebGL, which this browser has turned off.']],
+  ['download-failed', ["Couldn't download the face model", "Couldn't download the pose model"]],
+  [
+    'failed',
+    [
+      "Couldn't trace the outline.",
+      "Couldn't look for faces in this image",
+      "Couldn't look for a person in this image",
+    ],
+  ],
+  ['box', ['Download & turn on']],
+  ['running', ['Tracing the outline…', 'Finding faces…', 'Finding the pose…']],
+  [
+    'found',
+    ['Outline traced.', 'Face guides on. Brow, eye, nose and chin lines added.', 'Pose lines on.'],
+  ],
+  [
+    'none',
+    [
+      'No edges found at this Detail. Try a higher Detail.',
+      'No face found in this image.',
+      'No person found in this image.',
+    ],
+  ],
+]
 
 // --- Lines (D3) ---
 interface SheetCanvas {

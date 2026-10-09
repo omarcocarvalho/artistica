@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { AppPage } from './support/app.ts'
 import { FIXTURES } from './support/fixtures.ts'
+import { AI_ASSET_PATHS, DOWNLOAD_PATHS } from './support/guides.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { runOnly } from './support/projects.ts'
 
@@ -177,4 +178,76 @@ test('P2 nothing from the photos is persisted: storage stays small and a reload 
     ['Blur + Values', 'false'],
   ] as const)
     await expect(app.versionChip(v)).toHaveAttribute('aria-pressed', on)
+})
+
+interface CacheWindow {
+  caches?: {
+    keys(): Promise<string[]>
+    open(name: string): Promise<{ keys(): Promise<{ url: string }[]> }>
+  }
+}
+
+test('G-P2 with guides: settings v4 keep only the detail; Cache Storage holds only AI assets; nothing from a photo', async ({
+  page,
+}) => {
+  test.setTimeout(150_000)
+  const app = startApp(page)
+  await app.goto()
+  await app.upload(FIXTURES.portraitJpg)
+  await app.expectImages(1)
+  await app.openGuides()
+  await app.setGuide('edges', true)
+  await app.setDetail(73)
+  await app.setGuide('face', true)
+  const offered = (await app.expectGuideSettled('face')) === 'box'
+  if (offered) await app.downloadModel('face')
+  await app.setGuide('pose', true)
+  await app.expectGuideSettled('edges')
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('artistica:settings')))
+    .toContain('"detailPct":73')
+
+  const stored = await page.evaluate(async () => {
+    const w = globalThis as unknown as CacheWindow
+    const cached: Record<string, string[]> = {}
+    for (const name of (await w.caches?.keys()) ?? []) {
+      const cache = await w.caches?.open(name)
+      cached[name] = ((await cache?.keys()) ?? []).map((r) => r.url)
+    }
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i) ?? '')
+    return {
+      keys,
+      settings: localStorage.getItem('artistica:settings'),
+      dbs: indexedDB.databases ? (await indexedDB.databases()).length : 0,
+      session: sessionStorage.length,
+      cached,
+    }
+  })
+  expect(stored.keys).toEqual(['artistica:settings'])
+  const envelope = JSON.parse(stored.settings ?? 'null') as {
+    version: number
+    state: { lineDefaults: Record<string, unknown> }
+  }
+  expect(envelope.version).toBe(4)
+  // The detail is remembered; the switches never are (owner Q8).
+  expect(envelope.state.lineDefaults.edges).toEqual({ on: false, detailPct: 73 })
+  expect(envelope.state.lineDefaults.face).toBe(false)
+  expect(envelope.state.lineDefaults.pose).toBe(false)
+  expect(stored.session).toBe(0)
+  expect(stored.dbs).toBe(0)
+  const origin = new URL(page.url()).origin
+  for (const [name, urls] of Object.entries(stored.cached)) {
+    // Service workers are blocked here, so there is no shell cache (offline.spec checks it).
+    expect(name).toMatch(/^(artistica-ai-v1|artistica-shell-.+)$/)
+    for (const url of urls) {
+      expect(url).not.toMatch(/^blob:/)
+      expect(new URL(url).origin).toBe(origin)
+      expect(AI_ASSET_PATHS).toContain(new URL(url).pathname)
+    }
+  }
+  const ai = Object.entries(stored.cached).find(([n]) => n === 'artistica-ai-v1')?.[1] ?? []
+  expect(ai.map((u) => new URL(u).pathname).sort()).toEqual(
+    offered ? [...DOWNLOAD_PATHS.face].sort() : [],
+  )
 })
