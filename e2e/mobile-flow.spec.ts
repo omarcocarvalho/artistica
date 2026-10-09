@@ -816,8 +816,14 @@ test('G-P1 phone: guides in the always-open Lines card, the download, statuses, 
   const hold = await holdModel(page, 'face')
   await guides.downloadButton('face').click()
   await expect(guides.progress('face')).toBeVisible()
-  await expect(guides.status('Face construction', /^\d+\.\d of 15\.2 MB$/)).toBeVisible()
-  await expect(guides.progress('face')).toHaveAttribute('aria-valuetext', /^\d+\.\d of 15\.2 MB$/)
+  // The visible amount is hidden from screen readers; the bar speaks it in words (owner Q18, default).
+  const amount = guides.status('Face construction', /^\d+\.\d of 15\.2 MB$/)
+  await expect(amount).toBeVisible()
+  await expect(amount).toHaveAttribute('aria-hidden', 'true')
+  await expect(guides.progress('face')).toHaveAttribute(
+    'aria-valuetext',
+    /^\d+\.\d of 15\.2 megabytes$/,
+  )
   await expect.poll(hold.held).toBe(1)
 
   await app.goToStep('Export')
