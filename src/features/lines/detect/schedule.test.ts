@@ -933,7 +933,7 @@ describe('one landmarker at a time (M4-R5a)', () => {
     expect(status(detectionKey('face', a))).toBeUndefined()
   })
 
-  it('every job prepares the loaded landmarker again with the same bytes, so the engine can restart after its idle release', async () => {
+  it('every job prepares the loaded landmarker again with the same bytes, so the engine can restart its worker after a timeout', async () => {
     const h = fakePorts({ cached: ['face'] })
     const s = start(h.ports)
     s.sync([img('a', FACE), img('b', FACE), img('c', FACE)])
