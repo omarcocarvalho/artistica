@@ -7,7 +7,13 @@ import type { PathCmd } from '../types'
 import { points } from '../test-support/paths'
 import { circlePath } from './curves'
 import { MAX_POSES as LIMITS_MAX_POSES } from './limits'
-import { MAX_CMDS_PER_POSE, MAX_POSES, MIN_POSE_VISIBILITY, poseFigure } from './pose'
+import {
+  MAX_CMDS_PER_POSE,
+  MAX_POSES,
+  MIN_POSE_VISIBILITY,
+  poseFigure,
+  TURNED_HEAD_RADIUS,
+} from './pose'
 import { SYNTHETIC_H, SYNTHETIC_W, tPose, walkingPose } from './test-support/synthetic-pose'
 import type { PoseLandmarks, SourcePoint } from './types'
 
@@ -128,6 +134,7 @@ describe('poseFigure', () => {
     expect(MAX_POSES).toBe(4)
     expect(MAX_CMDS_PER_POSE).toBe(160)
     expect(MIN_POSE_VISIBILITY).toBe(0.5)
+    expect(TURNED_HEAD_RADIUS).toBe(0.85)
   })
 
   it('draws the mocked figure for a fully visible pose (T-pose, by hand)', () => {
@@ -245,6 +252,12 @@ describe('poseFigure', () => {
     expect(poseFigure(hide(tPose(), 7, MIN_POSE_VISIBILITY), SYNTH_IMG)).toEqual(full)
   })
 
+  it('a NaN visibility counts as hidden', () => {
+    expect(poseFigure(hide(tPose(), 15, Number.NaN), SYNTH_IMG)).toEqual(
+      poseFigure(hide(tPose(), 15), SYNTH_IMG),
+    )
+  })
+
   it('a missing visibility counts as hidden', () => {
     const pose = tPose()
     const short: PoseLandmarks = { points: pose.points, visibility: pose.visibility.slice(0, 15) }
@@ -281,11 +294,15 @@ describe('poseFigure', () => {
   )
 
   it.each([7, 8])(
-    'with ear %i hidden the head is centred on the nose, radius a quarter of the shoulder width',
+    'with ear %i hidden the head is centred on the nose, radius a quarter of the shoulder width or the turned-head radius',
     (ear) => {
       for (const [, pose, img] of CASES) {
         const nose = px(pose, img, 0)
-        const r = 0.25 * dist(px(pose, img, 11), px(pose, img, 12))
+        const other = px(pose, img, ear === 7 ? 8 : 7)
+        const r = Math.max(
+          0.25 * dist(px(pose, img, 11), px(pose, img, 12)),
+          TURNED_HEAD_RADIUS * dist(nose, other),
+        )
         const fig = poseFigure(hide(pose, ear), img)
         expectNear(fig.cmds.slice(0, 5), circlePath(nose.x, nose.y, r))
         expect(fig.joints).toEqual(poseFigure(pose, img).joints)
@@ -300,18 +317,82 @@ describe('poseFigure', () => {
 
   it.each([
     ['the nose and an ear', [0, 7]],
-    ['an ear and a shoulder', [8, 12]],
+    ['both ears and a shoulder', [7, 8, 12]],
   ])('with %s hidden there is no head and no neck', (_, hidden) => {
-    const full = poseFigure(tPose(), SYNTH_IMG)
     const pose = hidden.reduce((p, i) => hide(p, i), tPose())
     const fig = poseFigure(pose, SYNTH_IMG)
-    expect(fig.cmds.slice(0, 5).map((c) => c.op)).not.toEqual(['M', 'C', 'C', 'C', 'C'])
-    if (hidden.includes(0)) {
-      expect(fig.cmds).toEqual(full.cmds.slice(7))
-      expect(fig.joints).toEqual(full.joints)
-    } else {
-      expect(fig.cmds.some((c) => c.op === 'C')).toBe(false)
+    expect(fig.cmds.some((c) => c.op === 'C')).toBe(false)
+    const body = poseFigure(
+      hidden.slice(1).reduce((p, i) => hide(p, i), hide(tPose(), 0)),
+      SYNTH_IMG,
+    )
+    expect(fig).toEqual(body)
+  })
+
+  it('with an ear and a shoulder hidden the head is centred on the nose, sized by the other ear, with no neck', () => {
+    const fig = poseFigure(hide(hide(tPose(), 8), 12), SYNTH_IMG)
+    expectNear(fig.cmds.slice(0, 5), circlePath(300, 120, TURNED_HEAD_RADIUS * Math.hypot(30, 2)))
+    expect(fig.cmds.slice(5)).toEqual(poseFigure(hide(tPose(), 12), SYNTH_IMG).cmds.slice(5))
+    expect(fig.joints).toEqual(poseFigure(hide(tPose(), 12), SYNTH_IMG).joints)
+  })
+
+  describe('a head turned away from the camera keeps its size', () => {
+    const EAR_HALF = 30
+    const NOSE_DEPTH = (EAR_HALF * 11.5) / 7.25
+    function turned(yawDeg: number): PoseLandmarks {
+      const t = (yawDeg * Math.PI) / 180
+      const at = (x: number, y: number): SourcePoint => ({ x: x / SYNTHETIC_W, y: y / SYNTHETIC_H })
+      return move(
+        move(
+          move(tPose(), 7, at(300 + EAR_HALF * Math.cos(t), 118)),
+          8,
+          at(300 - EAR_HALF * Math.cos(t), 118),
+        ),
+        0,
+        at(300 + NOSE_DEPTH * Math.sin(t), 120),
+      )
     }
+
+    it('in strict profile, with the ears at one point, r = TURNED_HEAD_RADIUS × nose to ear', () => {
+      const pose = turned(90)
+      const ear = px(pose, SYNTH_IMG, 7)
+      expect(dist(ear, px(pose, SYNTH_IMG, 8))).toBeLessThan(1e-9)
+      const r = TURNED_HEAD_RADIUS * dist(px(pose, SYNTH_IMG, 0), ear)
+      expectNear(poseFigure(pose, SYNTH_IMG).cmds.slice(0, 5), circlePath(ear.x, ear.y, r))
+      expect(r).toBeGreaterThan(0.85 * 45)
+    })
+
+    it('in profile with the far ear and shoulder hidden, the head on the nose keeps its size', () => {
+      const pose = hide(hide(turned(90), 8), 12)
+      const nose = px(pose, SYNTH_IMG, 0)
+      const r = TURNED_HEAD_RADIUS * dist(nose, px(pose, SYNTH_IMG, 7))
+      expectNear(poseFigure(pose, SYNTH_IMG).cmds.slice(0, 5), circlePath(nose.x, nose.y, r))
+      expect(r).toBeGreaterThan(0.85 * 45)
+    })
+
+    it('in a 3/4 view the farther ear sets the radius, centred between the ears', () => {
+      const pose = turned(45)
+      const [l, r8, nose] = [px(pose, SYNTH_IMG, 7), px(pose, SYNTH_IMG, 8), px(pose, SYNTH_IMG, 0)]
+      const c = mid(l, r8)
+      const r = TURNED_HEAD_RADIUS * dist(nose, r8)
+      expect(r).toBeGreaterThan(dist(nose, l))
+      expect(r).toBeGreaterThan(0.75 * dist(l, r8))
+      expectNear(poseFigure(pose, SYNTH_IMG).cmds.slice(0, 5), circlePath(c.x, c.y, r))
+    })
+
+    it('facing the camera the ear rule wins and the figure is unchanged', () => {
+      expect(poseFigure(turned(0), SYNTH_IMG)).toEqual(poseFigure(tPose(), SYNTH_IMG))
+    })
+
+    it('stays within 0.85–1.1 × the frontal radius at every turn (property)', () => {
+      fc.assert(
+        fc.property(fc.double({ min: -90, max: 90, noNaN: true }), (yaw) => {
+          const { r } = headOf(poseFigure(turned(yaw), SYNTH_IMG).cmds)
+          expect(r / 45).toBeGreaterThanOrEqual(0.85)
+          expect(r / 45).toBeLessThanOrEqual(1.1)
+        }),
+      )
+    })
   })
 
   it('the neck runs from the head circle towards mid-shoulders, ending at mid-shoulders', () => {
@@ -333,10 +414,11 @@ describe('poseFigure', () => {
   })
 
   it('a head centred on mid-shoulders hangs its neck from its lowest point', () => {
-    const pose = move(move(tPose(), 7, { x: 330 / 600, y: 220 / 900 }), 8, {
-      x: 270 / 600,
-      y: 220 / 900,
-    })
+    const pose = [
+      [7, 330],
+      [8, 270],
+      [0, 300],
+    ].reduce((p, [i = 0, x = 0]) => move(p, i, { x: x / 600, y: 220 / 900 }), tPose())
     const fig = poseFigure(pose, SYNTH_IMG)
     expectNear(fig.cmds.slice(5, 7), [
       { op: 'M', x: 300, y: 220 + 45 },
@@ -355,6 +437,15 @@ describe('poseFigure', () => {
     expect(poseFigure(tPose(), touching)).toEqual(full)
     const missing = imgOf(SYNTHETIC_W, SYNTHETIC_H, { x: 0, y: 0, w: 600, h: 72.99 })
     expect(poseFigure(tPose(), missing)).toEqual({ cmds: [], joints: [] })
+  })
+
+  it.each([
+    ['a wrist', { x: 510, y: 210, w: 90, h: 20 }],
+    ['the ankles', { x: 0, y: 779, w: 600, h: 121 }],
+  ])('a crop that meets only %s draws the whole figure', (_, crop) => {
+    expect(poseFigure(tPose(), imgOf(SYNTHETIC_W, SYNTHETIC_H, crop))).toEqual(
+      poseFigure(tPose(), SYNTH_IMG),
+    )
   })
 
   it('a pose with every landmark hidden draws nothing', () => {

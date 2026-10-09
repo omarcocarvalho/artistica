@@ -8,6 +8,7 @@ import type { PoseLandmarks } from './types'
 export { MAX_POSES }
 export const MAX_CMDS_PER_POSE = 160
 export const MIN_POSE_VISIBILITY = 0.5
+export const TURNED_HEAD_RADIUS = 0.85
 
 interface Pt {
   readonly x: number
@@ -99,7 +100,7 @@ export function poseFigure(
   }
   const drawn = new Set<End>()
 
-  const head = headCircle(landmark, midShoulders)
+  const head = headCircle(landmark)
   if (head) {
     cmds.push(...circlePath(head.c.x, head.c.y, head.r))
     extend(head.c, head.r)
@@ -129,16 +130,16 @@ export function poseFigure(
   return { cmds, joints }
 }
 
-function headCircle(
-  landmark: (i: number) => Pt | null,
-  midShoulders: Pt | null,
-): { c: Pt; r: number } | null {
+function headCircle(landmark: (i: number) => Pt | null): { c: Pt; r: number } | null {
+  const nose = landmark(NOSE)
   const left = landmark(LEFT_EAR)
   const right = landmark(RIGHT_EAR)
-  if (left && right) return { c: mid(left, right), r: 0.75 * dist(left, right) }
-  const nose = landmark(NOSE)
+  const ears = [left, right].filter((e): e is Pt => e !== null)
+  const turned = nose ? Math.max(0, ...ears.map((e) => TURNED_HEAD_RADIUS * dist(nose, e))) : 0
+  if (left && right) return { c: mid(left, right), r: Math.max(0.75 * dist(left, right), turned) }
+  if (!nose) return null
   const l = landmark(LEFT_SHOULDER)
   const r = landmark(RIGHT_SHOULDER)
-  if (nose && l && r && midShoulders) return { c: nose, r: 0.25 * dist(l, r) }
-  return null
+  if (l && r) return { c: nose, r: Math.max(0.25 * dist(l, r), turned) }
+  return ears.length > 0 ? { c: nose, r: turned } : null
 }
