@@ -8,7 +8,7 @@ import { tileRenderKey } from '../../render/pixels/tile-plan'
 import { descriptor, layoutOf, placement, setupWith } from '../../render/test-support/fixtures'
 import { fromCrop, fromRotated } from '../guides/map'
 import type { EdgeOutline, FaceLandmarks, PoseLandmarks } from '../guides/types'
-import { createDetectionScheduler, type DetectionScheduler } from './schedule'
+import { createDetectionScheduler, type DetectionScheduler, DOWNLOAD_STALL_MS } from './schedule'
 import {
   type DetectionStatus,
   detectionKey,
@@ -356,6 +356,112 @@ describe('downloads', () => {
     s.sync([a])
     await flush()
     expect(status(detectionKey('face', a))).toEqual({ state: 'needs-download', bytes: 3_000 })
+  })
+
+  describe('a download that stalls (no bytes for DOWNLOAD_STALL_MS)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+    const settle = () => vi.advanceTimersByTimeAsync(0)
+
+    function stalling(h: ReturnType<typeof fakePorts>) {
+      const signals: AbortSignal[] = []
+      const feeds: ((loaded: number) => void)[] = []
+      h.loadImpl.current = (asset, onProgress, signal) => {
+        if (signal) signals.push(signal)
+        feeds.push((loaded) => onProgress?.({ loaded, total: asset.bytes }))
+        return new Promise((_, reject) => {
+          signal?.addEventListener('abort', () => {
+            reject(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+          })
+        })
+      }
+      return { signals, feeds }
+    }
+
+    it('fails as a download failure after 30 s without bytes, aborts the fetches, and Try again downloads again', async () => {
+      expect(DOWNLOAD_STALL_MS).toBe(30_000)
+      const h = fakePorts()
+      const ok = h.loadImpl.current
+      const { signals } = stalling(h)
+      const s = start(h.ports)
+      const a = img('a', FACE)
+      s.sync([a])
+      await settle()
+      s.download('face')
+      await settle()
+      expect(signals).toHaveLength(3)
+
+      await vi.advanceTimersByTimeAsync(DOWNLOAD_STALL_MS - 1)
+      expect(status(detectionKey('face', a))?.state).toBe('downloading')
+      expect(signals.some((x) => x.aborted)).toBe(false)
+
+      await vi.advanceTimersByTimeAsync(1)
+      expect(status(detectionKey('face', a))).toEqual({ state: 'failed', reason: 'download' })
+      expect(useDetections.getState().models.face).toBe('failed')
+      expect(signals.every((x) => x.aborted)).toBe(true)
+
+      h.loadImpl.current = ok
+      s.retry('face', a.id)
+      await settle()
+      expect(status(detectionKey('face', a))).toEqual({ state: 'done', found: 1 })
+    })
+
+    it('every new byte restarts the 30 s; only a gap with none fails', async () => {
+      const h = fakePorts()
+      const { feeds } = stalling(h)
+      const s = start(h.ports)
+      const a = img('a', FACE)
+      s.sync([a])
+      await settle()
+      s.download('face')
+      await settle()
+
+      for (let i = 1; i <= 4; i++) {
+        await vi.advanceTimersByTimeAsync(DOWNLOAD_STALL_MS - 1_000)
+        feeds[2]?.(i * 100)
+      }
+      await vi.advanceTimersByTimeAsync(DOWNLOAD_STALL_MS - 1_000)
+      feeds[2]?.(400)
+      expect(status(detectionKey('face', a))).toEqual({
+        state: 'downloading',
+        loaded: 400,
+        total: 14_000,
+      })
+      await vi.advanceTimersByTimeAsync(1_000)
+      expect(status(detectionKey('face', a))).toEqual({ state: 'failed', reason: 'download' })
+    })
+
+    it('a download that finishes, or is switched off, never fails later', async () => {
+      const h = fakePorts()
+      const s = start(h.ports)
+      const a = img('a', FACE)
+      s.sync([a])
+      await settle()
+      s.download('face')
+      await settle()
+      expect(status(detectionKey('face', a))).toEqual({ state: 'done', found: 1 })
+      await vi.advanceTimersByTimeAsync(DOWNLOAD_STALL_MS * 2)
+      expect(status(detectionKey('face', a))).toEqual({ state: 'done', found: 1 })
+
+      const p = img('p', POSE)
+      stalling(h)
+      s.sync([a, p])
+      await settle()
+      s.download('pose')
+      await settle()
+      s.sync([a, img('p')])
+      await settle()
+      expect(useDetections.getState().models.pose).toBe('absent')
+      await vi.advanceTimersByTimeAsync(DOWNLOAD_STALL_MS * 2)
+      expect(useDetections.getState().models.pose).toBe('absent')
+      s.sync([a, p])
+      await settle()
+      expect(status(detectionKey('pose', p))).toEqual({ state: 'needs-download', bytes: 9_000 })
+    })
   })
 
   it('download is ignored while the model downloads or once it is cached', async () => {

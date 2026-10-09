@@ -71,6 +71,9 @@ export interface DetectionScheduler {
 
 export const MAX_EDGE_ENTRIES_PER_HASH = 4
 
+/** A download that receives no bytes for this long fails as a download failure, so it cannot hold the export gate (M4-R18). */
+export const DOWNLOAD_STALL_MS = 30_000
+
 const KINDS: readonly GuideKind[] = ['face', 'pose', 'edges']
 const MODELS: readonly AiModel[] = ['face', 'pose']
 
@@ -296,6 +299,26 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
     show({ loaded: 0, total: neededBytes.get(m) ?? 0 })
     const mine = () => !disposed && downloads.get(m) === controller
 
+    const fail = (reason: 'download' | 'integrity') => {
+      clearTimeout(stall)
+      downloads.delete(m)
+      progress.delete(m)
+      clicked.delete(m)
+      failedDownload.set(m, reason)
+      setModel(m, 'failed')
+      setStatuses(keysOf(m).map((key) => [key, { state: 'failed', reason }] as const))
+    }
+    let stall: ReturnType<typeof setTimeout> | undefined
+    const watch = () => {
+      clearTimeout(stall)
+      stall = setTimeout(() => {
+        if (!mine()) return
+        fail('download')
+        controller.abort()
+      }, DOWNLOAD_STALL_MS)
+    }
+    watch()
+
     void (async () => {
       try {
         const total = await ports.loader.bytesToDownload(m)
@@ -308,8 +331,10 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
             ports.loader.loadAiAsset(
               asset,
               (p) => {
+                const grew = p.loaded > (loadedBytes[i] ?? 0)
                 loadedBytes[i] = p.loaded
                 if (mine()) {
+                  if (grew) watch()
                   const sum = loadedBytes.reduce((a, b) => a + b, 0)
                   show({ loaded: Math.min(sum, total), total })
                 }
@@ -319,6 +344,7 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
           ),
         )
         if (!mine()) return
+        clearTimeout(stall)
         downloads.delete(m)
         progress.delete(m)
         setModel(m, 'cached')
@@ -328,14 +354,7 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
         void refreshNeeded(other).catch(() => undefined)
       } catch (error) {
         if (!mine()) return
-        downloads.delete(m)
-        progress.delete(m)
-        clicked.delete(m)
-        const reason =
-          error instanceof Error && error.name === 'AiIntegrityError' ? 'integrity' : 'download'
-        failedDownload.set(m, reason)
-        setModel(m, 'failed')
-        setStatuses(keysOf(m).map((key) => [key, { state: 'failed', reason }] as const))
+        fail(error instanceof Error && error.name === 'AiIntegrityError' ? 'integrity' : 'download')
       }
     })()
   }
