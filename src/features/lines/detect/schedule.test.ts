@@ -8,7 +8,12 @@ import { tileRenderKey } from '../../render/pixels/tile-plan'
 import { descriptor, layoutOf, placement, setupWith } from '../../render/test-support/fixtures'
 import { fromCrop, fromRotated } from '../guides/map'
 import type { EdgeOutline, FaceLandmarks, PoseLandmarks } from '../guides/types'
-import { createDetectionScheduler, type DetectionScheduler, DOWNLOAD_STALL_MS } from './schedule'
+import {
+  createDetectionScheduler,
+  type DetectionScheduler,
+  DOWNLOAD_STALL_MS,
+  RELEASE_AFTER_CANCEL_MS,
+} from './schedule'
 import {
   type DetectionStatus,
   detectionKey,
@@ -16,7 +21,14 @@ import {
   INITIAL_DETECTIONS,
   useDetections,
 } from './store'
-import { ASSETS, type Deferred, deferred, fakePorts, flush } from './test-support/fake-ports'
+import {
+  ASSETS,
+  type Deferred,
+  deferred,
+  FakeBitmap,
+  fakePorts,
+  flush,
+} from './test-support/fake-ports'
 
 function img(
   name: string,
@@ -175,7 +187,29 @@ describe('downloads', () => {
     expect(status(detectionKey('face', a))).toEqual({ state: 'needs-download', bytes: 14_000 })
     expect(status(detectionKey('face', b))).toEqual({ state: 'needs-download', bytes: 14_000 })
     expect(useDetections.getState().models.face).toBe('absent')
-    expect(h.loader.isCached).toHaveBeenCalledTimes(3)
+    expect(h.loader.isCached).toHaveBeenCalledTimes(2)
+  })
+
+  it('after a download, a model evicted from the cache is not fetched again without a click when the next job reads it', async () => {
+    const h = fakePorts()
+    const s = start(h.ports)
+    const a = img('a', FACE)
+    s.sync([a])
+    await flush()
+    s.download('face')
+    await flush()
+    expect(status(detectionKey('face', a))).toEqual({ state: 'done', found: 1 })
+    expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([true])
+    const loads = h.loader.loadAiAsset.mock.calls.length
+
+    h.cachedUrls.delete(ASSETS.face.url)
+    const b = img('b', FACE)
+    s.sync([a, b])
+    await flush()
+    expect(h.loader.loadAiAsset).toHaveBeenCalledTimes(loads)
+    expect(h.landmarks).toHaveBeenCalledTimes(1)
+    expect(status(detectionKey('face', b))).toEqual({ state: 'needs-download', bytes: 3_000 })
+    expect(useDetections.getState().models.face).toBe('absent')
   })
 
   it('download(model) loads the runtime and the model through the loader with progress, then runs the waiting detections', async () => {
@@ -505,10 +539,10 @@ describe('jobs', () => {
     expect(h.log.filter((l) => l.startsWith('detect') && !l.includes('edges'))).toEqual([
       'detect face x',
       'detect pose x',
-      'detect pose a',
-      'detect pose b',
       'detect face a',
       'detect face b',
+      'detect pose a',
+      'detect pose b',
     ])
     expect(h.log.filter((l) => /^(prepare|dispose)/.test(l))).toEqual([
       'prepare face',
@@ -516,8 +550,16 @@ describe('jobs', () => {
       'prepare pose',
       'dispose pose',
       'prepare face',
+      'dispose face',
+      'prepare pose',
+      'dispose pose',
     ])
-    expect(h.landmarkEngines.map((e) => e.prepared)).toEqual([['face'], ['pose'], ['face']])
+    expect(h.landmarkEngines.map((e) => e.prepared)).toEqual([
+      ['face'],
+      ['pose'],
+      ['face'],
+      ['pose'],
+    ])
     expect(h.stats()).toEqual({
       maxActiveLandmarks: 1,
       maxActiveEdges: 1,
@@ -919,12 +961,13 @@ describe('one landmarker at a time (M4-R5a)', () => {
       'dispose face',
       'prepare pose',
       'detect pose p',
+      'dispose pose',
     ])
     expect(h.stats().maxLiveLandmarkEngines).toBe(1)
     expect(status(detectionKey('face', a))).toBeUndefined()
   })
 
-  it('every job prepares the loaded landmarker again with the same bytes, so the engine can restart after its idle release', async () => {
+  it('every job prepares the loaded landmarker again with the same bytes, so the engine can restart its worker after a timeout', async () => {
     const h = fakePorts({ cached: ['face'] })
     const s = start(h.ports)
     s.sync([img('a', FACE), img('b', FACE), img('c', FACE)])
@@ -941,22 +984,227 @@ describe('one landmarker at a time (M4-R5a)', () => {
     }
   })
 
-  it('a landmarker that fails to prepare again is closed, and the next job loads a new one', async () => {
-    const h = fakePorts({ cached: ['face'] })
+  it('the landmarker is closed and its bytes dropped when the landmark queue drains; the next job reads them again', async () => {
+    const h = fakePorts({ cached: ['face'], manual: true })
+    const s = start(h.ports)
+    const a = img('a', FACE)
+    const b = img('b', FACE)
+    s.sync([a, b])
+    await flush()
+    h.pending.shift()?.done.resolve([])
+    await flush()
+    expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([false])
+    h.pending.shift()?.done.resolve([])
+    await flush()
+    expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([true])
+    expect(h.loader.loadAiAsset).toHaveBeenCalledTimes(3)
+
+    const c = img('c', FACE)
+    s.sync([a, b, c])
+    await flush()
+    expect(h.loader.loadAiAsset).toHaveBeenCalledTimes(6)
+    expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([true, false])
+    const [first, , , again] = h.prepareCalls
+    expect(again?.[2]).not.toBe(first?.[2])
+    expect(again?.[1].wasm).not.toBe(first?.[1].wasm)
+    h.pending.shift()?.done.resolve([])
+    await flush()
+    expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([true, true])
+    expect(status(detectionKey('face', c))).toEqual({ state: 'done', found: 0 })
+  })
+
+  it('the edge engine is closed when the edge queue drains, and the next job starts a new one', async () => {
+    const h = fakePorts({ manual: true })
+    const s = start(h.ports)
+    const a = img('a', EDGES())
+    const b = img('b', EDGES())
+    s.sync([a, b])
+    await flush()
+    h.pending.shift()?.done.resolve([])
+    await flush()
+    expect(h.edgeEngines.map((e) => e.disposed)).toEqual([false])
+    h.pending.shift()?.done.resolve([])
+    await flush()
+    expect(h.edgeEngines.map((e) => e.disposed)).toEqual([true])
+
+    s.sync([a, img('b', EDGES(60))])
+    await flush()
+    expect(h.edgeEngines.map((e) => e.disposed)).toEqual([true, false])
+    h.pending.shift()?.done.resolve([])
+    await flush()
+    expect(h.edgeEngines.map((e) => e.disposed)).toEqual([true, true])
+  })
+
+  it('without Cache Storage, the next job after a drain runs on the in-memory copy (isCached false)', async () => {
+    const h = fakePorts()
+    h.loader.isCached.mockResolvedValue(false)
     const s = start(h.ports)
     const a = img('a', FACE)
     s.sync([a])
     await flush()
+    s.download('face')
+    await flush()
+    expect(status(detectionKey('face', a))).toEqual({ state: 'done', found: 1 })
+    expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([true])
+
+    const b = img('b', FACE)
+    s.sync([a, b])
+    await flush()
+    expect(status(detectionKey('face', b))).toEqual({ state: 'done', found: 1 })
+    expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([true, true])
+  })
+
+  describe('a drain caused by a cancelled job (RELEASE_AFTER_CANCEL_MS)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+    const settle = () => vi.advanceTimersByTimeAsync(0)
+
+    /** Switches the guide on and off before the job reaches its bitmap, once the model state is known. */
+    async function cancelOnce(s: DetectionScheduler, on: ImageDescriptor) {
+      s.sync([on])
+      s.sync([img(on.id)])
+      await settle()
+      s.sync([on])
+      s.sync([img(on.id)])
+      await settle()
+    }
+
+    it('keeps the landmarker, so switching the guide on again reuses it, and any other drain releases it at once', async () => {
+      expect(RELEASE_AFTER_CANCEL_MS).toBe(2_000)
+      const h = fakePorts({ cached: ['face'], manual: true })
+      const s = start(h.ports)
+      const a = img('a', FACE)
+      for (let i = 0; i < 5; i++) {
+        s.sync([a])
+        s.sync([img('a')])
+        await settle()
+      }
+      expect(status(detectionKey('face', a))).toBeUndefined()
+      expect(h.landmarks).toHaveBeenCalledTimes(1)
+      expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([false])
+
+      s.sync([a])
+      await settle()
+      expect(h.landmarks).toHaveBeenCalledTimes(1)
+      h.pending.shift()?.done.resolve([])
+      await settle()
+      expect(status(detectionKey('face', a))).toEqual({ state: 'done', found: 0 })
+      expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([true])
+    })
+
+    it('releases the landmarker and its bytes RELEASE_AFTER_CANCEL_MS after the drain', async () => {
+      const h = fakePorts({ cached: ['face'], manual: true })
+      const s = start(h.ports)
+      const a = img('a', FACE)
+      await cancelOnce(s, a)
+      expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([false])
+      await vi.advanceTimersByTimeAsync(RELEASE_AFTER_CANCEL_MS - 1)
+      s.sync([img('a')])
+      await settle()
+      expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([false])
+      await vi.advanceTimersByTimeAsync(1)
+      expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([true])
+
+      const loads = h.loader.loadAiAsset.mock.calls.length
+      s.sync([a])
+      await settle()
+      expect(h.landmarks).toHaveBeenCalledTimes(2)
+      expect(h.loader.loadAiAsset).toHaveBeenCalledTimes(loads + 3)
+    })
+
+    it('a job that starts within the window keeps the engine past it', async () => {
+      const h = fakePorts({ cached: ['face'], manual: true })
+      const s = start(h.ports)
+      const a = img('a', FACE)
+      await cancelOnce(s, a)
+      await vi.advanceTimersByTimeAsync(RELEASE_AFTER_CANCEL_MS / 2)
+      s.sync([a])
+      await settle()
+      await vi.advanceTimersByTimeAsync(RELEASE_AFTER_CANCEL_MS)
+      expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([false])
+      h.pending.shift()?.done.resolve([])
+      await settle()
+      expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([true])
+    })
+
+    it('keeps the edge engine the same way', async () => {
+      const h = fakePorts({ manual: true })
+      const s = start(h.ports)
+      const a = img('a', EDGES())
+      const b = img('b', EDGES())
+      const bitmap = deferred<ImageBitmap>()
+      s.sync([a, b])
+      await settle()
+      h.bitmapFor.mockImplementationOnce(() => bitmap.promise)
+      h.pending.shift()?.done.resolve([])
+      await settle()
+      s.sync([a])
+      bitmap.resolve(new FakeBitmap(b, 'edges') as unknown as ImageBitmap)
+      await settle()
+      expect(status(detectionKey('edges', b))).toBeUndefined()
+      expect(h.edgeEngines.map((e) => e.disposed)).toEqual([false])
+
+      s.sync([a, b])
+      await settle()
+      expect(h.edges).toHaveBeenCalledTimes(1)
+      h.pending.shift()?.done.resolve([])
+      await settle()
+      expect(h.edgeEngines.map((e) => e.disposed)).toEqual([true])
+    })
+
+    it('releases a kept edge engine RELEASE_AFTER_CANCEL_MS after the drain', async () => {
+      const h = fakePorts({ manual: true })
+      const s = start(h.ports)
+      const a = img('a', EDGES())
+      const b = img('b', EDGES())
+      const bitmap = deferred<ImageBitmap>()
+      s.sync([a, b])
+      await settle()
+      h.bitmapFor.mockImplementationOnce(() => bitmap.promise)
+      h.pending.shift()?.done.resolve([])
+      await settle()
+      s.sync([a])
+      bitmap.resolve(new FakeBitmap(b, 'edges') as unknown as ImageBitmap)
+      await settle()
+      await vi.advanceTimersByTimeAsync(RELEASE_AFTER_CANCEL_MS - 1)
+      expect(h.edgeEngines.map((e) => e.disposed)).toEqual([false])
+      await vi.advanceTimersByTimeAsync(1)
+      expect(h.edgeEngines.map((e) => e.disposed)).toEqual([true])
+    })
+
+    it('dispose releases a kept engine and clears the timer', async () => {
+      const h = fakePorts({ cached: ['face'], manual: true })
+      const s = start(h.ports)
+      await cancelOnce(s, img('a', FACE))
+      expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([false])
+      s.dispose()
+      expect(h.landmarkEngines.map((e) => e.disposed)).toEqual([true])
+      expect(vi.getTimerCount()).toBe(0)
+    })
+  })
+
+  it('a landmarker that fails to prepare again is closed, and the next job loads a new one', async () => {
+    const h = fakePorts({ cached: ['face'], manual: true })
+    const s = start(h.ports)
+    const a = img('a', FACE)
+    const b = img('b', FACE)
+    s.sync([a, b])
+    await flush()
     const engine = h.landmarkEngines[0]
     if (!engine) throw new Error('no engine')
     vi.spyOn(engine, 'prepare').mockRejectedValueOnce(new Error('worker restart failed'))
-    const b = img('b', FACE)
-    s.sync([a, b])
+    h.pending.shift()?.done.resolve([{ points: [{ x: 0.25, y: 0.1 }] }])
     await flush()
     expect(status(detectionKey('face', b))).toEqual({ state: 'failed', reason: 'error' })
     expect(engine.disposed).toBe(true)
     const c = img('c', FACE)
     s.sync([a, b, c])
+    await flush()
+    h.pending.shift()?.done.resolve([{ points: [{ x: 0.25, y: 0.1 }] }])
     await flush()
     expect(status(detectionKey('face', c))).toEqual({ state: 'done', found: 1 })
     expect(h.landmarks).toHaveBeenCalledTimes(2)
@@ -1022,6 +1270,7 @@ describe('one landmarker at a time (M4-R5a)', () => {
       'dispose face',
       'prepare pose',
       'detect pose p',
+      'dispose pose',
     ])
     expect(h.stats().maxLiveLandmarkEngines).toBe(1)
   })

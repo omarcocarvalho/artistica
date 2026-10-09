@@ -459,8 +459,10 @@ test.describe('edge outline (desktop)', () => {
     await expect(app.exportButton).toBeEnabled({ timeout: 60_000 })
     expect(await app.expectGuideSettled('edges')).toBe('found')
     expect(await appearances(page, 'Tracing the outline…')).toBe(1)
-    // One outline for the settled value: one message to the edge worker.
-    expect((await workerPosts(page, 'edges.worker')) - before).toBe(1)
+    // One outline for the settled value. The edge queue had drained, so it runs on a new edge
+    // worker that is released when the queue drains again (M4-R6): init, the outline and Comlink's
+    // release. A second outline would add at least one more message.
+    expect((await workerPosts(page, 'edges.worker')) - before).toBe(3)
   })
 
   test("G-D4b the browser's edge outline of a synthetic photo equals node's golden, exactly", async ({

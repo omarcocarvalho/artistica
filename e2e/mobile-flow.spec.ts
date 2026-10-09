@@ -152,7 +152,7 @@ const AFTER_IMPORT_BUDGET_MB = 1500
 const EXPORT_PEAK_BUDGET_MB = 1700
 /** The settled phase after the landmark worker's idle release, over the M3 settled phase (M4 overview). */
 const SETTLED_GUIDES_GROWTH_MB = 100
-/** The landmark worker ends 30 s after its queue empties (M4-R6). */
+/** The landmark worker ends when its queue drains, and at most 30 s later through the engine's idle release (M4-R6). */
 const IDLE_RELEASE_WAIT_MS = 35_000
 
 test('M3 @slow 22 x 24 MP photos x 3 study versions with every line and guide on import, preview and export on a phone within a memory budget', async ({
