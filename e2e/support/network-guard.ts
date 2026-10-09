@@ -28,10 +28,9 @@ export interface NetworkGuard {
  *    makes two requests to that URL, a GET and a HEAD). The FULL URL, query included, must match.
  * Any WebSocket is a violation. Playwright blocks service workers in every spec except the offline
  * spec, which lets the app's own worker serve the shell.
- * What the page sees per engine: the AI asset downloads run on the main thread, so every engine
- * sees them. Requests made inside dedicated workers (their own scripts and lazy chunks) are
- * visible to `page.on('request')` in Chromium; firefox and webkit may not report them, so a test
- * that relies on seeing a worker's requests checks that it saw them, or skips that engine.
+ * The AI asset downloads run on the main thread, so every engine sees them. A test that relies on
+ * seeing requests made inside dedicated workers checks first that the engine reports them (G-X2
+ * fetches from a test worker), or skips that engine.
  * Install it before navigating so nothing is missed. The app origin is `options.origin` or, by
  * default, the origin of the first http(s) main-frame navigation.
  */
