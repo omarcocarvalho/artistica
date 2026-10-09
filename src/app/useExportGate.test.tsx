@@ -5,6 +5,7 @@ import { makeLoadedImage } from '../features/images/test-utils'
 import {
   detectionKey,
   INITIAL_DETECTIONS,
+  useDetailDraft,
   useDetections,
   type DetectionStatus,
   type GuideKind,
@@ -39,6 +40,7 @@ beforeEach(() => {
 })
 afterEach(() => {
   useDetections.setState(INITIAL_DETECTIONS, true)
+  useDetailDraft.setState({ pending: false })
   useImages.setState(useImages.getInitialState(), true)
   usePages.setState({ status: 'idle', layout: null, empty: false, pages: [] })
 })
@@ -123,6 +125,25 @@ describe('useExportGate with guides (M4-R18, owner Q13)', () => {
     } finally {
       scheduler.dispose()
     }
+  })
+
+  it('blocks while a Detail change waits for its settle, though the old outline is done', () => {
+    useImages.setState({
+      images: [
+        makeLoadedImage({ id: A, lines: { ...DEFAULT_LINES, edges: { on: true, detailPct: 50 } } }),
+      ],
+    })
+    setStatus('edges', { state: 'done', found: 1 })
+    const { result } = renderHook(() => useExportGate())
+    expect(result.current.block).toBeNull()
+    act(() => {
+      useDetailDraft.setState({ pending: true })
+    })
+    expect(result.current).toEqual({ block: 'guides', reason: FINDING })
+    act(() => {
+      useDetailDraft.setState({ pending: false })
+    })
+    expect(result.current.block).toBeNull()
   })
 
   it('a guide whose model needs a download does not wait for the click', async () => {
