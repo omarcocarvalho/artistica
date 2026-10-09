@@ -294,7 +294,7 @@ describe('poseFigure', () => {
   )
 
   it.each([7, 8])(
-    'with ear %i hidden the head is centred on the nose, radius a quarter of the shoulder width or the turned-head radius',
+    'with ear %i hidden the radius is a quarter of the shoulder width or the turned-head radius, grown to reach the other ear',
     (ear) => {
       for (const [, pose, img] of CASES) {
         const nose = px(pose, img, 0)
@@ -304,15 +304,68 @@ describe('poseFigure', () => {
           TURNED_HEAD_RADIUS * dist(nose, other),
         )
         const fig = poseFigure(hide(pose, ear), img)
-        expectNear(fig.cmds.slice(0, 5), circlePath(nose.x, nose.y, r))
+        const head = headOf(fig.cmds)
+        expect(head.r).toBeCloseTo(Math.max(r, dist(head.c, other)), 9)
+        expect(dist(head.c, nose)).toBeLessThanOrEqual(head.r + 1e-9)
         expect(fig.joints).toEqual(poseFigure(pose, img).joints)
       }
     },
   )
 
+  it.each([7, 8])(
+    'facing the camera with ear %i hidden the head stays on the nose (T-pose)',
+    (ear) => {
+      const { c, r } = headOf(poseFigure(hide(tPose(), ear), SYNTH_IMG).cmds)
+      expect(dist(c, { x: 300, y: 120 })).toBeLessThan(1e-9)
+      expect(r).toBeCloseTo(Math.hypot(30, 2), 9)
+    },
+  )
+
+  it('figure.jpg with the ear beside the nose hidden keeps the head on the nose', () => {
+    const { c } = headOf(poseFigure(hide(FIXTURE, 7), FIXTURE_IMG).cmds)
+    expect(dist(c, px(FIXTURE, FIXTURE_IMG, 0))).toBeLessThan(1e-9)
+  })
+
+  it('figure.jpg (a 3/4 view) with the far ear hidden moves the head off the nose towards the ears', () => {
+    const pose = hide(FIXTURE, 8)
+    const { c, r } = headOf(poseFigure(pose, FIXTURE_IMG).cmds)
+    const nose = px(pose, FIXTURE_IMG, 0)
+    const ear = px(pose, FIXTURE_IMG, 7)
+    const cranium = mid(ear, px(FIXTURE, FIXTURE_IMG, 8))
+    expect(dist(c, cranium)).toBeLessThan(0.5 * dist(nose, cranium))
+    expect(dist(c, nose)).toBeLessThanOrEqual(r + 1e-9)
+    expect(dist(c, ear)).toBeLessThanOrEqual(r + 1e-9)
+  })
+
+  it.each([
+    ['apart', tPose().points[5]],
+    ['on one point', tPose().points[2]],
+  ])(
+    'an ear on the nose, with both shoulders and the eyes %s, puts the head on the nose',
+    (_, eye) => {
+      const nose = tPose().points[0] ?? { x: NaN, y: NaN }
+      const pose = move(move(hide(tPose(), 8), 7, nose), 5, eye ?? { x: NaN, y: NaN })
+      const head = headOf(poseFigure(pose, SYNTH_IMG).cmds)
+      expect(head).toEqual({ c: px(pose, SYNTH_IMG, 0), r: 30 })
+    },
+  )
+
+  it('an ear on the nose with a shoulder hidden gives no head (its radius would be 0)', () => {
+    const nose = tPose().points[0] ?? { x: NaN, y: NaN }
+    const fig = poseFigure(hide(move(hide(tPose(), 8), 7, nose), 12), SYNTH_IMG)
+    expect(fig.cmds.some((c) => c.op === 'C')).toBe(false)
+    expect(fig).toEqual(poseFigure(hide(hide(hide(tPose(), 0), 8), 12), SYNTH_IMG))
+  })
+
+  it('with both ears hidden the head is on the nose, a quarter of the shoulder width', () => {
+    const head = headOf(poseFigure(hide(hide(tPose(), 7), 8), SYNTH_IMG).cmds)
+    expect(head).toEqual({ c: { x: 300, y: 120 }, r: 30 })
+  })
+
   it('an ear outside the image also falls back to the nose', () => {
-    const fig = poseFigure(move(tPose(), 8, { x: -0.1, y: 0.1 }), SYNTH_IMG)
-    expectNear(fig.cmds.slice(0, 5), circlePath(300, 120, 30))
+    const { c, r } = headOf(poseFigure(move(tPose(), 8, { x: -0.1, y: 0.1 }), SYNTH_IMG).cmds)
+    expect(dist(c, { x: 300, y: 120 })).toBeLessThan(1e-9)
+    expect(r).toBeCloseTo(Math.hypot(30, 2), 9)
   })
 
   it.each([
@@ -329,28 +382,51 @@ describe('poseFigure', () => {
     expect(fig).toEqual(body)
   })
 
-  it('with an ear and a shoulder hidden the head is centred on the nose, sized by the other ear, with no neck', () => {
+  it('facing the camera with an ear and a shoulder hidden the head stays on the nose and reaches the other ear, with no neck', () => {
     const fig = poseFigure(hide(hide(tPose(), 8), 12), SYNTH_IMG)
-    expectNear(fig.cmds.slice(0, 5), circlePath(300, 120, TURNED_HEAD_RADIUS * Math.hypot(30, 2)))
+    expectNear(fig.cmds.slice(0, 5), circlePath(300, 120, Math.hypot(30, 2)))
     expect(fig.cmds.slice(5)).toEqual(poseFigure(hide(tPose(), 12), SYNTH_IMG).cmds.slice(5))
     expect(fig.joints).toEqual(poseFigure(hide(tPose(), 12), SYNTH_IMG).joints)
   })
 
   describe('a head turned away from the camera keeps its size', () => {
     const EAR_HALF = 30
-    const NOSE_DEPTH = (EAR_HALF * 11.5) / 7.25
+    const CM = EAR_HALF / 7.25
+    const CRANIUM: Pt = { x: 300, y: 118 }
+    const FACE: readonly (readonly [number, number, number, number])[] = [
+      [1, 1.6, 9.5, 110],
+      [2, 3.15, 9, 110],
+      [3, 4.7, 8, 110],
+      [4, -1.6, 9.5, 110],
+      [5, -3.15, 9, 110],
+      [6, -4.7, 8, 110],
+      [7, 7.25, 0, 118],
+      [8, -7.25, 0, 118],
+      [0, 0, 11.5, 120],
+    ]
     function turned(yawDeg: number): PoseLandmarks {
       const t = (yawDeg * Math.PI) / 180
-      const at = (x: number, y: number): SourcePoint => ({ x: x / SYNTHETIC_W, y: y / SYNTHETIC_H })
-      return move(
-        move(
-          move(tPose(), 7, at(300 + EAR_HALF * Math.cos(t), 118)),
-          8,
-          at(300 - EAR_HALF * Math.cos(t), 118),
-        ),
-        0,
-        at(300 + NOSE_DEPTH * Math.sin(t), 120),
+      return FACE.reduce(
+        (pose, [i, side, depth, y]) =>
+          move(pose, i, {
+            x: (300 + CM * (side * Math.cos(t) + depth * Math.sin(t))) / SYNTHETIC_W,
+            y: y / SYNTHETIC_H,
+          }),
+        tPose(),
       )
+    }
+    const farEar = (yawDeg: number): number => (yawDeg > 0 ? 7 : 8)
+    function oneEar(yawDeg: number) {
+      const pose = hide(turned(yawDeg), farEar(yawDeg))
+      const ear = px(pose, SYNTH_IMG, farEar(yawDeg) === 7 ? 8 : 7)
+      const nose = px(pose, SYNTH_IMG, 0)
+      return { pose, ear, nose, head: headOf(poseFigure(pose, SYNTH_IMG).cmds) }
+    }
+    function expectBetweenAndContaining(ear: Pt, nose: Pt, head: { c: Pt; r: number }): void {
+      const d = dist(ear, nose)
+      expect(dist(ear, head.c) + dist(head.c, nose)).toBeCloseTo(d, 9)
+      expect(dist(head.c, ear)).toBeLessThanOrEqual(head.r + 1e-9)
+      expect(dist(head.c, nose)).toBeLessThanOrEqual(head.r + 1e-9)
     }
 
     it('in strict profile, with the ears at one point, r = TURNED_HEAD_RADIUS × nose to ear', () => {
@@ -362,12 +438,56 @@ describe('poseFigure', () => {
       expect(r).toBeGreaterThan(0.85 * 45)
     })
 
-    it('in profile with the far ear and shoulder hidden, the head on the nose keeps its size', () => {
+    it('in profile with the far ear and shoulder hidden, the head keeps its size', () => {
       const pose = hide(hide(turned(90), 8), 12)
       const nose = px(pose, SYNTH_IMG, 0)
       const r = TURNED_HEAD_RADIUS * dist(nose, px(pose, SYNTH_IMG, 7))
-      expectNear(poseFigure(pose, SYNTH_IMG).cmds.slice(0, 5), circlePath(nose.x, nose.y, r))
+      expect(headOf(poseFigure(pose, SYNTH_IMG).cmds).r).toBeCloseTo(r, 9)
       expect(r).toBeGreaterThan(0.85 * 45)
+    })
+
+    it('in profile with the far ear hidden, the head sits on the cranium, reaching the nose and the ear', () => {
+      const { ear, nose, head } = oneEar(90)
+      expectBetweenAndContaining(ear, nose, head)
+      expect(dist(head.c, CRANIUM)).toBeLessThanOrEqual(0.15 * dist(ear, nose) + 1e-9)
+      expect(dist(head.c, ear)).toBeLessThan(dist(head.c, nose))
+    })
+
+    it('in a 3/4 view with the far ear hidden, the head is centred between the ears', () => {
+      const { ear, nose, head } = oneEar(45)
+      expectBetweenAndContaining(ear, nose, head)
+      expect(dist(head.c, CRANIUM)).toBeLessThan(1)
+    })
+
+    it('facing the camera with an ear hidden, the head stays on the nose', () => {
+      for (const ear of [7, 8]) {
+        const pose = hide(turned(0), ear)
+        const nose = px(pose, SYNTH_IMG, 0)
+        const head = headOf(poseFigure(pose, SYNTH_IMG).cmds)
+        expectBetweenAndContaining(px(pose, SYNTH_IMG, 15 - ear), nose, head)
+        expect(dist(head.c, nose)).toBeLessThan(0.1)
+      }
+    })
+
+    it('with an eye hidden the head is taken as in profile: the nose on its edge', () => {
+      for (const eye of [2, 5]) {
+        const pose = hide(hide(turned(45), 7), eye)
+        const ear = px(pose, SYNTH_IMG, 8)
+        const nose = px(pose, SYNTH_IMG, 0)
+        const head = headOf(poseFigure(pose, SYNTH_IMG).cmds)
+        expectBetweenAndContaining(ear, nose, head)
+        expect(dist(head.c, nose)).toBeCloseTo(head.r, 9)
+      }
+    })
+
+    it('with the far ear hidden the head lies between the ear and the nose, near the cranium, at every turn (property)', () => {
+      fc.assert(
+        fc.property(fc.double({ min: -90, max: 90, noNaN: true }), (yaw) => {
+          const { ear, nose, head } = oneEar(yaw)
+          expectBetweenAndContaining(ear, nose, head)
+          expect(dist(head.c, CRANIUM)).toBeLessThanOrEqual(0.15 * dist(ear, nose) + 0.5)
+        }),
+      )
     })
 
     it('in a 3/4 view the farther ear sets the radius, centred between the ears', () => {
@@ -477,7 +597,18 @@ describe('poseFigure', () => {
     expect(full.cmds.length + 5 * full.joints.length).toBe(99)
   })
 
-  it.each(CASES)('%s: a mirrored pose gives the mirrored figure', (_, pose, img) => {
+  it.each(
+    CASES.flatMap(([name, pose, img]) =>
+      [[], [7], [8], [8, 12]].map(
+        (hidden) =>
+          [
+            `${name}, hidden [${hidden.join(', ')}]`,
+            hidden.reduce((p, i) => hide(p, i), pose),
+            img,
+          ] as const,
+      ),
+    ),
+  )('%s: a mirrored pose gives the mirrored figure', (_, pose, img) => {
     const mirrored: PoseLandmarks = {
       points: MIRROR.map((k) => {
         const p = pose.points[k]

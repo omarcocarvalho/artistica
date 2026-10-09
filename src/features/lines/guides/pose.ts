@@ -9,6 +9,7 @@ export { MAX_POSES }
 export const MAX_CMDS_PER_POSE = 160
 export const MIN_POSE_VISIBILITY = 0.5
 export const TURNED_HEAD_RADIUS = 0.85
+export const EAR_HALF_PER_EYE_SPREAD = 7.25 / 6.3
 
 interface Pt {
   readonly x: number
@@ -21,6 +22,8 @@ export interface PoseFigure {
 }
 
 const NOSE = 0
+const LEFT_EYE = 2
+const RIGHT_EYE = 5
 const LEFT_EAR = 7
 const RIGHT_EAR = 8
 const LEFT_SHOULDER = 11
@@ -138,8 +141,19 @@ function headCircle(landmark: (i: number) => Pt | null): { c: Pt; r: number } | 
   const turned = nose ? Math.max(0, ...ears.map((e) => TURNED_HEAD_RADIUS * dist(nose, e))) : 0
   if (left && right) return { c: mid(left, right), r: Math.max(0.75 * dist(left, right), turned) }
   if (!nose) return null
-  const l = landmark(LEFT_SHOULDER)
-  const r = landmark(RIGHT_SHOULDER)
-  if (l && r) return { c: nose, r: Math.max(0.25 * dist(l, r), turned) }
-  return ears.length > 0 ? { c: nose, r: turned } : null
+  const ls = landmark(LEFT_SHOULDER)
+  const rs = landmark(RIGHT_SHOULDER)
+  const ear = ears[0]
+  const r = ls && rs ? Math.max(0.25 * dist(ls, rs), turned) : turned
+  if (!r) return null
+  const d = ear ? dist(nose, ear) : 0
+  if (!ear || d === 0) return { c: nose, r }
+  const le = landmark(LEFT_EYE)
+  const re = landmark(RIGHT_EYE)
+  const frontal = le && re ? (EAR_HALF_PER_EYE_SPREAD * dist(le, re)) / d : 0
+  const w = Math.min(Math.max(frontal, 1 - r / d), 1)
+  return {
+    c: { x: ear.x + w * (nose.x - ear.x), y: ear.y + w * (nose.y - ear.y) },
+    r: Math.max(r, w * d),
+  }
 }
