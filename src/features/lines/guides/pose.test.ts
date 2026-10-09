@@ -294,7 +294,7 @@ describe('poseFigure', () => {
   )
 
   it.each([7, 8])(
-    'with ear %i hidden the radius is a quarter of the shoulder width or the turned-head radius',
+    'with ear %i hidden the radius is a quarter of the shoulder width or the turned-head radius, grown to reach the other ear',
     (ear) => {
       for (const [, pose, img] of CASES) {
         const nose = px(pose, img, 0)
@@ -304,7 +304,9 @@ describe('poseFigure', () => {
           TURNED_HEAD_RADIUS * dist(nose, other),
         )
         const fig = poseFigure(hide(pose, ear), img)
-        expect(headOf(fig.cmds).r).toBeCloseTo(r, 9)
+        const head = headOf(fig.cmds)
+        expect(head.r).toBeCloseTo(Math.max(r, dist(head.c, other)), 9)
+        expect(dist(head.c, nose)).toBeLessThanOrEqual(head.r + 1e-9)
         expect(fig.joints).toEqual(poseFigure(pose, img).joints)
       }
     },
@@ -314,8 +316,8 @@ describe('poseFigure', () => {
     'facing the camera with ear %i hidden the head stays on the nose (T-pose)',
     (ear) => {
       const { c, r } = headOf(poseFigure(hide(tPose(), ear), SYNTH_IMG).cmds)
-      expect(dist(c, { x: 300, y: 120 })).toBeLessThan(0.1)
-      expect(r).toBeCloseTo(30, 9)
+      expect(dist(c, { x: 300, y: 120 })).toBeLessThan(1e-9)
+      expect(r).toBeCloseTo(Math.hypot(30, 2), 9)
     },
   )
 
@@ -336,19 +338,34 @@ describe('poseFigure', () => {
   })
 
   it.each([
-    ['with', []],
-    ['without', [12]],
-  ])('an ear on the nose, %s both shoulders, puts the head on the nose', (_, hidden) => {
+    ['apart', tPose().points[5]],
+    ['on one point', tPose().points[2]],
+  ])(
+    'an ear on the nose, with both shoulders and the eyes %s, puts the head on the nose',
+    (_, eye) => {
+      const nose = tPose().points[0] ?? { x: NaN, y: NaN }
+      const pose = move(move(hide(tPose(), 8), 7, nose), 5, eye ?? { x: NaN, y: NaN })
+      const head = headOf(poseFigure(pose, SYNTH_IMG).cmds)
+      expect(head).toEqual({ c: px(pose, SYNTH_IMG, 0), r: 30 })
+    },
+  )
+
+  it('an ear on the nose with a shoulder hidden gives no head (its radius would be 0)', () => {
     const nose = tPose().points[0] ?? { x: NaN, y: NaN }
-    const pose = hidden.reduce((p, i) => hide(p, i), move(hide(tPose(), 8), 7, nose))
-    const head = headOf(poseFigure(pose, SYNTH_IMG).cmds)
-    expect(head.c).toEqual(px(pose, SYNTH_IMG, 0))
+    const fig = poseFigure(hide(move(hide(tPose(), 8), 7, nose), 12), SYNTH_IMG)
+    expect(fig.cmds.some((c) => c.op === 'C')).toBe(false)
+    expect(fig).toEqual(poseFigure(hide(hide(hide(tPose(), 0), 8), 12), SYNTH_IMG))
+  })
+
+  it('with both ears hidden the head is on the nose, a quarter of the shoulder width', () => {
+    const head = headOf(poseFigure(hide(hide(tPose(), 7), 8), SYNTH_IMG).cmds)
+    expect(head).toEqual({ c: { x: 300, y: 120 }, r: 30 })
   })
 
   it('an ear outside the image also falls back to the nose', () => {
     const { c, r } = headOf(poseFigure(move(tPose(), 8, { x: -0.1, y: 0.1 }), SYNTH_IMG).cmds)
-    expect(dist(c, { x: 300, y: 120 })).toBeLessThan(0.1)
-    expect(r).toBeCloseTo(30, 9)
+    expect(dist(c, { x: 300, y: 120 })).toBeLessThan(1e-9)
+    expect(r).toBeCloseTo(Math.hypot(30, 2), 9)
   })
 
   it.each([
@@ -365,12 +382,9 @@ describe('poseFigure', () => {
     expect(fig).toEqual(body)
   })
 
-  it('with an ear and a shoulder hidden the head is sized by the other ear and reaches it, with no neck', () => {
+  it('facing the camera with an ear and a shoulder hidden the head stays on the nose and reaches the other ear, with no neck', () => {
     const fig = poseFigure(hide(hide(tPose(), 8), 12), SYNTH_IMG)
-    const d = Math.hypot(30, 2)
-    const r = TURNED_HEAD_RADIUS * d
-    const k = 1 - r / d
-    expectNear(fig.cmds.slice(0, 5), circlePath(300 + 30 * k, 120 - 2 * k, r))
+    expectNear(fig.cmds.slice(0, 5), circlePath(300, 120, Math.hypot(30, 2)))
     expect(fig.cmds.slice(5)).toEqual(poseFigure(hide(tPose(), 12), SYNTH_IMG).cmds.slice(5))
     expect(fig.joints).toEqual(poseFigure(hide(tPose(), 12), SYNTH_IMG).joints)
   })
@@ -583,7 +597,18 @@ describe('poseFigure', () => {
     expect(full.cmds.length + 5 * full.joints.length).toBe(99)
   })
 
-  it.each(CASES)('%s: a mirrored pose gives the mirrored figure', (_, pose, img) => {
+  it.each(
+    CASES.flatMap(([name, pose, img]) =>
+      [[], [7], [8], [8, 12]].map(
+        (hidden) =>
+          [
+            `${name}, hidden [${hidden.join(', ')}]`,
+            hidden.reduce((p, i) => hide(p, i), pose),
+            img,
+          ] as const,
+      ),
+    ),
+  )('%s: a mirrored pose gives the mirrored figure', (_, pose, img) => {
     const mirrored: PoseLandmarks = {
       points: MIRROR.map((k) => {
         const p = pose.points[k]
