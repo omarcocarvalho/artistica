@@ -10,6 +10,7 @@ import {
   FIXTURE_FACE,
   FIXTURE_POSE,
   PORTRAIT,
+  POSE_RECORDING_TOL_MM,
   buildPaths,
   exportSettled,
   findRun,
@@ -154,7 +155,7 @@ test('G-X1 works offline once the models are cached: reload from the service wor
     const part = guideTileLines({ ...img, lines }, only, trim, turned).strokes[0]?.cmds ?? []
     expect(part.length).toBeGreaterThan(0)
     expect(
-      findRun(ops, part, 1e-6),
+      findRun(ops, part, photo === PORTRAIT ? 1e-6 : POSE_RECORDING_TOL_MM),
       `${photo.name}: the recorded guide in the PDF`,
     ).toBeGreaterThanOrEqual(0)
   })

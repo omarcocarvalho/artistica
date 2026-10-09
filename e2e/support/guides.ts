@@ -82,6 +82,12 @@ const face = landmarks('face-landmarks.json')
 const pose = landmarks('pose-landmarks.json')
 /** The face found in portrait.jpg in chromium, normalised to the photo. */
 export const FIXTURE_FACE: FaceLandmarks = { points: face.points.map(([x, y]) => ({ x, y })) }
+/**
+ * How far, in page mm, a PDF pose stroke may be from FIXTURE_POSE's figure. The fixture was recorded
+ * in chromium on macOS arm64; CI's Linux chromium finds the pose up to 1.5e-3 mm away on an A4 tile
+ * (its face is identical). Within one machine detections are exact, which G-D4a pins.
+ */
+export const POSE_RECORDING_TOL_MM = 0.01
 /** The pose found in figure.jpg in chromium, normalised to the photo. */
 export const FIXTURE_POSE: PoseLandmarks = {
   points: pose.points.map(([x, y]) => ({ x, y })),
