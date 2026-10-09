@@ -74,6 +74,13 @@ export const MAX_EDGE_ENTRIES_PER_HASH = 4
 /** A download that receives no bytes for this long fails as a download failure, so it cannot hold the export gate (M4-R18). */
 export const DOWNLOAD_STALL_MS = 30_000
 
+/**
+ * A queue that drains because its last job was cancelled (the guide switched off mid-job) keeps its
+ * engine this long, so switching the guide on again reuses it instead of starting a new worker.
+ * Any other drain releases the engine at once (M4-R6).
+ */
+export const RELEASE_AFTER_CANCEL_MS = 2_000
+
 const KINDS: readonly GuideKind[] = ['face', 'pose', 'edges']
 const MODELS: readonly AiModel[] = ['face', 'pose']
 
@@ -91,6 +98,8 @@ interface Loaded {
 
 class Cancelled extends Error {}
 
+type Queue = 'landmarks' | 'edges'
+
 function hashOf(key: string): string {
   return key.split('|')[1] ?? ''
 }
@@ -107,14 +116,18 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
   let wanted = new Map<string, Want>()
   let present = new Set<string>()
 
-  const queues: Record<'landmarks' | 'edges', string[]> = { landmarks: [], edges: [] }
+  const queues: Record<Queue, string[]> = { landmarks: [], edges: [] }
   const busy = { landmarks: false, edges: false }
+  const cancelledLast = { landmarks: false, edges: false }
+  const releaseTimers: Record<Queue, ReturnType<typeof setTimeout> | undefined> = {
+    landmarks: undefined,
+    edges: undefined,
+  }
   const inFlight = new Set<string>()
   let loaded: Loaded | null = null
   let edgeEngine: EdgeEngine | null = null
 
   const probing = new Set<AiModel>()
-  const clicked = new Set<AiModel>()
   const neededBytes = new Map<AiModel, number>()
   const downloads = new Map<AiModel, AbortController>()
   const progress = new Map<AiModel, Progress>()
@@ -192,7 +205,6 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
         downloads.delete(m)
         controller.abort()
         progress.delete(m)
-        clicked.delete(m)
         setModel(m, 'absent')
         void refreshNeeded(m).catch(() => undefined)
       }
@@ -289,7 +301,6 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
     if (disposed || downloads.has(m) || model(m) === 'cached') return
     const controller = new AbortController()
     downloads.set(m, controller)
-    clicked.add(m)
     failedDownload.delete(m)
     setModel(m, 'downloading')
     const show = (p: Progress) => {
@@ -303,7 +314,6 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
       clearTimeout(stall)
       downloads.delete(m)
       progress.delete(m)
-      clicked.delete(m)
       failedDownload.set(m, reason)
       setModel(m, 'failed')
       setStatuses(keysOf(m).map((key) => [key, { state: 'failed', reason }] as const))
@@ -381,9 +391,25 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
     return queues.landmarks.splice(Math.max(i, 0), 1)[0]
   }
 
-  function releaseLandmarks(): void {
-    loaded?.engine.dispose()
-    loaded = null
+  function release(queue: Queue): void {
+    clearTimeout(releaseTimers[queue])
+    releaseTimers[queue] = undefined
+    cancelledLast[queue] = false
+    if (queue === 'landmarks') {
+      loaded?.engine.dispose()
+      loaded = null
+    } else {
+      edgeEngine?.dispose()
+      edgeEngine = null
+    }
+  }
+
+  function drained(queue: Queue): void {
+    if (!cancelledLast[queue]) release(queue)
+    else
+      releaseTimers[queue] ??= setTimeout(() => {
+        release(queue)
+      }, RELEASE_AFTER_CANCEL_MS)
   }
 
   function pump(): void {
@@ -391,32 +417,33 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
     if (!busy.landmarks) {
       const key = nextLandmarkKey()
       if (key !== undefined) runJob('landmarks', key)
-      else releaseLandmarks()
+      else drained('landmarks')
     }
     if (!busy.edges) {
       const key = queues.edges.shift()
       if (key !== undefined) runJob('edges', key)
-      else {
-        edgeEngine?.dispose()
-        edgeEngine = null
-      }
+      else drained('edges')
     }
   }
 
-  function runJob(queue: 'landmarks' | 'edges', key: string): void {
+  function runJob(queue: Queue, key: string): void {
     const want = wanted.get(key)
     if (!want) {
       pump()
       return
     }
     busy[queue] = true
+    clearTimeout(releaseTimers[queue])
+    releaseTimers[queue] = undefined
     inFlight.add(key)
+    let cancelled = false
     void (async () => {
       try {
         const found =
           want.kind === 'edges' ? await runEdges(key) : await runLandmarks(key, want.kind)
         store(key, found.result, found.count)
       } catch (error) {
+        cancelled = error instanceof Cancelled || !wanted.has(key)
         if (!disposed && !wanted.has(key)) setStatuses([[key, null]])
         else if (!(error instanceof Cancelled) && !disposed) {
           setStatuses([[key, { state: 'failed', reason: failure(error) }]])
@@ -424,6 +451,7 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
       } finally {
         inFlight.delete(key)
         busy[queue] = false
+        cancelledLast[queue] = cancelled
         if (want.kind !== 'edges' && model(want.kind) === 'unknown') requestUnseen(want.kind)
         pump()
       }
@@ -473,7 +501,8 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
       loaded.engine.dispose()
       loaded = null
     }
-    if (!clicked.has(m) && !(await ports.loader.isCached(m))) {
+    // `bytesToDownload`, not `isCached`: it also counts the loader's in-memory copies (no Cache Storage).
+    if ((await ports.loader.bytesToDownload(m)) > 0) {
       setModel(m, 'unknown')
       queues.landmarks = queues.landmarks.filter((k) => wanted.get(k)?.kind !== m)
       setStatuses(keysOf(m).map((k) => [k, null] as const))
@@ -556,9 +585,8 @@ export function createDetectionScheduler(ports: DetectionPorts): DetectionSchedu
     disposed = true
     for (const controller of downloads.values()) controller.abort()
     downloads.clear()
-    releaseLandmarks()
-    edgeEngine?.dispose()
-    edgeEngine = null
+    release('landmarks')
+    release('edges')
   }
 
   return { sync, download, retry, dispose }
