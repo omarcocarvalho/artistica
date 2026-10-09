@@ -1,29 +1,38 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
-import type { ImageDescriptor, Rotation } from '../../../shared/model/image'
+import type { ImageDescriptor, ImageEdits, Rotation } from '../../../shared/model/image'
 import {
   DEFAULT_LINES,
   type LinesPatch,
+  patchLines,
   SPIRAL_CORNERS,
   type SpiralCorner,
 } from '../../../shared/model/lines'
 import { outerReserveMm } from '../../../shared/model/page-setup'
 import { DEFAULT_STUDY, type StudyVersion } from '../../../shared/model/study'
 import { compositionPaths } from '../../lines/composition'
+import { circlePath } from '../../lines/guides/curves'
+import { edgePaths } from '../../lines/guides/edge-paths'
+import { facePaths } from '../../lines/guides/face'
+import { poseFigure } from '../../lines/guides/pose'
+import { NO_GUIDES, type ImageGuides } from '../../lines/guides/types'
 import type { PathCmd } from '../../lines/types'
 import type { Placement, RectMm } from '../../layout/types'
-import { applyMatrix, orientMatrix, tileRenderKey } from '../pixels/tile-plan'
+import { applyMatrix, orientMatrix, planTilePixels, tileRenderKey } from '../pixels/tile-plan'
 import {
   arbLineSettings,
   descriptor,
+  EVERY_GUIDE,
+  guidesFixture,
   id,
   layoutOf,
   linesDescriptor,
   placement,
+  PORTRAIT_PX,
   setupWith,
   studyDescriptor,
 } from '../test-support/fixtures'
-import type { PageModel, TileLines } from '../types'
+import type { DrawTile, PageModel, TileLines } from '../types'
 import { buildPageModels, combineRotation, readingOrder } from './build-page-models'
 import { idealCropMarks } from './crop-marks'
 import { expandRect, segmentIntersectsRect } from './rect'
@@ -401,6 +410,42 @@ const styleOf = (l: TileLines) => ({
   dashes: l.strokes.map((s) => s.dashMm),
 })
 
+interface Case {
+  readonly images: ImageDescriptor[]
+  readonly placements: Placement[]
+}
+const arbCase: fc.Arbitrary<Case> = fc
+  .array(
+    fc.record({
+      versions: fc.integer({ min: 1, max: 4 }),
+      laidOut: fc.integer({ min: 1, max: 4 }),
+      w: fc.double({ min: 5, max: 80, noNaN: true }),
+      h: fc.double({ min: 5, max: 80, noNaN: true }),
+      turned: fc.boolean(),
+      rotation: fc.constantFrom<Rotation>(0, 90, 180, 270),
+      flipH: fc.boolean(),
+      lines: fc.oneof(fc.constant(DEFAULT_LINES), arbLineSettings),
+    }),
+    { minLength: 1, maxLength: 5 },
+  )
+  .map((specs) => {
+    let y = 10
+    const images: ImageDescriptor[] = []
+    const placements: Placement[] = []
+    specs.forEach((s, i) => {
+      const name = `i${String(i)}`
+      const tiles = Array.from({ length: s.laidOut }, (_, k) => R(10 + k * (s.w + 2), y, s.w, s.h))
+      y += s.h + 2
+      images.push({
+        ...descriptor(name, 1200, 800, { rotation: s.rotation, flipH: s.flipH }),
+        study: { ...DEFAULT_STUDY, versions: VERSIONS.slice(0, s.versions) },
+        lines: s.lines,
+      })
+      placements.push(placement(name, tiles, { turned: s.turned }))
+    })
+    return { images, placements }
+  })
+
 describe('composition lines in the page model', () => {
   const three = studyDescriptor('a', ['original', 'blurred', 'values'])
   const row = placement('a', [R(20, 20), R(66, 20), R(112, 20)], { block: R(20, 20, 132, 60) })
@@ -601,43 +646,6 @@ describe('composition lines in the page model', () => {
     })
   })
 
-  interface Case {
-    readonly images: ImageDescriptor[]
-    readonly placements: Placement[]
-  }
-  const arbCase: fc.Arbitrary<Case> = fc
-    .array(
-      fc.record({
-        versions: fc.integer({ min: 1, max: 4 }),
-        laidOut: fc.integer({ min: 1, max: 4 }),
-        w: fc.double({ min: 5, max: 80, noNaN: true }),
-        h: fc.double({ min: 5, max: 80, noNaN: true }),
-        turned: fc.boolean(),
-        rotation: fc.constantFrom<Rotation>(0, 90, 180, 270),
-        flipH: fc.boolean(),
-        lines: fc.oneof(fc.constant(DEFAULT_LINES), arbLineSettings),
-      }),
-      { minLength: 1, maxLength: 5 },
-    )
-    .map((specs) => {
-      let y = 10
-      const images: ImageDescriptor[] = []
-      const placements: Placement[] = []
-      specs.forEach((s, i) => {
-        const name = `i${String(i)}`
-        const tiles = Array.from({ length: s.laidOut }, (_, k) =>
-          R(10 + k * (s.w + 2), y, s.w, s.h),
-        )
-        y += s.h + 2
-        images.push({
-          ...descriptor(name, 1200, 800, { rotation: s.rotation, flipH: s.flipH }),
-          study: { ...DEFAULT_STUDY, versions: VERSIONS.slice(0, s.versions) },
-          lines: s.lines,
-        })
-        placements.push(placement(name, tiles, { turned: s.turned }))
-      })
-      return { images, placements }
-    })
   const pagesOf = ({ images, placements }: Case, bleed: boolean) =>
     buildPageModels(
       layoutOf([placements], { w: 420, h: 594 }),
@@ -716,6 +724,229 @@ describe('composition lines in the page model', () => {
       fc.property(arbCase, fc.boolean(), (c, bleed) => {
         expect(pagesOf(c, bleed)).toEqual(pagesOf(c, bleed))
       }),
+    )
+  })
+})
+
+/** Source px → page mm through the tile's pixels (A2's oracle, independent of sourceToFrame). */
+function pixelOracle(tile: DrawTile, x: number, y: number): { x: number; y: number } {
+  const plan = planTilePixels(tile, { dpi: 72 })
+  const onCanvas = applyMatrix(
+    plan.matrix,
+    ((x - plan.src.x) * plan.scaledW) / plan.src.w,
+    ((y - plan.src.y) * plan.scaledH) / plan.src.h,
+  )
+  return {
+    x: tile.trim.x + ((onCanvas.x - plan.bleedPx) * tile.trim.w) / plan.outW,
+    y: tile.trim.y + ((onCanvas.y - plan.bleedPx) * tile.trim.h) / plan.outH,
+  }
+}
+
+function placeByOracle(tile: DrawTile, c: PathCmd): PathCmd {
+  if (c.op === 'C') {
+    const p1 = pixelOracle(tile, c.x1, c.y1)
+    const p2 = pixelOracle(tile, c.x2, c.y2)
+    const p = pixelOracle(tile, c.x, c.y)
+    return { op: 'C', x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y, x: p.x, y: p.y }
+  }
+  return { op: c.op, ...pixelOracle(tile, c.x, c.y) }
+}
+
+/** The types and solid batch a tile with every guide on must hold, from the source-px geometry and the oracle. */
+function oracleGuides(
+  img: ImageDescriptor,
+  guides: ImageGuides,
+  tile: DrawTile,
+): { types: string[]; cmds: PathCmd[] } {
+  const place = (c: PathCmd) => placeByOracle(tile, c)
+  const edges = guides.edges ? edgePaths(guides.edges, img).map(place) : []
+  const faces = (guides.faces ?? []).flatMap((f) => facePaths(f, img).map(place))
+  const poses = (guides.poses ?? []).flatMap((p) => {
+    const fig = poseFigure(p, img)
+    return [
+      ...fig.cmds.map(place),
+      ...fig.joints.flatMap((j) => {
+        const c = pixelOracle(tile, j.x, j.y)
+        return circlePath(c.x, c.y, img.lines.style.widthMm / 2)
+      }),
+    ]
+  })
+  const found = [
+    ['edges', edges],
+    ['face', faces],
+    ['pose', poses],
+  ] as const
+  return {
+    types: found.filter(([, c]) => c.length > 0).map(([t]) => t),
+    cmds: [...edges, ...faces, ...poses],
+  }
+}
+
+function expectCmdsNear(got: readonly PathCmd[], want: readonly PathCmd[], eps: number): void {
+  expect(got.map((c) => c.op).join('')).toBe(want.map((c) => c.op).join(''))
+  const g = pointsOf(got)
+  pointsOf(want).forEach(([x, y], i) => {
+    expect(Math.abs((g[i]?.[0] ?? NaN) - x)).toBeLessThan(eps)
+    expect(Math.abs((g[i]?.[1] ?? NaN) - y)).toBeLessThan(eps)
+  })
+}
+
+describe('guides in the page model (M4-R10–R12)', () => {
+  const portrait = (
+    edits: Partial<ImageEdits> = {},
+    versions: readonly StudyVersion[] = ['original'],
+  ) =>
+    linesDescriptor(
+      'p',
+      { ...EVERY_GUIDE, style: { widthMm: 0.5 } },
+      {
+        ...descriptor('p', PORTRAIT_PX.w, PORTRAIT_PX.h, edits),
+        study: { ...DEFAULT_STUDY, versions },
+      },
+    )
+  const guides = guidesFixture()
+  const byOracle = (page: PageModel | undefined, img: ImageDescriptor) => {
+    page?.tiles.forEach((tile, i) => {
+      const want = oracleGuides(img, guides, tile)
+      const l = page.lines.find((e) => e.tileIndex === i)
+      if (want.types.length === 0) {
+        expect(l).toBeUndefined()
+        return
+      }
+      const t = tile.trim
+      const eps = 1e-9 * (1 + Math.abs(t.x) + Math.abs(t.y) + t.w + t.h)
+      expect(l?.clip).toEqual(t)
+      expect(l?.types).toEqual(want.types)
+      expect(l?.strokes).toHaveLength(1)
+      expectCmdsNear(l?.strokes[0]?.cmds ?? [], want.cmds, eps)
+    })
+  }
+
+  it('without guides the page models equal master’s: no argument and () => NO_GUIDES (property)', () => {
+    fc.assert(
+      fc.property(arbCase, fc.boolean(), fc.boolean(), (c, bleed, switches) => {
+        const images = switches
+          ? c.images.map((img) => ({ ...img, lines: patchLines(img.lines, EVERY_GUIDE) }))
+          : c.images
+        const layout = layoutOf([c.placements], { w: 420, h: 594 })
+        const setup = bleed
+          ? setupWith({ bleed: { enabled: true, mm: 3 }, gutter: { enabled: true, mm: 6 } })
+          : setupWith()
+        const master = JSON.stringify(buildPageModels(layout, setup, c.images))
+        expect(JSON.stringify(buildPageModels(layout, setup, images))).toBe(master)
+        expect(JSON.stringify(buildPageModels(layout, setup, images, () => NO_GUIDES))).toBe(master)
+      }),
+    )
+  })
+
+  it('a face on a picture rotated 90° by the user and turned by the engine lands on the face in the tile', () => {
+    const img = portrait({ rotation: 90, flipH: true, crop: { x: 100, y: 300, w: 1100, h: 900 } })
+    const [page] = buildPageModels(
+      layoutOf([[placement('p', [R(20, 30, 85.5, 70)], { turned: true })]]),
+      setupWith({ bleed: { enabled: true, mm: 3 }, gutter: { enabled: true, mm: 6 } }),
+      [img],
+      () => guides,
+    )
+    expect(page?.tiles[0]?.rotation).toBe(180)
+    expect(page?.lines[0]?.types).toEqual(['edges', 'face', 'pose'])
+    byOracle(page, img)
+  })
+
+  it('guides follow the picture through rotation, flips, crop, bleed and the engine’s turn (property)', () => {
+    const crops = fc.oneof(
+      fc.constant(null),
+      fc.record({
+        x: fc.double({ min: 0, max: 600, noNaN: true }),
+        y: fc.double({ min: 0, max: 700, noNaN: true }),
+        w: fc.double({ min: 300, max: 700, noNaN: true }),
+        h: fc.double({ min: 300, max: 1300, noNaN: true }),
+      }),
+    )
+    fc.assert(
+      fc.property(
+        fc.constantFrom<Rotation>(0, 90, 180, 270),
+        fc.boolean(),
+        fc.boolean(),
+        crops,
+        fc.boolean(),
+        fc.boolean(),
+        fc.integer({ min: 1, max: 4 }),
+        fc.double({ min: 10, max: 80, noNaN: true }),
+        fc.double({ min: 10, max: 80, noNaN: true }),
+        (rotation, flipH, flipV, crop, turned, bleed, n, w, h) => {
+          const img = portrait({ rotation, flipH, flipV, crop }, VERSIONS.slice(0, n))
+          const tiles = Array.from({ length: n }, (_, k) => R(10 + k * (w + 8), 10, w, h))
+          const [page] = buildPageModels(
+            layoutOf([[placement('p', tiles, { turned })]], { w: 420, h: 594 }),
+            bleed
+              ? setupWith({ bleed: { enabled: true, mm: 3 }, gutter: { enabled: true, mm: 6 } })
+              : setupWith(),
+            [img],
+            () => guides,
+          )
+          byOracle(page, img)
+        },
+      ),
+      { numRuns: 60 },
+    )
+  })
+
+  it('every printed study version of an image carries the same guides', () => {
+    const img = portrait({ rotation: 270, flipV: true }, VERSIONS)
+    const tiles = [R(10, 10, 60, 40), R(76, 10, 60, 40), R(10, 56, 60, 40), R(76, 56, 60, 40)]
+    const [page] = buildPageModels(
+      layoutOf([[placement('p', tiles, { turned: true })]]),
+      setupWith(),
+      [img],
+      () => guides,
+    )
+    expect(page?.tiles.map((t) => t.version)).toEqual(VERSIONS)
+    expect(page?.lines.map((l) => l.types)).toEqual(VERSIONS.map(() => ['edges', 'face', 'pose']))
+    byOracle(page, img)
+    const [first, ...rest] = page?.lines ?? []
+    if (!first) throw new Error('no lines')
+    rest.forEach((l) => {
+      expectClose(relative(l), relative(first))
+    })
+  })
+
+  it('asks for each image’s guides and draws them only on that image’s tiles', () => {
+    const a = portrait()
+    const b = { ...linesDescriptor('b', EVERY_GUIDE), study: { ...DEFAULT_STUDY } }
+    const seen: string[] = []
+    const [page] = buildPageModels(
+      layoutOf([[placement('p', [R(10, 10, 60, 90)]), placement('b', [R(80, 10, 60, 40)])]]),
+      setupWith(),
+      [a, b],
+      (img) => {
+        seen.push(img.id)
+        return img.id === a.id ? guides : NO_GUIDES
+      },
+    )
+    expect(new Set(seen)).toEqual(new Set(['p', 'b']))
+    expect(page?.lines.map((l) => l.tileIndex)).toEqual([0])
+  })
+
+  it('guides change nothing but the lines: tiles, render keys, marks and groups (property)', () => {
+    fc.assert(
+      fc.property(arbCase, fc.boolean(), (c, bleed) => {
+        const images = c.images.map((img) => ({
+          ...img,
+          lines: patchLines(img.lines, EVERY_GUIDE),
+        }))
+        const layout = layoutOf([c.placements], { w: 420, h: 594 })
+        const setup = bleed
+          ? setupWith({ bleed: { enabled: true, mm: 3 }, gutter: { enabled: true, mm: 6 } })
+          : setupWith()
+        const plain = buildPageModels(layout, setup, images)
+        const guided = buildPageModels(layout, setup, images, () => guides)
+        expect(withoutLines(guided)).toEqual(withoutLines(plain))
+        expect(guided.flatMap((p) => p.tiles.map((t) => tileRenderKey(t)))).toEqual(
+          plain.flatMap((p) => p.tiles.map((t) => tileRenderKey(t))),
+        )
+        expect(buildPageModels(layout, setup, images, () => guides)).toEqual(guided)
+      }),
+      { numRuns: 40 },
     )
   })
 })

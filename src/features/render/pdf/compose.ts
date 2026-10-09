@@ -52,7 +52,7 @@ export class EmptyPdfError extends Error {
 export interface PdfComposer {
   /** Embed once per render key; a second call with the same key is a no-op. */
   embed(key: string, image: EncodedTileImage): Promise<void>
-  /** Add one page: every tile at trim + bleed, then its composition lines and the crop marks as vector paths. */
+  /** Add one page: every tile at trim + bleed, then its lines (composition lines and guides) and the crop marks as vector paths. */
   addPage(page: PageModel): void
   /** Rejects with EmptyPdfError when no page was added (pdf-lib would silently add a blank one). */
   save(): Promise<Uint8Array>

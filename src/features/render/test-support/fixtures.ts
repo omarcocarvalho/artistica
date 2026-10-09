@@ -26,7 +26,20 @@ import {
 } from '../../../shared/model/page-setup'
 import { DEFAULT_STUDY, type StudySettings, type StudyVersion } from '../../../shared/model/study'
 import type { LayoutResult, Placement, RectMm } from '../../layout/types'
-import type { DrawTile, PageModel } from '../types'
+import { MAX_EDGE_VERTICES } from '../../lines/edges/outline'
+import { mulberry32 } from '../../lines/edges/test-support/synthetic'
+import faceJson from '../../lines/guides/__fixtures__/face-landmarks.json'
+import poseJson from '../../lines/guides/__fixtures__/pose-landmarks.json'
+import {
+  NO_GUIDES,
+  type EdgeOutline,
+  type FaceLandmarks,
+  type ImageGuides,
+  type PoseLandmarks,
+  type SourcePoint,
+} from '../../lines/guides/types'
+import { tileLinesFor } from '../page-model/tile-lines'
+import type { DrawTile, PageModel, TileLines } from '../types'
 
 /** Test-only helpers: hand-built LayoutResult fixtures (sub-plan D never imports B's engine). */
 
@@ -57,6 +70,15 @@ export function linesDescriptor(
   base: ImageDescriptor = descriptor(name),
 ): ImageDescriptor {
   return { ...base, lines: patchLines(DEFAULT_LINES, patch) }
+}
+
+export function compositionLinesFor(
+  lines: LineSettings,
+  trim: RectMm,
+  turned: boolean,
+  tileIndex: number,
+): TileLines | null {
+  return tileLinesFor({ ...descriptor('a'), lines }, NO_GUIDES, trim, turned, tileIndex)
 }
 
 /** Any sanitized line settings, every type and every style value in range. */
@@ -243,3 +265,70 @@ export const arbShrunkPage: fc.Arbitrary<GridPage> = fc
       },
     }
   })
+
+const pointOf = (p: readonly number[]): SourcePoint => ({
+  x: p[0] ?? Number.NaN,
+  y: p[1] ?? Number.NaN,
+})
+
+/** The recorded face of portrait.jpg (C4 Step 3), normalised to the photo. */
+export const FIXTURE_FACE: FaceLandmarks = { points: faceJson.points.map(pointOf) }
+export const PORTRAIT_PX = { w: faceJson.pxW, h: faceJson.pxH } as const
+
+/** The recorded pose of figure.jpg (C4 Step 3), normalised to the photo. */
+export const FIXTURE_POSE: PoseLandmarks = {
+  points: poseJson.points.map(pointOf),
+  visibility: poseJson.visibility,
+}
+export const FIGURE_PX = { w: poseJson.pxW, h: poseJson.pxH } as const
+
+/** `count` wavy polylines of `perLine` points across the photo, normalised (0..1). */
+export function syntheticOutline(count: number, perLine: number): EdgeOutline {
+  return {
+    polylines: Array.from({ length: count }, (_, k) =>
+      Array.from({ length: perLine }, (_, i) => {
+        const t = perLine === 1 ? 0 : i / (perLine - 1)
+        return {
+          x: 0.05 + 0.9 * t,
+          y: (k + 0.5) / count + (0.25 / count) * Math.sin(7 * t + k),
+        }
+      }),
+    ),
+  }
+}
+
+/** `count` random walks of `perLine` points (steps of a few analysis px), normalised (0..1). */
+export function noisyOutline(count: number, perLine: number, seed = 7): EdgeOutline {
+  const rand = mulberry32(seed)
+  return {
+    polylines: Array.from({ length: count }, () => {
+      let x = 0.1 + 0.8 * rand()
+      let y = 0.1 + 0.8 * rand()
+      return Array.from({ length: perLine }, () => {
+        x = Math.min(0.99, Math.max(0.01, x + (rand() - 0.5) * 0.012))
+        y = Math.min(0.99, Math.max(0.01, y + (rand() - 0.5) * 0.012))
+        return { x, y }
+      })
+    }),
+  }
+}
+
+/** The worst case the page model must bound (M4-R17): 4000 edge vertices, 4 faces, 4 poses. */
+export function worstCaseGuides(): ImageGuides {
+  const shift = <P extends SourcePoint>(p: P, d: number): P => ({ ...p, x: p.x + d, y: p.y + d })
+  const shifts = [-0.12, -0.04, 0.04, 0.12]
+  return {
+    faces: shifts.map((d) => ({ points: FIXTURE_FACE.points.map((p) => shift(p, d)) })),
+    poses: shifts.map((d) => ({
+      points: FIXTURE_POSE.points.map((p) => shift(p, d / 2)),
+      visibility: FIXTURE_POSE.visibility,
+    })),
+    edges: noisyOutline(40, MAX_EDGE_VERTICES / 40),
+  }
+}
+
+export function guidesFixture(): ImageGuides {
+  return { faces: [FIXTURE_FACE], poses: [FIXTURE_POSE], edges: syntheticOutline(3, 5) }
+}
+
+export const EVERY_GUIDE: LinesPatch = { edges: { on: true }, face: true, pose: true }

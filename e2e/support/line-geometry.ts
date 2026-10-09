@@ -2,6 +2,8 @@ import type { RectMm } from '../../src/features/layout/types.ts'
 import { tileLinesFor as pageTileLines } from '../../src/features/render/page-model/tile-lines.ts'
 import type { TileLines } from '../../src/features/render/types.ts'
 import { DEFAULT_LINES, type LineSettings } from '../../src/shared/model/lines.ts'
+import { DEFAULT_EDITS } from '../../src/shared/model/image.ts'
+import { NO_GUIDES } from '../../src/features/lines/guides/types.ts'
 import { PT_PER_MM } from '../../src/shared/model/units.ts'
 import { rectPtToMm, strokeToMm, type PdfDraw, type PdfStroke } from './pdf.ts'
 
@@ -13,7 +15,13 @@ export interface PointMm {
 
 /** The app's own pure geometry for one tile (what both renderers must draw). */
 export function tileLinesFor(lines: LineSettings, trim: RectMm, turned: boolean): TileLines {
-  const tile = pageTileLines(lines, trim, turned, 0)
+  const tile = pageTileLines(
+    { pxW: 1, pxH: 1, edits: DEFAULT_EDITS, lines },
+    NO_GUIDES,
+    trim,
+    turned,
+    0,
+  )
   if (!tile) throw new Error('these settings draw no lines')
   return tile
 }

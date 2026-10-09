@@ -2,12 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { inspectPdf } from '../pdf/inspect'
 import { integerCropBox, planTilePixels, tileRenderKey, type PxRect } from '../pixels/tile-plan'
 import { fakeFactory, type FakeCanvas } from '../test-support/fake-canvas'
-import { drawTile, id, pageModel } from '../test-support/fixtures'
+import { compositionLinesFor, drawTile, id, pageModel } from '../test-support/fixtures'
 import { stripePng, TINY_JPEG } from '../test-support/image-bytes'
 import { ExportError, EXPORT_ERROR_KEYS, isAbortError, toExportError } from './errors'
 import type { ImageId } from '../../../shared/model/image'
 import { DEFAULT_LINES, patchLines } from '../../../shared/model/lines'
-import { tileLinesFor } from '../page-model/tile-lines'
 import {
   DEFAULT_STUDY,
   STUDY_VERSIONS,
@@ -131,7 +130,7 @@ describe('runExport', () => {
     const thirds = patchLines(DEFAULT_LINES, { thirds: true })
     const lined = pages.map((p) => ({
       ...p,
-      lines: p.tiles.flatMap((t, i) => tileLinesFor(thirds, t.trim, false, i) ?? []),
+      lines: p.tiles.flatMap((t, i) => compositionLinesFor(thirds, t.trim, false, i) ?? []),
     }))
     const bytes = await runExport(lined, sources(), {}, deps)
     expect(addPage.mock.calls.map(([p]) => p.lines)).toEqual(lined.map((p) => p.lines))

@@ -44,7 +44,7 @@ export interface PageModel {
   readonly cropMarks: readonly Segment[] // already shortened so they never cross another tile's trim+bleed
   /** Placements with ≥ 2 tiles, in placement order. Screen-only. */
   readonly groups: readonly StudyGroupOutline[]
-  /** In tile order; a tile whose image has no active type has no entry. */
+  /** In tile order; a tile whose image draws no line has no entry. */
   readonly lines: readonly TileLines[]
 }
 
@@ -55,7 +55,7 @@ export interface LineStroke {
   readonly cmds: readonly PathCmd[]
 }
 
-/** One tile's composition lines, replayed as-is by the PDF and the preview (M3-R6). */
+/** One tile's composition lines and guides, replayed as-is by the PDF and the preview (M3-R6, M4-R11). */
 export interface TileLines {
   /** Index into PageModel.tiles. */
   readonly tileIndex: number

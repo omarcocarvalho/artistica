@@ -2,14 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_PAGE_SETUP } from '../shared/model/page-setup'
 import type { ImageDescriptor, ImageId } from '../shared/model/image'
 import { DEFAULT_EDITS } from '../shared/model/image'
-import { DEFAULT_LINES } from '../shared/model/lines'
+import { DEFAULT_LINES, patchLines } from '../shared/model/lines'
 import { DEFAULT_STUDY } from '../shared/model/study'
 import { createPipeline, type PipelineDeps, type PipelineSink } from './pipeline'
 import type { LayoutItemInput, LayoutResult } from '../features/layout'
 import { buildLayoutItems } from '../features/layout/build-items'
 import { computeLayout } from '../features/layout/compute-layout'
 import type { PageModel } from '../features/render'
+import { NO_GUIDES } from '../features/lines/guides/types'
 import { buildPageModels } from '../features/render/page-model/build-page-models'
+import { tileRenderKey } from '../features/render/pixels/tile-plan'
+import { FIXTURE_FACE } from '../features/render/test-support/fixtures'
 import type { StudyVersion } from '../shared/model/study'
 
 const img = (id: string): ImageDescriptor => ({
@@ -170,6 +173,21 @@ describe('createPipeline', () => {
     expect(sink.done).not.toHaveBeenCalled()
   })
 
+  it('hands the guides to buildModels, and NO_GUIDES when none are given', async () => {
+    const { deps, resolvers, pipeline } = setup()
+    const guides = () => NO_GUIDES
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')], guides)
+    await vi.advanceTimersByTimeAsync(80)
+    resolvers[0]?.(layoutOf(4))
+    await vi.advanceTimersByTimeAsync(0)
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
+    await vi.advanceTimersByTimeAsync(80)
+    const calls = vi.mocked(deps.buildModels).mock.calls
+    expect(calls[0]?.[3]).toBe(guides)
+    expect(calls[1]?.[3]?.(img('a'))).toBe(NO_GUIDES)
+    expect(deps.layout).toHaveBeenCalledTimes(1)
+  })
+
   it('reuses the layout when only study parameters change (M2-R15)', async () => {
     const { deps, sink, resolvers, pipeline } = setup()
     deps.buildItems = vi.fn(tileItems)
@@ -317,5 +335,30 @@ describe('createPipeline with the real layout and page models', () => {
     expect(deps.layout).toHaveBeenCalledTimes(2)
     expect(sink.done).toHaveBeenCalledTimes(3)
     expect(lastTiles(sink)).toEqual(['original'])
+  })
+
+  it('a detection result rebuilds page models without calling layout, and changes no tile', async () => {
+    const { deps, sink, pending, pipeline } = realSetup()
+    const face = { ...img('a'), lines: patchLines(DEFAULT_LINES, { face: true }) }
+    const found = { ...NO_GUIDES, faces: [FIXTURE_FACE] }
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [face])
+    await vi.advanceTimersByTimeAsync(80)
+    pending[0]?.run()
+    await vi.advanceTimersByTimeAsync(0)
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [face], () => found)
+    await vi.advanceTimersByTimeAsync(80)
+    expect(deps.layout).toHaveBeenCalledTimes(1)
+    expect(sink.done).toHaveBeenCalledTimes(2)
+    const [before, after] = vi.mocked(sink.done).mock.calls.map(([layout, pages]) => ({
+      layout,
+      pages,
+    }))
+    expect(after?.layout).toBe(before?.layout)
+    expect(before?.pages.flatMap((p) => p.lines)).toEqual([])
+    expect(after?.pages.flatMap((p) => p.lines.map((l) => l.types))).toEqual([['face']])
+    const keys = (pages: readonly PageModel[] | undefined) =>
+      pages?.flatMap((p) => p.tiles.map((t) => tileRenderKey(t)))
+    expect(after?.pages.map((p) => p.tiles)).toEqual(before?.pages.map((p) => p.tiles))
+    expect(keys(after?.pages)).toEqual(keys(before?.pages))
   })
 })

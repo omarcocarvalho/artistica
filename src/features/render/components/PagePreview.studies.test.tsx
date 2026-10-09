@@ -3,10 +3,9 @@ import { StrictMode } from 'react'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initI18n } from '../../../shared/i18n'
 import { DEFAULT_LINES, type LinesPatch, patchLines } from '../../../shared/model/lines'
-import { tileLinesFor } from '../page-model/tile-lines'
 import type { PageModel, TileLines } from '../types'
 import { fakeStudyTiles } from '../test-support/fake-study-tiles'
-import { drawTile, id, pageModel } from '../test-support/fixtures'
+import { compositionLinesFor, drawTile, id, pageModel } from '../test-support/fixtures'
 import { PagePreview, type PagePreviewProps } from './PagePreview'
 
 const drawSpy = vi.hoisted(() => vi.fn())
@@ -290,7 +289,7 @@ describe('PagePreview study tiles', () => {
   it('redraws a line-only change from the cached tiles: no tile render, release or new study key (M3-R5)', () => {
     const linesFor = (patch: LinesPatch): TileLines[] =>
       group.tiles.flatMap(
-        (t, i) => tileLinesFor(patchLines(DEFAULT_LINES, patch), t.trim, false, i) ?? [],
+        (t, i) => compositionLinesFor(patchLines(DEFAULT_LINES, patch), t.trim, false, i) ?? [],
       )
     expect(linesFor({ thirds: true })).toHaveLength(3)
     const { f, rerender } = show()
