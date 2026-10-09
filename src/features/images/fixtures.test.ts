@@ -31,6 +31,8 @@ describe('image fixtures', () => {
       'mislabelled-heic.jpg': 'heic',
       'value-ramp.png': 'png',
       'flat-grey.png': 'png',
+      'portrait.jpg': 'jpeg',
+      'figure.jpg': 'jpeg',
       'notes.pdf': null,
     }
     for (const [name, kind] of Object.entries(kinds))
