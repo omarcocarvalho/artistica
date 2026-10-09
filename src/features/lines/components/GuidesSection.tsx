@@ -13,7 +13,7 @@ import { useImages } from '../../images'
 import type { ImageDescriptor, ImageId } from '../../../shared/model/image'
 import { MAX_EDGE_DETAIL, MIN_EDGE_DETAIL, type LinesPatch } from '../../../shared/model/lines'
 import { Badge, Button, Callout, Slider, Switch } from '../../../shared/ui'
-import type { AiModel, GuideKind } from '../detect/store'
+import { detectionKey, type AiModel, type GuideKind } from '../detect/store'
 import { useDetailDraft } from './detail-draft'
 import { useDetectionActions, type DetectionActions } from './detection-actions'
 import { DownloadBox } from './DownloadBox'
@@ -36,26 +36,53 @@ const MODELS = ['face', 'pose'] as const satisfies readonly AiModel[]
 
 type Translate = ReturnType<typeof useTranslation<'lines'>>['t']
 
-function announcement(t: Translate, kind: GuideKind, view: GuideView): string | null {
+/** What one guide's status says through the panel's live region. */
+interface Spoken {
+  readonly text: string | null
+  /** `result`: a finished search is shown; `clear`: forget it; `keep`: leave it as it was. */
+  readonly memo: 'result' | 'clear' | 'keep'
+  /** Not spoken while the guide's last shown status is a result (owner Q19, default). */
+  readonly quietAfterResult?: true
+}
+
+/** A guide's spoken status, for the search it shows (its detection key while it's on). */
+interface Said extends Spoken {
+  readonly subject: string | null
+}
+
+function announcement(t: Translate, kind: GuideKind, on: boolean, view: GuideView): Spoken {
   switch (view.view) {
     case 'box':
-      return t('guides.size', { mb: formatMb(view.bytes) })
+      return { text: t('guides.size', { mb: formatMb(view.bytes) }), memo: 'clear' }
     case 'downloading':
-      return kind === 'edges' ? null : t(`guides.${kind}.downloading`)
+      return { text: kind === 'edges' ? null : t(`guides.${kind}.downloading`), memo: 'clear' }
     case 'running':
-      return t(`guides.${kind}.running`)
-    case 'found':
-      return kind === 'edges' ? t('guides.edges.done') : t(`guides.${kind}.found`)
-    case 'none-found':
+      // After a Detail change (or a crop) re-traces a shown outline, only the new result is
+      // spoken; switching the outline on, or "Try again", speaks both (owner Q19, default).
       return kind === 'edges'
-        ? t('guides.edges.none')
-        : `${t(`guides.${kind}.none`)} ${t(`guides.${kind}.noneHint`)}`
+        ? { text: t('guides.edges.running'), memo: 'keep', quietAfterResult: true }
+        : { text: t(`guides.${kind}.running`), memo: 'keep' }
+    case 'found':
+      return {
+        text: kind === 'edges' ? t('guides.edges.done') : t(`guides.${kind}.found`),
+        memo: 'result',
+      }
+    case 'none-found':
+      return {
+        text:
+          kind === 'edges'
+            ? t('guides.edges.none')
+            : `${t(`guides.${kind}.none`)} ${t(`guides.${kind}.noneHint`)}`,
+        memo: 'result',
+      }
     case 'unsupported':
-      return t('guides.noWebGL')
+      return { text: t('guides.noWebGL'), memo: 'clear' }
     case 'idle':
+      // On with no status yet: the new search has not started (e.g. a Detail just committed).
+      return { text: null, memo: on ? 'keep' : 'clear' }
     case 'failed':
     case 'download-failed':
-      return null
+      return { text: null, memo: 'clear' }
   }
 }
 
@@ -88,9 +115,17 @@ function Guides({
     face: guideView('face', lines.face, useGuideStatus('face', image), actions.landmarksSupported),
     pose: guideView('pose', lines.pose, useGuideStatus('pose', image), actions.landmarksSupported),
   }
+  const on: Record<GuideKind, boolean> = {
+    edges: lines.edges.on,
+    face: lines.face,
+    pose: lines.pose,
+  }
   useAnnounceChanges(
     id,
-    KINDS.map((kind) => announcement(t, kind, views[kind])),
+    KINDS.map((kind) => ({
+      ...announcement(t, kind, on[kind], views[kind]),
+      subject: on[kind] ? detectionKey(kind, image) : null,
+    })),
     onAnnounce,
   )
   const detail = useSettledDetail(id, lines.edges.detailPct)
@@ -161,9 +196,7 @@ function EdgeStatus({ image, actions, view, waiting, describedBy }: PartProps) {
       return <p className="text-ink-muted text-sm">{t('guides.edges.none')}</p>
     case 'failed':
       return (
-        <Callout
-          tone="danger"
-          live
+        <Failure
           title={t('guides.edges.failed')}
           actions={
             <Button
@@ -251,21 +284,16 @@ function LandmarkGuide({
       break
     case 'download-failed':
       below = (
-        <Callout
-          tone="danger"
-          live
-          title={t(`guides.${model}.downloadFailed`)}
-          actions={retryAndOff}
-        >
+        <Failure title={t(`guides.${model}.downloadFailed`)} actions={retryAndOff}>
           {t('guides.failedHint')}
-        </Callout>
+        </Failure>
       )
       break
     case 'failed':
       below = (
-        <Callout tone="danger" live title={t(`guides.${model}.error`)} actions={retryAndOff}>
+        <Failure title={t(`guides.${model}.error`)} actions={retryAndOff}>
           {t('guides.errorHint')}
-        </Callout>
+        </Failure>
       )
       break
     case 'unsupported':
@@ -288,6 +316,29 @@ function LandmarkGuide({
       />
       {below}
     </GuideGroup>
+  )
+}
+
+/**
+ * A failure: the alert holds the message only, and its buttons follow it outside the alert
+ * (design/errors.html E6), so the alert is not read out with the buttons' names.
+ */
+function Failure({
+  title,
+  actions,
+  children,
+}: {
+  readonly title: string
+  readonly actions: ReactNode
+  readonly children?: ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Callout tone="danger" live title={title}>
+        {children}
+      </Callout>
+      <div className="flex flex-wrap gap-2">{actions}</div>
+    </div>
   )
 }
 
@@ -317,18 +368,38 @@ function GuideGroup({ children }: { readonly children: ReactNode }) {
 
 function useAnnounceChanges(
   imageId: ImageId,
-  texts: readonly (string | null)[],
+  spoken: readonly Said[],
   onAnnounce: (text: string) => void,
 ): void {
-  const key = JSON.stringify(texts)
-  const previous = useRef<{ imageId: ImageId; key: string } | null>(null)
+  const key = JSON.stringify(spoken)
+  const previous = useRef<{
+    imageId: ImageId
+    texts: readonly (string | null)[]
+    subjects: readonly (string | null)[]
+    /** Per guide: its last shown status is a result. */
+    result: readonly boolean[]
+  } | null>(null)
   useEffect(() => {
-    const before = previous.current
-    previous.current = { imageId, key }
-    if (before?.imageId !== imageId) return
-    const old = JSON.parse(before.key) as (string | null)[]
-    const now = JSON.parse(key) as (string | null)[]
-    const changed = now.filter((text, i): text is string => text !== null && text !== old[i])
+    const now = JSON.parse(key) as Said[]
+    const before = previous.current?.imageId === imageId ? previous.current : null
+    previous.current = {
+      imageId,
+      texts: now.map((s) => s.text),
+      subjects: now.map((s) => s.subject),
+      result: now.map(
+        (s, i) => s.memo === 'result' || (s.memo === 'keep' && (before?.result[i] ?? false)),
+      ),
+    }
+    if (!before) return
+    // A result for a new search is spoken even when its text matches the last one: a Detail,
+    // crop or rotation that returns to an earlier search shows its kept result at once.
+    const changed = now.flatMap((s, i) =>
+      s.text !== null &&
+      (s.text !== before.texts[i] || (s.memo === 'result' && s.subject !== before.subjects[i])) &&
+      !(s.quietAfterResult && before.result[i] === true)
+        ? [s.text]
+        : [],
+    )
     if (changed.length > 0) onAnnounce(changed.join(' '))
   }, [imageId, key, onAnnounce])
 }

@@ -664,18 +664,20 @@ test.describe('downloads (desktop)', () => {
     await expect(alert).toContainText(
       'Check your connection and try again. Other lines still work.',
     )
+    // E6: the buttons follow the alert, outside it, so it is read without them.
+    await expect(alert.getByRole('button')).toHaveCount(0)
     expect(await app.guideStatus('face')).toBe('download-failed')
     await expect(app.exportButton).toBeEnabled()
 
     // By keyboard: Safari does not focus a button on click, and focus returns only from a focused one.
-    await alert.getByRole('button', { name: 'Turn off face guides' }).focus()
+    await app.guideGroup('face').getByRole('button', { name: 'Turn off face guides' }).focus()
     await page.keyboard.press('Enter')
     await expect(app.guideSwitch('face')).toHaveAttribute('aria-checked', 'false')
     await expect(app.guideSwitch('face')).toBeFocused()
 
     await app.setGuide('face', true)
     await expect(alert).toContainText("Couldn't download the face model")
-    await alert.getByRole('button', { name: 'Try again' }).click()
+    await app.guideGroup('face').getByRole('button', { name: 'Try again' }).click()
     await expect
       .poll(() => app.guideStatus('face'), { timeout: 60_000 })
       .toMatch(/^(running|found|none|failed)$/)

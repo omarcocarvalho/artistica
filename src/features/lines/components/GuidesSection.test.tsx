@@ -85,6 +85,12 @@ function renderPanel(props: Partial<LinesPanelProps> = {}, actions = fakeActions
 }
 
 const section = () => screen.getByRole('region', { name: 'Guides from the photo' })
+/** design/errors.html E6: the alert holds the message only; its buttons sit beside it. */
+const expectAlertWithoutActions = (alert: HTMLElement) => {
+  expect(within(alert).queryAllByRole('button')).toHaveLength(0)
+  expect(alert).not.toHaveTextContent('Try again Turn off')
+  expect(alert).not.toHaveTextContent(/Turn off (face|pose) guides/)
+}
 const liveRegion = () => {
   const regions = screen.getAllByRole('status')
   expect(regions).toHaveLength(1)
@@ -350,6 +356,7 @@ describe('GuidesSection', () => {
       setStatus('edges', { state: 'failed', reason: 'error' })
       const alert = within(section()).getByRole('alert')
       expect(alert).toHaveTextContent("Couldn't trace the outline.")
+      expectAlertWithoutActions(alert)
       await user.click(within(section()).getByRole('button', { name: 'Try again' }))
       expect(actions.retry).toHaveBeenCalledWith('edges', A)
       expect(lines(A).edges.on).toBe(true)
@@ -443,9 +450,16 @@ describe('GuidesSection', () => {
       setStatus(c.kind, { state: 'downloading', loaded: 4_100_000, total: c.bytes })
       const bar = within(section()).getByRole('progressbar', { name: c.progress })
       expect(bar).toHaveAttribute('aria-valuenow', String(Math.round((4_100_000 / c.bytes) * 100)))
-      const text = `4.1 of ${(c.bytes / 1e6).toFixed(1)} MB`
-      expect(bar).toHaveAttribute('aria-valuetext', text)
-      expect(within(section()).getByText(text)).toBeVisible()
+      const total = (c.bytes / 1e6).toFixed(1)
+      // Spoken once, by the bar, in words; the visible "MB" line is hidden from screen readers.
+      expect(bar).toHaveAttribute('aria-valuetext', `4.1 of ${total} megabytes`)
+      const visible = within(section()).getByText(`4.1 of ${total} MB`)
+      expect(visible).toBeVisible()
+      expect(visible).toHaveAttribute('aria-hidden', 'true')
+      // No continuous announcement of the progress (owner Q18, default).
+      expect(bar).not.toHaveAttribute('aria-live')
+      expect(bar.closest('[aria-live], [role="status"], [role="alert"]')).toBeNull()
+      expect(visible.closest('[aria-live], [role="status"], [role="alert"]')).toBeNull()
       expect(within(section()).getByText(c.downloading)).toBeVisible()
       expect(within(section()).queryByRole('button', { name: DOWNLOAD })).not.toBeInTheDocument()
     })
@@ -505,6 +519,7 @@ describe('GuidesSection', () => {
         expect(alert).toHaveTextContent(
           'Check your connection and try again. Other lines still work.',
         )
+        expectAlertWithoutActions(alert)
         await user.click(within(section()).getByRole('button', { name: 'Try again' }))
         expect(actions.retry).toHaveBeenCalledExactlyOnceWith(c.kind, A)
         expect(c.read(lines(A))).toBe(true)
@@ -521,7 +536,10 @@ describe('GuidesSection', () => {
       setStatus(c.kind, { state: 'failed', reason: 'error' })
       const alert = within(section()).getByRole('alert')
       expect(alert).toHaveTextContent(c.error)
+      // owner Q16, default
+      expect(alert).toHaveTextContent('Try again. Other lines still work.')
       expect(alert).not.toHaveTextContent(c.failed)
+      expectAlertWithoutActions(alert)
       await user.click(within(section()).getByRole('button', { name: 'Try again' }))
       expect(actions.retry).toHaveBeenCalledExactlyOnceWith(c.kind, A)
       expect(within(section()).getByRole('button', { name: c.turnOff })).toBeVisible()
@@ -691,14 +709,137 @@ describe('GuidesSection', () => {
       expect(region).toHaveTextContent(NO_WEBGL)
     })
 
-    it("announces the edge outline's progress", () => {
-      seed(EDGES_ON)
+    it("announces the edge outline's progress when it's switched on", async () => {
+      const user = userEvent.setup()
       renderPanel()
       const region = liveRegion()
+      await user.click(screen.getByRole('switch', { name: 'Edge outline' }))
       setStatus('edges', { state: 'running' })
-      expect(region).toHaveTextContent('Tracing the outline…')
+      expect(region).toHaveTextContent(/^Tracing the outline…$/)
       setStatus('edges', { state: 'done', found: 3 })
-      expect(region).toHaveTextContent('Outline traced.')
+      expect(region).toHaveTextContent(/^Outline traced\.$/)
+    })
+
+    describe('after a Detail change, only the result is announced (owner Q19, default)', () => {
+      const setDetail = (pct: number) => {
+        act(() => {
+          useImages.getState().updateLines(A, { edges: { detailPct: pct } })
+        })
+      }
+
+      it.each([
+        [3, 'Outline traced.'],
+        [0, 'No edges found at this Detail. Try a higher Detail.'],
+      ] as const)('found %i → "%s", never "Tracing the outline…"', (found, result) => {
+        seed(EDGES_ON)
+        renderPanel()
+        const region = liveRegion()
+        setStatus('edges', { state: 'done', found: 3 })
+        const before = region.firstChild
+        setDetail(60)
+        expect(lines(A).edges.detailPct).toBe(60)
+        setStatus('edges', { state: 'running' })
+        // The visible status still says so; the region keeps its last announcement.
+        expect(within(section()).getByText('Tracing the outline…')).toBeVisible()
+        expect(region.firstChild).toBe(before)
+        expect(region).not.toHaveTextContent('Tracing the outline…')
+        setStatus('edges', { state: 'done', found })
+        expect(region).toHaveTextContent(new RegExp(`^${result.replace(/\./g, '\\.')}$`))
+        expect(region.firstChild).not.toBe(before)
+      })
+
+      it('also after "No edges found", and across a second Detail change mid-trace', () => {
+        seed(EDGES_ON)
+        renderPanel()
+        const region = liveRegion()
+        setStatus('edges', { state: 'done', found: 0 })
+        const before = region.firstChild
+        setDetail(60)
+        setStatus('edges', { state: 'running' })
+        // A second Detail commits before the first trace ends.
+        setDetail(70)
+        setStatus('edges', { state: 'running' })
+        expect(region.firstChild).toBe(before)
+        expect(region).not.toHaveTextContent('Tracing the outline…')
+        setStatus('edges', { state: 'done', found: 2 })
+        expect(region).toHaveTextContent(/^Outline traced\.$/)
+      })
+
+      it('also when the panel opens on a traced outline', () => {
+        seed(EDGES_ON)
+        setStatus('edges', { state: 'done', found: 3 })
+        renderPanel()
+        const region = liveRegion()
+        setDetail(70)
+        setStatus('edges', { state: 'running' })
+        expect(region).toBeEmptyDOMElement()
+        setStatus('edges', { state: 'done', found: 3 })
+        expect(region).toHaveTextContent(/^Outline traced\.$/)
+      })
+
+      it('switching the outline off and on again announces both messages', async () => {
+        const user = userEvent.setup()
+        seed(EDGES_ON)
+        renderPanel()
+        const region = liveRegion()
+        setStatus('edges', { state: 'done', found: 3 })
+        const sw = screen.getByRole('switch', { name: 'Edge outline' })
+        await user.click(sw)
+        // No result kept for this Detail: switching on traces it again.
+        setStatus('edges', null)
+        await user.click(sw)
+        setStatus('edges', { state: 'running' })
+        expect(region).toHaveTextContent(/^Tracing the outline…$/)
+        setStatus('edges', { state: 'done', found: 3 })
+        expect(region).toHaveTextContent(/^Outline traced\.$/)
+      })
+
+      it('"Try again" after a failure announces both messages', () => {
+        seed(EDGES_ON)
+        renderPanel()
+        const region = liveRegion()
+        setStatus('edges', { state: 'done', found: 3 })
+        setDetail(60)
+        setStatus('edges', { state: 'failed', reason: 'error' })
+        setStatus('edges', { state: 'running' })
+        expect(region).toHaveTextContent(/^Tracing the outline…$/)
+      })
+
+      it('a Detail change back to a traced Detail announces its result, with the same text', () => {
+        seed(EDGES_ON)
+        renderPanel()
+        const region = liveRegion()
+        setStatus('edges', { state: 'done', found: 3 })
+        setDetail(60)
+        setStatus('edges', { state: 'running' })
+        setStatus('edges', { state: 'done', found: 3 })
+        const before = region.firstChild
+        expect(region).toHaveTextContent(/^Outline traced\.$/)
+        // The scheduler keeps a finished status per Detail, so the result shows at once.
+        setDetail(50)
+        expect(region).toHaveTextContent(/^Outline traced\.$/)
+        expect(region.firstChild).not.toBe(before)
+      })
+
+      it('a rotation back to a searched rotation announces the kept face result', () => {
+        seed(FACE_ON)
+        renderPanel()
+        const region = liveRegion()
+        setStatus('face', { state: 'done', found: 1 })
+        act(() => {
+          useImages.getState().updateEdits(A, { rotation: 90 })
+        })
+        setStatus('face', { state: 'running' })
+        setStatus('face', { state: 'done', found: 1 })
+        const before = region.firstChild
+        act(() => {
+          useImages.getState().updateEdits(A, { rotation: 0 })
+        })
+        expect(region).toHaveTextContent(
+          /^Face guides on\. Brow, eye, nose and chin lines added\.$/,
+        )
+        expect(region.firstChild).not.toBe(before)
+      })
     })
 
     it('joins two changes that land together into one announcement', () => {
@@ -741,12 +882,61 @@ describe('GuidesSection', () => {
       expect(region).toBeEmptyDOMElement()
     })
 
-    it('the visible statuses are not live regions themselves', () => {
+    it.each<{
+      readonly name: string
+      readonly webgl: boolean
+      readonly face: DetectionStatus
+      readonly pose: DetectionStatus
+      readonly edges: DetectionStatus
+      readonly shown: readonly string[]
+    }>([
+      {
+        name: 'face and pose found, the outline running',
+        webgl: true,
+        face: { state: 'done', found: 1 },
+        pose: { state: 'done', found: 1 },
+        edges: { state: 'running' },
+        shown: [
+          'Face guides on. Brow, eye, nose and chin lines added.',
+          'Pose lines on.',
+          'Tracing the outline…',
+        ],
+      },
+      {
+        name: 'nothing found, a download, the outline traced',
+        webgl: true,
+        face: { state: 'done', found: 0 },
+        pose: { state: 'downloading', loaded: 1, total: 2_000_000 },
+        edges: { state: 'done', found: 1 },
+        shown: ['No face found in this image.', 'Downloading pose model…', 'Outline traced.'],
+      },
+      {
+        name: 'face and pose running, no edges found',
+        webgl: true,
+        face: { state: 'running' },
+        pose: { state: 'running' },
+        edges: { state: 'done', found: 0 },
+        shown: [
+          'Finding faces…',
+          'Finding the pose…',
+          'No edges found at this Detail. Try a higher Detail.',
+        ],
+      },
+      {
+        name: 'the WebGL note (owner Q15, default)',
+        webgl: false,
+        face: { state: 'needs-download', bytes: 1 },
+        pose: { state: 'failed', reason: 'unsupported' },
+        edges: { state: 'running' },
+        shown: [NO_WEBGL, 'Tracing the outline…'],
+      },
+    ])('the visible statuses are not live regions themselves: $name', (c) => {
       seed(ALL_ON)
-      renderPanel()
-      setStatus('face', { state: 'done', found: 0 })
-      setStatus('pose', { state: 'downloading', loaded: 1, total: 2_000_000 })
-      setStatus('edges', { state: 'done', found: 1 })
+      renderPanel({}, fakeActions({ landmarksSupported: c.webgl }))
+      setStatus('face', c.face)
+      setStatus('pose', c.pose)
+      setStatus('edges', c.edges)
+      for (const text of c.shown) expect(within(section()).getAllByText(text)[0]).toBeVisible()
       expect(section().querySelectorAll('[aria-live], [role="status"]')).toHaveLength(0)
     })
 

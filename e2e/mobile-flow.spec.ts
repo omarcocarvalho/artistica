@@ -13,6 +13,8 @@ import {
   recordAiRequests,
   summarizeLandmarkWorkers,
   textLog,
+  announcements,
+  watchAnnouncements,
   watchTexts,
   workerLog,
   type LandmarkWorkerSummary,
@@ -814,8 +816,14 @@ test('G-P1 phone: guides in the always-open Lines card, the download, statuses, 
   const hold = await holdModel(page, 'face')
   await guides.downloadButton('face').click()
   await expect(guides.progress('face')).toBeVisible()
-  await expect(guides.status('Face construction', /^\d+\.\d of 15\.2 MB$/)).toBeVisible()
-  await expect(guides.progress('face')).toHaveAttribute('aria-valuetext', /^\d+\.\d of 15\.2 MB$/)
+  // The visible amount is hidden from screen readers; the bar speaks it in words (owner Q18, default).
+  const amount = guides.status('Face construction', /^\d+\.\d of 15\.2 MB$/)
+  await expect(amount).toBeVisible()
+  await expect(amount).toHaveAttribute('aria-hidden', 'true')
+  await expect(guides.progress('face')).toHaveAttribute(
+    'aria-valuetext',
+    /^\d+\.\d of 15\.2 megabytes$/,
+  )
   await expect.poll(hold.held).toBe(1)
 
   await app.goToStep('Export')
@@ -909,8 +917,10 @@ test('G-P3 phone: every Guides control is at least 44 x 44 px, and the section h
   const failed = guides.group('Face construction').getByRole('alert')
   await expect(failed).toContainText("Couldn't download the face model")
   await expect(failed).toContainText('Check your connection and try again. Other lines still work.')
-  const tryAgain = failed.getByRole('button', { name: 'Try again', exact: true })
-  const turnOff = failed.getByRole('button', { name: 'Turn off face guides', exact: true })
+  await expect(failed.getByRole('button')).toHaveCount(0)
+  const faceGroup = guides.group('Face construction')
+  const tryAgain = faceGroup.getByRole('button', { name: 'Try again', exact: true })
+  const turnOff = faceGroup.getByRole('button', { name: 'Turn off face guides', exact: true })
   await expectTouchTargets([tryAgain, turnOff])
   // iOS zooms on focus only into a text control under 16 px (MIN_INPUT_FONT_PX); the section has none.
   await expect(
@@ -970,6 +980,7 @@ test('G-P5 phone: the Guides controls work from the keyboard, and focus stays on
   const guides = new GuidesSection(page, app.linesSection)
   await app.lineSwitch('Centre lines').focus()
   await watchTexts(page, [TRACING])
+  await watchAnnouncements(app.linesSection.getByRole('status'))
   const tracings = async () => (await textLog(page)).filter((e) => e.text === TRACING).length
 
   await page.keyboard.press(tab)
@@ -978,6 +989,8 @@ test('G-P5 phone: the Guides controls work from the keyboard, and focus stays on
   await expect(guides.switch('Edge outline')).toHaveAttribute('aria-checked', 'true')
   await expect(guides.status('Edge outline', TRACED)).toBeVisible({ timeout: 30_000 })
   expect(await tracings()).toBe(1)
+  // Switching the outline on speaks both messages.
+  await expect.poll(() => announcements(page)).toEqual([TRACING, TRACED])
   await page.keyboard.press(tab)
   await expect(guides.detail).toBeFocused()
   await page.keyboard.press('ArrowRight')
@@ -985,6 +998,8 @@ test('G-P5 phone: the Guides controls work from the keyboard, and focus stays on
   // The new Detail traces the outline again (after the 80 ms settle).
   await expect.poll(tracings, { timeout: 30_000 }).toBe(2)
   await expect(guides.status('Edge outline', TRACED)).toBeVisible({ timeout: 30_000 })
+  // After a Detail change only the result is spoken (owner Q19, default).
+  await expect.poll(() => announcements(page)).toEqual([TRACING, TRACED, TRACED])
 
   await page.keyboard.press(tab)
   await expect(guides.switch('Face construction')).toBeFocused()
@@ -1011,11 +1026,13 @@ test('G-P5 phone: the Guides controls work from the keyboard, and focus stays on
   await page.keyboard.press('Enter')
   const failed = guides.group('Body pose').getByRole('alert')
   await expect(failed).toContainText("Couldn't download the pose model")
+  await expect(failed.getByRole('button')).toHaveCount(0)
   await expect(guides.switch('Body pose')).toBeFocused()
+  const poseGroup = guides.group('Body pose')
   await page.keyboard.press(tab)
-  await expect(failed.getByRole('button', { name: 'Try again', exact: true })).toBeFocused()
+  await expect(poseGroup.getByRole('button', { name: 'Try again', exact: true })).toBeFocused()
   await page.keyboard.press(tab)
-  const turnOff = failed.getByRole('button', { name: 'Turn off pose guides', exact: true })
+  const turnOff = poseGroup.getByRole('button', { name: 'Turn off pose guides', exact: true })
   await expect(turnOff).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(guides.switch('Body pose')).toHaveAttribute('aria-checked', 'false')

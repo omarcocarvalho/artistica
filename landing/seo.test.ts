@@ -57,6 +57,19 @@ describe('landing SEO', () => {
     expect(visible.length).toBeGreaterThanOrEqual(5)
     expect(faq.mainEntity.map((e) => ({ q: e.name, a: e.acceptedAnswer.text }))).toEqual(visible)
   })
+  it('credits the MediaPipe models in the FAQ, visibly and in the JSON-LD (owner Q14)', () => {
+    const credit = "Face and pose guides use Google's MediaPipe models, running on your device."
+    const faq = jsonLd().find((j) => j['@type'] === 'FAQPage') as {
+      mainEntity: { acceptedAnswer: { text: string } }[]
+    }
+    expect(faq.mainEntity.map((e) => e.acceptedAnswer.text)).toContain(credit)
+    const answers = [
+      ...html.matchAll(
+        /<details[^>]*>\s*<summary[^>]*>[\s\S]*?<\/summary>\s*<p[^>]*>([\s\S]*?)<\/p>/g,
+      ),
+    ].map((m) => squash((m[1] ?? '').replace(/<[^>]+>/g, '')))
+    expect(answers).toContain(credit)
+  })
   it('sitemap and robots use absolute URLs under the project site', () => {
     const sitemap = read('public/sitemap.xml')
     expect(sitemap).toContain(`<loc>${ORIGIN}</loc>`)
