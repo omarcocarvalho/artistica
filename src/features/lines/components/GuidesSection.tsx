@@ -13,7 +13,7 @@ import { useImages } from '../../images'
 import type { ImageDescriptor, ImageId } from '../../../shared/model/image'
 import { MAX_EDGE_DETAIL, MIN_EDGE_DETAIL, type LinesPatch } from '../../../shared/model/lines'
 import { Badge, Button, Callout, Slider, Switch } from '../../../shared/ui'
-import type { AiModel, GuideKind } from '../detect/store'
+import { detectionKey, type AiModel, type GuideKind } from '../detect/store'
 import { useDetailDraft } from './detail-draft'
 import { useDetectionActions, type DetectionActions } from './detection-actions'
 import { DownloadBox } from './DownloadBox'
@@ -43,6 +43,11 @@ interface Spoken {
   readonly memo: 'result' | 'clear' | 'keep'
   /** Not spoken while the guide's last shown status is a result (owner Q19, default). */
   readonly quietAfterResult?: true
+}
+
+/** A guide's spoken status, for the search it shows (its detection key while it's on). */
+interface Said extends Spoken {
+  readonly subject: string | null
 }
 
 function announcement(t: Translate, kind: GuideKind, on: boolean, view: GuideView): Spoken {
@@ -117,7 +122,10 @@ function Guides({
   }
   useAnnounceChanges(
     id,
-    KINDS.map((kind) => announcement(t, kind, on[kind], views[kind])),
+    KINDS.map((kind) => ({
+      ...announcement(t, kind, on[kind], views[kind]),
+      subject: on[kind] ? detectionKey(kind, image) : null,
+    })),
     onAnnounce,
   )
   const detail = useSettledDetail(id, lines.edges.detailPct)
@@ -360,30 +368,34 @@ function GuideGroup({ children }: { readonly children: ReactNode }) {
 
 function useAnnounceChanges(
   imageId: ImageId,
-  spoken: readonly Spoken[],
+  spoken: readonly Said[],
   onAnnounce: (text: string) => void,
 ): void {
   const key = JSON.stringify(spoken)
   const previous = useRef<{
     imageId: ImageId
     texts: readonly (string | null)[]
+    subjects: readonly (string | null)[]
     /** Per guide: its last shown status is a result. */
     result: readonly boolean[]
   } | null>(null)
   useEffect(() => {
-    const now = JSON.parse(key) as Spoken[]
+    const now = JSON.parse(key) as Said[]
     const before = previous.current?.imageId === imageId ? previous.current : null
     previous.current = {
       imageId,
       texts: now.map((s) => s.text),
+      subjects: now.map((s) => s.subject),
       result: now.map(
         (s, i) => s.memo === 'result' || (s.memo === 'keep' && (before?.result[i] ?? false)),
       ),
     }
     if (!before) return
+    // A result for a new search is spoken even when its text matches the last one: a Detail,
+    // crop or rotation that returns to an earlier search shows its kept result at once.
     const changed = now.flatMap((s, i) =>
       s.text !== null &&
-      s.text !== before.texts[i] &&
+      (s.text !== before.texts[i] || (s.memo === 'result' && s.subject !== before.subjects[i])) &&
       !(s.quietAfterResult && before.result[i] === true)
         ? [s.text]
         : [],

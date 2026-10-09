@@ -748,6 +748,23 @@ describe('GuidesSection', () => {
         expect(region.firstChild).not.toBe(before)
       })
 
+      it('also after "No edges found", and across a second Detail change mid-trace', () => {
+        seed(EDGES_ON)
+        renderPanel()
+        const region = liveRegion()
+        setStatus('edges', { state: 'done', found: 0 })
+        const before = region.firstChild
+        setDetail(60)
+        setStatus('edges', { state: 'running' })
+        // A second Detail commits before the first trace ends.
+        setDetail(70)
+        setStatus('edges', { state: 'running' })
+        expect(region.firstChild).toBe(before)
+        expect(region).not.toHaveTextContent('Tracing the outline…')
+        setStatus('edges', { state: 'done', found: 2 })
+        expect(region).toHaveTextContent(/^Outline traced\.$/)
+      })
+
       it('also when the panel opens on a traced outline', () => {
         seed(EDGES_ON)
         setStatus('edges', { state: 'done', found: 3 })
@@ -786,6 +803,42 @@ describe('GuidesSection', () => {
         setStatus('edges', { state: 'failed', reason: 'error' })
         setStatus('edges', { state: 'running' })
         expect(region).toHaveTextContent(/^Tracing the outline…$/)
+      })
+
+      it('a Detail change back to a traced Detail announces its result, with the same text', () => {
+        seed(EDGES_ON)
+        renderPanel()
+        const region = liveRegion()
+        setStatus('edges', { state: 'done', found: 3 })
+        setDetail(60)
+        setStatus('edges', { state: 'running' })
+        setStatus('edges', { state: 'done', found: 3 })
+        const before = region.firstChild
+        expect(region).toHaveTextContent(/^Outline traced\.$/)
+        // The scheduler keeps a finished status per Detail, so the result shows at once.
+        setDetail(50)
+        expect(region).toHaveTextContent(/^Outline traced\.$/)
+        expect(region.firstChild).not.toBe(before)
+      })
+
+      it('a rotation back to a searched rotation announces the kept face result', () => {
+        seed(FACE_ON)
+        renderPanel()
+        const region = liveRegion()
+        setStatus('face', { state: 'done', found: 1 })
+        act(() => {
+          useImages.getState().updateEdits(A, { rotation: 90 })
+        })
+        setStatus('face', { state: 'running' })
+        setStatus('face', { state: 'done', found: 1 })
+        const before = region.firstChild
+        act(() => {
+          useImages.getState().updateEdits(A, { rotation: 0 })
+        })
+        expect(region).toHaveTextContent(
+          /^Face guides on\. Brow, eye, nose and chin lines added\.$/,
+        )
+        expect(region.firstChild).not.toBe(before)
       })
     })
 
