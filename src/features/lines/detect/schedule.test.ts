@@ -212,6 +212,50 @@ describe('downloads', () => {
     expect(useDetections.getState().models.face).toBe('absent')
   })
 
+  it.each([
+    ['the model', ASSETS.face.url, 3_000],
+    ['the shared runtime', ASSETS.runtimeWasm.url, 10_000],
+  ])(
+    'a cached copy of %s that fails verification is not fetched again without a click; the download box shows',
+    async (_, url, bytes) => {
+      const h = fakePorts()
+      const s = start(h.ports)
+      const a = img('a', FACE)
+      s.sync([a])
+      await flush()
+      s.download('face')
+      await flush()
+      expect(status(detectionKey('face', a))).toEqual({ state: 'done', found: 1 })
+      const clicked = h.loader.loadAiAsset.mock.calls.length
+
+      h.corruptUrls.add(url)
+      const b = img('b', FACE)
+      s.sync([a, b])
+      await flush()
+      const later = h.loader.loadAiAsset.mock.calls.slice(clicked)
+      expect(later.length).toBeGreaterThan(0)
+      for (const call of later) expect(call[3]).toEqual({ network: false })
+      expect(h.landmarks).toHaveBeenCalledTimes(1)
+      expect(status(detectionKey('face', b))).toEqual({ state: 'needs-download', bytes })
+      expect(useDetections.getState().models.face).toBe('absent')
+
+      s.download('face')
+      await flush()
+      expect(status(detectionKey('face', b))).toEqual({ state: 'done', found: 1 })
+    },
+  )
+
+  it('every load of a model that was cached before the session passes { network: false }', async () => {
+    const h = fakePorts({ cached: ['face', 'pose'] })
+    const s = start(h.ports)
+    s.sync([img('a', ALL)])
+    await flush()
+    expect(h.loader.loadAiAsset.mock.calls.length).toBeGreaterThan(0)
+    for (const call of h.loader.loadAiAsset.mock.calls) {
+      expect(call.slice(1)).toEqual([undefined, undefined, { network: false }])
+    }
+  })
+
   it('download(model) loads the runtime and the model through the loader with progress, then runs the waiting detections', async () => {
     const h = fakePorts()
     const s = start(h.ports)

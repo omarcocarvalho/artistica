@@ -563,6 +563,96 @@ describe('loadAiAsset', () => {
   })
 })
 
+describe('loadAiAsset without the network (every load but a click, Q10)', () => {
+  const CACHE_ONLY = { network: false } as const
+  const notCached = { name: 'AiNotCachedError' }
+
+  it('a cached asset is read and verified without a fetch', async () => {
+    const { loader, storage, fetch } = setup()
+    storage.ai().seed(ASSETS.face.url, BODIES.face)
+    bytesEqual(await loader.loadAiAsset(ASSETS.face, undefined, undefined, CACHE_ONLY), BODIES.face)
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('a corrupt cached entry rejects with AiNotCachedError, is deleted, and nothing is fetched', async () => {
+    const { loader, storage, fetch } = setup()
+    for (const k of ['runtimeLoader', 'runtimeWasm', 'face'] as const)
+      storage.ai().seed(ASSETS[k].url, BODIES[k])
+    const flipped = BODIES.face.slice()
+    flipped[100] = (flipped[100] ?? 0) ^ 0xff
+    storage.ai().seed(ASSETS.face.url, flipped)
+    expect(await loader.bytesToDownload('face')).toBe(0)
+    await expect(
+      loader.loadAiAsset(ASSETS.face, undefined, undefined, CACHE_ONLY),
+    ).rejects.toMatchObject(notCached)
+    expect(fetch).not.toHaveBeenCalled()
+    expect(storage.ai().entries.has(href(ASSETS.face.url))).toBe(false)
+    expect(await loader.bytesToDownload('face')).toBe(ASSETS.face.bytes)
+    expect(await loader.isCached('face')).toBe(false)
+  })
+
+  it('an unreadable cached entry rejects with AiNotCachedError, is deleted, and nothing is fetched', async () => {
+    for (const broken of ['match', 'body'] as const) {
+      const { loader, storage, fetch } = setup()
+      storage.ai().seed(ASSETS.face.url, BODIES.face)
+      storage.ai().unreadable.set(href(ASSETS.face.url), broken)
+      await expect(
+        loader.loadAiAsset(ASSETS.face, undefined, undefined, CACHE_ONLY),
+      ).rejects.toMatchObject(notCached)
+      expect(fetch).not.toHaveBeenCalled()
+      expect(storage.ai().entries.has(href(ASSETS.face.url))).toBe(false)
+    }
+  })
+
+  it('an evicted or never cached asset rejects with AiNotCachedError without a fetch', async () => {
+    for (const caches of [new FakeCaches(), null]) {
+      const { loader, fetch } = setup({ caches })
+      await expect(
+        loader.loadAiAsset(ASSETS.face, undefined, undefined, CACHE_ONLY),
+      ).rejects.toMatchObject(notCached)
+      expect(fetch).not.toHaveBeenCalled()
+    }
+  })
+
+  it('without Cache Storage, the copy kept in memory after a click is returned (C3 fallback)', async () => {
+    const { loader, fetch } = setup({ caches: null })
+    bytesEqual(await loader.loadAiAsset(ASSETS.face), BODIES.face)
+    bytesEqual(await loader.loadAiAsset(ASSETS.face, undefined, undefined, CACHE_ONLY), BODIES.face)
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('an already aborted signal rejects with its reason', async () => {
+    const { loader, storage } = setup()
+    storage.ai().seed(ASSETS.face.url, BODIES.face)
+    const controller = new AbortController()
+    controller.abort()
+    await expect(
+      loader.loadAiAsset(ASSETS.face, undefined, controller.signal, CACHE_ONLY),
+    ).rejects.toMatchObject({ name: 'AbortError' })
+  })
+
+  it('never joins or fails a download a click started for the same asset', async () => {
+    const { loader, fetch, gate } = setup({ serve: () => ({ gateAt: 1, chunk: 1_000 }) })
+    const clicked = loader.loadAiAsset(ASSETS.face)
+    const g = await gate(0)
+    await expect(
+      loader.loadAiAsset(ASSETS.face, undefined, undefined, CACHE_ONLY),
+    ).rejects.toMatchObject(notCached)
+    g.release()
+    bytesEqual(await clicked, BODIES.face)
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('a click while a cache-only read is under way still downloads', async () => {
+    const { loader, fetch } = setup()
+    const quiet = loader.loadAiAsset(ASSETS.face, undefined, undefined, CACHE_ONLY)
+    const clicked = loader.loadAiAsset(ASSETS.face)
+    await expect(quiet).rejects.toMatchObject(notCached)
+    bytesEqual(await clicked, BODIES.face)
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('only same-origin manifest assets, never photo data', () => {
   it('refuses an asset that is not in the manifest, without a fetch', async () => {
     const { loader, fetch } = setup()
