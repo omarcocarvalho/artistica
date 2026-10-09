@@ -1,7 +1,10 @@
+import { useState } from 'react'
+import { DetectionsProvider } from '../features/lines'
 import { useApplyTheme } from '../shared/theme'
 import { DesktopWorkspace } from './components/DesktopWorkspace'
 import { NoticeRegion } from './components/NoticeRegion'
 import { TopBar } from './components/TopBar'
+import { createAppDetectionActions } from './detections'
 import { AppEffects } from './effects/AppEffects'
 import { useIsDesktop } from './hooks/useIsDesktop'
 import { MobileFlow } from './mobile/MobileFlow'
@@ -19,30 +22,33 @@ export function App() {
   const isDesktop = useIsDesktop()
   const imageCount = useImageCount()
   const { reason: exportDisabledReason } = useExportGate()
+  const [detectionActions] = useState(createAppDetectionActions)
   return (
-    <div className="bg-canvas text-ink flex h-dvh flex-col">
-      <AppEffects />
-      <TopBar
-        onExport={() => {
-          useAppUi.getState().openExport()
-        }}
-        exportDisabledReason={exportDisabledReason}
-      />
-      {isDesktop ? (
-        <DesktopWorkspace
-          imageCount={imageCount}
-          images={<ImagesSlot />}
-          emptyActions={<EmptyActionsSlot />}
-          preview={<PreviewSlot />}
-          previewToolbar={<PreviewToolbar />}
-          settings={<SettingsSlot variant="desktop" />}
+    <DetectionsProvider value={detectionActions}>
+      <div className="bg-canvas text-ink flex h-dvh flex-col">
+        <AppEffects />
+        <TopBar
+          onExport={() => {
+            useAppUi.getState().openExport()
+          }}
+          exportDisabledReason={exportDisabledReason}
         />
-      ) : (
-        <MobileFlow />
-      )}
-      <EditSlot />
-      <ExportSlot />
-      <NoticeRegion />
-    </div>
+        {isDesktop ? (
+          <DesktopWorkspace
+            imageCount={imageCount}
+            images={<ImagesSlot />}
+            emptyActions={<EmptyActionsSlot />}
+            preview={<PreviewSlot />}
+            previewToolbar={<PreviewToolbar />}
+            settings={<SettingsSlot variant="desktop" />}
+          />
+        ) : (
+          <MobileFlow />
+        )}
+        <EditSlot />
+        <ExportSlot />
+        <NoticeRegion />
+      </div>
+    </DetectionsProvider>
   )
 }

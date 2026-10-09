@@ -1,3 +1,4 @@
+import { DetectionEffect } from './DetectionEffect'
 import { LeaveWarningEffect } from './LeaveWarningEffect'
 import { LineDefaultsEffect } from './LineDefaultsEffect'
 import { PasteEffect } from './PasteEffect'
@@ -9,6 +10,7 @@ export function AppEffects() {
     <>
       <StudyDefaultsEffect />
       <LineDefaultsEffect />
+      <DetectionEffect />
       <PipelineEffect />
       <PasteEffect />
       <LeaveWarningEffect />

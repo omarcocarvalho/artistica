@@ -4,6 +4,8 @@ export { buildPageModels } from './page-model/build-page-models'
 export type { StudyGroupOutline } from './types'
 export { readingOrder } from './page-model/build-page-models'
 export { CROP_MARK_WIDTH_PT } from './page-model/crop-marks'
+export { resolveCrop } from './crop'
+export { orientMatrix } from './pixels/tile-plan'
 export type { LineStroke, TileLines } from './types'
 export {
   MAX_GUIDE_CMDS_PER_TILE,

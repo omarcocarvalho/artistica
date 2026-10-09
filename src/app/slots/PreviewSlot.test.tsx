@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initI18n } from '../../shared/i18n'
 import type { ImageId } from '../../shared/model/image'
+import { DEFAULT_LINES, type LineSettings } from '../../shared/model/lines'
 import { stubDesktop } from '../test-utils'
 
 const h = vi.hoisted(() => ({
@@ -10,6 +11,7 @@ const h = vi.hoisted(() => ({
   selectedId: null as string | null,
   studyTiles: [] as unknown[],
   provider: { name: 'app study provider' },
+  lines: undefined as LineSettings | undefined,
 }))
 vi.mock('../study-provider', () => ({
   appStudyProvider: h.provider,
@@ -39,7 +41,9 @@ vi.mock('../../features/render', () => ({
 }))
 vi.mock('../../features/images', () => {
   const state = {
-    images: [{ id: 'a', name: 'anna.jpg', bitmap: {} }],
+    get images() {
+      return [{ id: 'a', name: 'anna.jpg', bitmap: {}, lines: h.lines }]
+    },
     get selectedId() {
       return h.selectedId
     },
@@ -71,6 +75,7 @@ beforeEach(() => {
   h.selectedId = null
   h.select.mockClear()
   h.studyTiles = []
+  h.lines = undefined
   useAppUi.setState({ editingId: null })
   usePages.setState({
     status: 'idle',
@@ -180,6 +185,27 @@ describe('PreviewSlot', () => {
       'anna.jpg, Blurred, 60 × 40 mm, lines: Golden spiral',
       'anna.jpg, Values, 60 × 40 mm',
     ])
+  })
+  it('names the switched-on guides after the composition lines, found or not (M4-R22)', () => {
+    h.lines = { ...DEFAULT_LINES, thirds: true, face: true }
+    act(() => {
+      usePages.setState({
+        pages: [
+          {
+            index: 0,
+            size: { w: 210, h: 297 },
+            safeArea: { x: 5, y: 5, w: 200, h: 287 },
+            cropMarks: [],
+            lines: [{ tileIndex: 0, types: ['thirds'] }],
+            tiles: [{ imageId: 'a', version: 'original', trim: { x: 10, y: 10, w: 60, h: 40 } }],
+          },
+        ] as never,
+      })
+    })
+    render(<PreviewSlot />)
+    expect(screen.getByRole('list', { name: 'Page 1 contents' })).toHaveTextContent(
+      'anna.jpg, 60 × 40 mm, lines: Rule of thirds and Face construction',
+    )
   })
   it('renders no figure or caption of its own (PagePreview owns them)', () => {
     const { container } = render(<PreviewSlot />)

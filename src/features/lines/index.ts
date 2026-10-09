@@ -57,6 +57,7 @@ export type {
 } from './detect/store'
 export { createDetectionScheduler, MAX_EDGE_ENTRIES_PER_HASH } from './detect/schedule'
 export { createLandmarkEngine } from './detect/landmark-engine'
+export { AI_LOADER } from './detect/loader'
 export type {
   AiAsset,
   AiAssets,

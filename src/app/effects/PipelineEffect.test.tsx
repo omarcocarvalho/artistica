@@ -2,8 +2,9 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { tileRenderKey } from '../../features/render/pixels/tile-plan'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useImages } from '../../features/images'
+import { selectImageDescriptors, useImages } from '../../features/images'
 import { computeLayout } from '../../features/layout'
+import { detectionKey, INITIAL_DETECTIONS, useDetections } from '../../features/lines'
 import { useSettings } from '../../features/settings'
 import { initI18n } from '../../shared/i18n'
 import { DEFAULT_EDITS, type ImageId } from '../../shared/model/image'
@@ -181,5 +182,68 @@ describe('PipelineEffect lifetime', () => {
     await new Promise((resolve) => setTimeout(resolve, 200))
     expect(layoutAsync).not.toHaveBeenCalled()
     expect(usePages.getState().pages).toEqual([])
+  })
+})
+
+describe('PipelineEffect with guides (M4)', () => {
+  const edgesOn = () => {
+    act(() => {
+      useImages.getState().updateLines('a' as ImageId, { edges: { on: true } })
+    })
+  }
+  const keyOfA = () => {
+    const img = selectImageDescriptors(useImages.getState())[0]
+    if (!img) throw new Error('no image')
+    return detectionKey('edges', img)
+  }
+  afterEach(() => {
+    useDetections.setState(INITIAL_DETECTIONS, true)
+  })
+
+  it('a detection result reschedules the pipeline with guidesFor: the page model gains the guide, the layout is reused', async () => {
+    layoutAsync.mockImplementation((setup, items) => Promise.resolve(computeLayout(setup, items)))
+    edgesOn()
+    render(<PipelineEffect />)
+    await waitFor(() => {
+      expect(usePages.getState().pages).toHaveLength(1)
+    })
+    expect(usePages.getState().pages[0]?.lines).toEqual([])
+    act(() => {
+      useDetections.setState({
+        results: new Map([
+          [
+            keyOfA(),
+            {
+              polylines: [
+                [
+                  { x: 0.1, y: 0.1 },
+                  { x: 0.9, y: 0.9 },
+                ],
+              ],
+            },
+          ],
+        ]),
+      })
+    })
+    await waitFor(() => {
+      expect(usePages.getState().pages[0]?.lines.map((l) => l.types)).toEqual([['edges']])
+    })
+    expect(layoutAsync).toHaveBeenCalledTimes(1)
+  })
+
+  it('a status change alone (download progress) does not reschedule the pipeline', async () => {
+    layoutAsync.mockImplementation((setup, items) => Promise.resolve(computeLayout(setup, items)))
+    edgesOn()
+    render(<PipelineEffect />)
+    await waitFor(() => {
+      expect(usePages.getState().pages).toHaveLength(1)
+    })
+    const pages = usePages.getState().pages
+    act(() => {
+      useDetections.setState({ status: new Map([[keyOfA(), { state: 'running' }]]) })
+    })
+    expect(usePages.getState().status).toBe('idle')
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    expect(usePages.getState().pages).toBe(pages)
   })
 })

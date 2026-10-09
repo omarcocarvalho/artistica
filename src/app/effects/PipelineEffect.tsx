@@ -2,6 +2,7 @@ import i18n from 'i18next'
 import { useEffect, useRef } from 'react'
 import { selectImageDescriptors, useImages } from '../../features/images'
 import { buildLayoutItems, layoutAsync } from '../../features/layout'
+import { guidesFor, useDetections } from '../../features/lines'
 import { buildPageModels } from '../../features/render'
 import { useSettings } from '../../features/settings'
 import { createPipeline, type Pipeline } from '../pipeline'
@@ -11,6 +12,7 @@ import { useNotices } from '../state/useNotices'
 export function PipelineEffect(): null {
   const pageSetup = useSettings((s) => s.pageSetup)
   const images = useImages(selectImageDescriptors)
+  const results = useDetections((s) => s.results)
   const pipelineRef = useRef<Pipeline | null>(null)
 
   useEffect(() => {
@@ -38,8 +40,9 @@ export function PipelineEffect(): null {
   }, [])
 
   useEffect(() => {
-    pipelineRef.current?.schedule(pageSetup, images)
-  }, [pageSetup, images])
+    const detections = useDetections.getState()
+    pipelineRef.current?.schedule(pageSetup, images, (img) => guidesFor(detections, img))
+  }, [pageSetup, images, results])
 
   return null
 }

@@ -1,8 +1,15 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { useImages } from '../../features/images'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { selectImageDescriptors, useImages } from '../../features/images'
 import { makeLoadedImage } from '../../features/images/test-utils'
+import {
+  detectionKey,
+  DetectionsProvider,
+  INITIAL_DETECTIONS,
+  useDetections,
+  type DetectionActions,
+} from '../../features/lines'
 import { initI18n } from '../../shared/i18n'
 import type { ImageId } from '../../shared/model/image'
 import { StudiesSlot } from './StudiesSlot'
@@ -13,8 +20,12 @@ const linesHeading = () => screen.getByRole('heading', { level: 3, name: 'Lines'
 /** The "N on" badge beside the Lines heading, or null when no line type is on. */
 const linesCount = () =>
   within(linesHeading().parentElement ?? document.body).queryByText(/^\d+ on$/)
+const ACTIONS: DetectionActions = { download: vi.fn(), retry: vi.fn(), landmarksSupported: true }
 beforeAll(async () => {
   await initI18n()
+})
+afterEach(() => {
+  useDetections.setState(INITIAL_DETECTIONS, true)
 })
 beforeEach(() => {
   useImages.setState({
@@ -170,6 +181,55 @@ describe('StudiesSlot', () => {
           .getAttribute('aria-describedby') ?? '',
       ),
     )
+  })
+  it('phone: the "N on" badge counts guides', () => {
+    render(
+      <DetectionsProvider value={ACTIONS}>
+        <StudiesSlot variant="phone" />
+      </DetectionsProvider>,
+    )
+    act(() => {
+      useImages.getState().updateLines('a' as ImageId, { thirds: true })
+    })
+    expect(linesCount()).toHaveTextContent('1 on')
+    act(() => {
+      useImages.getState().updateLines('a' as ImageId, { face: true, edges: { on: true } })
+    })
+    expect(linesCount()).toHaveTextContent('3 on')
+    act(() => {
+      useImages.getState().updateLines('a' as ImageId, { thirds: false, edges: { on: false } })
+    })
+    expect(linesCount()).toHaveTextContent('1 on')
+  })
+  it('phone with the Guides section: one live region for the wait, and a guide status is announced once', () => {
+    const { container } = render(
+      <DetectionsProvider value={ACTIONS}>
+        <StudiesSlot variant="phone" />
+      </DetectionsProvider>,
+    )
+    expect(
+      within(linesSection()).getByRole('heading', { level: 4, name: 'Guides from the photo' }),
+    ).toBeVisible()
+    const regionsWith = (text: string) =>
+      Array.from(container.querySelectorAll('[aria-live]')).filter((r) =>
+        r.textContent.includes(text),
+      )
+    act(() => {
+      useImages.setState({ importing: 1 })
+    })
+    expect(regionsWith('Waiting for photos to finish importing…')).toHaveLength(1)
+    act(() => {
+      useImages.setState({ importing: 0 })
+      useImages.getState().updateLines('a' as ImageId, { edges: { on: true } })
+    })
+    const img = selectImageDescriptors(useImages.getState()).find((i) => i.id === 'a')
+    if (!img) throw new Error('no image')
+    act(() => {
+      useDetections.setState({
+        status: new Map([[detectionKey('edges', img), { state: 'running' }]]),
+      })
+    })
+    expect(regionsWith('Tracing the outline…')).toHaveLength(1)
   })
   it('desktop: no Lines section (the Lines tab holds the panel)', () => {
     render(<StudiesSlot variant="desktop" />)

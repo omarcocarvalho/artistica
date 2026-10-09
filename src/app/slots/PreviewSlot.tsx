@@ -26,6 +26,7 @@ export function PreviewSlot() {
   const showGuides = useAppUi((s) => s.showGuides)
   const isDesktop = useIsDesktop()
   const names = useMemo(() => new Map(images.map((i) => [i.id, i.name])), [images])
+  const linesOf = useMemo(() => new Map(images.map((i) => [i.id, i.lines])), [images])
   const getName = (id: ImageId) => names.get(id) ?? t('app:preview.unnamedImage')
   const paperLabel = paper === 'Custom' ? t('app:preview.customPaper') : paper
   const orientation = layout ? t(`app:preview.orientation.${layout.orientation}`) : ''
@@ -88,7 +89,7 @@ export function PreviewSlot() {
             })}
           />
           <ul aria-label={t('app:preview.pageItems', { current: i + 1 })} className="sr-only">
-            {describePage(model, names).map((d, k) => (
+            {describePage(model, names, linesOf).map((d, k) => (
               <li key={`${d.imageId}-${String(k)}`}>{describeTile(d)}</li>
             ))}
           </ul>
