@@ -748,6 +748,9 @@ async function guideColourShare(tile: Locator): Promise<number> {
   )
 }
 
+const TRACING = 'Tracing the outline…'
+const TRACED = 'Outline traced.'
+
 type GuidePhoto = 'portrait' | 'figure' | 'grey'
 
 /**
@@ -966,16 +969,22 @@ test('G-P5 phone: the Guides controls work from the keyboard, and focus stays on
   await app.goToStep('Studies')
   const guides = new GuidesSection(page, app.linesSection)
   await app.lineSwitch('Centre lines').focus()
+  await watchTexts(page, [TRACING])
+  const tracings = async () => (await textLog(page)).filter((e) => e.text === TRACING).length
 
   await page.keyboard.press(tab)
   await expect(guides.switch('Edge outline')).toBeFocused()
   await page.keyboard.press('Space')
   await expect(guides.switch('Edge outline')).toHaveAttribute('aria-checked', 'true')
+  await expect(guides.status('Edge outline', TRACED)).toBeVisible({ timeout: 30_000 })
+  expect(await tracings()).toBe(1)
   await page.keyboard.press(tab)
   await expect(guides.detail).toBeFocused()
   await page.keyboard.press('ArrowRight')
   await expect(guides.detail).toHaveAttribute('aria-valuetext', '51%')
-  await expect(guides.status('Edge outline', 'Outline traced.')).toBeVisible({ timeout: 30_000 })
+  // The new Detail traces the outline again (after the 80 ms settle).
+  await expect.poll(tracings, { timeout: 30_000 }).toBe(2)
+  await expect(guides.status('Edge outline', TRACED)).toBeVisible({ timeout: 30_000 })
 
   await page.keyboard.press(tab)
   await expect(guides.switch('Face construction')).toBeFocused()
@@ -1013,8 +1022,6 @@ test('G-P5 phone: the Guides controls work from the keyboard, and focus stays on
   await expect(guides.switch('Body pose')).toBeFocused()
 })
 
-const TRACING = 'Tracing the outline…'
-const TRACED = 'Outline traced.'
 const FINDING_FACES = 'Finding faces…'
 const FACE_FOUND = 'Face guides on. Brow, eye, nose and chin lines added.'
 const NO_FACE = 'No face found in this image.'
