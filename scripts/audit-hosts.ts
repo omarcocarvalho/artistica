@@ -32,6 +32,7 @@ export const ALLOWED_LINKS: readonly string[] = [
   'kripken.github.io/emscripten-site/docs/api_reference/preamble.js.html',
   'pubs.opengroup.org/onlinepubs/009695399/functions/tzset.html',
   'server.com:4324:12',
+  'wasm/test_return_address.wasm-0012cc2a:wasm-function[26]:0x9f3',
   'unicode.org/faq/utf_bom.html',
   'www.w3.org/TR/2013/WD-cssom-view-20131217/',
   'bugzil.la/1328882',
@@ -72,12 +73,46 @@ const ALLOWED_NAMES: ReadonlySet<string> = new Set([
 /** Documents shipped beside the models; the app never loads them. */
 const UNSCANNED = new Set(['.md', '.txt'])
 
-const URL_PATTERN = /\b(?:https?|wss?):\/\/([A-Za-z0-9][A-Za-z0-9.-]*(?::\d+)?)([^\s"'`<>()\\\0]*)/g
+const PATH = String.raw`([^\s"'${'`'}<>()\\\0]*)`
 
-export function remoteLinks(text: string): string[] {
-  return [...text.matchAll(URL_PATTERN)].map(
+/**
+ * `scheme://host` with any scheme in any case. After a special scheme browsers read `\` as `/`
+ * and take the host after any number of separators, so `wss:/host` is another host even from
+ * this https page.
+ */
+const SCHEME_LINK = new RegExp(
+  String.raw`\b(?:[a-z][a-z0-9+.-]*:\/\/|(?:https?|wss?|ftp):[/\\]+)([a-z0-9][a-z0-9.-]*(?::\d+)?)` +
+    PATH,
+  'gi',
+)
+
+/**
+ * A protocol-relative `//host.tld` or `//host:port` at the start of a string, a CSS `url(` or an
+ * unquoted HTML attribute value, after optional whitespace (URL parsing strips it).
+ */
+const RELATIVE_LINK = new RegExp(
+  String.raw`(?<=["'${'`'}(=]\s*)//([a-z0-9-]+(?:\.[a-z0-9-]+)+(?::\d+)?|[a-z0-9-]+:\d+)` + PATH,
+  'gi',
+)
+
+/** JSON and JS strings may escape `/` as `\/`. */
+function unescapeSlashes(text: string): string {
+  return text.replaceAll('\\/', '/')
+}
+
+function linksIn(text: string, pattern: RegExp): string[] {
+  return [...text.matchAll(pattern)].map(
     (m) => `${m[1].toLowerCase()}${m[2].replace(/[.,;]+$/, '')}`,
   )
+}
+
+export function remoteLinks(text: string): string[] {
+  const plain = unescapeSlashes(text)
+  return [...linksIn(plain, SCHEME_LINK), ...linksIn(plain, RELATIVE_LINK)]
+}
+
+function withoutLinks(text: string): string {
+  return unescapeSlashes(text).replace(SCHEME_LINK, ' ').replace(RELATIVE_LINK, ' ')
 }
 
 function isAllowed(link: string, allowed: readonly string[]): boolean {
@@ -98,7 +133,7 @@ function forbiddenNames(text: string): string[] {
 /** The links in `text` that are not allowed, then every forbidden name outside a link. */
 export function auditText(text: string, allowed: readonly string[] = ALLOWED_LINKS): string[] {
   const bad = remoteLinks(text).filter((link) => !isAllowed(link, allowed))
-  const forbidden = forbiddenNames(text.replace(URL_PATTERN, ' '))
+  const forbidden = forbiddenNames(withoutLinks(text))
   return [...new Set([...bad, ...forbidden])]
 }
 
