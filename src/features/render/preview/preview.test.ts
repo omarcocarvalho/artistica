@@ -2,7 +2,16 @@ import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_LINES, patchLines } from '../../../shared/model/lines'
 import { centreDashMm } from '../../lines/geometry'
 import { tileLinesFor } from '../page-model/tile-lines'
-import { drawTile, id, pageModel } from '../test-support/fixtures'
+import {
+  compositionLinesFor,
+  descriptor,
+  drawTile,
+  EVERY_GUIDE,
+  guidesFixture,
+  id,
+  pageModel,
+  PORTRAIT_PX,
+} from '../test-support/fixtures'
 import type { PageModel, TileLines } from '../types'
 import { DEFAULT_PAGE_DRAW_COLORS, drawPage, type PageCtx } from './draw-page'
 import { previewDpi, previewScale, tileHitAreas } from './preview-geometry'
@@ -394,7 +403,7 @@ describe('drawPage composition lines', () => {
     style: { colour: '#1f3fbf', widthMm: 1.5, opacityPct: 60 },
   })
   const linesOf = (settings = every, rect = trim, turned = false, i = 0): TileLines => {
-    const tl = tileLinesFor(settings, rect, turned, i)
+    const tl = compositionLinesFor(settings, rect, turned, i)
     if (!tl) throw new Error('fixture draws no lines')
     return tl
   }
@@ -603,6 +612,93 @@ describe('drawPage composition lines', () => {
     expect(calls.indexOf('save')).toBeGreaterThan(
       calls.findLastIndex((c) => c.startsWith('fillRect')),
     )
+  })
+})
+
+describe('drawPage guides (M4-R11, R12)', () => {
+  const k = 2.5
+  const scale = previewScale({ w: 210, h: 297 }, 210 * k, 1)
+  const trim = { x: 20, y: 30, w: 60, h: 90 }
+  const tl = tileLinesFor(
+    {
+      ...descriptor('a', PORTRAIT_PX.w, PORTRAIT_PX.h),
+      lines: patchLines(DEFAULT_LINES, { ...EVERY_GUIDE, thirds: true, centre: true }),
+    },
+    guidesFixture(),
+    trim,
+    false,
+    0,
+  )
+  if (!tl) throw new Error('fixture draws no lines')
+  const page = pageModel([drawTile({ trim, bleedMm: 3 })], {
+    lines: [tl],
+    cropMarks: [{ x1: 16, y1: 30, x2: 12, y2: 30 }],
+  })
+
+  /** Path calls with their exact arguments, strokes and images in order. */
+  function exactCtx() {
+    const rec = recordingCtx()
+    const calls: (string | number)[][] = []
+    const ctx: PageCtx = {
+      ...rec.ctx,
+      moveTo: (...a) => calls.push(['M', ...a]),
+      lineTo: (...a) => calls.push(['L', ...a]),
+      bezierCurveTo: (...a) => calls.push(['C', ...a]),
+      rect: (...a) => calls.push(['rect', ...a]),
+      stroke: () => calls.push(['stroke']),
+      drawImage: () => calls.push(['drawImage']),
+    }
+    return { ctx, calls }
+  }
+
+  it('the recorded calls replay the guide commands exactly, after the tile and before the crop marks', () => {
+    const { ctx, calls } = exactCtx()
+    drawPage(ctx, page, scale, {
+      showGuides: false,
+      colors: DEFAULT_PAGE_DRAW_COLORS,
+      tileImage: () => ({}) as CanvasImageSource,
+    })
+    const want = tl.strokes.flatMap((s) => [
+      ...s.cmds.map((c) =>
+        c.op === 'C'
+          ? ['C', c.x1 * k, c.y1 * k, c.x2 * k, c.y2 * k, c.x * k, c.y * k]
+          : [c.op, c.x * k, c.y * k],
+      ),
+      ['stroke'],
+    ])
+    expect(tl.strokes).toHaveLength(2)
+    expect(calls).toEqual([
+      ['drawImage'],
+      ['rect', trim.x * k, trim.y * k, trim.w * k, trim.h * k],
+      ...want,
+      ['M', 16 * k, 30 * k],
+      ['L', 12 * k, 30 * k],
+      ['stroke'],
+    ])
+  })
+
+  it('draws no image and creates no canvas for guides', () => {
+    const createElement = vi.fn()
+    const offscreen = vi.fn()
+    vi.stubGlobal('document', { createElement })
+    vi.stubGlobal('OffscreenCanvas', offscreen)
+    try {
+      const images = (p: PageModel) => {
+        const { ctx, calls } = exactCtx()
+        drawPage(ctx, p, scale, {
+          showGuides: true,
+          colors: DEFAULT_PAGE_DRAW_COLORS,
+          tileImage: () => ({}) as CanvasImageSource,
+        })
+        return calls.filter((c) => c[0] === 'drawImage').length
+      }
+      expect(images(page)).toBe(1)
+      expect(images({ ...page, lines: [] })).toBe(1)
+      expect(createElement).not.toHaveBeenCalled()
+      expect(offscreen).not.toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })
 

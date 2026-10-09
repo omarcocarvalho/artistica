@@ -1,14 +1,32 @@
 import { createHash } from 'node:crypto'
-import { PDFDict, PDFDocument, PDFName, PDFNumber, PDFRawStream } from '@pdfme/pdf-lib'
+import {
+  PDFArray,
+  PDFDict,
+  PDFDocument,
+  PDFName,
+  PDFNumber,
+  PDFRawStream,
+  PDFRef,
+} from '@pdfme/pdf-lib'
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_LINES, patchLines, type LinesPatch } from '../../../shared/model/lines'
 import { PT_PER_MM } from '../../../shared/model/units'
 import { centreDashMm } from '../../lines/geometry'
+import { type ImageGuides } from '../../lines/guides/types'
 import type { PathCmd } from '../../lines/types'
 import type { RectMm } from '../../layout/types'
 import { tileLinesFor } from '../page-model/tile-lines'
 import { tileRenderKey } from '../pixels/tile-plan'
-import { drawTile, pageModel } from '../test-support/fixtures'
+import {
+  compositionLinesFor,
+  descriptor,
+  drawTile,
+  EVERY_GUIDE,
+  guidesFixture,
+  pageModel,
+  PORTRAIT_PX,
+  worstCaseGuides,
+} from '../test-support/fixtures'
 import { TINY_JPEG } from '../test-support/image-bytes'
 import type { EncodedTileImage, PageModel, TileLines } from '../types'
 import { composePdf, toPdfRect } from './compose'
@@ -36,7 +54,7 @@ function at<T>(xs: readonly T[] | undefined, i: number): T {
 }
 
 function linesFor(patch: LinesPatch, trim: RectMm, tileIndex = 0, turned = false): TileLines {
-  const tl = tileLinesFor(patchLines(DEFAULT_LINES, patch), trim, turned, tileIndex)
+  const tl = compositionLinesFor(patchLines(DEFAULT_LINES, patch), trim, turned, tileIndex)
   if (!tl) throw new Error('no lines')
   return tl
 }
@@ -357,5 +375,90 @@ describe('composePdf lines (M3-R6–R8)', () => {
     const a = await composePdf(pages, encodedFor(pages))
     const b = await composePdf(pages, encodedFor(pages))
     expect(sha256(a)).toBe(sha256(b))
+  })
+})
+
+describe('composePdf guides (M4-R11, R12, R16)', () => {
+  const trim = { x: 20, y: 30, w: 60, h: 90 }
+  const portrait = (patch: LinesPatch) => ({
+    ...descriptor('a', PORTRAIT_PX.w, PORTRAIT_PX.h),
+    lines: patchLines(DEFAULT_LINES, patch),
+  })
+  const guided = (patch: LinesPatch, guides: ImageGuides, t: RectMm = trim, i = 0): TileLines => {
+    const tl = tileLinesFor(portrait(patch), guides, t, false, i)
+    if (!tl) throw new Error('no lines')
+    return tl
+  }
+
+  /** Stored (flate) length of each page's content stream. */
+  async function contentBytes(bytes: Uint8Array): Promise<number[]> {
+    const doc = await PDFDocument.load(bytes, { updateMetadata: false })
+    return doc.getPages().map((p) => {
+      const contents = p.node.Contents()
+      const streams = contents instanceof PDFArray ? contents.asArray() : [contents]
+      return streams.reduce((n, ref) => {
+        const s = ref instanceof PDFRef ? doc.context.lookup(ref) : ref
+        if (!(s instanceof PDFRawStream)) throw new Error('not a raw stream')
+        expect(s.dict.get(PDFName.of('Filter'))).toBe(PDFName.of('FlateDecode'))
+        return n + s.contents.length
+      }, 0)
+    })
+  }
+
+  it('a tile with guides is still one solid stroke and one dashed stroke', async () => {
+    const tl = guided({ ...EVERY_GUIDE, thirds: true, centre: true }, guidesFixture())
+    expect(tl.types).toEqual(['thirds', 'centre', 'edges', 'face', 'pose'])
+    const pages = [pageModel([drawTile({ trim })], { lines: [tl] })]
+    const strokes = await strokesOfPage(pages)
+    expect(strokes.map((s) => s.dashPt.length > 0)).toEqual([false, true])
+  })
+
+  it('draws the guides after every image and before every crop mark, clipped to the trim', async () => {
+    const tl = guided(EVERY_GUIDE, guidesFixture())
+    const pages = [
+      pageModel([drawTile({ trim, bleedMm: 3 })], {
+        lines: [tl],
+        cropMarks: [{ x1: 19, y1: 30, x2: 15, y2: 30 }],
+      }),
+    ]
+    const page = at((await inspectPdf(await composePdf(pages, encodedFor(pages)))).pages, 0)
+    expect(page.content.lastIndexOf(' Do')).toBeLessThan(page.content.indexOf(' re'))
+    expect(page.strokes.map(isRegistrationStroke)).toEqual([false, true])
+    const r = toPdfRect(trim, 297)
+    expect(at(page.strokes, 0).clip).toEqual({ x: r.x, y: r.y, w: r.width, h: r.height })
+  })
+
+  it('round-trips the guide geometry within 0.001 mm: joints as stroked circles, no fill', async () => {
+    const tl = guided({ ...EVERY_GUIDE, style: { widthMm: 0.8 } }, guidesFixture())
+    const pages = [pageModel([drawTile({ trim })], { lines: [tl] })]
+    const report = await inspectPdf(await composePdf(pages, encodedFor(pages)))
+    const strokes = at(report.pages, 0).strokes
+    expect(strokes).toHaveLength(1)
+    expect(at(strokes, 0).widthPt).toBe(pt(0.8))
+    expectCmdsClose(
+      at(strokes, 0).path.map((op) => toMm(op, 297)),
+      at(tl.strokes, 0).cmds,
+    )
+    expect(at(report.pages, 0).content).not.toMatch(/(^|\s)(f|f\*|B|B\*|b|b\*)(\s|$)/)
+  })
+
+  it('embeds byte-identical images with guides on and off', async () => {
+    const off = [pageModel([drawTile({ trim })])]
+    const on = [{ ...at(off, 0), lines: [guided(EVERY_GUIDE, guidesFixture())] }]
+    expect(await imageStreams(await composePdf(on, encodedFor(on)))).toEqual(
+      await imageStreams(await composePdf(off, encodedFor(off))),
+    )
+  })
+
+  it('the PDF content of a tile with 4000 edge vertices is ≤ 120 KB after flate (M4-R16)', async () => {
+    const tl = guided(
+      { ...EVERY_GUIDE, ...EVERY_TYPE, style: { widthMm: 0.35 } },
+      worstCaseGuides(),
+    )
+    expect(tl.strokes.reduce((n, s) => n + s.cmds.length, 0)).toBeGreaterThan(4000)
+    const pages = [pageModel([drawTile({ trim })], { lines: [tl] })]
+    const [bytes = Infinity] = await contentBytes(await composePdf(pages, encodedFor(pages)))
+    console.info(`[pdf size] worst-case guide tile: ${String(bytes)} B of content after flate`)
+    expect(bytes).toBeLessThanOrEqual(120 * 1024)
   })
 })

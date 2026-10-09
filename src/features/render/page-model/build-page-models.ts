@@ -4,6 +4,7 @@ import type { SizeMm } from '../../../shared/model/paper'
 import { tileStudyFor } from '../../../shared/model/study'
 import type { Mm } from '../../../shared/model/units'
 import type { LayoutResult, Placement, RectMm } from '../../layout/types'
+import { NO_GUIDES, type ImageGuides } from '../../lines/guides/types'
 import { resolveCrop } from '../crop'
 import type { DrawTile, PageModel, StudyGroupOutline, TileLines } from '../types'
 import { cropMarksForTiles } from './crop-marks'
@@ -79,6 +80,7 @@ export function buildPageModels(
   layout: LayoutResult,
   setup: PageSetup,
   images: readonly ImageDescriptor[],
+  guides: (img: ImageDescriptor) => ImageGuides = () => NO_GUIDES,
 ): PageModel[] {
   const byId = new Map<ImageId, ImageDescriptor>(images.map((img) => [img.id, img]))
   const bleedMm = setup.bleed.enabled ? setup.bleed.mm : 0
@@ -92,8 +94,9 @@ export function buildPageModels(
       const img = byId.get(placement.imageId)
       if (!img) continue
       const drawn = drawTilesFor(img, placement, bleedMm)
+      const found = drawn.length > 0 ? guides(img) : NO_GUIDES
       for (const tile of drawn) {
-        const tl = tileLinesFor(img.lines, tile.trim, placement.turned, tiles.length)
+        const tl = tileLinesFor(img, found, tile.trim, placement.turned, tiles.length)
         if (tl) lines.push(tl)
         tiles.push(tile)
       }

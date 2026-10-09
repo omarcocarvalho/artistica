@@ -1,7 +1,11 @@
 import { isAbortError, type LayoutItemInput, type LayoutResult } from '../features/layout'
+import { NO_GUIDES, type ImageGuides } from '../features/lines'
 import type { PageModel } from '../features/render'
 import type { ImageDescriptor } from '../shared/model/image'
 import type { PageSetup } from '../shared/model/page-setup'
+
+export type GuidesOf = (img: ImageDescriptor) => ImageGuides
+const noGuides: GuidesOf = () => NO_GUIDES
 
 export interface PipelineDeps {
   delayMs: number
@@ -11,6 +15,7 @@ export interface PipelineDeps {
     layout: LayoutResult,
     setup: PageSetup,
     images: readonly ImageDescriptor[],
+    guides: GuidesOf,
   ) => PageModel[]
 }
 export interface PipelineSink {
@@ -21,7 +26,8 @@ export interface PipelineSink {
   failed: (error: unknown) => void
 }
 export interface Pipeline {
-  schedule: (setup: PageSetup, images: readonly ImageDescriptor[]) => void
+  /** The layout memo ignores `guides`: a detection result only rebuilds the page models. */
+  schedule: (setup: PageSetup, images: readonly ImageDescriptor[], guides?: GuidesOf) => void
   dispose: () => void
 }
 
@@ -34,6 +40,7 @@ export function createPipeline(deps: PipelineDeps, sink: PipelineSink): Pipeline
     mine: number,
     setup: PageSetup,
     images: readonly ImageDescriptor[],
+    guides: GuidesOf,
   ): Promise<void> {
     const empty = images.length === 0
     try {
@@ -44,7 +51,7 @@ export function createPipeline(deps: PipelineDeps, sink: PipelineSink): Pipeline
       if (mine !== seq) return
       memo = { key, layout }
       if (empty) sink.cleared(layout)
-      else sink.done(layout, deps.buildModels(layout, setup, images))
+      else sink.done(layout, deps.buildModels(layout, setup, images, guides))
     } catch (error) {
       if (mine !== seq || isAbortError(error)) return
       if (empty) sink.cleared(null)
@@ -53,12 +60,12 @@ export function createPipeline(deps: PipelineDeps, sink: PipelineSink): Pipeline
   }
 
   return {
-    schedule(setup, images) {
+    schedule(setup, images, guides = noGuides) {
       clearTimeout(timer)
       const mine = ++seq
       sink.computing()
       timer = setTimeout(() => {
-        void run(mine, setup, images)
+        void run(mine, setup, images, guides)
       }, deps.delayMs)
     },
     dispose() {
