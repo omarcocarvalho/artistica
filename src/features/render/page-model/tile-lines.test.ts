@@ -11,12 +11,13 @@ import {
   sanitizeLines,
 } from '../../../shared/model/lines'
 import { compositionPaths } from '../../lines/composition'
+import { MAX_EDGE_VERTICES } from '../../lines/edges/outline'
 import { centreDashMm } from '../../lines/geometry'
 import { circlePath } from '../../lines/guides/curves'
 import { edgePaths } from '../../lines/guides/edge-paths'
-import { facePaths } from '../../lines/guides/face'
+import { facePaths, MAX_CMDS_PER_FACE, MAX_FACES } from '../../lines/guides/face'
 import { applyAffine, sourceToFrame } from '../../lines/guides/map'
-import { poseFigure } from '../../lines/guides/pose'
+import { MAX_CMDS_PER_POSE, MAX_POSES, poseFigure } from '../../lines/guides/pose'
 import { NO_GUIDES, type ImageGuides, type PoseLandmarks } from '../../lines/guides/types'
 import { frameOf, frameToPage } from '../../lines/place'
 import type { PathCmd } from '../../lines/types'
@@ -469,6 +470,15 @@ describe('tileLinesFor with guides (M4-R11, R12, R17)', () => {
         last: rounded(pose.at(-1)),
       },
     }).toMatchSnapshot()
+  })
+
+  it('the per-image caps of every guide add up to at most MAX_GUIDE_CMDS_PER_TILE', () => {
+    expect(
+      MAX_LINE_CMDS_PER_TILE +
+        MAX_EDGE_VERTICES +
+        MAX_FACES * MAX_CMDS_PER_FACE +
+        MAX_POSES * MAX_CMDS_PER_POSE,
+    ).toBeLessThanOrEqual(MAX_GUIDE_CMDS_PER_TILE)
   })
 
   it('never more than MAX_GUIDE_CMDS_PER_TILE commands: the worst case and any guides (property)', () => {
