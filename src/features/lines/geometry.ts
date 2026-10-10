@@ -65,6 +65,6 @@ export function centreDashMm(widthMm: Mm, tileShortMm: Mm): readonly [Mm, Mm] {
   const dash = Math.max(1.5, 6 * widthMm)
   const gap = Math.max(1, 4 * widthMm)
   const period = Math.max(tileShortMm / 3, 2.5, 2.5 * widthMm)
-  if (dash + gap <= period) return [dash, gap]
+  if (dash + gap <= period * (1 + 1e-12)) return [dash, gap]
   return [(6 * period) / 10, (4 * period) / 10]
 }

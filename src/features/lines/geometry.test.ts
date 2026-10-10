@@ -222,7 +222,19 @@ describe('centre lines', () => {
   })
 
   it('is M3’s dash, byte for byte, when the short side is exactly 30 × the width', () => {
-    for (const w of [0.267, 0.273, 0.284]) expect(centreDashMm(w, 30 * w)).toEqual(m3(w))
+    for (const w of [0.267, 0.273, 0.284, 0.33854076898706387, 0.4217086561216765])
+      expect(centreDashMm(w, 30 * w)).toEqual(m3(w))
+    fc.assert(
+      fc.property(widths, (w) => {
+        expect(centreDashMm(w, 30 * w)).toEqual(m3(w))
+      }),
+    )
+  })
+
+  it('scales the dash on a tile a hair under 30 × the width', () => {
+    const [dash, gap] = centreDashMm(2, 60 * (1 - 1e-9))
+    expect(dash + gap).toBeLessThan(20)
+    expect(dash + gap).toBeCloseTo(20, 6)
   })
 
   it('is M3’s dash, exactly, on every tile whose short side is at least 30 × the width (property)', () => {
