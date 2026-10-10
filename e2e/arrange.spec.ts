@@ -1153,6 +1153,86 @@ test.describe('manual layout, scrolling and warnings while arranging (desktop)',
   })
 })
 
+interface HitEl {
+  readonly style: { pointerEvents: string }
+  contains(other: HitEl | null): boolean
+}
+
+/** What the page shows at (x, y), with the ghost hit-testable for the moment: is it the ghost? */
+async function ghostShownAt(page: Page, x: number, y: number): Promise<boolean> {
+  return page.evaluate(
+    ([px, py]) => {
+      const g = globalThis as unknown as {
+        document: {
+          querySelector(s: string): HitEl | null
+          elementFromPoint(x: number, y: number): HitEl | null
+        }
+      }
+      const ghost = g.document.querySelector('[data-testid="arrange-ghost"]')
+      if (!ghost) return false
+      ghost.style.pointerEvents = 'auto'
+      const hit = g.document.elementFromPoint(px, py)
+      ghost.style.pointerEvents = ''
+      return ghost.contains(hit)
+    },
+    [x, y] as const,
+  )
+}
+
+test.describe('manual layout, the drag ghost past the preview (desktop)', () => {
+  runOnly('chromium', 'firefox', 'webkit')
+  test.use({ viewport: { width: 1280, height: 900 } })
+
+  test("B-D10 a photo dragged past the preview's left edge shows its whole ghost over the photo list, refused and announced on release", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000)
+    const { app, arrange } = await start(page)
+    await load(app, await shapes(page, 3))
+    await arrange.enter()
+    await watchAnnouncements(arrange.liveRegion)
+    const shown = await arrange.blockBoxes()
+    const first = shown.find((b) => b.page === 0)
+    if (!first) throw new Error('no photo on page 1')
+    await arrange.block(first.name).scrollIntoViewIfNeeded()
+    const scroller = await page.locator('main#main').boundingBox()
+    if (!scroller) throw new Error('no preview scroller')
+    const a = await arrange.sheetBox(0)
+    const half = (first.rect.w / 2) * a.ppm
+    const x0 = a.x + first.rect.x * a.ppm + half
+    const y0 = a.y + (first.rect.y + first.rect.h / 2) * a.ppm
+    await page.mouse.move(x0, y0)
+    await page.mouse.down()
+    await page.mouse.move(scroller.x - 80 + half, y0, { steps: 12 })
+    await expect(arrange.ghost).toHaveClass(/is-invalid/)
+    await expect(arrange.ghost).toContainText("Can't place here")
+
+    const g = await arrange.ghost.boundingBox()
+    if (!g) throw new Error('no ghost')
+    const viewport = page.viewportSize()
+    if (!viewport) throw new Error('no viewport')
+    expect(g.x).toBeLessThan(scroller.x - 40)
+    expect(g.x).toBeGreaterThanOrEqual(0)
+    expect(g.y).toBeGreaterThanOrEqual(0)
+    expect(g.x + g.width).toBeLessThanOrEqual(viewport.width)
+    expect(g.y + g.height).toBeLessThanOrEqual(viewport.height)
+    expect(await page.locator('main#main [data-testid="arrange-ghost"]').count()).toBe(0)
+    expect(await ghostShownAt(page, g.x + 2, g.y + g.height - 2)).toBe(true)
+    expect(await ghostShownAt(page, g.x + 2, g.y + 2)).toBe(true)
+    await expect(arrange.ghost).toHaveCSS('pointer-events', 'none')
+    await expect(arrange.ghost).toHaveAttribute('aria-hidden', 'true')
+
+    await page.mouse.up()
+    await expect(arrange.ghost).toHaveCount(0)
+    await arrange.expectAnnouncement("Can't place it there: it would go past the margin.")
+    expect(await announcements(page)).toEqual([
+      "Can't place it there: it would go past the margin.",
+    ])
+    expect(await arrange.blockBoxes()).toEqual(shown)
+    await expect(arrange.undo).toBeDisabled()
+  })
+})
+
 test.describe('manual layout timing (chromium)', () => {
   runOnly('chromium')
   test.use({ viewport: { width: 1280, height: 900 } })
