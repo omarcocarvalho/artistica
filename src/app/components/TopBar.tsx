@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Button, Icon, Tooltip, VisuallyHidden } from '../../shared/ui'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import { Logo } from './Logo'
+import { PresetsButton } from './PresetsButton'
 import { ThemeToggle } from './ThemeToggle'
 
 export interface TopBarProps {
@@ -34,6 +35,7 @@ export function TopBar({ onExport, exportDisabledReason }: TopBarProps) {
       </span>
       <span className="min-w-0 flex-1" />
       <ThemeToggle />
+      <PresetsButton />
       {showExport && (
         <>
           <Tooltip content={exportDisabledReason ?? ''} disabled={!disabled}>

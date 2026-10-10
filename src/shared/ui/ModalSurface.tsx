@@ -10,11 +10,14 @@ export interface ModalSurfaceProps {
   description?: string
   /** Accessible name of the close (X) button, e.g. "Close". */
   closeLabel: string
-  children: ReactNode
+  /** The body; leave out for a title-and-buttons confirmation. */
+  children?: ReactNode
   /** Buttons for the footer bar. */
   footer?: ReactNode
   /** Where focus goes on close when the element that opened the overlay has left the document. */
   returnFocus?: () => HTMLElement | null
+  /** Called before Esc closes the overlay; `event.preventDefault()` keeps it open. */
+  onEscapeKeyDown?: (event: KeyboardEvent) => void
 }
 
 export interface SurfaceLayout {
@@ -32,6 +35,7 @@ export function ModalSurface({
   children,
   footer,
   returnFocus,
+  onEscapeKeyDown,
   layout,
 }: ModalSurfaceProps & { layout: SurfaceLayout }) {
   const onCloseAutoFocus = useReturnFocus(open, returnFocus)
@@ -42,6 +46,7 @@ export function ModalSurface({
         <RadixDialog.Content
           className={layout.content}
           onCloseAutoFocus={onCloseAutoFocus}
+          onEscapeKeyDown={onEscapeKeyDown}
           {...(description ? {} : { 'aria-describedby': undefined })}
         >
           {layout.grab ? <div className="ds-sheet__grab" aria-hidden="true" /> : null}
@@ -62,7 +67,7 @@ export function ModalSurface({
               {description}
             </RadixDialog.Description>
           ) : null}
-          <div className={layout.body}>{children}</div>
+          {children === undefined ? null : <div className={layout.body}>{children}</div>}
           {footer ? <div className="ds-dialog__foot">{footer}</div> : null}
         </RadixDialog.Content>
       </RadixDialog.Portal>

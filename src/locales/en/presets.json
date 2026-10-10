@@ -1,0 +1,99 @@
+{
+  "button": "Presets",
+  "title": "Presets",
+  "close": "Close",
+  "empty": "Save your page setup, studies and lines under a name, then apply them in one go.",
+  "listLabel": "Saved presets",
+  "save": {
+    "open": "Save current settings…",
+    "name": "Preset name",
+    "submit": "Save",
+    "cancel": "Cancel",
+    "needName": "Give the preset a name.",
+    "tooLong": "Use at most {{max}} characters.",
+    "exists": "A preset with this name exists.",
+    "replace": "Replace it",
+    "full": "You have {{max}} presets, the most this device keeps. Delete one to save another.",
+    "saved": "Saved {{name}}.",
+    "replaced": "Replaced {{name}}."
+  },
+  "row": {
+    "apply": "Apply",
+    "applyLabel": "Apply {{name}}",
+    "rename": "Rename",
+    "renameLabel": "Rename {{name}}",
+    "delete": "Delete",
+    "deleteLabel": "Delete {{name}}"
+  },
+  "rename": {
+    "label": "New name for {{name}}",
+    "submit": "Save",
+    "cancel": "Cancel",
+    "renamed": "Renamed {{from}} to {{to}}."
+  },
+  "apply": {
+    "confirmTitle": "Apply “{{name}}”?",
+    "confirmBody_one": "It sets the page setup and the studies and lines of your photo.",
+    "confirmBody_other": "It sets the page setup and the studies and lines of all {{count}} photos.",
+    "confirm": "Apply",
+    "cancel": "Cancel",
+    "applied": "Applied {{name}}.",
+    "waiting": "Waiting for photos to finish importing…"
+  },
+  "delete": {
+    "confirmTitle": "Delete “{{name}}”?",
+    "confirm": "Delete",
+    "cancel": "Cancel",
+    "deleted": "Deleted {{name}}."
+  },
+  "export": {
+    "button": "Export all"
+  },
+  "import": {
+    "button": "Import…",
+    "file": "Presets file",
+    "imported_one": "Imported {{count}} preset.",
+    "imported_other": "Imported {{count}} presets.",
+    "renamed_one": "{{count}} was renamed: {{list}}.",
+    "renamed_other": "{{count}} were renamed: {{list}}.",
+    "renamedPair": "{{from}} → {{to}}",
+    "listSeparator": ", ",
+    "skipped_one": "{{count}} was skipped: it wasn't valid.",
+    "skipped_other": "{{count}} were skipped: they weren't valid.",
+    "full_one": "{{count}} wasn't added: this device keeps at most {{max}} presets.",
+    "full_other": "{{count}} weren't added: this device keeps at most {{max}} presets.",
+    "adjusted_one": "{{count}} preset had a value out of range, which was adjusted.",
+    "adjusted_other": "{{count}} presets had values out of range, which were adjusted.",
+    "error": {
+      "tooLarge": "This file is too large to be a presets file.",
+      "notPresets": "This file isn't a presets file from Artistica.",
+      "newerVersion": "This file was made by a newer version of Artistica. Update the page and try again.",
+      "empty": "No presets were found in this file."
+    }
+  },
+  "summary": {
+    "separator": " · ",
+    "plus": " + ",
+    "custom": "Custom {{w}} × {{h}} {{unit}}",
+    "orientation": {
+      "auto": "Auto",
+      "portrait": "Portrait",
+      "landscape": "Landscape"
+    },
+    "bleed": "bleed {{size}}",
+    "version": {
+      "original": "original",
+      "blurred": "blurred {{pct}}%",
+      "values": "values {{count}}",
+      "blurValues": "blurred values {{count}}"
+    },
+    "line": {
+      "grid": "grid",
+      "thirds": "thirds",
+      "armature": "armature",
+      "golden": "golden ratio",
+      "spiral": "spiral",
+      "centre": "centre lines"
+    }
+  }
+}

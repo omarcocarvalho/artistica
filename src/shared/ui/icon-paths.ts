@@ -35,6 +35,12 @@ export const PATHS = {
   zoomOut: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z', 'M20 20l-4-4M8 11h6'],
   chevronLeft: ['M15 6l-6 6 6 6'],
   chevronRight: ['M9 6l6 6-6 6'],
+  sliders: [
+    'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12',
+    'M14 6a2 2 0 1 0 4 0 2 2 0 1 0-4 0z',
+    'M8 12a2 2 0 1 0 4 0 2 2 0 1 0-4 0z',
+    'M16 18a2 2 0 1 0 4 0 2 2 0 1 0-4 0z',
+  ],
 } as const satisfies Record<string, readonly string[]>
 
 export type IconName = keyof typeof PATHS
