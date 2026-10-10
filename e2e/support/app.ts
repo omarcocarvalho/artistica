@@ -218,12 +218,10 @@ export class AppPage {
     return this.pageFigures.getByRole('button', { name: `${name}, ${version}`, exact: true })
   }
   /**
-   * Waits until no sheet is busy (layout or study tiles pending), then checks again a couple of
-   * frames later: a sheet marks itself busy in an effect that runs after its tiles are painted.
-   */
-  /**
-   * No preview element is busy and every page sheet on screen is drawn (a page far from the view
-   * keeps a 0 × 0 canvas, M5-R21), on two checks two frames apart.
+   * Waits until no preview element is busy (layout or study tiles pending) and every page sheet on
+   * screen is drawn (a page far from the view keeps a 0 × 0 canvas, M5-R21), then checks again a
+   * couple of frames later: a sheet marks itself busy in an effect that runs after its tiles are
+   * painted.
    */
   async expectPreviewSettled(timeout = 30_000): Promise<void> {
     const settled = () =>
@@ -645,7 +643,7 @@ const GUIDE_STATUS_TEXT: readonly (readonly [GuideStatus, readonly string[]])[] 
   ],
 ]
 
-// --- Lines (D3) ---
+// --- Preview settling (M5-R21) ---
 interface SettleRect {
   left: number
   top: number
@@ -667,6 +665,7 @@ interface SettleWindow {
   getComputedStyle(el: SettleElement): { overflowX: string; overflowY: string }
 }
 
+// --- Lines (D3) ---
 interface SheetCanvas {
   width: number
   height: number
