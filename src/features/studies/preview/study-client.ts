@@ -127,7 +127,7 @@ export function createStudyRenderer(
     }
     try {
       const out = await engine.renderStudyTile(plan, clone, study)
-      if (engine !== main && gen === generation) timeoutsInARow = 0
+      if (gen === generation) timeoutsInARow = 0
       return out
     } catch (e) {
       clone.close()

@@ -430,6 +430,57 @@ describe('createStudyRenderer: job timeout (M5-R22)', () => {
     expect(spawn).toHaveBeenCalledTimes(2)
     expect(fallback).not.toHaveBeenCalled()
   })
+
+  it('an abandoned worker whose start-up finishes late is never given the job', async () => {
+    vi.useFakeTimers()
+    let finishInit: () => void = () => undefined
+    const late = engine({
+      init: vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            finishInit = resolve
+          }),
+      ),
+    })
+    const spawn = vi.fn(() => (spawn.mock.calls.length === 1 ? late : engine()))
+    const render = createStudyRenderer(spawn, () => engine())
+    const job = outcome(render(plan, bmp(), study))
+    await vi.advanceTimersByTimeAsync(STUDY_JOB_TIMEOUT_MS)
+    await expect(job).resolves.toBe(STUDY_TIMEOUT)
+    finishInit()
+    await settle()
+    expect(late.renders).toBe(0)
+  })
+
+  it('a late answer from an abandoned worker does not reset the count, so the next timeout still moves to the main thread', async () => {
+    vi.useFakeTimers()
+    let answerLate: (b: ImageBitmap) => void = () => undefined
+    const spawn = vi.fn(() =>
+      spawn.mock.calls.length === 1
+        ? engine({
+            renderStudyTile: vi.fn(
+              () =>
+                new Promise<ImageBitmap>((resolve) => {
+                  answerLate = resolve
+                }),
+            ),
+          })
+        : engine({ renderStudyTile: vi.fn(() => never<ImageBitmap>()) }),
+    )
+    const fallback = vi.fn(() => engine())
+    const render = createStudyRenderer(spawn, fallback)
+    const first = outcome(render(plan, bmp(), study))
+    await vi.advanceTimersByTimeAsync(STUDY_JOB_TIMEOUT_MS)
+    await expect(first).resolves.toBe(STUDY_TIMEOUT)
+    const second = outcome(render(plan, bmp(), study))
+    await settle()
+    answerLate(bmp(2))
+    await settle()
+    await vi.advanceTimersByTimeAsync(STUDY_JOB_TIMEOUT_MS)
+    await expect(second).resolves.toBe(STUDY_TIMEOUT)
+    expect(fallback).toHaveBeenCalledTimes(1)
+    expect(spawn).toHaveBeenCalledTimes(2)
+  })
 })
 
 describe('createAppStudyProvider', () => {
