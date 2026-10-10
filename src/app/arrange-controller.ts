@@ -220,9 +220,34 @@ export function undoArrange(): void {
   useArrangeUi.getState().announce(i18n.t('preview:arrange.undone'))
 }
 
-/** After Undo from a photo, focus that photo wherever the restored arrangement puts it. */
+let stopRefocus: (() => void) | null = null
+
+function focusStillOn(id: BlockId): boolean {
+  const active = document.activeElement
+  return (
+    active === null ||
+    active === document.body ||
+    (active instanceof HTMLElement && active.dataset.blockId === id)
+  )
+}
+
+/**
+ * After Undo from a photo, focus that photo wherever the restored arrangement puts it. Back to the
+ * automatic layout, the photo moves only when the engine's result is shown, so it is asked for again
+ * then, unless focus has gone somewhere else meanwhile.
+ */
 export function refocusBlock(id: BlockId): void {
+  stopRefocus?.()
+  stopRefocus = null
   if (shownManual()?.blocks.some((b) => b.blockId === id)) useArrangeUi.getState().requestFocus(id)
+  if (useArrange.getState().manual !== null || usePages.getState().status !== 'computing') return
+  const stop = usePages.subscribe((pages) => {
+    if (pages.status === 'computing') return
+    stop()
+    if (stopRefocus === stop) stopRefocus = null
+    if (useArrange.getState().manual === null && focusStillOn(id)) refocusBlock(id)
+  })
+  stopRefocus = stop
 }
 
 export function rerunAutoLayout(): void {

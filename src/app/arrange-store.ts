@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { selectImageDescriptors, useImages } from '../features/images'
 import {
+  blockIdOf,
   buildLayoutItems,
   manualFromLayout,
   type BlockId,
@@ -14,11 +15,14 @@ import { usePages } from './pages-store'
 
 export const MAX_UNDO = 50
 
-/** Session state only (M5-R7): it holds image ids, so it is never persisted. */
+/**
+ * Session state only (M5-R7): it holds image ids, so it is never persisted. An undo step of `null`
+ * is the automatic layout, so undoing the first edit ends the arrangement.
+ */
 export interface ArrangeState {
   readonly mode: boolean
   readonly manual: ManualLayout | null
-  readonly undo: readonly ManualLayout[]
+  readonly undo: readonly (ManualLayout | null)[]
   readonly selected: BlockId | null
   setMode(on: boolean): void
   select(id: BlockId | null): void
@@ -28,16 +32,22 @@ export interface ArrangeState {
   adopt(outcome: ManualOutcome): void
 }
 
+const currentItems = () => buildLayoutItems(selectImageDescriptors(useImages.getState()))
+
 function shownAsManual(): ManualLayout | null {
   const { layout, empty } = usePages.getState()
   if (layout === null || empty) return null
-  const items = buildLayoutItems(selectImageDescriptors(useImages.getState()))
-  return manualFromLayout(layout, items, useSettings.getState().pageSetup)
+  return manualFromLayout(layout, currentItems(), useSettings.getState().pageSetup)
 }
 
-/** B1 ruling: an operation on a block id that is not in the manual layout throws, so stale ids go. */
-function keptSelection(selected: BlockId | null, manual: ManualLayout): BlockId | null {
-  return selected !== null && manual.blocks.some((b) => b.blockId === selected) ? selected : null
+/**
+ * B1 ruling: an operation on a block id that is not in the manual layout throws, so stale ids go.
+ * With the automatic layout, a selection is kept while its photo copy is loaded.
+ */
+function keptSelection(selected: BlockId | null, manual: ManualLayout | null): BlockId | null {
+  if (selected === null) return null
+  const ids = manual === null ? currentItems().map(blockIdOf) : manual.blocks.map((b) => b.blockId)
+  return ids.includes(selected) ? selected : null
 }
 
 const sameLayout = (a: ManualLayout, b: ManualLayout): boolean =>
@@ -57,17 +67,18 @@ export const useArrange = create<ArrangeState>()((set, get) => ({
     set({ selected: id })
   },
   apply: (op) => {
-    const current = get().manual ?? shownAsManual()
+    const stored = get().manual
+    const current = stored ?? shownAsManual()
     if (current === null) return null
     const result = op(current)
     if (!result.ok) return result.reason
-    set((s) => ({ manual: result.manual, undo: [...s.undo, current].slice(-MAX_UNDO) }))
+    set((s) => ({ manual: result.manual, undo: [...s.undo, stored].slice(-MAX_UNDO) }))
     return null
   },
   undoLast: () => {
     const { undo, selected } = get()
-    const previous = undo.at(-1)
-    if (previous === undefined) return
+    if (undo.length === 0) return
+    const previous = undo.at(-1) ?? null
     set({ manual: previous, undo: undo.slice(0, -1), selected: keptSelection(selected, previous) })
   },
   rerunAuto: () => {

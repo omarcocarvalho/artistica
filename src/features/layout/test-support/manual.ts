@@ -1,5 +1,4 @@
 import type { ManualBlock, ManualLayout } from '../manual'
-import type { LayoutResult } from '../types'
 
 /** Freeze a value and everything inside it, so a mutation throws in strict mode. */
 export function deepFreeze<T>(value: T): T {
@@ -30,17 +29,4 @@ export function blockOf(m: ManualLayout, id: string): ManualBlock {
   const b = m.blocks.find((x) => x.blockId === id)
   if (b === undefined) throw new Error(`no block ${id}`)
   return b
-}
-
-/** The result as the manual path gives it back: `scaled-to-fit` is not carried over. */
-export function withoutScaledToFit(r: LayoutResult): LayoutResult {
-  return {
-    ...r,
-    pages: r.pages.map((p) => ({
-      placements: p.placements.map((pl) => ({
-        ...pl,
-        warnings: pl.warnings.filter((w) => w !== 'scaled-to-fit'),
-      })),
-    })),
-  }
 }

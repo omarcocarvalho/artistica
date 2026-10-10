@@ -84,14 +84,14 @@ describe('useArrange: initial state', () => {
 })
 
 describe('useArrange.apply', () => {
-  it('the first edit starts from what is shown (M5-R8) and pushes it as the undo step', () => {
+  it('the first edit starts from what is shown (M5-R8) and pushes "automatic" (null) as the undo step', () => {
     const layout = show(['a', 'b'])
     const base = manualFromLayout(layout, items(), useSettings.getState().pageSetup)
     const id = idOf(base, 1)
     const refusal = useArrange.getState().apply(right(id))
     expect(refusal).toBeNull()
     const s = useArrange.getState()
-    expect(s.undo).toEqual([base])
+    expect(s.undo).toEqual([null])
     const moved = nudge(base, id, 1, 0, items())
     if (!moved.ok) throw new Error(moved.reason)
     expect(s.manual).toEqual(moved.manual)
@@ -132,7 +132,7 @@ describe('useArrange.apply', () => {
     const base = shownBase()
     const id = idOf(base)
     expect(MAX_UNDO).toBe(50)
-    const history: (ManualLayout | null)[] = [base]
+    const history: (ManualLayout | null)[] = [null]
     for (let i = 0; i < MAX_UNDO + 5; i++) {
       expect(useArrange.getState().apply(i % 2 === 0 ? right(id) : back(id))).toBeNull()
       history.push(useArrange.getState().manual)
@@ -164,9 +164,46 @@ describe('useArrange.undoLast', () => {
     useArrange.getState().apply(right(id))
     useArrange.getState().undoLast()
     expect(useArrange.getState().manual).toBe(one)
-    expect(useArrange.getState().undo).toEqual([base])
+    expect(useArrange.getState().undo).toEqual([null])
     useArrange.getState().undoLast()
-    expect(useArrange.getState().manual).toEqual(base)
+    expect(useArrange.getState().manual).toBeNull()
+    expect(useArrange.getState().undo).toEqual([])
+  })
+
+  it('undoing the first edit goes back to the automatic layout, not to a copy of it', () => {
+    show(['a', 'b'])
+    const id = idOf(shownBase(), 1)
+    useArrange.getState().setMode(true)
+    useArrange.getState().apply(right(id))
+    useArrange.getState().select(id)
+    useArrange.getState().undoLast()
+    expect(useArrange.getState()).toMatchObject({
+      mode: true,
+      manual: null,
+      undo: [],
+      selected: id,
+    })
+  })
+
+  it('back to automatic, it drops a selection whose photo is gone', () => {
+    show(['a', 'b'])
+    const id = idOf(shownBase(), 1)
+    useArrange.getState().apply(right(id))
+    useArrange.getState().select(id)
+    useImages.setState({ images: [loaded('a')] })
+    useArrange.getState().undoLast()
+    expect(useArrange.getState()).toMatchObject({ manual: null, selected: null })
+  })
+
+  it('past MAX_UNDO edits the oldest kept arrangement is the bottom step', () => {
+    show(['a'])
+    const id = idOf(shownBase())
+    for (let i = 0; i < MAX_UNDO + 1; i++)
+      useArrange.getState().apply(i % 2 === 0 ? right(id) : back(id))
+    const bottom = useArrange.getState().undo[0]
+    expect(bottom).not.toBeNull()
+    for (let i = 0; i < MAX_UNDO; i++) useArrange.getState().undoLast()
+    expect(useArrange.getState().manual).toBe(bottom)
     expect(useArrange.getState().undo).toEqual([])
   })
 

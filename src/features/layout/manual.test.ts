@@ -13,7 +13,7 @@ import {
 } from './manual'
 import { itemsArb, pageSetupArb } from './test-support/arbitraries'
 import { item, realisticItems } from './test-support/fixtures'
-import { block, deepFreeze, manualOf, withoutScaledToFit } from './test-support/manual'
+import { block, deepFreeze, manualOf } from './test-support/manual'
 import type { LayoutItemInput } from './types'
 
 const A4_PORTRAIT: PageSetup = { ...DEFAULT_PAGE_SETUP, orientation: 'portrait' }
@@ -61,7 +61,7 @@ describe('manualFromLayout and layoutFromManual', () => {
   it.each(cases)('round-trips the auto layout (%s)', (_, setup, items) => {
     const result = computeLayout(setup, items)
     const manual = manualFromLayout(deepFreeze(result), deepFreeze(items), setup)
-    expect(layoutFromManual(deepFreeze(manual), items, setup)).toEqual(withoutScaledToFit(result))
+    expect(layoutFromManual(deepFreeze(manual), items, setup)).toEqual(result)
   })
 
   it('leaves out placements and blocks whose photo is gone', () => {
@@ -106,16 +106,35 @@ describe('manualFromLayout and layoutFromManual', () => {
     expect(manual.blocks).toEqual(sorted)
   })
 
-  it('flags low-dpi from the tile width alone and never scaled-to-fit', () => {
+  it('flags low-dpi from the tile width alone, and scaled-to-fit only on a fixed size larger than the content box', () => {
     const items = [
       item('soft', 1, 30),
       item('fixed', 1, 1000, { kind: 'fixed', axis: 'width', mm: 900 }),
+      item('fits', 1, 1000, { kind: 'fixed', axis: 'width', mm: 40 }),
+      item('auto', 1, 1000),
+      item('both', 1, 50, { kind: 'fixed', axis: 'height', mm: 300 }),
     ]
-    const manual = manualOf([block('soft#0', 10, 10, 50), block('fixed#0', 10, 70, 100)])
+    const manual = manualOf([
+      block('soft#0', 10, 10, 50),
+      block('fixed#0', 10, 70, 100),
+      block('fits#0', 120, 10, 40),
+      block('auto#0', 120, 70, 190),
+      block('both#0', 10, 180, 100),
+    ])
     const out = layoutFromManual(manual, items, A4_PORTRAIT)
     const byId = new Map(out.pages.flatMap((p) => p.placements).map((p) => [p.imageId, p]))
     expect(byId.get('soft' as ImageId)?.warnings).toEqual(['low-dpi'])
-    expect(byId.get('fixed' as ImageId)?.warnings).toEqual([])
+    expect(byId.get('fixed' as ImageId)?.warnings).toEqual(['scaled-to-fit'])
+    expect(byId.get('fits' as ImageId)?.warnings).toEqual([])
+    expect(byId.get('auto' as ImageId)?.warnings).toEqual([])
+    expect(byId.get('both' as ImageId)?.warnings).toEqual(['low-dpi', 'scaled-to-fit'])
+  })
+
+  it('counts the gutter between the tiles of a fixed-size photo when it flags scaled-to-fit', () => {
+    // Two square tiles fit at most 135.5 mm wide with the 6 mm gutter, 138.5 mm without it.
+    const items = [item('pair', 1, 1000, { kind: 'fixed', axis: 'width', mm: 137 }, 2)]
+    const out = layoutFromManual(manualOf([block('pair#0', 10, 10, 135.5)]), items, A4_PORTRAIT)
+    expect(out.pages[0]?.placements[0]?.warnings).toEqual(['scaled-to-fit'])
   })
 
   it('sorts placements as the engine does, whatever order the blocks come in', () => {
@@ -134,7 +153,7 @@ describe('manualFromLayout and layoutFromManual', () => {
       fc.property(pageSetupArb, itemsArb(10), (setup, items) => {
         const result = computeLayout(setup, items)
         const manual = manualFromLayout(result, items, setup)
-        expect(layoutFromManual(manual, items, setup)).toEqual(withoutScaledToFit(result))
+        expect(layoutFromManual(manual, items, setup)).toEqual(result)
       }),
       { numRuns: 100 },
     )

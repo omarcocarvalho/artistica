@@ -11,7 +11,7 @@ import {
 } from './manual'
 import { packAround, reconcileManual } from './manual-reconcile'
 import { item, realisticItems } from './test-support/fixtures'
-import { block, blockOf, deepFreeze, manualOf, withoutScaledToFit } from './test-support/manual'
+import { block, blockOf, deepFreeze, manualOf } from './test-support/manual'
 import type { LayoutItemInput, LayoutResult, ManualOutcome } from './types'
 
 // Content box (10, 10, 190 × 277), gutter 6.
@@ -67,7 +67,7 @@ describe('reconcileManual: nothing changed', () => {
     const start = manualFromLayout(auto, realistic, DEFAULT_PAGE_SETUP)
     const { rest, outcome } = split(computeLayout(DEFAULT_PAGE_SETUP, realistic, start))
     expect(outcome.kind).toBe('kept')
-    expect(rest).toEqual(withoutScaledToFit(auto))
+    expect(rest).toEqual(auto)
   })
 
   it('does not mutate its inputs', () => {
