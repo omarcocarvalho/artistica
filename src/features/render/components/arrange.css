@@ -1,0 +1,159 @@
+/* The sheet is white in both themes, so outlines on it use fixed colours with at least 3:1 on white. */
+@layer components {
+  .arrange-layer {
+    --on-paper-select: #2f4c9e;
+    --on-paper-block: #5e5146;
+    --on-paper-danger: #a3261b;
+    --on-paper-swap: #b0432a;
+    --arrange-handle-hit: 24px;
+  }
+
+  .arrange-block {
+    position: absolute;
+    z-index: 2;
+    box-sizing: border-box;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .arrange-block::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    pointer-events: none;
+    border: 1.5px dashed var(--on-paper-block);
+    border-radius: 2px;
+  }
+  .arrange-block:focus-visible {
+    outline: var(--focus-ring-width, 2px) solid var(--on-paper-select);
+    outline-offset: 4px;
+  }
+  .arrange-block.is-selected::after {
+    border: 2px solid var(--on-paper-select);
+  }
+  .arrange-block.is-picked::after {
+    border: 2px solid var(--on-paper-swap);
+    box-shadow: 0 0 0 4px rgb(176 67 42 / 0.25);
+  }
+  .arrange-block.is-origin::after {
+    border-style: dotted;
+  }
+
+  .arrange-handle {
+    position: absolute;
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    width: var(--arrange-handle-hit);
+    height: var(--arrange-handle-hit);
+    touch-action: none;
+  }
+  .arrange-handle::before {
+    content: '';
+    box-sizing: border-box;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--on-paper-select);
+    border-radius: 2px;
+    background: #fff;
+  }
+  .arrange-handle[data-corner='tl'] {
+    left: calc(var(--arrange-handle-hit) / -2);
+    top: calc(var(--arrange-handle-hit) / -2);
+    cursor: nwse-resize;
+  }
+  .arrange-handle[data-corner='tr'] {
+    right: calc(var(--arrange-handle-hit) / -2);
+    top: calc(var(--arrange-handle-hit) / -2);
+    cursor: nesw-resize;
+  }
+  .arrange-handle[data-corner='bl'] {
+    left: calc(var(--arrange-handle-hit) / -2);
+    bottom: calc(var(--arrange-handle-hit) / -2);
+    cursor: nesw-resize;
+  }
+  .arrange-handle[data-corner='br'] {
+    right: calc(var(--arrange-handle-hit) / -2);
+    bottom: calc(var(--arrange-handle-hit) / -2);
+    cursor: nwse-resize;
+  }
+
+  .arrange-ghost,
+  .arrange-swap-target {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+  }
+  .arrange-ghost {
+    z-index: 5;
+    border: 2px solid var(--on-paper-select);
+    background: rgb(47 76 158 / 0.12);
+    box-shadow: 0 6px 14px rgb(0 0 0 / 0.25);
+    cursor: grabbing;
+  }
+  .arrange-ghost.is-invalid {
+    border: 2px dotted var(--on-paper-danger);
+    background: rgb(163 38 27 / 0.14);
+  }
+  .arrange-swap-target {
+    z-index: 4;
+    border: 3px double var(--on-paper-swap);
+  }
+
+  .arrange-chip {
+    position: absolute;
+    left: 0;
+    top: -20px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--on-paper-select);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .arrange-chip--swap {
+    background: var(--on-paper-swap);
+  }
+  .arrange-chip--danger {
+    background: var(--on-paper-danger);
+  }
+
+  @media (pointer: coarse), (max-width: 959.98px) {
+    .arrange-layer {
+      --arrange-handle-hit: 44px;
+    }
+    .arrange-handle::before {
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .arrange-block::after {
+      border-color: CanvasText;
+    }
+    .arrange-block.is-selected::after,
+    .arrange-block.is-picked::after,
+    .arrange-ghost {
+      border-color: Highlight;
+    }
+    .arrange-ghost.is-invalid,
+    .arrange-swap-target {
+      border-color: CanvasText;
+    }
+    .arrange-handle::before {
+      border-color: Highlight;
+      background: Canvas;
+    }
+    .arrange-chip {
+      border: 1px solid CanvasText;
+      background: Canvas;
+      color: CanvasText;
+    }
+  }
+}

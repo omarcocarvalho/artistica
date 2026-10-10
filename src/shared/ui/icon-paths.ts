@@ -35,6 +35,13 @@ export const PATHS = {
   zoomOut: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z', 'M20 20l-4-4M8 11h6'],
   chevronLeft: ['M15 6l-6 6 6 6'],
   chevronRight: ['M9 6l6 6-6 6'],
+  chevronUp: ['M6 15l6-6 6 6'],
+  chevronDown: ['M6 9l6 6 6-6'],
+  move: [
+    'M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3',
+  ],
+  undo: ['M9 14L4 9l5-5', 'M4 9h10a6 6 0 0 1 0 12h-3'],
+  rerun: ['M20 11a8 8 0 1 0-2.3 5.7', 'M20 4v7h-7'],
   sliders: [
     'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12',
     'M14 6a2 2 0 1 0 4 0 2 2 0 1 0-4 0z',

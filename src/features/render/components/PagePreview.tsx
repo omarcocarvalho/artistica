@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ImageId } from '../../../shared/model/image'
-import { Badge } from '../../../shared/ui'
+import { Badge, cx } from '../../../shared/ui'
 import { releaseCanvas, renderTile } from '../pixels/render-tile'
 import { forScaledSource, planTilePixels, tileRenderKey } from '../pixels/tile-plan'
 import { readDrawColors } from '../preview/draw-colors'
@@ -13,6 +13,8 @@ import { releaseAllTileCanvases, syncTileCanvasCache } from '../preview/tile-cac
 import { useDevicePixelRatio, useElementWidth } from '../preview/use-element-width'
 import { useNearViewport, type ScrollAxis } from '../preview/use-near-viewport'
 import type { PageModel } from '../types'
+import { ArrangeLayer } from './ArrangeLayer'
+import type { ArrangeProps } from './arrange-types'
 
 /** A bitmap of the whole image, at any size; page models are planned against pxW x pxH. */
 export interface PreviewSource {
@@ -40,6 +42,8 @@ export interface PagePreviewProps {
   readonly scrollAxis?: ScrollAxis
   /** Called with the page index each time the sheet canvas is drawn; identity changes do not redraw. */
   readonly onDrawn?: (pageIndex: number) => void
+  /** Arrange mode: movable blocks replace the tile buttons. */
+  readonly arrange?: ArrangeProps
 }
 
 const createDomCanvas = (w: number, h: number): HTMLCanvasElement => {
@@ -65,6 +69,7 @@ export function PagePreview({
   studyTiles,
   scrollAxis = 'y',
   onDrawn,
+  arrange,
 }: PagePreviewProps) {
   const { t } = useTranslation(['preview', 'studies'])
   const captionId = useId()
@@ -87,6 +92,13 @@ export function PagePreview({
   const holdsSelection = selectedId !== null && model.tiles.some((t) => t.imageId === selectedId)
   const near = seen === 'near' || model.index === 0 || holdsSelection
   const undecided = seen === 'unknown' && !near
+  const sheets = arrange?.sheets
+
+  useEffect(() => {
+    const el = sheetRef.current
+    if (!sheets || !el) return
+    return sheets.register(model.index, el)
+  }, [sheets, model.index])
 
   useEffect(() => {
     if (!studyTiles) return
@@ -180,7 +192,7 @@ export function PagePreview({
         ref={sheetRef}
         role="group"
         aria-labelledby={captionId}
-        className="bg-paper shadow-paper relative w-full"
+        className={cx('bg-paper shadow-paper relative w-full', arrange && 'arrange-layer')}
         style={{ aspectRatio: `${String(model.size.w)} / ${String(model.size.h)}` }}
       >
         <canvas
@@ -188,91 +200,100 @@ export function PagePreview({
           aria-hidden="true"
           className="absolute inset-0 block h-full w-full"
         />
-        {areas.map((area, i) => {
-          const selected = area.imageId === selectedId
-          const imageName = nameOf(area.imageId, i)
-          const versionLabel = t(`studies:version.${area.version}`)
-          const name =
-            area.version === 'original'
-              ? imageName
-              : t('tile.versionName', { name: imageName, version: versionLabel })
-          const dpiId = `${captionId}-dpi-${String(i)}`
-          const fitId = `${captionId}-fit-${String(i)}`
-          return (
-            <button
-              key={area.key}
-              type="button"
-              aria-label={name}
-              aria-pressed={selected}
-              aria-describedby={
-                [area.lowDpi ? dpiId : null, area.scaledToFit ? fitId : null]
-                  .filter(Boolean)
-                  .join(' ') || undefined
-              }
-              onClick={() => {
-                onSelect(area.imageId)
-              }}
-              className="aria-pressed:outline-selection absolute cursor-pointer bg-transparent p-0 aria-pressed:outline-2 aria-pressed:outline-offset-2 aria-pressed:outline-solid"
-              style={{
-                left: `${String(area.leftPct)}%`,
-                top: `${String(area.topPct)}%`,
-                width: `${String(area.widthPct)}%`,
-                height: `${String(area.heightPct)}%`,
-              }}
-            >
-              {area.groupSize > 1 && (
-                <span
-                  aria-hidden="true"
-                  className="absolute top-1 left-1 rounded-[3px] bg-white/85 px-1.5 text-[10px] font-bold tracking-wide text-[#2b2420] uppercase"
-                >
-                  {versionLabel}
-                </span>
-              )}
-              {selected && area.firstInGroup && (
-                <span
-                  aria-hidden="true"
-                  className="bg-selection text-ink-inverse absolute -top-[22px] left-0 rounded px-1.5 text-[10px] font-bold whitespace-nowrap"
-                >
-                  {imageName}
-                </span>
-              )}
-              {area.lowDpi && (
-                <>
-                  {area.firstInGroup && (
-                    <Badge
-                      tone="warning"
-                      icon="warning"
-                      aria-hidden="true"
-                      className="absolute right-1 bottom-1 text-[10px] shadow-xs"
-                    >
-                      {t('tile.lowDpi', { dpi: area.dpi })}
-                    </Badge>
-                  )}
-                  <span id={dpiId} className="sr-only">
-                    {t('tile.lowDpiLabel', { dpi: area.dpi })}
+        {arrange ? (
+          <ArrangeLayer
+            arrange={arrange}
+            page={model.index}
+            pageSize={model.size}
+            sheet={() => sheetRef.current}
+          />
+        ) : null}
+        {!arrange &&
+          areas.map((area, i) => {
+            const selected = area.imageId === selectedId
+            const imageName = nameOf(area.imageId, i)
+            const versionLabel = t(`studies:version.${area.version}`)
+            const name =
+              area.version === 'original'
+                ? imageName
+                : t('tile.versionName', { name: imageName, version: versionLabel })
+            const dpiId = `${captionId}-dpi-${String(i)}`
+            const fitId = `${captionId}-fit-${String(i)}`
+            return (
+              <button
+                key={area.key}
+                type="button"
+                aria-label={name}
+                aria-pressed={selected}
+                aria-describedby={
+                  [area.lowDpi ? dpiId : null, area.scaledToFit ? fitId : null]
+                    .filter(Boolean)
+                    .join(' ') || undefined
+                }
+                onClick={() => {
+                  onSelect(area.imageId)
+                }}
+                className="aria-pressed:outline-selection absolute cursor-pointer bg-transparent p-0 aria-pressed:outline-2 aria-pressed:outline-offset-2 aria-pressed:outline-solid"
+                style={{
+                  left: `${String(area.leftPct)}%`,
+                  top: `${String(area.topPct)}%`,
+                  width: `${String(area.widthPct)}%`,
+                  height: `${String(area.heightPct)}%`,
+                }}
+              >
+                {area.groupSize > 1 && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-1 left-1 rounded-[3px] bg-white/85 px-1.5 text-[10px] font-bold tracking-wide text-[#2b2420] uppercase"
+                  >
+                    {versionLabel}
                   </span>
-                </>
-              )}
-              {area.scaledToFit && (
-                <>
-                  {area.firstInGroup && (
-                    <Badge
-                      tone="warning"
-                      icon="warning"
-                      aria-hidden="true"
-                      className="absolute bottom-1 left-1 text-[10px] shadow-xs"
-                    >
-                      {t('tile.scaledToFit')}
-                    </Badge>
-                  )}
-                  <span id={fitId} className="sr-only">
-                    {t('tile.scaledToFitLabel')}
+                )}
+                {selected && area.firstInGroup && (
+                  <span
+                    aria-hidden="true"
+                    className="bg-selection text-ink-inverse absolute -top-[22px] left-0 rounded px-1.5 text-[10px] font-bold whitespace-nowrap"
+                  >
+                    {imageName}
                   </span>
-                </>
-              )}
-            </button>
-          )
-        })}
+                )}
+                {area.lowDpi && (
+                  <>
+                    {area.firstInGroup && (
+                      <Badge
+                        tone="warning"
+                        icon="warning"
+                        aria-hidden="true"
+                        className="absolute right-1 bottom-1 text-[10px] shadow-xs"
+                      >
+                        {t('tile.lowDpi', { dpi: area.dpi })}
+                      </Badge>
+                    )}
+                    <span id={dpiId} className="sr-only">
+                      {t('tile.lowDpiLabel', { dpi: area.dpi })}
+                    </span>
+                  </>
+                )}
+                {area.scaledToFit && (
+                  <>
+                    {area.firstInGroup && (
+                      <Badge
+                        tone="warning"
+                        icon="warning"
+                        aria-hidden="true"
+                        className="absolute bottom-1 left-1 text-[10px] shadow-xs"
+                      >
+                        {t('tile.scaledToFit')}
+                      </Badge>
+                    )}
+                    <span id={fitId} className="sr-only">
+                      {t('tile.scaledToFitLabel')}
+                    </span>
+                  </>
+                )}
+              </button>
+            )
+          })}
       </div>
       <figcaption id={captionId} className="text-ink-muted text-xs">
         {label}

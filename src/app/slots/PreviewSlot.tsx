@@ -1,10 +1,28 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { GuidesLegend, GuidesToggle, PagePreview } from '../../features/render'
+import {
+  createSheetRegistry,
+  GuidesLegend,
+  GuidesToggle,
+  PagePreview,
+  type ArrangeIntent,
+  type ArrangeProps,
+} from '../../features/render'
 import { useImages } from '../../features/images'
 import { useSettings } from '../../features/settings'
 import type { ImageId } from '../../shared/model/image'
 import { Button, Callout, VisuallyHidden } from '../../shared/ui'
+import {
+  commitOp,
+  pickUpBlock,
+  previewOp,
+  selectBlock,
+  undoArrange,
+  useArrangeView,
+} from '../arrange-controller'
+import { useArrange } from '../arrange-store'
+import { useArrangeUi } from '../arrange-ui'
+import { ArrangeToolbar } from '../components/ArrangeToolbar'
 import { describePage, type TileDescription } from '../describe-page'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import { usePages } from '../pages-store'
@@ -21,6 +39,41 @@ const selectImage = (id: ImageId) => {
 const markDrawn = (page: number) => {
   mark('draw:end', { page })
 }
+const commitFromBlock = (intent: ArrangeIntent) => commitOp(intent, { fromBlock: true })
+const focused = (id: string) => {
+  useArrangeUi.getState().focused(id)
+}
+
+function useArrangeProps(enabled: boolean): ArrangeProps | undefined {
+  const selected = useArrange((s) => s.selected)
+  const pickedUp = useArrangeUi((s) => s.pickedUp)
+  const focusId = useArrangeUi((s) => s.focusId)
+  const [sheets] = useState(createSheetRegistry)
+  const { manual, blocks } = useArrangeView()
+  if (!enabled || manual === null) return undefined
+  const present = (id: string | null) => (blocks.some((b) => b.id === id) ? id : null)
+  return {
+    blocks,
+    content: manual.content,
+    gutter: manual.gutter,
+    selected: present(selected),
+    pickedUp: present(pickedUp),
+    focusId,
+    sheets,
+    onSelect: selectBlock,
+    onFocused: focused,
+    onPreview: previewOp,
+    onCommit: commitFromBlock,
+    onPickUp: pickUpBlock,
+  }
+}
+
+/** One polite region for arrange announcements, outside the busy preview so nothing holds it back. */
+function ArrangeAnnouncer() {
+  const { text, n } = useArrangeUi((s) => s.announcement)
+  const repeat = n % 2 === 1 ? '\u00a0' : ''
+  return <VisuallyHidden aria-live="polite">{text + repeat}</VisuallyHidden>
+}
 
 export function PreviewSlot() {
   const { t, i18n } = useTranslation(['app', 'pageSetup', 'studies', 'lines'])
@@ -32,6 +85,8 @@ export function PreviewSlot() {
   const paper = useSettings((s) => s.pageSetup.paper)
   const showGuides = useAppUi((s) => s.showGuides)
   const isDesktop = useIsDesktop()
+  const arrangeMode = useArrange((s) => s.mode)
+  const arrange = useArrangeProps(arrangeMode && isDesktop)
   const computing = status === 'computing'
   const slow = useDelayedFlag(computing, UPDATING_ANNOUNCE_DELAY_MS)
   const [wasComputing, setWasComputing] = useState(computing)
@@ -71,54 +126,65 @@ export function PreviewSlot() {
   const noRoom =
     layout !== null && images.length > 0 && layout.pages.length === 0 && status === 'idle'
 
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (!arrange || e.shiftKey || !(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') return
+    e.preventDefault()
+    undoArrange()
+  }
+
   return (
-    <div
-      aria-busy={computing}
-      className={
-        isDesktop
-          ? 'flex flex-col items-center gap-8 p-6'
-          : 'flex snap-x snap-mandatory gap-4 overflow-x-auto p-4'
-      }
-    >
-      <VisuallyHidden role="status">{statusText}</VisuallyHidden>
-      {status === 'error' && (
-        <Callout tone="danger" live>
-          {t('app:topBar.exportError')}
-        </Callout>
-      )}
-      {noRoom && (
-        <Callout tone="warning" live>
-          {t('pageSetup:noRoom')}
-        </Callout>
-      )}
-      {showGuides && pages.length > 0 && <GuidesLegend />}
-      {pages.map((model, i) => (
-        <div key={model.index} className="w-full max-w-3xl shrink-0 snap-center">
-          <PagePreview
-            model={model}
-            getSource={getPreviewSource}
-            studyTiles={appStudyProvider}
-            scrollAxis={isDesktop ? 'y' : 'x'}
-            onDrawn={markDrawn}
-            getName={getName}
-            selectedId={selectedId}
-            onSelect={selectImage}
-            guides={showGuides}
-            label={t('app:preview.pageCaption', {
-              current: i + 1,
-              total: pages.length,
-              paper: paperLabel,
-              orientation,
-            })}
-          />
-          <ul aria-label={t('app:preview.pageItems', { current: i + 1 })} className="sr-only">
-            {describePage(model, names, linesOf).map((d, k) => (
-              <li key={`${d.imageId}-${String(k)}`}>{describeTile(d)}</li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </div>
+    <>
+      <ArrangeAnnouncer />
+      <div
+        aria-busy={computing}
+        onKeyDown={onKeyDown}
+        className={
+          isDesktop
+            ? 'flex flex-col items-center gap-8 p-6'
+            : 'flex snap-x snap-mandatory gap-4 overflow-x-auto p-4'
+        }
+      >
+        <VisuallyHidden role="status">{statusText}</VisuallyHidden>
+        {status === 'error' && (
+          <Callout tone="danger" live>
+            {t('app:topBar.exportError')}
+          </Callout>
+        )}
+        {noRoom && (
+          <Callout tone="warning" live>
+            {t('pageSetup:noRoom')}
+          </Callout>
+        )}
+        {showGuides && pages.length > 0 && <GuidesLegend />}
+        {pages.map((model, i) => (
+          <div key={model.index} className="w-full max-w-3xl shrink-0 snap-center">
+            <PagePreview
+              model={model}
+              getSource={getPreviewSource}
+              studyTiles={appStudyProvider}
+              scrollAxis={isDesktop ? 'y' : 'x'}
+              onDrawn={markDrawn}
+              getName={getName}
+              selectedId={selectedId}
+              onSelect={selectImage}
+              guides={showGuides}
+              arrange={arrange}
+              label={t('app:preview.pageCaption', {
+                current: i + 1,
+                total: pages.length,
+                paper: paperLabel,
+                orientation,
+              })}
+            />
+            <ul aria-label={t('app:preview.pageItems', { current: i + 1 })} className="sr-only">
+              {describePage(model, names, linesOf).map((d, k) => (
+                <li key={`${d.imageId}-${String(k)}`}>{describeTile(d)}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </>
   )
 }
 
@@ -126,25 +192,29 @@ export function PreviewToolbar() {
   const { t } = useTranslation('app')
   const showGuides = useAppUi((s) => s.showGuides)
   const selectedId = useImages((s) => s.selectedId)
+  const arrangeMode = useArrange((s) => s.mode)
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-end justify-end gap-3">
       <GuidesToggle
         checked={showGuides}
         onCheckedChange={(v) => {
           useAppUi.getState().setShowGuides(v)
         }}
       />
-      <Button
-        disabled={selectedId === null}
-        onClick={() => {
-          if (selectedId) {
-            selectImage(selectedId)
-            useAppUi.getState().openEdit(selectedId)
-          }
-        }}
-      >
-        {t('preview.editSelected')}
-      </Button>
+      {!arrangeMode && (
+        <Button
+          disabled={selectedId === null}
+          onClick={() => {
+            if (selectedId) {
+              selectImage(selectedId)
+              useAppUi.getState().openEdit(selectedId)
+            }
+          }}
+        >
+          {t('preview.editSelected')}
+        </Button>
+      )}
+      <ArrangeToolbar />
     </div>
   )
 }
