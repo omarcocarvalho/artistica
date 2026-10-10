@@ -8,6 +8,7 @@ import { Button, Callout, VisuallyHidden } from '../../shared/ui'
 import { describePage, type TileDescription } from '../describe-page'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import { usePages } from '../pages-store'
+import { mark } from '../perf-marks'
 import { useAppUi } from '../state/useAppUi'
 import { appStudyProvider, getPreviewSource } from '../study-provider'
 import { useDelayedFlag } from '../use-delayed-flag'
@@ -16,6 +17,9 @@ export const UPDATING_ANNOUNCE_DELAY_MS = 500
 
 const selectImage = (id: ImageId) => {
   useImages.getState().select(id)
+}
+const markDrawn = (page: number) => {
+  mark('draw:end', { page })
 }
 
 export function PreviewSlot() {
@@ -95,6 +99,7 @@ export function PreviewSlot() {
             getSource={getPreviewSource}
             studyTiles={appStudyProvider}
             scrollAxis={isDesktop ? 'y' : 'x'}
+            onDrawn={markDrawn}
             getName={getName}
             selectedId={selectedId}
             onSelect={selectImage}
