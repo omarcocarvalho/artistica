@@ -313,6 +313,8 @@ describe('ArrangeToolbar on the phone (B5)', () => {
       useArrange.getState().select('a#0')
     })
     expect(screen.queryByRole('button', { name: 'Photo options' })).toBeNull()
+    arranged(null)
+    expect(screen.queryByRole('button', { name: 'Photo options' })).toBeNull()
     arranged('a#0')
     expect(within(bar()).getByRole('button', { name: 'Photo options' })).toHaveClass('ds-btn--lg')
   })
