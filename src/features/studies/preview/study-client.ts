@@ -6,6 +6,7 @@ import type { TilePixelPlan } from '../../render/pixels/tile-plan'
 import {
   createStudyPreviewProvider,
   RENDERER_RESTARTED,
+  STUDY_TIMEOUT,
   type StudyPreviewProvider,
 } from './provider'
 import {
@@ -34,22 +35,38 @@ export interface StudyEngine extends StudyWorkerApi {
   dispose?(): void
 }
 
+export const STUDY_JOB_TIMEOUT_MS = 20_000
+
 function restarted(cause: unknown): Error {
   const e = new Error('Study renderer restarted', { cause })
   e.name = RENDERER_RESTARTED
   return e
 }
 
-/** Lazy worker with a main-thread fallback (M2-R11). */
+function timedOut(): Error {
+  const e = new Error('Study job timed out')
+  e.name = STUDY_TIMEOUT
+  return e
+}
+
+/**
+ * Lazy worker with a main-thread fallback (M2-R11). A worker job (start-up included) that has not
+ * answered after `timeoutMs` rejects with `STUDY_TIMEOUT` and its worker is terminated; the next job
+ * gets a fresh worker, and a second timeout in a row moves to the main thread for good (M5-R22).
+ * Main-thread jobs are not timed.
+ */
 export function createStudyRenderer(
   spawn: () => StudyEngine,
   fallback: () => StudyEngine,
+  timeoutMs: number = STUDY_JOB_TIMEOUT_MS,
 ): StudyRenderer {
   let disposed = false
   const isDisposed = (): boolean => disposed
   let worker: StudyEngine | null = null
   let main: StudyEngine | null = null
   let chosen: Promise<StudyEngine> | null = null
+  let generation = 0
+  let timeoutsInARow = 0
 
   const dropWorker = (): void => {
     worker?.dispose?.()
@@ -61,42 +78,94 @@ export function createStudyRenderer(
     chosen = Promise.resolve(main)
     return main
   }
-  const choose = (): Promise<StudyEngine> =>
-    (chosen ??= (async () => {
+  const abandonWorker = (): void => {
+    generation++
+    timeoutsInARow++
+    if (timeoutsInARow >= 2) {
+      switchToMain()
+      return
+    }
+    dropWorker()
+    chosen = null
+  }
+  const choose = (): Promise<StudyEngine> => {
+    if (chosen) return chosen
+    const gen = generation
+    chosen = (async () => {
       try {
         const spawned = spawn()
         worker = spawned
         await spawned.init()
         return spawned
       } catch (e) {
-        if (isDisposed()) throw e
+        if (isDisposed() || gen !== generation) throw e
         return switchToMain()
       }
-    })())
+    })()
+    return chosen
+  }
   const workerDied = (engine: StudyEngine): boolean =>
     engine === worker && engine.isDead?.() === true
+
+  const runOn = async (
+    plan: TilePixelPlan,
+    clone: ImageBitmap,
+    study: TileStudy,
+    untimed: () => void,
+  ): Promise<ImageBitmap> => {
+    const gen = generation
+    let engine: StudyEngine
+    try {
+      engine = await choose()
+      if (isDisposed()) throw new Error('Study renderer disposed')
+      if (gen !== generation) throw timedOut()
+      if (workerDied(engine)) engine = switchToMain()
+      if (engine === main) untimed()
+    } catch (e) {
+      clone.close()
+      throw e
+    }
+    try {
+      const out = await engine.renderStudyTile(plan, clone, study)
+      if (engine !== main && gen === generation) timeoutsInARow = 0
+      return out
+    } catch (e) {
+      clone.close()
+      if (workerDied(engine)) throw restarted(e)
+      throw e
+    }
+  }
 
   const render = async (
     plan: TilePixelPlan,
     clone: ImageBitmap,
     study: TileStudy,
   ): Promise<ImageBitmap> => {
-    let engine: StudyEngine
-    try {
-      if (isDisposed()) throw new Error('Study renderer disposed')
-      engine = await choose()
-      if (isDisposed()) throw new Error('Study renderer disposed')
-      if (workerDied(engine)) engine = switchToMain()
-    } catch (e) {
+    if (isDisposed()) {
       clone.close()
-      throw e
+      throw new Error('Study renderer disposed')
     }
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const stalled = timedOut()
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        reject(stalled)
+      }, timeoutMs)
+    })
+    const job = runOn(plan, clone, study, () => {
+      clearTimeout(timer)
+    })
     try {
-      return await engine.renderStudyTile(plan, clone, study)
+      return await Promise.race([job, timeout])
     } catch (e) {
-      clone.close()
-      if (workerDied(engine)) throw restarted(e)
+      if (e === stalled) {
+        job.catch(() => undefined)
+        clone.close()
+        if (!isDisposed()) abandonWorker()
+      }
       throw e
+    } finally {
+      clearTimeout(timer)
     }
   }
 

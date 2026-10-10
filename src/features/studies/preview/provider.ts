@@ -56,8 +56,12 @@ const bytesOf = (b: BitmapLike): number => b.width * b.height * 4
 
 /** `error.name` of a render that failed only because its renderer was replaced. Matched by name: errors lose their class across Comlink. */
 export const RENDERER_RESTARTED = 'StudyRendererRestarted'
-const isRetryable = (e: unknown): boolean =>
-  typeof e === 'object' && e !== null && 'name' in e && e.name === RENDERER_RESTARTED
+/** `error.name` of a render its renderer gave up on after `STUDY_JOB_TIMEOUT_MS` (M5-R22). */
+export const STUDY_TIMEOUT = 'StudyTimeout'
+/** Room for createStudyRenderer's two recoveries: a fresh worker, then the main thread (M5-R22). */
+const TIMEOUT_RETRIES = 2
+const named = (e: unknown, name: string): boolean =>
+  typeof e === 'object' && e !== null && 'name' in e && e.name === name
 
 export function createStudyPreviewProvider<B extends BitmapLike>(
   deps: ProviderDeps<B>,
@@ -70,6 +74,7 @@ export function createStudyPreviewProvider<B extends BitmapLike>(
   const holders = new Map<B, number>()
   const failed = new Set<string>()
   const retried = new Set<string>()
+  const timeouts = new Map<string, number>()
   const queue: StudyTileRequest[] = []
   const listeners = new Set<() => void>()
   let running: string | null = null
@@ -142,6 +147,7 @@ export function createStudyPreviewProvider<B extends BitmapLike>(
     }
     for (const key of [...failed]) if (!keys.has(key)) failed.delete(key)
     for (const key of [...retried]) if (!keys.has(key)) retried.delete(key)
+    for (const key of [...timeouts.keys()]) if (!keys.has(key)) timeouts.delete(key)
   }
 
   const stillWanted = (job: StudyTileRequest): boolean =>
@@ -196,8 +202,14 @@ export function createStudyPreviewProvider<B extends BitmapLike>(
             discard(job)
             return
           }
-          if (isRetryable(error) && !retried.has(job.key)) {
+          if (named(error, RENDERER_RESTARTED) && !retried.has(job.key)) {
             retried.add(job.key)
+            queue.unshift(job)
+            return
+          }
+          const timedOut = timeouts.get(job.key) ?? 0
+          if (named(error, STUDY_TIMEOUT) && timedOut < TIMEOUT_RETRIES) {
+            timeouts.set(job.key, timedOut + 1)
             queue.unshift(job)
             return
           }

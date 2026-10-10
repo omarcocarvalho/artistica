@@ -1,8 +1,13 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { TilePixelPlan } from '../../render/pixels/tile-plan'
 import { FakeCanvas } from '../../render/test-support/fake-canvas'
-import { RENDERER_RESTARTED } from './provider'
-import { createAppStudyProvider, createStudyRenderer, type StudyEngine } from './study-client'
+import { RENDERER_RESTARTED, STUDY_TIMEOUT } from './provider'
+import {
+  createAppStudyProvider,
+  createStudyRenderer,
+  STUDY_JOB_TIMEOUT_MS,
+  type StudyEngine,
+} from './study-client'
 import { request } from './test-support/fakes'
 
 const plan = {} as TilePixelPlan
@@ -240,8 +245,196 @@ describe('createStudyRenderer', () => {
   })
 })
 
+describe('createStudyRenderer: job timeout (M5-R22)', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const settle = async (): Promise<void> => {
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+  }
+  const never = <T>(): Promise<T> => new Promise<T>(() => undefined)
+  const outcome = (job: Promise<unknown>): Promise<unknown> =>
+    job.then(
+      () => 'resolved',
+      (e: unknown) => (e as Error).name,
+    )
+
+  interface FakeWorker {
+    hang: boolean
+    renders: number
+    readonly dispose: Mock<() => void>
+  }
+
+  /** Workers made in order; worker n never answers its renders while `hang` (initially `hangs(n)`). */
+  function workers(hangs: (n: number) => boolean) {
+    const made: FakeWorker[] = []
+    const spawn = vi.fn((): StudyEngine => {
+      const w: FakeWorker = { hang: hangs(made.length), renders: 0, dispose: vi.fn() }
+      made.push(w)
+      return {
+        init: () => Promise.resolve(),
+        renderStudyTile: () => {
+          w.renders++
+          return w.hang ? never<ImageBitmap>() : Promise.resolve(bmp(2))
+        },
+        dispose: w.dispose,
+      }
+    })
+    return { made, spawn }
+  }
+
+  it('a job with no answer after 20 s rejects with name StudyTimeout, terminates the worker, and the next job gets a fresh one', async () => {
+    vi.useFakeTimers()
+    expect(STUDY_JOB_TIMEOUT_MS).toBe(20_000)
+    const { made, spawn } = workers((n) => n === 0)
+    const render = createStudyRenderer(spawn, () => engine())
+    const clone = bmp()
+    const job = outcome(render(plan, clone, study))
+    await settle()
+    await vi.advanceTimersByTimeAsync(STUDY_JOB_TIMEOUT_MS - 1)
+    expect(made[0]?.dispose).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
+    await expect(job).resolves.toBe(STUDY_TIMEOUT)
+    expect(made[0]?.dispose).toHaveBeenCalledTimes(1)
+    expect(clone.closed).toBeGreaterThanOrEqual(1)
+
+    await expect(render(plan, bmp(), study)).resolves.toBeDefined()
+    expect(spawn).toHaveBeenCalledTimes(2)
+    expect(made[1]?.renders).toBe(1)
+  })
+
+  it('a second timeout in a row moves the preview to the main thread for the session, where jobs are not timed', async () => {
+    vi.useFakeTimers()
+    const { made, spawn } = workers(() => true)
+    let finishMain: (b: ImageBitmap) => void = () => undefined
+    const mainRender = vi.fn(
+      () =>
+        new Promise<ImageBitmap>((resolve) => {
+          finishMain = resolve
+        }),
+    )
+    const main = engine({ renderStudyTile: mainRender })
+    const fallback = vi.fn(() => main)
+    const render = createStudyRenderer(spawn, fallback)
+    const first = outcome(render(plan, bmp(), study))
+    await vi.advanceTimersByTimeAsync(STUDY_JOB_TIMEOUT_MS)
+    await expect(first).resolves.toBe(STUDY_TIMEOUT)
+    expect(fallback).not.toHaveBeenCalled()
+    const second = outcome(render(plan, bmp(), study))
+    await vi.advanceTimersByTimeAsync(STUDY_JOB_TIMEOUT_MS)
+    await expect(second).resolves.toBe(STUDY_TIMEOUT)
+    expect(made[1]?.dispose).toHaveBeenCalledTimes(1)
+    expect(fallback).toHaveBeenCalledTimes(1)
+
+    const third = outcome(render(plan, bmp(), study))
+    await vi.advanceTimersByTimeAsync(STUDY_JOB_TIMEOUT_MS * 3)
+    finishMain(bmp(2))
+    await expect(third).resolves.toBe('resolved')
+    expect(mainRender).toHaveBeenCalledTimes(1)
+    expect(spawn).toHaveBeenCalledTimes(2)
+  })
+
+  it('a job that answers between two timeouts resets the count, so the next timeout gets a fresh worker again', async () => {
+    vi.useFakeTimers()
+    const { made, spawn } = workers((n) => n !== 1)
+    const fallback = vi.fn(() => engine())
+    const render = createStudyRenderer(spawn, fallback)
+    const first = outcome(render(plan, bmp(), study))
+    await vi.advanceTimersByTimeAsync(STUDY_JOB_TIMEOUT_MS)
+    await expect(first).resolves.toBe(STUDY_TIMEOUT)
+    await expect(render(plan, bmp(), study)).resolves.toBeDefined()
+    const second = made[1]
+    if (second) second.hang = true
+    const third = outcome(render(plan, bmp(), study))
+    await vi.advanceTimersByTimeAsync(STUDY_JOB_TIMEOUT_MS)
+    await expect(third).resolves.toBe(STUDY_TIMEOUT)
+    expect(fallback).not.toHaveBeenCalled()
+    expect(made[1]?.dispose).toHaveBeenCalledTimes(1)
+    void render(plan, bmp(), study).catch(() => undefined)
+    await settle()
+    expect(spawn).toHaveBeenCalledTimes(3)
+    expect(made[2]?.renders).toBe(1)
+  })
+
+  it('the timer covers the worker’s start-up, and its late init failure does not switch to the main thread', async () => {
+    vi.useFakeTimers()
+    let failInit: (e: Error) => void = () => undefined
+    const disposeFirst = vi.fn()
+    const spawn = vi.fn(() =>
+      spawn.mock.calls.length === 1
+        ? engine({
+            init: vi.fn(
+              () =>
+                new Promise<void>((_, reject) => {
+                  failInit = reject
+                }),
+            ),
+            dispose: disposeFirst,
+          })
+        : engine(),
+    )
+    const fallback = vi.fn(() => engine())
+    const render = createStudyRenderer(spawn, fallback)
+    const clone = bmp()
+    const job = outcome(render(plan, clone, study))
+    await vi.advanceTimersByTimeAsync(STUDY_JOB_TIMEOUT_MS)
+    await expect(job).resolves.toBe(STUDY_TIMEOUT)
+    expect(disposeFirst).toHaveBeenCalledTimes(1)
+    expect(clone.closed).toBeGreaterThanOrEqual(1)
+    failInit(new Error('Study worker stopped'))
+    await settle()
+    await expect(render(plan, bmp(), study)).resolves.toBeDefined()
+    expect(fallback).not.toHaveBeenCalled()
+    expect(spawn).toHaveBeenCalledTimes(2)
+  })
+
+  it('a slow job that answers before the timeout (19.9 s) is never retried', async () => {
+    vi.useFakeTimers()
+    const out = bmp(9)
+    const dispose = vi.fn()
+    const worker = engine({
+      renderStudyTile: vi.fn(
+        () =>
+          new Promise<ImageBitmap>((resolve) => {
+            setTimeout(() => {
+              resolve(out)
+            }, 19_900)
+          }),
+      ),
+      dispose,
+    })
+    const spawn = vi.fn(() => worker)
+    const render = createStudyRenderer(spawn, () => engine())
+    const job = render(plan, bmp(), study)
+    await vi.advanceTimersByTimeAsync(19_900)
+    await expect(job).resolves.toBe(out)
+    await vi.advanceTimersByTimeAsync(STUDY_JOB_TIMEOUT_MS)
+    expect(dispose).not.toHaveBeenCalled()
+    expect(spawn).toHaveBeenCalledTimes(1)
+  })
+
+  it('a timeout after dispose makes no worker and no main-thread engine', async () => {
+    vi.useFakeTimers()
+    const { spawn } = workers(() => true)
+    const fallback = vi.fn(() => engine())
+    const render = createStudyRenderer(spawn, fallback)
+    const first = outcome(render(plan, bmp(), study))
+    await vi.advanceTimersByTimeAsync(STUDY_JOB_TIMEOUT_MS)
+    await expect(first).resolves.toBe(STUDY_TIMEOUT)
+    const second = outcome(render(plan, bmp(), study))
+    await settle()
+    render.dispose()
+    await vi.advanceTimersByTimeAsync(STUDY_JOB_TIMEOUT_MS)
+    await expect(second).resolves.toBe(STUDY_TIMEOUT)
+    expect(spawn).toHaveBeenCalledTimes(2)
+    expect(fallback).not.toHaveBeenCalled()
+  })
+})
+
 describe('createAppStudyProvider', () => {
   afterEach(() => {
+    vi.useRealTimers()
     vi.unstubAllGlobals()
   })
 
@@ -292,7 +485,7 @@ describe('createAppStudyProvider', () => {
     expect(preview.closed).toBe(0)
   })
 
-  type WorkerReply = 'error' | 'messageerror' | { value: unknown }
+  type WorkerReply = 'error' | 'messageerror' | 'hang' | { value: unknown }
   interface WireMessage {
     readonly id: string
     readonly type: string
@@ -300,7 +493,7 @@ describe('createAppStudyProvider', () => {
   }
 
   /** A Worker that answers Comlink's APPLY calls by method name: a value, or an error event. */
-  function stubWorker(reply: (method: string) => WorkerReply) {
+  function stubWorker(reply: (method: string, worker: number) => WorkerReply) {
     const made: FakeWorker[] = []
     class FakeWorker {
       readonly listeners = new Map<string, ((ev: unknown) => void)[]>()
@@ -319,7 +512,8 @@ describe('createAppStudyProvider', () => {
         if (msg.type !== 'APPLY') return
         const method = msg.path?.[0] ?? ''
         this.calls.push({ method, transfers })
-        const r = reply(method)
+        const r = reply(method, made.indexOf(this))
+        if (r === 'hang') return
         setTimeout(() => {
           if (typeof r === 'string') this.emit(r, {})
           else this.emit('message', { data: { id: msg.id, type: 'RAW', value: r.value } })
@@ -424,6 +618,52 @@ describe('createAppStudyProvider', () => {
       p.dispose()
     },
   )
+
+  it('a stalled worker job: terminated after 20 s, the tile renders on a fresh worker and the queue moves on', async () => {
+    vi.useFakeTimers()
+    const outs = [bmp(100), bmp(101)]
+    const workers = stubWorker((method, n) =>
+      method === 'init' ? { value: undefined } : n === 0 ? 'hang' : { value: outs.shift() },
+    )
+    const { source } = stubPreview()
+    const p = createAppStudyProvider(() => source)
+    p.want('page0', [request('a', 'k1'), request('a', 'k2', { slot: 'a|blurred|0:1' })])
+    await vi.advanceTimersByTimeAsync(STUDY_JOB_TIMEOUT_MS - 1)
+    expect(workers).toHaveLength(1)
+    expect(p.pending('page0')).toBe(2)
+    await vi.advanceTimersByTimeAsync(1)
+    await vi.waitFor(() => {
+      expect(p.pending('page0')).toBe(0)
+    })
+    expect(workers).toHaveLength(2)
+    expect(workers[0]?.terminate).toHaveBeenCalledTimes(1)
+    expect(workers[1]?.calls.map((c) => c.method)).toEqual([
+      'init',
+      'renderStudyTile',
+      'renderStudyTile',
+    ])
+    expect(p.get('k1', SLOT)).not.toBeNull()
+    expect(p.get('k2', 'a|blurred|0:1')).not.toBeNull()
+    p.dispose()
+  })
+
+  it('a job that stalls on two workers in a row renders on the main thread, as do later jobs', async () => {
+    vi.useFakeTimers()
+    const workers = stubWorker((method) => (method === 'init' ? { value: undefined } : 'hang'))
+    const outs = stubOffscreen()
+    const { source } = stubPreview()
+    const p = createAppStudyProvider(() => source)
+    p.want('page0', [request('a', 'k1'), request('a', 'k2', { slot: 'a|blurred|0:1' })])
+    await vi.advanceTimersByTimeAsync(STUDY_JOB_TIMEOUT_MS * 2)
+    await vi.waitFor(() => {
+      expect(p.pending('page0')).toBe(0)
+    })
+    expect(workers).toHaveLength(2)
+    expect(workers.map((w) => w.terminate.mock.calls.length)).toEqual([1, 1])
+    expect(p.get('k1', SLOT)).toBe(outs[0])
+    expect(p.get('k2', 'a|blurred|0:1')).toBe(outs[1])
+    p.dispose()
+  })
 
   it('without main-thread OffscreenCanvas 2D, the fallback renders on DOM canvases', async () => {
     stubWorker((method) => (method === 'init' ? 'error' : { value: bmp() }))
