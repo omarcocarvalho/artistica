@@ -47,6 +47,7 @@
   --color-info-soft: var(--color-secondary-soft);
   --color-paper: #ffffff;
   --color-paper-edge: rgb(0 0 0 / 0.08);
+  --color-brand: #b0432a;
   --color-guide-safe: #2a7ab8;
   --color-guide-bleed: #d63a78;
   --color-guide-cut: rgb(0 0 0 / 0.35);

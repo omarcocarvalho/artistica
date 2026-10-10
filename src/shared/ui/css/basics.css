@@ -1,4 +1,4 @@
-/* Buttons, badges, chips, callouts, progress, sketch card. Adapted from design/mockup.css (.btn → .ds-btn). */
+/* Buttons, badges, chips, callouts, progress, sketch card, logo mark. Adapted from design/mockup.css (.btn → .ds-btn). */
 @layer components {
   .ds-btn {
     --btn-bg: var(--color-surface);
@@ -336,5 +336,42 @@
     clip-path: inset(50%);
     white-space: nowrap;
     border: 0;
+  }
+
+  .logo-mark {
+    --logo-ink: var(--color-ink);
+    --logo-paper: var(--color-paper);
+    --logo-tile: var(--color-brand);
+    --logo-line: var(--color-ochre);
+    display: block;
+    flex: none;
+  }
+  .logo-mark__sheet {
+    fill: var(--logo-paper);
+    stroke: var(--logo-ink);
+  }
+  .logo-mark__tile {
+    fill: var(--logo-tile);
+  }
+  .logo-mark__spiral,
+  .logo-mark__rule {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .logo-mark__spiral {
+    stroke: var(--logo-line);
+  }
+  .logo-mark__rule {
+    stroke: var(--logo-ink);
+  }
+  @media (forced-colors: active) {
+    .logo-mark {
+      --logo-ink: CanvasText;
+      --logo-paper: Canvas;
+      --logo-tile: CanvasText;
+      --logo-line: Canvas;
+      forced-color-adjust: none;
+    }
   }
 }

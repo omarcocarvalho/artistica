@@ -76,6 +76,33 @@ describe('landing SEO', () => {
     expect(sitemap).toContain(`<loc>${ORIGIN}app/</loc>`)
     expect(read('public/robots.txt')).toContain(`Sitemap: ${ORIGIN}sitemap.xml`)
   })
+  it.each(['index.html', 'app/index.html'])(
+    '%s links the SVG favicon and the 180 px home-screen icon',
+    (page) => {
+      const doc = read(page)
+      expect(doc).toContain('<link rel="icon" type="image/svg+xml" href="/favicon.svg" />')
+      expect(doc).toContain(
+        '<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />',
+      )
+    },
+  )
+  it('favicon.svg is the logo mark, standalone, with a dark-tab variant', () => {
+    const svg = read('public/favicon.svg')
+    expect(svg).toMatch(/^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 32 32"/)
+    expect(svg).not.toContain('<text')
+    expect(svg).not.toMatch(/var\(/)
+    expect(svg).toContain('@media (prefers-color-scheme: dark)')
+    expect(svg.length).toBeLessThan(2_048)
+  })
+  it('apple-touch-icon.png is an opaque 180x180 PNG', () => {
+    const png = readFileSync(new URL('../public/apple-touch-icon.png', import.meta.url))
+    expect(png.subarray(1, 4).toString('ascii')).toBe('PNG')
+    expect(png.readUInt32BE(16)).toBe(180)
+    expect(png.readUInt32BE(20)).toBe(180)
+    // Colour type 2 is RGB without alpha: iOS fills transparent pixels with black.
+    expect(png[25]).toBe(2)
+    expect(png.length).toBeLessThan(30_000)
+  })
   it('og-image.png is a 1200x630 PNG under 300 KB', () => {
     const png = readFileSync(new URL('../public/og-image.png', import.meta.url))
     expect(png.subarray(1, 4).toString('ascii')).toBe('PNG')
