@@ -68,6 +68,20 @@ describe('presetFromSettings', () => {
     expect(preset('  A4   values ').name).toBe('A4 values')
   })
 
+  it('gives fields that are not objects their defaults', () => {
+    const garbage = { pageSetup: null, study: [], lines: 'x' } as unknown as {
+      pageSetup: PageSetup
+      study: StudySettings
+      lines: LineSettings
+    }
+    expect(presetFromSettings('A4', garbage)).toEqual({
+      name: 'A4',
+      pageSetup: DEFAULT_PAGE_SETUP,
+      study: DEFAULT_STUDY,
+      lines: DEFAULT_LINES,
+    })
+  })
+
   it('a preset never carries unit, theme or language', () => {
     const settings = {
       pageSetup,
@@ -353,6 +367,16 @@ describe('parsePresetFile', () => {
     expect(result).toMatchObject({ ok: true, skipped: 0, adjusted: 2 })
   })
 
+  it('counts a preset whose study versions were reordered or repeated as adjusted', () => {
+    const raw = { ...preset(), study: { ...study, versions: ['values', 'original', 'values'] } }
+    expect(parsePresetFile(fileText([raw]))).toEqual({
+      ok: true,
+      presets: [preset()],
+      skipped: 0,
+      adjusted: 1,
+    })
+  })
+
   it('does not count dropped unknown keys as adjusted', () => {
     const result = parsePresetFile(fileText([{ ...preset(), extra: 1 }]))
     expect(result).toEqual({ ok: true, presets: [preset()], skipped: 0, adjusted: 0 })
@@ -360,7 +384,9 @@ describe('parsePresetFile', () => {
 
   it('drops unknown keys and ignores __proto__ and constructor keys', () => {
     const p = preset()
-    const text = `{"format":"artistica-presets","version":1,"__proto__":{"polluted":1},"constructor":{"prototype":{"polluted":2}},"presets":[{"__proto__":{"polluted":3},"constructor":{"x":1},"prototype":{"y":1},"name":"A4 values","pageSetup":${JSON.stringify({ ...p.pageSetup, __proto__: null })},"study":${JSON.stringify(p.study)},"lines":${JSON.stringify(p.lines)},"photo":"img-1"}]}`
+    const withProto = (o: object): string =>
+      `{"__proto__":{"polluted":4},${JSON.stringify(o).slice(1)}`
+    const text = `{"format":"artistica-presets","version":1,"__proto__":{"polluted":1},"constructor":{"prototype":{"polluted":2}},"presets":[{"__proto__":{"polluted":3},"constructor":{"x":1},"prototype":{"y":1},"name":"A4 values","pageSetup":${withProto(p.pageSetup)},"study":${withProto(p.study)},"lines":${withProto({ ...p.lines, grid: JSON.parse(withProto(p.lines.grid)) as unknown })},"photo":"img-1"}]}`
     const result = parsePresetFile(text)
     expect(result).toEqual({ ok: true, presets: [p], skipped: 0, adjusted: 0 })
     if (!result.ok) throw new Error('expected ok')
@@ -368,6 +394,10 @@ describe('parsePresetFile', () => {
     expect(Object.hasOwn(only ?? {}, '__proto__')).toBe(false)
     expect(Object.getPrototypeOf(only)).toBe(Object.prototype)
     expect(Object.keys(only ?? {})).toEqual(['name', 'pageSetup', 'study', 'lines'])
+    for (const nested of [only?.pageSetup, only?.study, only?.lines, only?.lines.grid]) {
+      expect(Object.hasOwn(nested ?? {}, '__proto__')).toBe(false)
+      expect(Object.getPrototypeOf(nested)).toBe(Object.prototype)
+    }
     expect(({} as Record<string, unknown>).polluted).toBeUndefined()
     expect(Object.prototype).not.toHaveProperty('polluted')
   })
