@@ -11,6 +11,7 @@ describe('public API', () => {
         'MAX_DECODED_PIXELS',
         'MAX_FILE_BYTES',
         'decodeFull',
+        'decodedPixelLimit',
         'importErrorKeys',
         'removalFocusTarget',
         'selectImageDescriptors',
@@ -29,5 +30,6 @@ describe('public API', () => {
     expect(api.importErrorKeys('cors').title).toBe('errors:images.cors.title')
     expect(api.MAX_FILE_BYTES).toBe(100 * 1024 * 1024)
     expect(api.MAX_DECODED_PIXELS).toBe(200_000_000)
+    expect(api.decodedPixelLimit).toBeTypeOf('function')
   })
 })

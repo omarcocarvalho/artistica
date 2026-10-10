@@ -33,6 +33,8 @@ export interface DecodeDeps {
   browserAppliesExif(): Promise<boolean>
   /** Should a downscaled decode pass `resizeWidth`/`resizeHeight` to createImageBitmap? */
   resizeOnDecode(): Promise<boolean>
+  /** The most pixels a photo may have when it is added; a photo already added exports up to MAX_DECODED_PIXELS. */
+  maxDecodedPixels(): number
   loadHeicConverter(): Promise<(blob: Blob) => Promise<Blob>>
   createObjectURL(blob: Blob): string
 }
@@ -138,15 +140,14 @@ interface Sniffed {
   readonly declared: Size | null
 }
 
-async function sniff(blob: Blob, name: string): Promise<Sniffed> {
+async function sniff(blob: Blob, name: string, maxPixels: number): Promise<Sniffed> {
   const head = new Uint8Array(await blob.slice(0, HEAD_BYTES).arrayBuffer())
   const sniffed = sniffImage(head)
   const kind: SniffedKind | null =
     sniffed?.kind ?? (looksLikeHeicByLabel(blob.type, name) ? 'heic' : null)
   if (kind === null) throw new ImportFailure('unsupported-format')
   const declared = readDeclaredSize(head, kind)
-  if (declared !== null && declared.w * declared.h > MAX_DECODED_PIXELS)
-    throw new ImportFailure('too-large')
+  if (declared !== null && declared.w * declared.h > maxPixels) throw new ImportFailure('too-large')
   return { kind, head, declared }
 }
 
@@ -183,10 +184,10 @@ async function decodeResized(
 }
 
 /** Upright size of a decode. Closes it and throws when it is too large. */
-function uprightSize(oriented: Oriented): { w: number; h: number } {
+function uprightSize(oriented: Oriented, maxPixels: number): { w: number; h: number } {
   const w = oriented.transform?.width ?? oriented.bitmap.width
   const h = oriented.transform?.height ?? oriented.bitmap.height
-  if (w * h > MAX_DECODED_PIXELS) {
+  if (w * h > maxPixels) {
     oriented.bitmap.close()
     throw new ImportFailure('too-large')
   }
@@ -261,7 +262,7 @@ async function decodePreview(
     kind === 'heic'
       ? await decodeHeic(blob, deps)
       : { ...(await decodeStandard(blob, kind, head, deps)), source: blob }
-  const upright = uprightSize(decoded)
+  const upright = uprightSize(decoded, deps.maxDecodedPixels())
   const size = previewTarget(upright)
   const preview = await paintUpright(decoded, kind, size.w, size.h, deps)
   return { preview, upright, source: decoded.source }
@@ -277,7 +278,7 @@ export async function decodeImage(
   deps: DecodeDeps,
 ): Promise<DecodedImage> {
   if (blob.size > MAX_FILE_BYTES) throw new ImportFailure('too-large')
-  const sniffed = await sniff(blob, name)
+  const sniffed = await sniff(blob, name, deps.maxDecodedPixels())
   const animatedGif =
     sniffed.kind === 'gif' && isAnimatedGif(new Uint8Array(await blob.arrayBuffer()))
   const { preview, upright, source } = await decodePreview(blob, sniffed, deps)
@@ -309,7 +310,7 @@ export async function decodeFullImage(
   name: string,
   deps: DecodeDeps,
 ): Promise<ImageBitmap> {
-  const sniffed = await sniff(source, name)
+  const sniffed = await sniff(source, name, MAX_DECODED_PIXELS)
   const { kind, head } = sniffed
   const target = (u: Size): Size => planDownscale(u.w, u.h)
   const resized = await decodeResized(source, sniffed, target, deps)
@@ -321,6 +322,6 @@ export async function decodeFullImage(
     kind === 'heic'
       ? await decodeHeic(source, deps)
       : await decodeStandard(source, kind, head, deps)
-  const full = target(uprightSize(decoded))
+  const full = target(uprightSize(decoded, MAX_DECODED_PIXELS))
   return paintUpright(decoded, kind, full.w, full.h, deps)
 }

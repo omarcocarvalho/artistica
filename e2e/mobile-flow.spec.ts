@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { AppPage, colourDistance } from './support/app.ts'
 import { FIXTURES } from './support/fixtures.ts'
@@ -21,8 +21,13 @@ import { inspectPdf } from '../src/features/render/pdf/inspect.ts'
 import { compositionPaths } from '../src/features/lines/composition.ts'
 import { DEFAULT_LINES, patchLines } from '../src/shared/model/lines.ts'
 import { runOnly } from './support/projects.ts'
-import { heapByContext, sampleBrowserMemory, type ContextHeap } from './support/memory.ts'
-import { syntheticJpegs } from './support/synthetic.ts'
+import {
+  heapByContext,
+  sampleBrowserMemory,
+  settledRss,
+  type ContextHeap,
+} from './support/memory.ts'
+import { syntheticJpegs, syntheticJpegsApart } from './support/synthetic.ts'
 import {
   installWorkerProbe,
   summarizeLandmarkWorkers,
@@ -366,6 +371,196 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line and guide on
     .soft(peaks['settled after guides'], 'settled after guides')
     .toBeLessThanOrEqual((peaks['settled after studies'] ?? NaN) + SETTLED_GUIDES_GROWTH_MB)
   expect.soft(peaks.export, 'export').toBeLessThan(EXPORT_PEAK_BUDGET_MB)
+})
+
+/** M5 memory tests (D7): the spec's own case, many pages, and one very large photo. */
+const M5_PHOTO = { w: 4000, h: 3000 }
+/** M5b: the settled memory after every page has been near the view, over the first 10 pages' (M5-R21). */
+const PAGES_GROWTH_MB = 150
+/** A decode's peak lasts well under the sampler's default 250 ms. */
+const DECODE_SAMPLE_MS = 50
+
+function skipUnlessChromium(projectName: string): void {
+  test.skip(
+    projectName !== 'mobile-chromium',
+    'chromium only: the photos are encoded by a page canvas and RSS comes from Chromium’s process list',
+  )
+}
+
+test('M5a @slow 20 x 12 MP photos with default settings on A4: import, preview and export on a phone within the memory budget', async ({
+  page,
+  browser,
+}, testInfo) => {
+  skipUnlessChromium(testInfo.project.name)
+  test.setTimeout(300_000)
+  const crashed: string[] = []
+  page.on('crash', () => crashed.push('page crashed'))
+  const photos = await syntheticJpegsApart(browser, 20, M5_PHOTO.w, M5_PHOTO.h, { noisy: true })
+  const app = startApp(page)
+  await app.goto()
+  const memory = sampleBrowserMemory(browser, DECODE_SAMPLE_MS)
+  let pdf: Buffer
+  let previewPages: number
+  let settled: number
+  try {
+    await page.waitForTimeout(1000)
+    memory.phase('import')
+    await app.upload(photos)
+    await app.expectImages(20, 120_000)
+    await page.getByRole('button', { name: 'Next' }).click()
+    await app.setPaper('A4')
+    await page.getByRole('button', { name: 'Next' }).click()
+    memory.phase('preview')
+    await page.getByRole('button', { name: 'Next' }).click()
+    previewPages = await app.expectPreviewPages(2)
+    for (let i = 0; i < previewPages; i++) await app.showPage(i)
+    await app.showPage(0)
+    settled = await settledRss(page, memory, 'settled')
+    await page.getByRole('button', { name: 'Next' }).click()
+    await expect(app.exportStep.getByText('20 from 20 images')).toBeVisible()
+    memory.phase('export')
+    pdf = (await app.exportPdf('step')).bytes
+  } finally {
+    await memory.stop()
+  }
+  const peaks = memory.peaks()
+  const report = JSON.stringify({ previewPages, peaksMb: peaks, settledMb: settled })
+  console.log(`memory M5a: ${report}`)
+  testInfo.annotations.push({ type: 'memory', description: report })
+
+  const info = await summarizePdf(pdf)
+  expect(info.pageCount).toBe(previewPages)
+  expect(info.pages.every((p) => Math.abs(p.widthPt - 595.28) < 1)).toBe(true)
+  expect(sum(info.pages.map((p) => p.imagePlacements))).toBe(20)
+  expect(crashed).toEqual([])
+  expect.soft(peaks.import, 'import').toBeLessThan(AFTER_IMPORT_BUDGET_MB)
+  expect.soft(peaks.preview, 'preview').toBeLessThan(AFTER_IMPORT_BUDGET_MB)
+  expect.soft(peaks.export, 'export').toBeLessThan(EXPORT_PEAK_BUDGET_MB)
+})
+
+test('M5b @slow 60 x 12 MP photos on about 60 A6 pages: phone memory does not grow with the pages seen', async ({
+  page,
+  browser,
+}, testInfo) => {
+  skipUnlessChromium(testInfo.project.name)
+  test.setTimeout(480_000)
+  const crashed: string[] = []
+  page.on('crash', () => crashed.push('page crashed'))
+  const photos = await syntheticJpegsApart(browser, 60, M5_PHOTO.w, M5_PHOTO.h, { noisy: true })
+  const app = startApp(page)
+  await app.goto()
+  const memory = sampleBrowserMemory(browser)
+  let previewPages: number
+  let beforePreview: number
+  let firstPages: number
+  let everyPage: number
+  let drawnAfter: number
+  try {
+    memory.phase('import')
+    await app.upload(photos)
+    await app.expectImages(60, 300_000)
+    await page.getByRole('button', { name: 'Next' }).click()
+    await app.setPaper('A6')
+    await page.getByRole('button', { name: 'Next' }).click()
+    await app.pickStudiesImage('synthetic-01.jpg')
+    await app.setVersions(['Original', 'Blurred'])
+    await app.applyStudiesToAll()
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Study settings copied to 59 images.' }),
+    ).toBeAttached()
+    beforePreview = await settledRss(page, memory, 'before preview')
+    memory.phase('first 10 pages')
+    await page.getByRole('button', { name: 'Next' }).click()
+    previewPages = await app.expectPreviewPages(50)
+    for (let i = 0; i < 10; i++) await app.showPage(i)
+    await app.showPage(0)
+    firstPages = await settledRss(page, memory, 'settled after 10 pages')
+    memory.phase('every page')
+    for (let i = 10; i < previewPages; i++) await app.showPage(i)
+    await app.showPage(0)
+    everyPage = await settledRss(page, memory, 'settled after every page')
+    drawnAfter = await app.drawnSheetCount()
+  } finally {
+    await memory.stop()
+  }
+  const report = JSON.stringify({
+    previewPages,
+    drawnAfter,
+    settledMb: { beforePreview, firstPages, everyPage },
+    growthMb: everyPage - firstPages,
+    peaksMb: memory.peaks(),
+  })
+  console.log(`memory M5b: ${report}`)
+  testInfo.annotations.push({ type: 'memory', description: report })
+
+  expect(crashed).toEqual([])
+  expect(previewPages).toBeGreaterThanOrEqual(50)
+  expect.soft(drawnAfter, 'sheets drawn after going back to page 1').toBeLessThan(10)
+  expect
+    .soft(everyPage, 'settled after every page')
+    .toBeLessThanOrEqual(firstPages + PAGES_GROWTH_MB)
+})
+
+const LARGE_PHOTOS = [
+  { mp: 100, w: 11547, h: 8660 },
+  { mp: 200, w: 16330, h: 12247 },
+] as const
+
+test('M5c @slow a 100 MP photo imports on a phone within the memory budget, and a 200 MP one is refused before decoding (owner Q-H7)', async ({
+  page,
+  browser,
+}, testInfo) => {
+  skipUnlessChromium(testInfo.project.name)
+  test.setTimeout(300_000)
+  const crashed: string[] = []
+  page.on('crash', () => crashed.push('page crashed'))
+  const files: string[] = []
+  for (const { mp, w, h } of LARGE_PHOTOS) {
+    const file = testInfo.outputPath(`synthetic-${String(mp)}mp.jpg`)
+    for (const photo of await syntheticJpegsApart(browser, 1, w, h, { noisy: true }))
+      writeFileSync(file, photo.buffer)
+    files.push(file)
+  }
+  const [file100 = '', file200 = ''] = files
+  const app = startApp(page)
+  await app.goto()
+  const coarse = await page.evaluate(
+    () =>
+      (globalThis as unknown as { matchMedia(q: string): { matches: boolean } }).matchMedia(
+        '(pointer: coarse)',
+      ).matches,
+  )
+  expect(coarse, 'the phone project has a coarse pointer').toBe(true)
+  const memory = sampleBrowserMemory(browser, DECODE_SAMPLE_MS)
+  const settled: Record<string, number> = {}
+  let refusal: string
+  try {
+    settled.start = await settledRss(page, memory, 'start')
+    memory.phase('import 100 MP')
+    await app.upload(file100)
+    await app.expectImages(1, 120_000)
+    settled['100 MP'] = await settledRss(page, memory, 'settled 100 MP')
+    await app.removeAll()
+    await app.expectImages(0)
+    memory.phase('import 200 MP')
+    await app.upload(file200)
+    const alert = page.getByRole('alert').filter({ hasText: 'synthetic-200mp.jpg is too large' })
+    await expect(alert).toBeVisible({ timeout: 60_000 })
+    refusal = (await alert.textContent()) ?? ''
+    settled['200 MP'] = await settledRss(page, memory, 'settled 200 MP')
+  } finally {
+    await memory.stop()
+  }
+  const peaks = memory.peaks()
+  const report = JSON.stringify({ peaksMb: peaks, settledMb: settled })
+  console.log(`memory M5c: ${report}`)
+  testInfo.annotations.push({ type: 'memory', description: report })
+
+  expect(crashed).toEqual([])
+  expect(refusal).toContain('Photos can be up to 100 MB and 100 megapixels.')
+  await expect(app.imageRows).toHaveCount(0)
+  expect.soft(peaks['import 100 MP'], 'import 100 MP').toBeLessThan(AFTER_IMPORT_BUDGET_MB)
+  expect.soft(peaks['import 200 MP'], 'import 200 MP').toBeLessThan(AFTER_IMPORT_BUDGET_MB)
 })
 
 test('M2 touch targets in the step bar and footer are at least 44px tall', async ({ page }) => {

@@ -12,4 +12,5 @@ export {
 } from './store'
 export { importErrorKeys } from './errors'
 export { MAX_FILE_BYTES, MAX_DECODED_PIXELS } from './limits'
+export { decodedPixelLimit } from './pixel-limit'
 export type { LoadedImage, ImportOutcome, ImportErrorCode, ImportWarning } from './types'

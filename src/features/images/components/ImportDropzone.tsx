@@ -11,15 +11,16 @@ import { flushSync } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Button, Callout, Icon, IconButton, ProgressBar } from '../../../shared/ui'
 import { importErrorKeys } from '../errors'
-import { MAX_DECODED_PIXELS, MAX_FILE_BYTES } from '../limits'
+import { MAX_FILE_BYTES } from '../limits'
+import { decodedPixelLimit } from '../pixel-limit'
 import { useImages } from '../store'
 import type { ImportErrorCode, ImportOutcome } from '../types'
 
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif'
-const limitVars = {
+const limitVars = () => ({
   maxMb: Math.round(MAX_FILE_BYTES / 1048576),
-  maxMp: Math.round(MAX_DECODED_PIXELS / 1e6),
-}
+  maxMp: Math.round(decodedPixelLimit() / 1e6),
+})
 
 export interface ImportDropzoneProps {
   variant?: 'compact' | 'card'
@@ -43,7 +44,7 @@ function IssueCallout({ issue, onDismiss }: { issue: Issue; onDismiss: () => voi
   let tone: 'danger' | 'warning' | 'info' = 'danger'
   if (issue.kind === 'error') {
     const keys = importErrorKeys(issue.error)
-    const vars = { name: issue.source, ...limitVars }
+    const vars = { name: issue.source, ...limitVars() }
     title = t(keys.title, vars)
     message = t(keys.message, vars)
   } else if (issue.kind === 'no-image') {
@@ -351,9 +352,9 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
             <div id={urlErrId} role="alert">
               <Callout
                 tone="danger"
-                title={t(urlKeys.title, { name: urlError.source, ...limitVars })}
+                title={t(urlKeys.title, { name: urlError.source, ...limitVars() })}
               >
-                {t(urlKeys.message, { name: urlError.source, ...limitVars })}
+                {t(urlKeys.message, { name: urlError.source, ...limitVars() })}
               </Callout>
               {urlError.error === 'cors' && (
                 <div className="mt-2 flex justify-end gap-2">

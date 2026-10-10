@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { reportPasteOutcomes } from './import-notices'
 import { useNotices } from './state/useNotices'
 import type { ImportOutcome } from '../features/images'
@@ -10,6 +10,9 @@ const nameOf = (id: ImageId) => (id === ('gif' as ImageId) ? 'spin.gif' : undefi
 
 beforeEach(() => {
   useNotices.getState().clear()
+})
+afterEach(() => {
+  vi.unstubAllGlobals()
 })
 
 const ok = (id: string, warnings?: 'animated-gif'[]): ImportOutcome => ({
@@ -65,4 +68,17 @@ describe('reportPasteOutcomes', () => {
     expect(message).not.toContain('f3.txt')
     expect(message).toContain('"more":5')
   })
+  it.each([
+    [true, 100],
+    [false, 200],
+  ])(
+    'names the pixel limit for this device in a "too large" notice (coarse pointer %s, owner Q-H7)',
+    (coarse, maxMp) => {
+      vi.stubGlobal('matchMedia', (q: string) => ({ matches: q === '(pointer: coarse)' && coarse }))
+      reportPasteOutcomes([{ ok: false, source: 'huge.jpg', error: 'too-large' }], t, nameOf)
+      const [notice] = useNotices.getState().notices
+      expect(notice?.message).toContain(`"maxMp":${String(maxMp)}`)
+      expect(notice?.message).toContain('"maxMb":100')
+    },
+  )
 })

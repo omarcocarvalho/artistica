@@ -2,7 +2,7 @@
 import fc from 'fast-check'
 import { describe, expect, it, vi } from 'vitest'
 import { MAX_SOURCE_LONG_SIDE_PX } from '../../shared/model/image'
-import { MAX_CANVAS_AREA, MAX_FILE_BYTES, PREVIEW_LONG_SIDE_PX } from './limits'
+import { MAX_CANVAS_AREA, MAX_DECODED_PIXELS, MAX_FILE_BYTES, PREVIEW_LONG_SIDE_PX } from './limits'
 import { ImportFailure } from './errors'
 import type { Matrix } from './exif'
 import {
@@ -51,6 +51,7 @@ function makeDeps({ createImageBitmap: decodeOver, ...over }: Partial<DecodeDeps
     },
     browserAppliesExif: () => Promise.resolve(false),
     resizeOnDecode: () => Promise.resolve(false),
+    maxDecodedPixels: () => MAX_DECODED_PIXELS,
     loadHeicConverter: () => Promise.resolve((b: Blob) => Promise.resolve(b)),
     createObjectURL: () => 'blob:thumb',
     ...over,
@@ -258,6 +259,51 @@ describe('decodeImage: HEIC', () => {
       { ...deps, loadHeicConverter: load },
     )
     expect(load).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('decodeImage: the import pixel limit comes from deps (owner Q-H7)', () => {
+  const TOUCH = 100_000_000
+
+  it('refuses a declared size over the limit before decoding', async () => {
+    const { deps } = makeDeps({ maxDecodedPixels: () => TOUCH })
+    const jpeg = blobOf(skeletonJpeg(11548, 8660), 'image/jpeg')
+    await expect(decodeImage(jpeg, 'big.jpg', deps)).rejects.toMatchObject({ code: 'too-large' })
+    expect(deps.createImageBitmap).not.toHaveBeenCalled()
+  })
+
+  it('decodes a declared size exactly at the limit', async () => {
+    const { deps } = makeDeps({
+      maxDecodedPixels: () => TOUCH,
+      createImageBitmap: () => Promise.resolve(bitmap(10000, 10000)),
+    })
+    const out = await decodeImage(blobOf(skeletonJpeg(10000, 10000), 'image/jpeg'), 'a.jpg', deps)
+    expect([out.originalPxW, out.originalPxH]).toEqual([10000, 10000])
+  })
+
+  it('refuses a decode over the limit when the header gives no size, and closes the bitmap', async () => {
+    const huge = bitmap(12000, 9000)
+    const { deps } = makeDeps({
+      maxDecodedPixels: () => TOUCH,
+      createImageBitmap: () => Promise.resolve(huge),
+    })
+    await expect(
+      decodeImage(blobOf(webpHeader(), 'image/webp'), 'a.webp', deps),
+    ).rejects.toMatchObject({ code: 'too-large' })
+    expect(huge.close).toHaveBeenCalled()
+  })
+
+  it('decodeFullImage keeps the general limit, so a photo already added still exports', async () => {
+    const { deps } = makeDeps({
+      maxDecodedPixels: () => TOUCH,
+      createImageBitmap: () => Promise.resolve(bitmap(16000, 12000)),
+    })
+    const source = blobOf(skeletonJpeg(16000, 12000), 'image/jpeg')
+    const full = await decodeFullImage(source, 'big.jpg', deps)
+    expect([full.width, full.height]).toEqual([
+      planDownscale(16000, 12000).w,
+      planDownscale(16000, 12000).h,
+    ])
   })
 })
 
