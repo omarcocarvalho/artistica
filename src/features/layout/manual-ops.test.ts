@@ -67,6 +67,11 @@ describe('moveBlock', () => {
   it('throws on an unknown block', () => {
     expect(() => moveBlock(start, 'nope#0', 0, 10, 10, items)).toThrow(RangeError)
   })
+
+  it('throws on a block whose photo is gone', () => {
+    const rest = items.filter((it) => it.imageId !== 'a')
+    expect(() => moveBlock(start, 'a#0', 0, 10, 10, rest)).toThrow(RangeError)
+  })
 })
 
 describe('nudge', () => {
@@ -103,6 +108,21 @@ describe('nudge', () => {
   it('slides along a neighbour it touches', () => {
     const m = manualOf([block('a#0', 10, 10, 50), block('b#0', 10, 66, 50)])
     expect(blockOf(ok(nudge(m, 'a#0', 1, 0, items)), 'a#0').x).toBe(11)
+  })
+
+  it('moves away from a neighbour it is flush with', () => {
+    const m = manualOf([block('a#0', 10, 10, 50), block('b#0', 66, 10, 50)])
+    expect(blockOf(ok(nudge(m, 'b#0', 1, 0, items)), 'b#0').x).toBe(67)
+    expect(blockOf(ok(nudge(m, 'a#0', 0, 1, items)), 'a#0').y).toBe(11)
+  })
+
+  it('stops flush with the bottom and right margins', () => {
+    // Bottom margin at 287, right margin at 200.
+    const m = manualOf([block('a#0', 149.5, 236.6, 50)])
+    expect(blockOf(ok(nudge(m, 'a#0', 0, 1, items)), 'a#0').y).toBeCloseTo(237, 9)
+    expect(blockOf(ok(nudge(m, 'a#0', 1, 0, items)), 'a#0').x).toBeCloseTo(150, 9)
+    const low = manualOf([block('a#0', 100, 236.6, 50)])
+    expect(blockOf(ok(nudge(low, 'a#0', 0, 5, items)), 'a#0').y).toBeCloseTo(237, 9)
   })
 
   it('moves diagonally until the first contact', () => {
@@ -199,6 +219,19 @@ describe('swapBlocks (M5-R11)', () => {
     expect(blockOf(out, 'a#0')).toMatchObject({ x: 10, y: 10, tileW: 40 })
   })
 
+  it('turns a fixed size when only its turn fits the other box', () => {
+    // A 3:2 fixed photo, 60 × 40, into the 40 × 60 box of a 2:3 photo 40 mm wide.
+    const fixedWide = item('fw', 1.5, 1000, { kind: 'fixed', axis: 'width', mm: 60 })
+    const m = manualOf([block('fw#0', 10, 10, 60), block('tall#0', 100, 100, 40)])
+    const out = ok(swapBlocks(m, 'fw#0', 'tall#0', [...items, fixedWide]))
+    expect(blockOf(out, 'fw#0')).toMatchObject({ x: 100, y: 100, tileW: 60, turned: true })
+  })
+
+  it('throws when a block is swapped with itself', () => {
+    const m = manualOf([block('a#0', 10, 10, 50), block('b#0', 100, 100, 50)])
+    expect(() => swapBlocks(m, 'a#0', 'a#0', items)).toThrow(RangeError)
+  })
+
   it('refuses a fixed size that does not fit the other box', () => {
     const m = manualOf([block('fixed#0', 10, 10, 40), block('a#0', 100, 100, 30)])
     expect(swapBlocks(m, 'fixed#0', 'a#0', items)).toEqual({ ok: false, reason: 'does-not-fit' })
@@ -254,6 +287,14 @@ describe('moveToPage (M5-R13)', () => {
     expect(blockOf(out, 'a#0').page).toBe(0)
     expect(blockOf(out, 'b#0').page).toBe(1)
     expect(blockOf(out, 'c#0').page).toBe(1)
+  })
+
+  it('places a block as wide as the content box, flush with both margins', () => {
+    const m = manualOf([block('a#0', 10, 10, 190), block('b#0', 10, 10, 50, 1)], 2)
+    const out = ok(moveToPage(m, 'b#0', 2, items))
+    expect(blockOf(out, 'a#0')).toMatchObject({ page: 0, x: 10, y: 10, tileW: 190 })
+    const full = ok(moveToPage(out, 'a#0', 2, items))
+    expect(blockOf(full, 'a#0')).toMatchObject({ page: 1, x: 10, y: 10, tileW: 190 })
   })
 
   it('refuses a page with no room', () => {

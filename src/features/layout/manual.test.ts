@@ -64,6 +64,17 @@ describe('manualFromLayout and layoutFromManual', () => {
     expect(layoutFromManual(deepFreeze(manual), items, setup)).toEqual(withoutScaledToFit(result))
   })
 
+  it('leaves out placements and blocks whose photo is gone', () => {
+    const items = [item('a', 1), item('b', 1.5)]
+    const result = computeLayout(A4_PORTRAIT, items)
+    const rest = items.filter((it) => it.imageId !== 'b')
+    const manual = manualFromLayout(result, rest, A4_PORTRAIT)
+    expect(manual.blocks.map((b) => b.blockId)).toEqual(['a#0'])
+    const full = manualFromLayout(result, items, A4_PORTRAIT)
+    const out = layoutFromManual(full, rest, A4_PORTRAIT)
+    expect(out.pages.flatMap((p) => p.placements.map((pl) => pl.key))).toEqual([items[0]?.key])
+  })
+
   it('carries the turned flag and the unturned tile width', () => {
     const setup = A4_PORTRAIT
     const items = [item('wide', 3), item('wide2', 3)]
