@@ -3,7 +3,7 @@ import { initI18n, type LanguageCode } from '../shared/i18n'
 
 type Bundles = Readonly<Record<string, Record<string, unknown>>>
 
-/** Hand-written test strings, standing in for the real translations until they land. */
+/** Hand-written pt-BR strings for the keys the formatting tests read. */
 export const PT_BR: Bundles = {
   app: {
     preview: {
