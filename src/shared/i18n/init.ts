@@ -1,40 +1,31 @@
 import i18n, { type i18n as I18nInstance } from 'i18next'
-import LanguageDetector from 'i18next-browser-languagedetector'
 import { initReactI18next } from 'react-i18next'
 import { DEFAULT_LANGUAGE, LANGUAGES, NAMESPACES, type LanguageCode } from './languages'
+import { setAppLanguage } from './load'
 import { resources } from './resources'
 
 export interface InitI18nOptions {
-  /** The language saved in settings. It wins over the browser's language. null = not chosen yet. */
-  readonly savedLanguage?: LanguageCode | null
+  /** The resolved language (M6-R3). It is loaded before init returns; if it fails, English stays. */
+  readonly language?: LanguageCode
 }
 
-/**
- * Initialise i18next once. Detection order: the saved setting, then `navigator`, then `en`.
- * Languages without resources fall back to English, so an unsupported browser language never breaks the UI.
- * Safe to call more than once: later calls return the same instance (and apply `savedLanguage` if given).
- */
+/** Initialise i18next once; later calls return the same instance and switch to `language` if given. */
 export async function initI18n(options: InitI18nOptions = {}): Promise<I18nInstance> {
-  const { savedLanguage = null } = options
-  if (i18n.isInitialized) {
-    if (savedLanguage) await i18n.changeLanguage(savedLanguage)
-    return i18n
-  }
-  await i18n
-    .use(LanguageDetector)
-    .use(initReactI18next)
-    .init({
+  const { language } = options
+  if (!i18n.isInitialized) {
+    await i18n.use(initReactI18next).init({
       resources,
-      lng: savedLanguage ?? undefined,
+      lng: DEFAULT_LANGUAGE,
       fallbackLng: DEFAULT_LANGUAGE,
       supportedLngs: [...LANGUAGES],
       nonExplicitSupportedLngs: false,
       ns: [...NAMESPACES],
       defaultNS: 'common',
-      detection: { order: ['navigator'], caches: [] },
       interpolation: { escapeValue: false },
       react: { useSuspense: false },
       initAsync: false,
     })
+  }
+  if (language && language !== i18n.language) await setAppLanguage(language)
   return i18n
 }
