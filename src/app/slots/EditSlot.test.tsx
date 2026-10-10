@@ -56,7 +56,7 @@ describe('EditSlot', () => {
     expect(useAppUi.getState().editingId).toBeNull()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
-  it('closes itself when the image is removed while its sheet is open', () => {
+  it('closes itself when the image is removed while its sheet is open', async () => {
     useAppUi.getState().openEdit('a' as ImageId)
     render(<EditSlot />)
     act(() => {
@@ -64,6 +64,7 @@ describe('EditSlot', () => {
     })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(useAppUi.getState().editingId).toBeNull()
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
   })
 
   describe('focus after removing the image from its sheet', () => {
