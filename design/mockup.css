@@ -1074,3 +1074,119 @@ dialog.dialog--sm { width: min(480px, calc(100vw - 32px)); }
   .stage { padding: var(--space-3); overflow: hidden; }
   .desk__toolbar .arrange-controls { width: 100%; }
 }
+
+/* ---------- Per-language type (M6-R17, R18) ----------------------------
+   Display and hand keep their Latin fallbacks before the CJK sans, so the
+   mockups show Latin glyphs from Latin fonts where the brand fonts are absent. */
+:lang(ja) {
+  --font-cjk: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, "Noto Sans JP", "Noto Sans CJK JP";
+}
+:lang(ko) {
+  --font-cjk: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Noto Sans CJK KR";
+}
+:lang(zh-CN) {
+  --font-cjk: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", "Noto Sans CJK SC";
+}
+:is(:lang(ja), :lang(ko), :lang(zh-CN)) {
+  --font-ui: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", var(--font-cjk), system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --font-display: "Fraunces", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, var(--font-cjk), sans-serif;
+  --font-hand: "Caveat", "Segoe Print", "Bradley Hand", "Chalkboard SE", var(--font-cjk), sans-serif;
+  font-synthesis: none;
+}
+/* Zero specificity, so headings keep --font-display. */
+:where([lang]) { font-family: var(--font-ui); }
+:is(:lang(ja), :lang(zh-CN)) { line-break: strict; word-break: normal; overflow-wrap: anywhere; }
+:is(h1, h2, h3, h4, .btn):lang(ja) { word-break: auto-phrase; }
+:lang(ko) { word-break: keep-all; overflow-wrap: anywhere; }
+.btn, .chip label, .chip-btn, .seg label, [role="tab"] { overflow-wrap: anywhere; }
+
+/* ---------- Language switcher (M6-R15) -------------------------------- */
+.lang-select {
+  position: relative; display: inline-flex; align-items: center; gap: var(--space-1-5);
+  min-height: var(--size-target-dense); padding: var(--space-1-5) var(--space-2-5, 0.625rem);
+  border: var(--border-width) solid transparent; border-radius: var(--radius-md);
+  font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--color-ink);
+  white-space: nowrap; flex: none;
+}
+.lang-select:hover { background: var(--color-surface-sunken); }
+.lang-select svg { width: 1.1em; height: 1.1em; flex: none; }
+.lang-select .lang-select__chev { width: 0.8em; height: 0.8em; color: var(--color-ink-muted); }
+.lang-select select {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0;
+  opacity: 0; cursor: pointer; font-size: var(--text-base); border: 0;
+}
+.lang-select:has(select:focus-visible), .lang-select.is-focus {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color); outline-offset: var(--focus-ring-offset);
+}
+.lang-select--phone { min-width: var(--size-target); min-height: var(--size-target); padding: 0; justify-content: center; }
+.lang-select--phone svg { width: 1.25rem; height: 1.25rem; }
+.lang-select--phone .lang-select__name, .lang-select--phone .lang-select__chev { display: none; }
+@media (max-width: 639px) {
+  .lang-select:not(.lang-select--desktop) { min-width: var(--size-target); min-height: var(--size-target); padding: 0; justify-content: center; }
+  .lang-select:not(.lang-select--desktop) .lang-select__name,
+  .lang-select:not(.lang-select--desktop) .lang-select__chev { display: none; }
+}
+@media (forced-colors: active) {
+  .lang-select { border-color: ButtonText; }
+}
+
+.native-list {
+  list-style: none; margin: 0; padding: var(--space-1-5); min-width: 15rem;
+  background: var(--color-surface-raised); border: 1px solid var(--color-line);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg); font-size: var(--text-base);
+}
+.native-list li { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1-5) var(--space-3); border-radius: var(--radius-sm); }
+.native-list li::before { content: ""; width: 1em; flex: none; text-align: center; }
+.native-list li[data-selected] { background: var(--color-secondary); color: var(--color-on-secondary); }
+.native-list li[data-selected]::before { content: "✓"; }
+
+.appbar {
+  display: flex; align-items: center; gap: var(--space-2); min-width: 0; width: 100%;
+  padding: var(--space-2) var(--space-4); background: var(--color-surface);
+  border: 1px solid var(--color-line); border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+}
+.appbar .brand { min-width: 0; flex: 0 1 auto; }
+.appbar .brand__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.appbar .brand__mark { flex: none; }
+.appbar__spacer { flex: 1 1 0; min-width: 0; }
+.appbar--phone { width: 390px; max-width: 100%; padding-inline: var(--space-3); gap: var(--space-1); }
+.appbar--phone .privacy-pill, .appbar--phone .appbar__label, .appbar--phone .appbar__export { display: none; }
+.appbar--phone .btn { min-height: var(--size-target); }
+.appbar--phone .btn--icon-phone { width: var(--size-target); padding: 0; }
+.appbar--phone .brand__mark { width: 28px; height: 28px; }
+@media (max-width: 959px) { .appbar .appbar__export { display: none; } }
+@media (max-width: 639px) {
+  .appbar { padding-inline: var(--space-3); gap: var(--space-1); }
+  .appbar .privacy-pill, .appbar .appbar__label { display: none; }
+  .appbar .btn { min-height: var(--size-target); }
+  .appbar .btn--icon-phone { width: var(--size-target); padding: 0; }
+}
+
+/* Landing footer: the language links (M6-R21). */
+.lang-links { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-2); }
+.lang-links__label { display: inline-flex; align-items: center; gap: var(--space-1-5); font-weight: var(--weight-semibold); color: var(--color-ink); }
+.lang-links__label svg { width: 16px; height: 16px; }
+.lang-links ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0 var(--space-1); }
+.lang-links a { display: inline-flex; align-items: center; min-height: 2rem; padding: 0 var(--space-2); border-radius: var(--radius-sm); }
+.lang-links a[aria-current="page"] { color: var(--color-ink); font-weight: var(--weight-bold); text-decoration: none; box-shadow: inset 0 -3px 0 var(--color-accent); border-radius: 0; }
+
+/* CJK specimens */
+.specimen { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: var(--space-6); align-items: start; }
+.specimen__desktop, .specimen__phone {
+  background: var(--color-surface); border: 1px solid var(--color-line); border-radius: var(--radius-lg);
+  padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-4); min-width: 0;
+}
+.specimen__phone { padding: var(--space-4); font-size: var(--text-base); }
+.specimen__phone .btn { min-height: var(--size-target); font-size: var(--text-base); }
+.specimen__phone .seg label { min-height: var(--size-target); font-size: var(--text-base); }
+.specimen__phone .chip label { min-height: var(--size-target); font-size: var(--text-base); }
+.specimen__tag { font-size: var(--text-xs); font-weight: var(--weight-bold); color: var(--color-ink-muted); letter-spacing: var(--tracking-wide); text-transform: uppercase; }
+.stack-note { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-ink-muted); overflow-wrap: anywhere; }
+.break-demo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.break-demo__box { width: 100%; max-width: 13.5em; padding: var(--space-3); border: 1px dashed var(--color-line-strong); border-radius: var(--radius-sm); background: var(--color-surface); font-size: var(--text-base); line-height: var(--leading-relaxed); }
+.break-demo__box--loose { line-break: loose; }
+.break-demo__box--normal-ko { word-break: normal; }
+.narrow-chip { width: 9rem; }
+.specimen .seg { align-self: flex-start; }
+@media (max-width: 960px) { .specimen { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) { .break-demo { grid-template-columns: minmax(0, 1fr); } }
