@@ -152,8 +152,9 @@ async function sniff(blob: Blob, name: string): Promise<Sniffed> {
 
 /**
  * Decodes straight to `pick(upright size)` in one createImageBitmap call, with the upright size
- * taken from the header. Null when that size is not smaller, the header has no size (GIF, WebP,
- * HEIC), the browser should not resize, or the browser leaves EXIF rotation to the app.
+ * taken from the header. Null when that size is not smaller, the header has no usable size (GIF,
+ * WebP, HEIC, or a zero side such as a JPEG whose height is set later by a DNL marker), the browser
+ * should not resize, or the browser leaves EXIF rotation to the app.
  */
 async function decodeResized(
   blob: Blob,
@@ -161,7 +162,7 @@ async function decodeResized(
   pick: (upright: Size) => Size,
   deps: DecodeDeps,
 ): Promise<{ bitmap: ImageBitmap; upright: Size; size: Size } | null> {
-  if (declared === null) return null
+  if (declared === null || declared.w < 1 || declared.h < 1) return null
   const orientation = kind === 'jpeg' ? (readJpegInfo(head)?.orientation ?? 1) : 1
   const upright = orientation >= 5 ? { w: declared.h, h: declared.w } : declared
   const size = pick(upright)

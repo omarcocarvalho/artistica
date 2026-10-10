@@ -40,6 +40,14 @@ describe('probeResizeOnDecode', () => {
       }),
     ).toBe(false)
   })
+  it('is false when the browser honours only the width', async () => {
+    expect(
+      await probeResizeOnDecode({
+        createCanvas: canvas,
+        createImageBitmap: () => Promise.resolve(bmp(2, 2)),
+      }),
+    ).toBe(false)
+  })
   it('closes the probe bitmap', async () => {
     const close = vi.fn()
     const b = { width: 2, height: 1, close } as unknown as ImageBitmap

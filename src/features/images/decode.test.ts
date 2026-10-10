@@ -634,6 +634,15 @@ describe('decoding straight to the needed size', () => {
     expect(decoded.map((d) => resizeKeys(d.options))).toEqual([[]])
   })
 
+  it('keeps the two-step path when the header declares a zero side', async () => {
+    const { deps, decoded } = resizing({
+      createImageBitmap: () => Promise.resolve(bitmap(8000, 6000)),
+    })
+    const out = await decodeImage(blobOf(skeletonJpeg(8000, 0), 'image/jpeg'), 'dnl.jpg', deps)
+    expect(decoded.map((d) => resizeKeys(d.options))).toEqual([[]])
+    expect([out.originalPxW, out.originalPxH]).toEqual([8000, 6000])
+  })
+
   it('flattens a resized PNG onto white at the requested size and closes the resized decode', async () => {
     const resized = bitmap(2048, 1024)
     const { deps, decoded, paints } = resizing({
