@@ -8,16 +8,12 @@ import {
   GUIDE_PHOTOS,
   GuidesSection,
   holdModel,
-  installWorkerProbe,
   interval,
   recordAiRequests,
-  summarizeLandmarkWorkers,
   textLog,
   announcements,
   watchAnnouncements,
   watchTexts,
-  workerLog,
-  type LandmarkWorkerSummary,
 } from './support/guides.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { summarizePdf, type PdfStroke, type PdfSummary } from './support/pdf.ts'
@@ -27,6 +23,12 @@ import { DEFAULT_LINES, patchLines } from '../src/shared/model/lines.ts'
 import { runOnly } from './support/projects.ts'
 import { heapByContext, sampleBrowserMemory, type ContextHeap } from './support/memory.ts'
 import { syntheticJpegs } from './support/synthetic.ts'
+import {
+  installWorkerProbe,
+  summarizeLandmarkWorkers,
+  workerLog,
+  type LandmarkWorkerSummary,
+} from './support/workers.ts'
 import { expectNoFocusZoom, expectTouchTargets, settled } from './support/targets.ts'
 
 runOnly('mobile-chromium', 'mobile-webkit')
