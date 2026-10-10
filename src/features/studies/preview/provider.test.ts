@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { id } from '../../render/test-support/fixtures'
-import { createStudyPreviewProvider, RENDERER_RESTARTED, STUDY_RETAIN_BYTES } from './provider'
+import {
+  createStudyPreviewProvider,
+  RENDERER_RESTARTED,
+  STUDY_RETAIN_BYTES,
+  STUDY_TIMEOUT,
+} from './provider'
 import {
   bitmapLog,
   deferred,
@@ -515,6 +520,93 @@ describe('createStudyPreviewProvider: edge cases', () => {
     f.renders[2]?.result.reject(restart())
     await f.settle()
     expect(f.renders).toHaveLength(4)
+  })
+
+  const timeout = (): Error => Object.assign(new Error('stalled'), { name: STUDY_TIMEOUT })
+
+  it('a timed-out job re-runs before the rest of the queue: once on a fresh worker, once more on the main thread, then it fails and the queue moves on', async () => {
+    const p = createStudyPreviewProvider(f.deps)
+    const listener = vi.fn()
+    p.subscribe(listener)
+    p.want('page0', [request('a', 'k1'), request('b', 'k2', { w: 60, slot: 'b|blurred|0:1' })])
+    await f.settle()
+    f.renders[0]?.result.reject(timeout())
+    await f.settle()
+    expect(f.renders.map((r) => r.plan.canvasW)).toEqual([100, 100])
+    expect(f.crops).toHaveLength(2)
+    f.renders[1]?.result.reject(timeout())
+    await f.settle()
+    expect(f.renders.map((r) => r.plan.canvasW)).toEqual([100, 100, 100])
+    f.renders[2]?.result.reject(timeout())
+    await f.settle()
+    expect(f.renders.map((r) => r.plan.canvasW)).toEqual([100, 100, 100, 60])
+    expect(p.stats()).toMatchObject({ running: 1, queued: 0 })
+    expect(p.pending('page0')).toBe(1)
+    await f.finish(3)
+    expect(p.stats()).toMatchObject({ running: 0, queued: 0 })
+    expect(p.pending('page0')).toBe(0)
+    f.flush()
+    expect(listener).toHaveBeenCalled()
+    expect(p.get('k1', SLOT)).toBeNull()
+  })
+
+  it('a timed-out job that answers on its retry is drawn', async () => {
+    const p = createStudyPreviewProvider(f.deps)
+    p.want('page0', [request('a', 'k1')])
+    await f.settle()
+    f.renders[0]?.result.reject(timeout())
+    const out = await f.finish(1)
+    expect(p.get('k1', SLOT)).toBe(out)
+    expect(p.pending('page0')).toBe(0)
+  })
+
+  it('timeout retries are counted apart from restart retries', async () => {
+    const p = createStudyPreviewProvider(f.deps)
+    p.want('page0', [request('a', 'k1')])
+    await f.settle()
+    f.renders[0]?.result.reject(restart())
+    await f.settle()
+    f.renders[1]?.result.reject(timeout())
+    await f.settle()
+    f.renders[2]?.result.reject(timeout())
+    await f.settle()
+    expect(f.renders).toHaveLength(4)
+  })
+
+  it('forgets used-up timeout retries once nobody wants the key', async () => {
+    const p = createStudyPreviewProvider(f.deps)
+    p.want('page0', [request('a', 'k1')])
+    await f.settle()
+    for (let i = 0; i < 3; i++) {
+      f.renders[i]?.result.reject(timeout())
+      await f.settle()
+    }
+    expect(f.renders).toHaveLength(3)
+    p.want('page0', [])
+    p.want('page0', [request('a', 'k1')])
+    await f.settle()
+    expect(f.renders).toHaveLength(4)
+    f.renders[3]?.result.reject(timeout())
+    await f.settle()
+    expect(f.renders).toHaveLength(5)
+  })
+
+  it('a timeout after the key stopped being wanted neither retries nor uses up a retry', async () => {
+    const p = createStudyPreviewProvider(f.deps)
+    p.want('page0', [request('a', 'k1')])
+    await f.settle()
+    p.want('page0', [request('a', 'k2')])
+    f.renders[0]?.result.reject(timeout())
+    await f.settle()
+    expect(f.renders).toHaveLength(2)
+    p.want('page0', [request('a', 'k1')])
+    await f.finish(1)
+    expect(f.renders).toHaveLength(3)
+    f.renders[2]?.result.reject(timeout())
+    await f.settle()
+    f.renders[3]?.result.reject(timeout())
+    await f.settle()
+    expect(f.renders).toHaveLength(5)
   })
 
   it('notifies listeners when a render fails, so pending is read again', async () => {
