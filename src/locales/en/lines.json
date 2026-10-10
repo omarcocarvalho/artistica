@@ -42,10 +42,10 @@
   "guides": {
     "heading": "Guides from the photo",
     "onDevice": "On device",
-    "detail": { "label": "Detail", "value": "{{pct}}%" },
-    "size": "One-time download: {{mb}} MB",
+    "detail": { "label": "Detail", "value": "{{value}}" },
+    "size": "One-time download: {{size}}",
     "download": "Download & turn on",
-    "progress": "{{loaded}} of {{total}} MB",
+    "progress": "{{loaded}} of {{total}}",
     "progressSpoken": "{{loaded}} of {{total}} megabytes",
     "failedHint": "Check your connection and try again. Other lines still work.",
     "errorHint": "Try again. Other lines still work.",
@@ -87,14 +87,14 @@
     "hexLabel": "Colour hex code",
     "hexHint": "Type # and six hex digits, like #1f3fbf."
   },
-  "thickness": { "label": "Thickness", "value": "{{mm}} mm" },
-  "opacity": { "label": "Opacity", "value": "{{pct}}%" },
+  "thickness": { "label": "Thickness", "value": "{{value}} {{unit}}" },
+  "opacity": { "label": "Opacity", "value": "{{value}}" },
   "applyAll": {
     "button": "Apply lines to all images",
     "hint_one": "Add another photo to copy these settings to it.",
-    "hint_other": "Copies these line settings to all {{count}} images.",
-    "done_one": "Line settings copied to {{count}} image.",
-    "done_other": "Line settings copied to {{count}} images.",
+    "hint_other": "Copies these line settings to all {{count, number}} images.",
+    "done_one": "Line settings copied to {{count, number}} image.",
+    "done_other": "Line settings copied to {{count, number}} images.",
     "nothingChanged": "All images already use these line settings."
   }
 }

@@ -1,9 +1,10 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useImages } from '../../images'
 import { makeLoadedImage } from '../../images/test-utils'
 import { initI18n } from '../../../shared/i18n'
+import { PT_BR, switchLanguage } from '../../../test/languages'
 import type { ImageId } from '../../../shared/model/image'
 import { DEFAULT_LINES, type LineSettings } from '../../../shared/model/lines'
 import {
@@ -1031,5 +1032,31 @@ describe('GuidesSection', () => {
       await user.tab()
       expect(document.activeElement).toBe(screen.getByRole('switch', { name: 'Body pose' }))
     })
+  })
+})
+
+describe('Guides in other languages', () => {
+  afterAll(async () => {
+    await switchLanguage('en')
+  })
+
+  it('formats the download size and progress in Portuguese (Brazil)', async () => {
+    await switchLanguage('pt-BR', PT_BR)
+    seed(FACE_ON)
+    renderPanel()
+    setStatus('face', { state: 'needs-download', bytes: 15_200_000 })
+    expect(within(section()).getByText('Download único: 15,2 MB')).toBeVisible()
+    setStatus('face', { state: 'downloading', loaded: 4_100_000, total: 15_200_000 })
+    const bar = within(section()).getByRole('progressbar')
+    expect(bar).toHaveAttribute('aria-valuetext', '4,1 de 15,2 megabytes')
+    expect(within(section()).getByText('4,1 de 15,2 MB')).toBeVisible()
+  })
+
+  it('formats the Detail percentage in Spanish', async () => {
+    await switchLanguage('es')
+    const user = userEvent.setup()
+    renderPanel()
+    await user.click(screen.getByRole('switch', { name: 'Edge outline' }))
+    expect(screen.getByRole('slider', { name: 'Detail' })).toHaveAttribute('aria-valuetext', '50 %')
   })
 })

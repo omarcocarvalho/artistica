@@ -5,7 +5,13 @@ import {
 } from '../../shared/model/lines'
 import type { Preset } from '../../shared/model/preset'
 import type { StudyVersion } from '../../shared/model/study'
-import { mmToUnit, roundForUnit, type Mm, type Unit } from '../../shared/model/units'
+import {
+  formatLength,
+  formatLengthNumber,
+  formatPercent,
+  unitLabel,
+} from '../../shared/i18n/format'
+import type { Unit } from '../../shared/model/units'
 
 export type I18nT = (key: string, options?: Record<string, unknown>) => string
 
@@ -21,18 +27,17 @@ const lineOn: Record<CompositionLineType, (l: LineSettings) => boolean> = {
 /** "A4 · Auto · values 5 · thirds": paper, orientation, bleed when on, versions, composition lines. `t` is bound to `presets`. */
 export function presetSummary(preset: Preset, unit: Unit, t: I18nT): string {
   const { pageSetup, study, lines } = preset
-  const num = (mm: Mm): string => String(roundForUnit(mmToUnit(mm, unit), unit))
   const paper =
     pageSetup.paper === 'Custom'
       ? t('summary.custom', {
-          w: num(pageSetup.customSize.w),
-          h: num(pageSetup.customSize.h),
-          unit,
+          w: formatLengthNumber(pageSetup.customSize.w, unit),
+          h: formatLengthNumber(pageSetup.customSize.h, unit),
+          unit: unitLabel(unit),
         })
       : pageSetup.paper
   const versionText: Record<StudyVersion, string> = {
     original: t('summary.version.original'),
-    blurred: t('summary.version.blurred', { pct: study.blurPct }),
+    blurred: t('summary.version.blurred', { value: formatPercent(study.blurPct) }),
     values: t('summary.version.values', { count: study.values.count }),
     blurValues: t('summary.version.blurValues', { count: study.values.count }),
   }
@@ -42,7 +47,7 @@ export function presetSummary(preset: Preset, unit: Unit, t: I18nT): string {
     paper,
     t(`summary.orientation.${pageSetup.orientation}`),
     ...(pageSetup.bleed.enabled
-      ? [t('summary.bleed', { size: `${num(pageSetup.bleed.mm)} ${unit}` })]
+      ? [t('summary.bleed', { size: formatLength(pageSetup.bleed.mm, unit) })]
       : []),
     study.versions.map((v) => versionText[v]).join(plus),
     ...(activeLines.length > 0

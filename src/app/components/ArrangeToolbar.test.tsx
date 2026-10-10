@@ -1,6 +1,6 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { selectImageDescriptors, useImages } from '../../features/images'
 import { buildLayoutItems } from '../../features/layout/build-items'
 import { computeLayout } from '../../features/layout/compute-layout'
@@ -9,6 +9,7 @@ import { initI18n } from '../../shared/i18n'
 import { DEFAULT_EDITS, type ImageId } from '../../shared/model/image'
 import { DEFAULT_LINES } from '../../shared/model/lines'
 import { DEFAULT_STUDY } from '../../shared/model/study'
+import { PT_BR, switchLanguage } from '../../test/languages'
 import { shownManual } from '../arrange-controller'
 import { useArrange } from '../arrange-store'
 import { useArrangeUi } from '../arrange-ui'
@@ -532,5 +533,33 @@ describe('ArrangeToolbar on the phone (B5)', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Re-run' }))
     expect(useArrange.getState().manual).toBeNull()
     expect(said()).toBe('Photos arranged automatically.')
+  })
+})
+
+describe('ArrangeToolbar in Portuguese (Brazil)', () => {
+  afterAll(async () => {
+    await switchLanguage('en')
+  })
+
+  it("formats the photo sheet's size with decimal commas and the inch symbol", async () => {
+    await switchLanguage('pt-BR', PT_BR)
+    useSettings.getState().setUnit('in')
+    show([loaded('a'), loaded('b')])
+    stubDesktop(false)
+    render(<ArrangeToolbar variant="phone" />)
+    const user = userEvent.setup()
+    act(() => {
+      useArrange.getState().setMode(true)
+      useArrange.getState().select('a#0')
+    })
+    await user.click(screen.getByRole('button', { name: 'Photo options' }))
+    const sheet = screen.getByRole('dialog', { name: 'a.jpg' })
+    expect(sheet).toHaveAccessibleDescription(
+      /^\d+(,\d{1,2})? × \d+(,\d{1,2})? pol\., página 1 de 1$/,
+    )
+    expect(sheet).toHaveAccessibleDescription(/\d,\d/)
+    expect(
+      within(sheet).getByRole<HTMLInputElement>('spinbutton', { name: 'Width' }).value,
+    ).toMatch(/^\d+(,\d{1,2})?$/)
   })
 })

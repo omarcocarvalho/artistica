@@ -10,6 +10,7 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useImages } from '../../images'
+import { formatMegabytes, formatPercent } from '../../../shared/i18n/format'
 import type { ImageDescriptor, ImageId } from '../../../shared/model/image'
 import { MAX_EDGE_DETAIL, MIN_EDGE_DETAIL, type LinesPatch } from '../../../shared/model/lines'
 import { Badge, Button, Callout, Slider, Switch } from '../../../shared/ui'
@@ -17,7 +18,7 @@ import { detectionKey, type AiModel, type GuideKind } from '../detect/store'
 import { useDetailDraft } from './detail-draft'
 import { useDetectionActions, type DetectionActions } from './detection-actions'
 import { DownloadBox } from './DownloadBox'
-import { formatMb, guideView, useGuideStatus, type GuideView } from './use-guide-status'
+import { guideView, useGuideStatus, type GuideView } from './use-guide-status'
 
 export const DETAIL_SETTLE_MS = 80
 
@@ -53,7 +54,7 @@ interface Said extends Spoken {
 function announcement(t: Translate, kind: GuideKind, on: boolean, view: GuideView): Spoken {
   switch (view.view) {
     case 'box':
-      return { text: t('guides.size', { mb: formatMb(view.bytes) }), memo: 'clear' }
+      return { text: t('guides.size', { size: formatMegabytes(view.bytes) }), memo: 'clear' }
     case 'downloading':
       return { text: kind === 'edges' ? null : t(`guides.${kind}.downloading`), memo: 'clear' }
     case 'running':
@@ -162,7 +163,7 @@ function Guides({
               disabled={waiting}
               describedBy={describedBy}
               onValueChange={detail.change}
-              formatValue={(pct) => t('guides.detail.value', { pct })}
+              formatValue={(pct) => t('guides.detail.value', { value: formatPercent(pct) })}
             />
             <EdgeStatus view={views.edges} {...shared} />
           </>

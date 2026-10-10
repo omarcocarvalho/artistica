@@ -11,3 +11,16 @@ export { initI18n } from './init'
 export type { InitI18nOptions } from './init'
 export { availableLanguages, loadLanguage, setAppLanguage } from './load'
 export { matchLanguage, resolveLanguage } from './match'
+export {
+  formatDegrees,
+  formatLength,
+  formatLengthNumber,
+  formatLengthValue,
+  formatMegabytes,
+  formatMegabytesNumber,
+  formatNumber,
+  formatPercent,
+  joinSentences,
+  unitLabel,
+} from './format'
+export type { NumberOptions } from './format'

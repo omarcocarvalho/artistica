@@ -11,6 +11,7 @@ import {
 } from '../../features/render'
 import { useImages } from '../../features/images'
 import { useSettings } from '../../features/settings'
+import { formatLengthNumber, unitLabel } from '../../shared/i18n/format'
 import type { ImageId } from '../../shared/model/image'
 import { Button, Callout, VisuallyHidden } from '../../shared/ui'
 import {
@@ -119,14 +120,18 @@ export function PreviewSlot() {
   const orientation = layout ? t(`app:preview.orientation.${layout.orientation}`) : ''
   const listFormat = useMemo(() => new Intl.ListFormat(i18n.language), [i18n.language])
   const describeTile = (d: TileDescription) => {
+    const size = {
+      w: formatLengthNumber(d.widthMm, 'mm'),
+      h: formatLengthNumber(d.heightMm, 'mm'),
+      unit: unitLabel('mm'),
+    }
     const item =
       d.version === 'original'
-        ? t('app:preview.item', { name: d.name, w: d.widthMm, h: d.heightMm })
+        ? t('app:preview.item', { name: d.name, ...size })
         : t('app:preview.itemVersion', {
             name: d.name,
             version: t(`studies:version.${d.version}`),
-            w: d.widthMm,
-            h: d.heightMm,
+            ...size,
           })
     if (d.lines.length === 0) return item
     const list = listFormat.format(d.lines.map((type) => t(`lines:type.${type}`)))

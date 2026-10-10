@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useImages } from '../../images'
+import { formatDegrees, formatPercent } from '../../../shared/i18n/format'
 import type { ImageId } from '../../../shared/model/image'
 import {
   MAX_BLUR_PCT,
@@ -122,11 +123,11 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
             onValueChange={within(MIN_BLUR_PCT, MAX_BLUR_PCT, (blurPct) => {
               patch({ blurPct })
             })}
-            formatValue={(pct) => t('blur.valueText', { pct })}
+            formatValue={(pct) => t('blur.valueText', { value: formatPercent(pct) })}
             minLabel={t('blur.min')}
             maxLabel={t('blur.max')}
           />
-          <span className={HINT}>{t('blur.hint', { pct: study.blurPct })}</span>
+          <span className={HINT}>{t('blur.hint', { value: formatPercent(study.blurPct) })}</span>
           <span className={HINT}>{t('blur.usedBy')}</span>
         </section>
 
@@ -167,7 +168,7 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
             onValueChange={within(0, MAX_HUE, (hue) => {
               patch({ values: { hue, neutral: false } })
             })}
-            formatValue={(deg) => t('values.hueText', { deg })}
+            formatValue={(deg) => t('values.hueText', { value: formatDegrees(deg) })}
           />
           <RampStrip values={study.values} />
           <span className={HINT}>{t('values.hint')}</span>

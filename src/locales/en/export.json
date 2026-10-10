@@ -9,13 +9,12 @@
       "landscape": "landscape"
     },
     "tiles": "Tiles",
-    "tilesValue_one": "{{tiles}} from {{count}} image",
-    "tilesValue_other": "{{tiles}} from {{count}} images",
+    "tilesValue_one": "{{tiles}} from {{count, number}} image",
+    "tilesValue_other": "{{tiles}} from {{count, number}} images",
     "cropMarks": "Crop marks",
     "bleed": "Bleed",
     "on": "On",
     "off": "Off",
-    "length": "{{value}} {{unit}}",
     "quality": "Quality",
     "qualityValue": "300 DPI, never upscaled"
   },

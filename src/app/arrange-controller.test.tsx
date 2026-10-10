@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { selectImageDescriptors, useImages } from '../features/images'
 import { buildLayoutItems } from '../features/layout/build-items'
 import { computeLayout } from '../features/layout/compute-layout'
@@ -9,6 +9,7 @@ import { initI18n } from '../shared/i18n'
 import { DEFAULT_EDITS, type ImageId } from '../shared/model/image'
 import { DEFAULT_LINES } from '../shared/model/lines'
 import { DEFAULT_STUDY } from '../shared/model/study'
+import { PT_BR, switchLanguage } from '../test/languages'
 import {
   arrangeBlocks,
   commitOp,
@@ -472,5 +473,35 @@ describe('the auto layout as a manual one', () => {
     expect(shownManual()).toEqual(
       manualFromLayout(layout, items(), useSettings.getState().pageSetup),
     )
+  })
+})
+
+describe('arrangeBlocks in Portuguese (Brazil)', () => {
+  beforeAll(async () => {
+    await switchLanguage('pt-BR', PT_BR)
+  })
+  afterAll(async () => {
+    await switchLanguage('en')
+  })
+
+  it('names each block with decimal commas and the language inch symbol', () => {
+    show([loaded('a')])
+    const name = arrangeBlocks(base(), items(), 'in')[0]?.name
+    expect(name).toMatch(/^a\.jpg, \d+(,\d{1,2})? × \d+(,\d{1,2})? pol\., página 1$/)
+    expect(name).toMatch(/\d,\d/)
+  })
+
+  it('announces a placed block in inches with decimal commas', () => {
+    useSettings.getState().setUnit('in')
+    show([loaded('a'), loaded('b')])
+    expect(commitOp({ kind: 'nudge', id: 'b#0', dx: 1, dy: 1 }, { fromBlock: true })).toBe(true)
+    const m = useArrange.getState().manual
+    if (!m) throw new Error('not arranged')
+    const { r } = rectOf(m, 'b#0')
+    const f = (mm: number) => String(Math.round((mm / 25.4) * 100) / 100).replace('.', ',')
+    expect(said()).toBe(
+      `b.jpg, ${f(r.w)} × ${f(r.h)} pol., página 1, ${f(r.x)} pol. da esquerda, ${f(r.y)} pol. do topo.`,
+    )
+    expect(said()).toMatch(/\d,\d/)
   })
 })
