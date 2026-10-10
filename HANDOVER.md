@@ -20,7 +20,7 @@ Later milestones add polish and translations.
 - **Everything runs in the browser.** Photos are never uploaded or persisted.
 - **Hosting:** GitHub Pages. The landing page is at `/artistica/` and the tool at `/artistica/app/`.
 - **Product spec:** [docs/spec.md](docs/spec.md). It is the source of truth.
-- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (released), M4 → `v0.4.0` (released), M5 → `v0.5.0`, M6 → `v1.0.0`.
+- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (released), M4 → `v0.4.0` (released), M5 → `v0.5.0` (in progress), M6 → `v1.0.0`.
 
 ## Current status
 
@@ -50,6 +50,12 @@ Later milestones add polish and translations.
 - **Phone memory** (M3 in `e2e/mobile-flow.spec.ts`, every line and guide on, CI mobile-chromium, master `8202465`): studies 1354, guides 1368, preview with guides 1270, settled after guides −46 against settled after studies, export 1328 MB, against budgets of 1500 / 1500 / 1500 / +100 / 1700 MB. The figures of the five master runs after #145 are in the ledger.
 - **Release:** [#124](https://github.com/omarcocarvalho/artistica/pull/124) (`chore(master): release 0.4.0`) merged as `2f0054f`, which created the [`v0.4.0`](https://github.com/omarcocarvalho/artistica/releases/tag/v0.4.0) release and deployed it to Pages.
 
+**M5 ("Polish" → `v0.5.0`) is planned, approved and in progress.** The owner delegated M5 on 2026-10-10: "draft the M5 plan, and you can auto approve the changes and keep implementing, only waiting for the 1.0.0 sign off". The controller approved the plan under that delegation, with every recommended default built (Q1–Q12, and Q-H2–Q-H12 for the M1 questions below). Plan: [`2026-10-10-m5-overview.md`](docs/superpowers/plans/2026-10-10-m5-overview.md) and sub-plans A–E (presets, manual layout, accessibility, performance and memory, mockups and polish): 24 tasks in six waves, then the final review F.
+
+- **Exit:** the spec §3 targets met and measured on CI (layout of 50 images in the worker < 500 ms, a preview update < 200 ms for 20 images, 20 × 12 MP photos → PDF within the phone memory budgets, the bundle budget, memory independent of page count), with the evidence in the M5 ledger.
+- **Sign-off:** the controller signs off M5 (final review in three parts plus automated real-browser evidence) and merges the v0.5.0 release PR. The owner's phone checklist for M5 is folded into the v1.0.0 sign-off.
+- **No new dependency** (M5-R1). Presets and manual arrangements never hold anything derived from a photo; arrangements are never persisted.
+
 ## Branch map
 
 | Branch | Use |
@@ -59,7 +65,9 @@ Later milestones add polish and translations.
 
 ## Next steps (in order)
 
-1. **Plan M5** (polish), starting with its own implementation plan in `docs/superpowers/plans/`, approved by the owner. The M5 items deferred so far are in the M2, M3 and M4 ledgers and under "Known issues" below.
+1. **Execute M5** from [`2026-10-10-m5-overview.md`](docs/superpowers/plans/2026-10-10-m5-overview.md), wave by wave (task graph in the overview), recording each task in `docs/superpowers/ledgers/m5.md`.
+2. **Release v0.5.0** when the final review F is clean and master CI is green (controller sign-off under the owner's delegation; no owner phone run for M5).
+3. **Plan M6** (translations and 1.0). The v1.0.0 sign-off includes the M5 phone checklist and the owner's review of the M5 questions (overview, "Phone checklist for the v1.0.0 sign-off" and "Questions for the owner").
 
 ## Owner answers from M2 (2026-10-07)
 
@@ -91,6 +99,8 @@ The owner accepted every recommended default of the M4 plan (Q1–Q14 and the bu
 **Answered from M4 (2026-10-10):** Q17 (small faces in full-body photos may not be found), Q18 (no running progress announcement) and Q19 (only the result is announced after a Detail change), each with its recommended default, already built. Details in the M4 overview.
 
 The spec doesn't answer the questions below. Nothing was changed for them.
+
+**Triaged in the M5 plan (2026-10-10):** questions 2–12 below each have a recommended default in the [M5 overview](docs/superpowers/plans/2026-10-10-m5-overview.md) (Q-H2–Q-H12), accepted by the controller under the owner's delegation: Q2 inline phone export, Q3 a tooltip for the disabled Export reason, Q5 a Cancel for pending imports and Q10 drop wording are built in M5; Q7 is measured in M5 and limited only if a very large photo goes over the memory budget; Q12 adds one line to the spec; Q4, Q6, Q8, Q9 and Q11 stay as built. The owner can override any of them at the v1.0.0 sign-off.
 
 **Left open from M1** (Q1 was answered in M2 as H1: phone controls are now 44 px; for Q5 and Q6 the owner accepted the M3 defaults H1 and H2 — unchanged in M3, cancelling to be decided in M5 — so both stay open; the M4 defaults H1–H3, accepted on 2026-10-08, again leave Q5, Q6 and Q7 unchanged, with cancelling still for M5):
 
@@ -248,6 +258,6 @@ The M4 final review triaged every deferred item; the table is in the [M4 ledger]
 - Live site: https://omarcocarvalho.github.io/artistica/
 - Releases: https://github.com/omarcocarvalho/artistica/releases
 - Spec: [docs/spec.md](docs/spec.md)
-- Plans: [docs/superpowers/plans/](docs/superpowers/plans/) — M1 starts at `2026-10-03-m1-overview.md`, M2 at `2026-10-07-m2-overview.md`, M3 at `2026-10-07-m3-overview.md`, M4 at `2026-10-08-m4-overview.md`
+- Plans: [docs/superpowers/plans/](docs/superpowers/plans/) — M1 starts at `2026-10-03-m1-overview.md`, M2 at `2026-10-07-m2-overview.md`, M3 at `2026-10-07-m3-overview.md`, M4 at `2026-10-08-m4-overview.md`, M5 at `2026-10-10-m5-overview.md`
 - Execution ledgers (progress, rulings, deferred minors per task): [docs/superpowers/ledgers/](docs/superpowers/ledgers/)
 - Design mockups: [design/](design/) (open `design/index.html`)
