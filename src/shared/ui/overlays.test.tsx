@@ -59,6 +59,44 @@ describe('Dialog', () => {
     expect(onOpenChange).toHaveBeenLastCalledWith(false)
   })
 
+  it('calls onClosed once the dialog has closed and focus is back on the opener', async () => {
+    let focusedWhenClosed: Element | null = null
+    const onClosed = vi.fn(() => {
+      focusedWhenClosed = document.activeElement
+    })
+    function Closing() {
+      const [open, setOpen] = useState(false)
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(true)
+            }}
+          >
+            Open
+          </button>
+          <Dialog
+            open={open}
+            onOpenChange={setOpen}
+            title="T"
+            closeLabel="Close"
+            onClosed={onClosed}
+          />
+        </>
+      )
+    }
+    render(<Closing />)
+    const opener = screen.getByRole('button', { name: 'Open' })
+    await userEvent.click(opener)
+    expect(onClosed).not.toHaveBeenCalled()
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => {
+      expect(onClosed).toHaveBeenCalledTimes(1)
+    })
+    expect(focusedWhenClosed).toBe(opener)
+  })
+
   it('lets onEscapeKeyDown keep it open', async () => {
     const onOpenChange = vi.fn()
     const onEscapeKeyDown = vi.fn((event: KeyboardEvent) => {

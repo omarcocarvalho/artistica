@@ -396,15 +396,45 @@ describe('ArrangeToolbar on the phone (B5)', () => {
     arranged('b#0')
     const block = document.createElement('div')
     block.dataset.blockId = 'b#0'
-    const scroll = vi.fn()
+    let focusedAtScroll: Element | null = null
+    const scroll = vi.fn(() => {
+      focusedAtScroll = document.activeElement
+    })
     block.scrollIntoView = scroll
     document.body.append(block)
     try {
       await user.click(screen.getByRole('button', { name: 'Photo options' }))
       await user.click(screen.getByRole('button', { name: 'Done' }))
       expect(scroll).toHaveBeenCalledWith({ block: 'nearest', inline: 'center' })
+      expect(focusedAtScroll).toBe(screen.getByRole('button', { name: 'Photo options' }))
     } finally {
       block.remove()
+    }
+  })
+
+  it('when what opened the sheet is gone, closing it focuses the photo (a tapped block re-rendered on another page)', async () => {
+    show([loaded('a'), loaded('b')])
+    const user = phone()
+    arranged('b#0')
+    const block = document.createElement('div')
+    block.dataset.blockId = 'b#0'
+    block.tabIndex = 0
+    block.scrollIntoView = vi.fn()
+    const tapped = document.createElement('div')
+    tapped.tabIndex = 0
+    document.body.append(block, tapped)
+    try {
+      tapped.focus()
+      act(() => {
+        screen.getByRole('button', { name: 'Photo options' }).click()
+      })
+      expect(screen.getByRole('dialog', { name: 'b.jpg' })).toBeInTheDocument()
+      tapped.remove()
+      await user.click(screen.getByRole('button', { name: 'Done' }))
+      expect(document.activeElement).toBe(block)
+    } finally {
+      block.remove()
+      tapped.remove()
     }
   })
 

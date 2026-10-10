@@ -16,6 +16,8 @@ export interface ModalSurfaceProps {
   footer?: ReactNode
   /** Where focus goes on close when the element that opened the overlay has left the document. */
   returnFocus?: () => HTMLElement | null
+  /** Called after the overlay has closed and focus has gone back. */
+  onClosed?: () => void
   /** Called before Esc closes the overlay; `event.preventDefault()` keeps it open. */
   onEscapeKeyDown?: (event: KeyboardEvent) => void
 }
@@ -36,16 +38,20 @@ export function ModalSurface({
   footer,
   returnFocus,
   onEscapeKeyDown,
+  onClosed,
   layout,
 }: ModalSurfaceProps & { layout: SurfaceLayout }) {
-  const onCloseAutoFocus = useReturnFocus(open, returnFocus)
+  const returnFocusOnClose = useReturnFocus(open, returnFocus)
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay className="ds-overlay" />
         <RadixDialog.Content
           className={layout.content}
-          onCloseAutoFocus={onCloseAutoFocus}
+          onCloseAutoFocus={(event) => {
+            returnFocusOnClose(event)
+            onClosed?.()
+          }}
           onEscapeKeyDown={onEscapeKeyDown}
           {...(description ? {} : { 'aria-describedby': undefined })}
         >

@@ -127,9 +127,10 @@ function SelectedControls({ block, blocks, pageCount, imageName, variant }: Sele
   )
 }
 
-function revealBlock(id: string): void {
+function blockElement(id: string): HTMLElement | null {
   for (const el of document.querySelectorAll<HTMLElement>('[data-block-id]'))
-    if (el.dataset.blockId === id) el.scrollIntoView({ block: 'nearest', inline: 'center' })
+    if (el.dataset.blockId === id) return el
+  return null
 }
 
 /**
@@ -224,9 +225,7 @@ export function ArrangeToolbar({ variant = 'desktop' }: { readonly variant?: Var
     )
 
   const closeOptions = (open: boolean) => {
-    if (open) return
-    setOptionsFor(null)
-    if (block) revealBlock(block.id)
+    if (!open) setOptionsFor(null)
   }
   const unitLabel = t(`common:units.${unit}`)
   const fmt = (mm: number) => roundForUnit(mmToUnit(mm, unit), unit)
@@ -271,6 +270,10 @@ export function ArrangeToolbar({ variant = 'desktop' }: { readonly variant?: Var
       {block && (
         <BottomSheet
           open={optionsFor === block.id}
+          returnFocus={() => blockElement(block.id)}
+          onClosed={() => {
+            blockElement(block.id)?.scrollIntoView({ block: 'nearest', inline: 'center' })
+          }}
           onOpenChange={closeOptions}
           title={imageName(block)}
           description={t('arrange.sheetSummary', {
