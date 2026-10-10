@@ -494,6 +494,18 @@
       });
     });
 
+    /* ---------- Language select: the visible name follows the choice ---- */
+    $$("[data-lang-select]").forEach(function (box) {
+      var select = $("select", box);
+      var name = $(".lang-select__name", box);
+      if (!select || !name) return;
+      select.addEventListener("change", function () {
+        var opt = select.options[select.selectedIndex];
+        name.textContent = opt.textContent;
+        name.setAttribute("lang", opt.getAttribute("lang") || "en");
+      });
+    });
+
     /* ---------- Dropzone hover feedback -------------------------------- */
     $$(".dropzone").forEach(function (z) {
       ["dragenter", "dragover"].forEach(function (ev) { z.addEventListener(ev, function (e) { e.preventDefault(); z.classList.add("is-over"); }); });
