@@ -323,6 +323,16 @@ describe('applying', () => {
     expect(within(dialog).queryByText('Waiting for photos to finish importing…')).toBeNull()
   })
 
+  it('with photos loaded and an import running, Apply asks nothing and applies nothing', async () => {
+    addPresets(LETTER)
+    loadPhotos(2)
+    useImages.setState({ importing: 1 })
+    const { user, dialog } = await openDialog()
+    await user.click(within(dialog).getByRole('button', { name: 'Apply Letter landscape, bleed' }))
+    expect(screen.queryByRole('dialog', { name: /Apply “/ })).not.toBeInTheDocument()
+    expect(useSettings.getState().pageSetup.paper).toBe('A4')
+  })
+
   it('an import that starts while the question is open refuses the apply', async () => {
     addPresets(LETTER)
     loadPhotos(2)
@@ -410,6 +420,16 @@ describe('renaming', () => {
     expect(within(dialog).getByRole('status')).toHaveTextContent(
       'Renamed A4 value studies to A4 values, 7 tones.',
     )
+  })
+
+  it('Enter on the unchanged name closes the field and announces nothing', async () => {
+    addPresets(makePreset('One'))
+    const { user, dialog } = await openDialog()
+    await user.click(within(dialog).getByRole('button', { name: 'Rename One' }))
+    await user.type(within(dialog).getByRole('textbox', { name: 'New name for One' }), '{Enter}')
+    expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Rename One' })).toHaveFocus()
+    expect(within(dialog).getByRole('status')).toHaveTextContent('')
   })
 
   it('Escape cancels without closing the dialog', async () => {
@@ -534,6 +554,32 @@ describe('Import', () => {
     })
     expect(status).toHaveTextContent("2 were skipped: they weren't valid.")
     expect(status).toHaveTextContent('1 preset had a value out of range, which was adjusted.')
+  })
+
+  it('reports a single skipped preset in the singular', async () => {
+    const good = JSON.parse(buildPresetFile([makePreset('A')])) as { presets: unknown[] }
+    const raw = { ...good, presets: [...good.presets, { name: 'broken' }] }
+    const { user, dialog } = await openDialog()
+    await user.upload(fileInput(dialog), new File([JSON.stringify(raw)], 'p.json'))
+    const status = within(dialog).getByRole('status')
+    await waitFor(() => {
+      expect(status).toHaveTextContent('Imported 1 preset.')
+    })
+    expect(status).toHaveTextContent("1 was skipped: it wasn't valid.")
+  })
+
+  it('announces the same error again when the same file is chosen again', async () => {
+    const { user, dialog } = await openDialog()
+    await user.upload(fileInput(dialog), new File(['nope'], 'p.json'))
+    const first = await within(dialog).findByRole('alert')
+    await user.upload(fileInput(dialog), new File(['nope'], 'p.json'))
+    await waitFor(() => {
+      expect(within(dialog).getByRole('alert')).not.toBe(first)
+    })
+    expect(first).not.toBeInTheDocument()
+    expect(within(dialog).getByRole('alert')).toHaveTextContent(
+      "This file isn't a presets file from Artistica.",
+    )
   })
 
   it('reports presets that did not fit under the device limit', async () => {
