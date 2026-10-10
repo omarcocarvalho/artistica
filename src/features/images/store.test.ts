@@ -646,6 +646,223 @@ describe('download limiter', () => {
   })
 })
 
+const settledWithin = <T>(p: Promise<T>, ms: number): Promise<T | 'pending'> =>
+  Promise.race([
+    p,
+    new Promise<'pending'>((r) =>
+      setTimeout(() => {
+        r('pending')
+      }, ms),
+    ),
+  ])
+
+const pastedLinks = (n: number): DataTransfer =>
+  ({
+    files: [],
+    items: [],
+    getData: (f: string) =>
+      f === 'text/plain'
+        ? Array.from({ length: n }, (_, k) => `https://a.com/${String(k)}.jpg`).join(' ')
+        : '',
+  }) as unknown as DataTransfer
+
+describe('waiting downloads (M5-R23)', () => {
+  it('a finished download keeps its download slot until it gets a decode slot: 20 links with a slow decoder hold at most 4 blobs', async () => {
+    const live = new Set<Blob>()
+    let peak = 0
+    const fetchImage = vi.fn<ImagesDeps['fetchImage']>((url) => {
+      const blob = new Blob([url])
+      live.add(blob)
+      peak = Math.max(peak, live.size)
+      return Promise.resolve({ blob, name: url.split('/').pop() ?? 'u.jpg' })
+    })
+    const gates: { resolve: (d: DecodedImage) => void }[] = []
+    const decode = vi.fn((blob: Blob) => {
+      const g = deferred<DecodedImage>()
+      gates.push(g)
+      return g.promise.finally(() => {
+        live.delete(blob)
+      })
+    })
+    const { store } = setup({ fetchImage, decode })
+    const p = store.getState().addFromClipboard(pastedLinks(20))
+    await vi.waitFor(() => {
+      expect(decode).toHaveBeenCalledTimes(2)
+    })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(fetchImage).toHaveBeenCalledTimes(4)
+    expect(live.size).toBe(4)
+    for (let done = 0; done < 20; done++) {
+      await vi.waitFor(() => {
+        expect(gates.length).toBeGreaterThan(done)
+      })
+      gates[done]?.resolve(decoded())
+    }
+    const out = await p
+    expect(out).toHaveLength(20)
+    expect(out?.every((o) => o.ok)).toBe(true)
+    expect(peak).toBeLessThanOrEqual(4)
+    expect(fetchImage).toHaveBeenCalledTimes(20)
+  })
+
+  it('a failed download frees its slot without waiting for a decode slot', async () => {
+    const gate = deferred<DecodedImage>()
+    const decode = vi.fn(() => gate.promise)
+    let calls = 0
+    const fetchImage = vi.fn<ImagesDeps['fetchImage']>((url) =>
+      calls++ < 2
+        ? Promise.reject(new ImportFailure('network'))
+        : Promise.resolve({ blob: new Blob([url]), name: 'ok.jpg' }),
+    )
+    const { store } = setup({ fetchImage, decode })
+    void store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    const links = store.getState().addFromClipboard(pastedLinks(3))
+    await vi.waitFor(() => {
+      expect(fetchImage).toHaveBeenCalledTimes(3)
+    })
+    expect(decode).toHaveBeenCalledTimes(2)
+    store.getState().cancelImports()
+    gate.resolve(decoded())
+    expect(await links).toBeNull()
+  })
+})
+
+describe('cancelImports (owner Q-H5)', () => {
+  it('aborts pending downloads, resolves their batches as null, and keeps the photos already loaded and the selection', async () => {
+    const signals: AbortSignal[] = []
+    const fetchImage = vi.fn<ImagesDeps['fetchImage']>((_url, signal) => {
+      signals.push(signal)
+      return new Promise((_res, rej) => {
+        signal.addEventListener('abort', () => {
+          rej(new ImportFailure('network'))
+        })
+      })
+    })
+    const { store, revoked } = setup({ fetchImage })
+    await store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    store.getState().select('id-2' as ImageId)
+    const p = store.getState().addFromUrl('https://x.com/slow.jpg')
+    await vi.waitFor(() => {
+      expect(signals).toHaveLength(1)
+    })
+    expect(store.getState().importing).toBe(1)
+    store.getState().cancelImports()
+    expect(signals[0]?.aborted).toBe(true)
+    expect(store.getState().importing).toBe(0)
+    expect(await p).toBeNull()
+    const s = store.getState()
+    expect(s.images.map((i) => i.name)).toEqual(['a.jpg', 'b.jpg'])
+    expect(s.selectedId).toBe('id-2')
+    expect(revoked).toEqual([])
+  })
+
+  it('a decode still waiting for a slot is never run, and one in flight is disposed when it ends', async () => {
+    const gate = deferred<ReturnType<typeof decoded>>()
+    const decode = vi.fn(() => gate.promise)
+    const { store, revoked } = setup({ decode })
+    const p = store.getState().addFiles([file('a.jpg'), file('b.jpg'), file('c.jpg')])
+    await vi.waitFor(() => {
+      expect(decode).toHaveBeenCalledTimes(2)
+    })
+    store.getState().cancelImports()
+    const late = decoded({ thumbUrl: 'blob:late' })
+    gate.resolve(late)
+    expect(await p).toBeNull()
+    expect(decode).toHaveBeenCalledTimes(2)
+    expect(store.getState().images).toEqual([])
+    expect(revoked).toContain('blob:late')
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(late.preview.close).toHaveBeenCalled()
+  })
+
+  it('a link waiting for a download slot never downloads', async () => {
+    const fetchImage = vi.fn<ImagesDeps['fetchImage']>(
+      (_url, signal) =>
+        new Promise((_res, rej) => {
+          signal.addEventListener('abort', () => {
+            rej(new ImportFailure('network'))
+          })
+        }),
+    )
+    const { store } = setup({ fetchImage })
+    const p = store.getState().addFromClipboard(pastedLinks(3))
+    await vi.waitFor(() => {
+      expect(fetchImage).toHaveBeenCalledTimes(2)
+    })
+    store.getState().cancelImports()
+    expect(await p).toBeNull()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(fetchImage).toHaveBeenCalledTimes(2)
+  })
+
+  it('an import started after a cancel runs normally on a fresh signal, and the cancelled one never lowers its count', async () => {
+    const gates = [deferred<DecodedImage>(), deferred<DecodedImage>()]
+    let i = 0
+    const { store } = setup({
+      decode: () => (gates[i++] as { promise: Promise<DecodedImage> }).promise,
+    })
+    const old = store.getState().addFiles([file('old.jpg')])
+    await vi.waitFor(() => {
+      expect(i).toBe(1)
+    })
+    store.getState().cancelImports()
+    const fresh = store.getState().addFiles([file('new.jpg')])
+    expect(store.getState().importing).toBe(1)
+    await vi.waitFor(() => {
+      expect(i).toBe(2)
+    })
+    gates[0]?.resolve(decoded())
+    expect(await old).toBeNull()
+    expect(store.getState().importing).toBe(1)
+    gates[1]?.resolve(decoded())
+    const out = await fresh
+    expect(out?.map((o) => o.ok)).toEqual([true])
+    expect(store.getState().images.map((x) => x.name)).toEqual(['new.jpg'])
+    expect(store.getState().importing).toBe(0)
+  })
+
+  it('with nothing importing it changes nothing', async () => {
+    const { store } = setup()
+    await store.getState().addFiles([file('a.jpg')])
+    const before = store.getState()
+    store.getState().cancelImports()
+    expect(store.getState()).toBe(before)
+  })
+
+  it('a photo waiting for a decode slot leaves the queue at once, before the decodes in flight end', async () => {
+    const gate = deferred<DecodedImage>()
+    const decode = vi.fn(() => gate.promise)
+    const { store } = setup({ decode })
+    const busy = store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    const waiting = store.getState().addFiles([file('c.jpg')])
+    await vi.waitFor(() => {
+      expect(decode).toHaveBeenCalledTimes(2)
+    })
+    store.getState().cancelImports()
+    expect(await settledWithin(waiting, 50)).toBe(null)
+    gate.resolve(decoded())
+    expect(await busy).toBeNull()
+  })
+
+  it('a finished download waiting for a decode slot drops its blob and download slot at once', async () => {
+    const gate = deferred<DecodedImage>()
+    const decode = vi.fn(() => gate.promise)
+    const fetchImage = vi.fn<ImagesDeps['fetchImage']>((url) =>
+      Promise.resolve({ blob: new Blob([url]), name: 'u.jpg' }),
+    )
+    const { store } = setup({ decode, fetchImage })
+    const busy = store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    const waiting = store.getState().addFromUrl('https://x.com/u.jpg')
+    await vi.waitFor(() => {
+      expect(fetchImage).toHaveBeenCalledTimes(1)
+    })
+    store.getState().cancelImports()
+    expect(await settledWithin(waiting, 50)).toBe(null)
+    gate.resolve(decoded())
+    expect(await busy).toBeNull()
+  })
+})
+
 describe('progress', () => {
   it('importing returns to 0 when a batch throws before any job starts', async () => {
     const { store } = setup({

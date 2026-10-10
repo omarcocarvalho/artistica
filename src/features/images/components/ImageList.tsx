@@ -119,6 +119,7 @@ export function ImageList({ onEdit }: ImageListProps) {
   const { t } = useTranslation('images')
   const images = useImages((s) => s.images)
   const selectedId = useImages((s) => s.selectedId)
+  const importing = useImages((s) => s.importing > 0)
   const unit = useSettings((s) => s.unit)
   const [confirming, setConfirming] = useState(false)
 
@@ -133,11 +134,18 @@ export function ImageList({ onEdit }: ImageListProps) {
     }
   }
 
+  const removeAllButton = (
+    <Button variant="ghost" icon="trash" onClick={removeAll}>
+      {t('list.removeAll.button')}
+    </Button>
+  )
+
   if (images.length === 0) {
     return (
       <div className="px-4 py-3">
         <p className="text-ink-muted text-sm">{t('list.empty.title')}</p>
         <p className="text-ink-subtle mt-1 text-xs">{t('list.empty.formats')}</p>
+        {importing && <div className="mt-2 flex justify-end">{removeAllButton}</div>}
       </div>
     )
   }
@@ -145,9 +153,7 @@ export function ImageList({ onEdit }: ImageListProps) {
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <span className="text-ink-muted text-sm">{t('list.count', { count: images.length })}</span>
-        <Button variant="ghost" icon="trash" onClick={removeAll}>
-          {t('list.removeAll.button')}
-        </Button>
+        {removeAllButton}
       </div>
       <ul aria-label={t('list.ariaLabel')} className="flex flex-col gap-2 p-0">
         {images.map((image, index) => (

@@ -7,6 +7,7 @@ import {
   type DragEvent,
   type SyntheticEvent,
 } from 'react'
+import { flushSync } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Button, Callout, Icon, IconButton, ProgressBar } from '../../../shared/ui'
 import { importErrorKeys } from '../errors'
@@ -29,7 +30,7 @@ type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K>
 
 type Issue =
   | { id: number; kind: 'error'; error: ImportErrorCode; source: string }
-  | { id: number; kind: 'no-image' }
+  | { id: number; kind: 'no-image'; origin: 'paste' | 'drop' }
   | { id: number; kind: 'paste-hint' }
 
 const hasFiles = (e: DragEvent | globalThis.DragEvent): boolean =>
@@ -46,8 +47,9 @@ function IssueCallout({ issue, onDismiss }: { issue: Issue; onDismiss: () => voi
     title = t(keys.title, vars)
     message = t(keys.message, vars)
   } else if (issue.kind === 'no-image') {
-    title = t('images:dropzone.noImage.title')
-    message = t('images:dropzone.noImage.message')
+    const key = issue.origin === 'drop' ? 'noImageDrop' : 'noImage'
+    title = t(`images:dropzone.${key}.title`)
+    message = t(`images:dropzone.${key}.message`)
     tone = 'warning'
   } else {
     title = t('images:dropzone.pasteHint.title')
@@ -71,6 +73,7 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
   const importing = useImages((s) => s.importing)
 
   const fileInput = useRef<HTMLInputElement>(null)
+  const uploadButton = useRef<HTMLButtonElement>(null)
   const urlInput = useRef<HTMLInputElement>(null)
   const nextIssue = useRef(1)
   const urlId = useId()
@@ -81,6 +84,12 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
   const [url, setUrl] = useState('')
   const [urlError, setUrlError] = useState<{ error: ImportErrorCode; source: string } | null>(null)
   const [urlBusy, setUrlBusy] = useState(false)
+  const [stopped, setStopped] = useState(false)
+  const [seenImporting, setSeenImporting] = useState(importing)
+  if (importing !== seenImporting) {
+    setSeenImporting(importing)
+    if (importing > 0) setStopped(false)
+  }
 
   // A file dropped just outside the zone must not navigate away (that would lose every loaded photo).
   useEffect(() => {
@@ -113,7 +122,7 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
     const outcomes = await (origin === 'drop'
       ? images.addFromDrop(dt)
       : images.addFromClipboard(dt))
-    if (outcomes?.length === 0) addIssue({ kind: 'no-image' })
+    if (outcomes?.length === 0) addIssue({ kind: 'no-image', origin })
     else report(outcomes)
   }
 
@@ -184,6 +193,14 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
     } finally {
       setUrlBusy(false)
     }
+  }
+
+  const cancelImports = (): void => {
+    flushSync(() => {
+      useImages.getState().cancelImports()
+      setStopped(true)
+    })
+    uploadButton.current?.focus()
   }
 
   const openLink = (): void => {
@@ -283,6 +300,7 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
         className={card ? 'flex flex-wrap justify-center gap-2' : 'grid grid-cols-3 gap-2'}
       >
         <Button
+          ref={uploadButton}
           variant={card ? 'primary' : 'secondary'}
           size={buttonSize}
           onClick={() => fileInput.current?.click()}
@@ -366,25 +384,33 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
       )}
       {card && dragging && <p className="text-accent mt-4">{t('dropzone.dropActive')}</p>}
 
-      {/* Always mounted so screen readers announce what is added to it. */}
-      <div role="status" className="mt-3 flex flex-col gap-2 text-left">
+      <div className="mt-3 flex items-start gap-2 text-left">
+        {/* Always mounted so screen readers announce what is added to it. */}
+        <div role="status" className="flex grow flex-col gap-2">
+          {importing > 0 && (
+            <div>
+              <ProgressBar value={null} label={t('dropzone.importingLabel')} />
+              <span className="text-sm">{t('dropzone.importing', { count: importing })}</span>
+            </div>
+          )}
+          {stopped && importing === 0 && <p className="text-sm">{t('dropzone.stopped')}</p>}
+          {issues
+            .filter((issue) => issue.kind !== 'error')
+            .map((issue) => (
+              <IssueCallout
+                key={issue.id}
+                issue={issue}
+                onDismiss={() => {
+                  dismiss(issue.id)
+                }}
+              />
+            ))}
+        </div>
         {importing > 0 && (
-          <div>
-            <ProgressBar value={null} label={t('dropzone.importingLabel')} />
-            <span className="text-sm">{t('dropzone.importing', { count: importing })}</span>
-          </div>
+          <Button variant="ghost" aria-label={t('dropzone.cancelLabel')} onClick={cancelImports}>
+            {t('dropzone.cancel')}
+          </Button>
         )}
-        {issues
-          .filter((issue) => issue.kind !== 'error')
-          .map((issue) => (
-            <IssueCallout
-              key={issue.id}
-              issue={issue}
-              onDismiss={() => {
-                dismiss(issue.id)
-              }}
-            />
-          ))}
       </div>
 
       {card && (
