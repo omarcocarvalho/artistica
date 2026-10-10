@@ -31,6 +31,8 @@ export interface DecodeDeps {
   createImageBitmap(blob: Blob, options?: ImageBitmapOptions): Promise<ImageBitmap>
   createCanvas(w: number, h: number): CanvasLike
   browserAppliesExif(): Promise<boolean>
+  /** Should a downscaled decode pass `resizeWidth`/`resizeHeight` to createImageBitmap? */
+  resizeOnDecode(): Promise<boolean>
   loadHeicConverter(): Promise<(blob: Blob) => Promise<Blob>>
   createObjectURL(blob: Blob): string
 }
@@ -53,6 +55,11 @@ interface Oriented {
   readonly bitmap: ImageBitmap
   /** Null when the bitmap is already upright. */
   readonly transform: { matrix: Matrix; width: number; height: number } | null
+}
+
+interface Size {
+  readonly w: number
+  readonly h: number
 }
 
 const IDENTITY: Matrix = [1, 0, 0, 1, 0, 0]
@@ -125,7 +132,13 @@ async function makeThumb(bitmap: ImageBitmap, deps: DecodeDeps): Promise<string>
   }
 }
 
-async function sniff(blob: Blob, name: string): Promise<{ kind: SniffedKind; head: Uint8Array }> {
+interface Sniffed {
+  readonly kind: SniffedKind
+  readonly head: Uint8Array
+  readonly declared: Size | null
+}
+
+async function sniff(blob: Blob, name: string): Promise<Sniffed> {
   const head = new Uint8Array(await blob.slice(0, HEAD_BYTES).arrayBuffer())
   const sniffed = sniffImage(head)
   const kind: SniffedKind | null =
@@ -134,7 +147,38 @@ async function sniff(blob: Blob, name: string): Promise<{ kind: SniffedKind; hea
   const declared = readDeclaredSize(head, kind)
   if (declared !== null && declared.w * declared.h > MAX_DECODED_PIXELS)
     throw new ImportFailure('too-large')
-  return { kind, head }
+  return { kind, head, declared }
+}
+
+/**
+ * Decodes straight to `pick(upright size)` in one createImageBitmap call, with the upright size
+ * taken from the header. Null when that size is not smaller, the header has no size (GIF, WebP,
+ * HEIC), the browser should not resize, or the browser leaves EXIF rotation to the app.
+ */
+async function decodeResized(
+  blob: Blob,
+  { kind, head, declared }: Sniffed,
+  pick: (upright: Size) => Size,
+  deps: DecodeDeps,
+): Promise<{ bitmap: ImageBitmap; upright: Size; size: Size } | null> {
+  if (declared === null) return null
+  const orientation = kind === 'jpeg' ? (readJpegInfo(head)?.orientation ?? 1) : 1
+  const upright = orientation >= 5 ? { w: declared.h, h: declared.w } : declared
+  const size = pick(upright)
+  if (size.w >= upright.w && size.h >= upright.h) return null
+  if (!(await deps.resizeOnDecode())) return null
+  if (orientation !== 1 && !(await deps.browserAppliesExif())) return null
+  try {
+    const bitmap = await deps.createImageBitmap(blob, {
+      imageOrientation: 'from-image',
+      resizeWidth: size.w,
+      resizeHeight: size.h,
+      resizeQuality: 'high',
+    })
+    return { bitmap, upright, size }
+  } catch (cause) {
+    throw new ImportFailure('decode-failed', { cause })
+  }
 }
 
 /** Upright size of a decode. Closes it and throws when it is too large. */
@@ -194,6 +238,34 @@ function previewSize(w: number, h: number): { w: number; h: number } {
   return { w: Math.max(1, Math.round(w * s)), h: Math.max(1, Math.round(h * s)) }
 }
 
+const previewTarget = (u: Size): Size => {
+  const full = planDownscale(u.w, u.h)
+  return previewSize(full.w, full.h)
+}
+
+/** The upright preview bitmap, the upright original size, and the compressed bytes to keep. */
+async function decodePreview(
+  blob: Blob,
+  sniffed: Sniffed,
+  deps: DecodeDeps,
+): Promise<{ preview: ImageBitmap; upright: Size; source: Blob }> {
+  const { kind, head } = sniffed
+  const resized = await decodeResized(blob, sniffed, previewTarget, deps)
+  if (resized !== null) {
+    const { bitmap, upright, size } = resized
+    const preview = await paintUpright({ bitmap, transform: null }, kind, size.w, size.h, deps)
+    return { preview, upright, source: blob }
+  }
+  const decoded =
+    kind === 'heic'
+      ? await decodeHeic(blob, deps)
+      : { ...(await decodeStandard(blob, kind, head, deps)), source: blob }
+  const upright = uprightSize(decoded)
+  const size = previewTarget(upright)
+  const preview = await paintUpright(decoded, kind, size.w, size.h, deps)
+  return { preview, upright, source: decoded.source }
+}
+
 /**
  * Import decode: checks the file, then keeps only a preview bitmap, a thumbnail and the compressed
  * source. No full-size bitmap outlives this call.
@@ -204,16 +276,11 @@ export async function decodeImage(
   deps: DecodeDeps,
 ): Promise<DecodedImage> {
   if (blob.size > MAX_FILE_BYTES) throw new ImportFailure('too-large')
-  const { kind, head } = await sniff(blob, name)
-  const animatedGif = kind === 'gif' && isAnimatedGif(new Uint8Array(await blob.arrayBuffer()))
-  const decoded =
-    kind === 'heic'
-      ? await decodeHeic(blob, deps)
-      : { ...(await decodeStandard(blob, kind, head, deps)), source: blob }
-  const upright = uprightSize(decoded)
+  const sniffed = await sniff(blob, name)
+  const animatedGif =
+    sniffed.kind === 'gif' && isAnimatedGif(new Uint8Array(await blob.arrayBuffer()))
+  const { preview, upright, source } = await decodePreview(blob, sniffed, deps)
   const full = planDownscale(upright.w, upright.h)
-  const size = previewSize(full.w, full.h)
-  const preview = await paintUpright(decoded, kind, size.w, size.h, deps)
   try {
     const thumbUrl = await makeThumb(preview, deps)
     return {
@@ -224,7 +291,7 @@ export async function decodeImage(
       originalPxH: upright.h,
       thumbUrl,
       animatedGif,
-      source: decoded.source,
+      source,
     }
   } catch (e) {
     preview.close()
@@ -241,12 +308,18 @@ export async function decodeFullImage(
   name: string,
   deps: DecodeDeps,
 ): Promise<ImageBitmap> {
-  const { kind, head } = await sniff(source, name)
+  const sniffed = await sniff(source, name)
+  const { kind, head } = sniffed
+  const target = (u: Size): Size => planDownscale(u.w, u.h)
+  const resized = await decodeResized(source, sniffed, target, deps)
+  if (resized !== null) {
+    const { bitmap, size } = resized
+    return paintUpright({ bitmap, transform: null }, kind, size.w, size.h, deps)
+  }
   const decoded =
     kind === 'heic'
       ? await decodeHeic(source, deps)
       : await decodeStandard(source, kind, head, deps)
-  const upright = uprightSize(decoded)
-  const full = planDownscale(upright.w, upright.h)
+  const full = target(uprightSize(decoded))
   return paintUpright(decoded, kind, full.w, full.h, deps)
 }

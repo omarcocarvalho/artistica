@@ -2,6 +2,7 @@ import type { Matrix } from './exif'
 import type { CanvasLike, DecodeDeps } from './decode'
 import { loadHeicConverter } from './heic'
 import { probeBrowserAppliesExif } from './orientation-probe'
+import { probeResizeOnDecode, resizeOnDecodeSavesMemory } from './resize-probe'
 
 function createCanvas(w: number, h: number): CanvasLike {
   const el = document.createElement('canvas')
@@ -39,10 +40,15 @@ function createCanvas(w: number, h: number): CanvasLike {
 
 export function createBrowserDecodeDeps(): DecodeDeps {
   let probe: Promise<boolean> | undefined
+  let resizeProbe: Promise<boolean> | undefined
   const deps: DecodeDeps = {
     createImageBitmap: (blob, options) => createImageBitmap(blob, options),
     createCanvas,
     browserAppliesExif: () => (probe ??= probeBrowserAppliesExif(deps)),
+    resizeOnDecode: () =>
+      (resizeProbe ??= resizeOnDecodeSavesMemory(navigator.userAgent)
+        ? probeResizeOnDecode(deps)
+        : Promise.resolve(false)),
     loadHeicConverter,
     createObjectURL: (blob) => URL.createObjectURL(blob),
   }
