@@ -35,6 +35,7 @@ export default defineConfig({
         'src/features/studies/**',
         'src/shared/colour/**',
         'src/shared/model/lines.ts',
+        'src/shared/model/page-setup-schema.ts',
         'src/shared/model/preset.ts',
         'src/shared/model/study.ts',
         'src/sw/**',

@@ -15,12 +15,14 @@ import {
   type LineSettings,
 } from '../../shared/model/lines'
 import { MIN_SAFE_AREA_MM, normalizePageSetup } from '../../shared/model/page-setup'
+import { MAX_PRESETS, sanitizePreset } from '../../shared/model/preset'
 import {
   DEFAULT_STUDY,
   MAX_BLUR_PCT,
   MAX_VALUES,
   MIN_BLUR_PCT,
   MIN_VALUES,
+  type StudySettings,
 } from '../../shared/model/study'
 import {
   DEFAULT_SETTINGS,
@@ -73,6 +75,7 @@ function expectNormalised(out: SettingsData): void {
     'language',
     'lineDefaults',
     'pageSetup',
+    'presets',
     'studyDefaults',
     'theme',
     'unit',
@@ -129,6 +132,7 @@ describe('parseSettings', () => {
         face: false,
         pose: false,
       },
+      presets: [],
     }
     expect(parseSettings(valid)).toEqual(valid)
   })
@@ -224,7 +228,12 @@ describe('studyDefaults', () => {
 
   it('fills in the defaults when the field is missing (a v1 object)', () => {
     const v1 = { pageSetup: DEFAULT_SETTINGS.pageSetup, unit: 'in', language: 'en', theme: 'dark' }
-    expect(parseSettings(v1)).toEqual({ ...v1, studyDefaults: D, lineDefaults: DEFAULT_LINES })
+    expect(parseSettings(v1)).toEqual({
+      ...v1,
+      studyDefaults: D,
+      lineDefaults: DEFAULT_LINES,
+      presets: [],
+    })
   })
 
   it('accepts valid study defaults unchanged', () => {
@@ -408,7 +417,7 @@ describe('lineDefaults (v3)', () => {
       theme: 'dark',
       studyDefaults: { blurPct: 70, values: { count: 7, hue: 200, neutral: false } },
     }
-    expect(parseSettings(v2)).toEqual({ ...v2, lineDefaults: DEFAULT_LINES })
+    expect(parseSettings(v2)).toEqual({ ...v2, lineDefaults: DEFAULT_LINES, presets: [] })
   })
 
   it('a v1 envelope still loads, with default studies and lines', () => {
@@ -417,6 +426,7 @@ describe('lineDefaults (v3)', () => {
       ...v1,
       studyDefaults: DEFAULT_SETTINGS.studyDefaults,
       lineDefaults: DEFAULT_LINES,
+      presets: [],
     })
   })
 
@@ -615,18 +625,20 @@ describe('lineDefaults (v4): the edge detail', () => {
         face: false,
         pose: false,
       },
+      presets: [],
     })
   })
 
   it('v2 and v1 envelopes still load', () => {
     const { pageSetup, unit, language, theme, studyDefaults } = v3
     const v2 = { pageSetup, unit, language, theme, studyDefaults }
-    expect(parseSettings(v2)).toEqual({ ...v2, lineDefaults: DEFAULT_LINES })
+    expect(parseSettings(v2)).toEqual({ ...v2, lineDefaults: DEFAULT_LINES, presets: [] })
     const v1 = { pageSetup, unit, language, theme }
     expect(parseSettings(v1)).toEqual({
       ...v1,
       studyDefaults: DEFAULT_SETTINGS.studyDefaults,
       lineDefaults: DEFAULT_LINES,
+      presets: [],
     })
   })
 
@@ -724,4 +736,93 @@ describe('lineDefaults (v4): the edge detail', () => {
       })
     },
   )
+})
+
+describe('presets (v5)', () => {
+  const study: StudySettings = {
+    versions: ['original', 'values'],
+    blurPct: 25,
+    values: { count: 7, hue: 200, neutral: true },
+  }
+  const stored = (name: string, over: Record<string, unknown> = {}) => ({
+    name,
+    pageSetup: { ...DEFAULT_SETTINGS.pageSetup, paper: 'A3' },
+    study,
+    lines: { ...DEFAULT_LINES, thirds: true },
+    ...over,
+  })
+
+  it('defaults to no presets, and a v4 object gains presets []', () => {
+    expect(DEFAULT_SETTINGS.presets).toEqual([])
+    expect(parseSettings({ theme: 'dark' }).presets).toEqual([])
+  })
+
+  it.each([
+    ['a string', 'x'],
+    ['an object', { a: stored('A') }],
+    ['null', null],
+  ])('a presets field that is %s loads as [] and keeps the other fields', (_name, presets) => {
+    const out = parseSettings({ theme: 'dark', presets })
+    expect(out.presets).toEqual([])
+    expect(out.theme).toBe('dark')
+  })
+
+  it('sanitises stored presets with the preset sanitizer', () => {
+    const raw = stored(' A4   values ', {
+      pageSetup: { ...DEFAULT_SETTINGS.pageSetup, safeAreaMm: 1 },
+      lines: { ...DEFAULT_LINES, thirds: true, face: true, extra: 1 },
+    })
+    const [p] = parseSettings({ presets: [raw] }).presets
+    expect(p).toEqual(sanitizePreset(raw))
+    expect(p?.name).toBe('A4 values')
+    expect(p?.pageSetup.safeAreaMm).toBe(MIN_SAFE_AREA_MM)
+    expect(p?.lines.face).toBe(false)
+    expect(p?.study.versions).toEqual(['original', 'values'])
+  })
+
+  it('drops one bad preset alone', () => {
+    const out = parseSettings({
+      presets: [stored('A'), stored(''), { name: 'B', pageSetup: 'x' }, 7, stored('C')],
+    })
+    expect(out.presets.map((p) => p.name)).toEqual(['A', 'C'])
+  })
+
+  it('keeps the first of presets whose names differ only in case or spacing', () => {
+    const out = parseSettings({
+      presets: [stored('A4 values'), stored(' a4  VALUES ', { study: DEFAULT_STUDY }), stored('B')],
+    })
+    expect(out.presets.map((p) => p.name)).toEqual(['A4 values', 'B'])
+    expect(out.presets[0]?.study).toEqual(study)
+  })
+
+  it('keeps at most MAX_PRESETS, counting only the presets that load', () => {
+    const many = [stored(''), ...Array.from({ length: 25 }, (_, i) => stored(`P${String(i)}`))]
+    const out = parseSettings({ presets: many })
+    expect(out.presets).toHaveLength(MAX_PRESETS)
+    expect(out.presets[0]?.name).toBe('P0')
+    expect(out.presets.at(-1)?.name).toBe('P19')
+  })
+
+  it('a duplicate does not take a slot from a later preset', () => {
+    const many = [
+      stored('A'),
+      stored('a'),
+      ...Array.from({ length: 19 }, (_, i) => stored(`P${String(i)}`)),
+    ]
+    expect(
+      parseSettings({ presets: many })
+        .presets.map((p) => p.name)
+        .at(-1),
+    ).toBe('P18')
+  })
+
+  it('loads any stored presets without throwing (property)', () => {
+    fc.assert(
+      fc.property(fc.anything(), (presets) => {
+        const out = parseSettings({ presets })
+        expect(out.presets.length).toBeLessThanOrEqual(MAX_PRESETS)
+        for (const p of out.presets) expect(sanitizePreset(p)).toEqual(p)
+      }),
+    )
+  })
 })

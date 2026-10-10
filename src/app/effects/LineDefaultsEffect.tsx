@@ -1,13 +1,18 @@
 import { useEffect } from 'react'
 import { useImages } from '../../features/images'
-import { useSettings } from '../../features/settings'
+import { normalizeLineDefaults, useSettings } from '../../features/settings'
+import { linesEqual } from '../../shared/model/lines'
 
 /** Owner Q7: the last-used line style, grid size and corner (an edit to the selected image, or "Apply lines to all") become the defaults; types never do. */
 export function LineDefaultsEffect(): null {
   const defaults = useSettings((s) => s.lineDefaults)
 
   useEffect(() => {
-    useImages.getState().setDefaultLines(defaults)
+    const images = useImages.getState()
+    // A preset's session default (M5-R6) survives the defaults its own apply wrote.
+    const current = images.getDefaults()
+    if (current.sessionLines && linesEqual(normalizeLineDefaults(current.lines), defaults)) return
+    images.setDefaultLines(defaults)
   }, [defaults])
 
   useEffect(

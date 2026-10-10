@@ -2,7 +2,13 @@ import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import type { StateStorage } from 'zustand/middleware'
 import { DEFAULT_LINES, SPIRAL_CORNERS, type LineSettings } from '../../shared/model/lines'
-import { DEFAULT_STUDY } from '../../shared/model/study'
+import {
+  MAX_PRESETS,
+  presetFromSettings,
+  sanitizePreset,
+  type Preset,
+} from '../../shared/model/preset'
+import { DEFAULT_STUDY, type StudySettings } from '../../shared/model/study'
 import { DEFAULT_SETTINGS, parseSettings } from './schema'
 import {
   SETTINGS_STORAGE_KEY,
@@ -195,19 +201,19 @@ describe('actions', () => {
 })
 
 describe('persistence', () => {
-  it('writes version 4 under artistica:settings, without notes or actions', () => {
+  it('writes the current version under artistica:settings, without notes or actions', () => {
     const storage = memoryStorage()
     const store = createSettingsStore(storage)
     store.getState().setTheme('light')
     store.getState().setPageSetup({ safeAreaMm: 1 })
     const { version, state } = saved(storage)
     expect(SETTINGS_STORAGE_KEY).toBe('artistica:settings')
-    expect(version).toBe(4)
-    expect(SETTINGS_VERSION).toBe(4)
+    expect(version).toBe(SETTINGS_VERSION)
     expect(Object.keys(state).sort()).toEqual([
       'language',
       'lineDefaults',
       'pageSetup',
+      'presets',
       'studyDefaults',
       'theme',
       'unit',
@@ -393,7 +399,7 @@ describe('study defaults (schema v2)', () => {
     expect(env.state.studyDefaults).toEqual(store.getState().studyDefaults)
   })
 
-  it('persists nothing but the four M1 fields, studyDefaults and lineDefaults', () => {
+  it('persists nothing but the four M1 fields, studyDefaults, lineDefaults and presets', () => {
     const storage = memoryStorage()
     const store = createSettingsStore(storage)
     store.getState().setStudyDefaults({ blurPct: 10, values: DEFAULT_STUDY.values })
@@ -401,6 +407,7 @@ describe('study defaults (schema v2)', () => {
       'language',
       'lineDefaults',
       'pageSetup',
+      'presets',
       'studyDefaults',
       'theme',
       'unit',
@@ -667,10 +674,6 @@ describe('guide defaults (schema v4)', () => {
     pose: false,
   }
 
-  it('SETTINGS_VERSION is 4', () => {
-    expect(SETTINGS_VERSION).toBe(4)
-  })
-
   it('a v3 envelope loads with every field and the default edge detail 50', () => {
     const s = createSettingsStore(
       memoryStorage(JSON.stringify({ version: 3, state: v3 })),
@@ -722,7 +725,7 @@ describe('guide defaults (schema v4)', () => {
     const storage = memoryStorage()
     createSettingsStore(storage).getState().setLineDefaults(guidesOn)
     const env = saved(storage)
-    expect(env.version).toBe(4)
+    expect(env.version).toBe(SETTINGS_VERSION)
     expect(env.state.lineDefaults).toEqual(rememberedGuides)
   })
 
@@ -783,5 +786,280 @@ describe('guide defaults (schema v4)', () => {
       ...rememberedGuides,
       edges: { on: false, detailPct: 20 },
     })
+  })
+})
+
+describe('presets (schema v5)', () => {
+  const study: StudySettings = {
+    versions: ['original', 'values'],
+    blurPct: 25,
+    values: { count: 7, hue: 200, neutral: true },
+  }
+  const make = (name: string, over: Partial<StudySettings> = {}): Preset =>
+    presetFromSettings(name, {
+      pageSetup: { ...DEFAULT_SETTINGS.pageSetup, paper: 'A3' },
+      study: { ...study, ...over },
+      lines: { ...DEFAULT_LINES, thirds: true },
+    })
+  const names = (store: ReturnType<typeof createSettingsStore>) =>
+    store.getState().presets.map((p) => p.name)
+  const v4 = {
+    pageSetup: { ...DEFAULT_SETTINGS.pageSetup, paper: 'Letter', safeAreaMm: 7 },
+    unit: 'in',
+    language: 'ja',
+    theme: 'dark',
+    studyDefaults: { blurPct: 70, values: { count: 7, hue: 200, neutral: true } },
+    lineDefaults: {
+      ...DEFAULT_LINES,
+      style: { colour: '#1f3fbf', widthMm: 1.35, opacityPct: 56 },
+      edges: { on: false, detailPct: 73 },
+    },
+  }
+
+  it('SETTINGS_VERSION is 5', () => {
+    expect(SETTINGS_VERSION).toBe(5)
+  })
+
+  it('a v4 envelope loads with every field and presets []', () => {
+    const s = createSettingsStore(
+      memoryStorage(JSON.stringify({ version: 4, state: v4 })),
+      'mm',
+    ).getState()
+    expect({
+      pageSetup: s.pageSetup,
+      unit: s.unit,
+      language: s.language,
+      theme: s.theme,
+      studyDefaults: s.studyDefaults,
+      lineDefaults: s.lineDefaults,
+      presets: s.presets,
+    }).toEqual({ ...v4, presets: [] })
+  })
+
+  it.each([1, 2, 3])('a v%i envelope still loads, with presets []', (version) => {
+    const { pageSetup, unit, language, theme } = v4
+    const s = createSettingsStore(
+      memoryStorage(JSON.stringify({ version, state: { pageSetup, unit, language, theme } })),
+    ).getState()
+    expect(s).toMatchObject({ pageSetup, unit, language, theme, presets: [] })
+  })
+
+  it('stored presets are sanitised on load: a bad one is dropped alone, duplicates keep the first, at most 20', () => {
+    const presets = [
+      { ...make('A'), pageSetup: { ...make('A').pageSetup, safeAreaMm: 1 } },
+      { name: 'broken', pageSetup: 3 },
+      make('a'),
+      ...Array.from({ length: 22 }, (_, i) => make(`P${String(i)}`)),
+    ]
+    const s = createSettingsStore(
+      memoryStorage(JSON.stringify({ version: 5, state: { ...v4, presets } })),
+    ).getState()
+    expect(s.presets).toHaveLength(MAX_PRESETS)
+    expect(s.presets.map((p) => p.name).slice(0, 3)).toEqual(['A', 'P0', 'P1'])
+    expect(s.presets[0]?.pageSetup.safeAreaMm).toBe(3)
+    expect(s.theme).toBe('dark')
+  })
+
+  describe('savePreset', () => {
+    it('adds a new preset at the end and returns saved', () => {
+      const store = createSettingsStore(memoryStorage())
+      expect(store.getState().savePreset(make('A'))).toBe('saved')
+      expect(store.getState().savePreset(make('B'))).toBe('saved')
+      expect(names(store)).toEqual(['A', 'B'])
+      expect(store.getState().presets[0]).toEqual(make('A'))
+    })
+
+    it('normalises the name', () => {
+      const store = createSettingsStore(memoryStorage())
+      expect(store.getState().savePreset({ ...make('x'), name: '  A4   values ' })).toBe('saved')
+      expect(names(store)).toEqual(['A4 values'])
+    })
+
+    it('refuses a name that is taken, case-insensitively, unless replace is true', () => {
+      const store = createSettingsStore(memoryStorage())
+      store.getState().savePreset(make('A4 values'))
+      store.getState().savePreset(make('B'))
+      const next = make(' a4 VALUES ', { blurPct: 60 })
+      expect(store.getState().savePreset(next)).toBe('exists')
+      expect(store.getState().presets[0]?.study.blurPct).toBe(25)
+      expect(store.getState().savePreset(next, { replace: false })).toBe('exists')
+      expect(store.getState().savePreset(next, { replace: true })).toBe('replaced')
+      expect(names(store)).toEqual(['a4 VALUES', 'B'])
+      expect(store.getState().presets[0]?.study.blurPct).toBe(60)
+    })
+
+    it('refuses a new preset when 20 are kept, but still replaces one', () => {
+      const store = createSettingsStore(memoryStorage())
+      for (let i = 0; i < MAX_PRESETS; i++) {
+        expect(store.getState().savePreset(make(`P${String(i)}`))).toBe('saved')
+      }
+      expect(store.getState().savePreset(make('one more'))).toBe('full')
+      expect(store.getState().presets).toHaveLength(MAX_PRESETS)
+      expect(store.getState().savePreset(make('P3', { blurPct: 9 }), { replace: true })).toBe(
+        'replaced',
+      )
+      expect(store.getState().presets[3]?.study.blurPct).toBe(9)
+    })
+
+    it.each([
+      ['empty', ''],
+      ['blank', '   '],
+      ['too long', 'x'.repeat(41)],
+    ])('refuses a name that is %s with bad-name', (_n, name) => {
+      const store = createSettingsStore(memoryStorage())
+      expect(store.getState().savePreset({ ...make('x'), name })).toBe('bad-name')
+      expect(store.getState().presets).toEqual([])
+    })
+
+    it('stores only the whitelisted, sanitised fields', () => {
+      const storage = memoryStorage()
+      const store = createSettingsStore(storage)
+      const dirty = {
+        ...make('A'),
+        imageId: 'img-1',
+        study: { ...study, blurPct: 900, contentHash: 'h' },
+        lines: { ...make('A').lines, face: true },
+      } as unknown as Preset
+      store.getState().savePreset(dirty)
+      const [p] = store.getState().presets
+      expect(p).toEqual(sanitizePreset(dirty))
+      expect(p?.study.blurPct).toBe(100)
+      expect(p?.lines.face).toBe(false)
+      expect(JSON.stringify(saved(storage).state.presets)).not.toMatch(/imageId|contentHash/)
+    })
+  })
+
+  describe('renamePreset', () => {
+    it('renames in place and keeps the list order', () => {
+      const store = createSettingsStore(memoryStorage())
+      for (const n of ['A', 'B', 'C']) store.getState().savePreset(make(n))
+      expect(store.getState().renamePreset('b', '  Bee  ')).toBe('renamed')
+      expect(names(store)).toEqual(['A', 'Bee', 'C'])
+      expect(store.getState().presets[1]?.study).toEqual(study)
+    })
+
+    it('refuses a name another preset has', () => {
+      const store = createSettingsStore(memoryStorage())
+      for (const n of ['A', 'B']) store.getState().savePreset(make(n))
+      expect(store.getState().renamePreset('A', ' b ')).toBe('exists')
+      expect(names(store)).toEqual(['A', 'B'])
+    })
+
+    it('lets a preset change the case of its own name', () => {
+      const store = createSettingsStore(memoryStorage())
+      store.getState().savePreset(make('a4'))
+      expect(store.getState().renamePreset('a4', 'A4')).toBe('renamed')
+      expect(names(store)).toEqual(['A4'])
+    })
+
+    it('reports bad-name and missing', () => {
+      const store = createSettingsStore(memoryStorage())
+      store.getState().savePreset(make('A'))
+      expect(store.getState().renamePreset('A', ' ')).toBe('bad-name')
+      expect(store.getState().renamePreset('Z', 'Y')).toBe('missing')
+      expect(names(store)).toEqual(['A'])
+    })
+  })
+
+  describe('deletePreset', () => {
+    it('removes by name, case-insensitively', () => {
+      const store = createSettingsStore(memoryStorage())
+      for (const n of ['A', 'B', 'C']) store.getState().savePreset(make(n))
+      store.getState().deletePreset(' b ')
+      expect(names(store)).toEqual(['A', 'C'])
+    })
+
+    it('does nothing for a name it does not have', () => {
+      const storage = countingStorage()
+      const store = createSettingsStore(storage)
+      store.getState().savePreset(make('A'))
+      const writes = storage.writes()
+      const before = store.getState().presets
+      store.getState().deletePreset('Z')
+      expect(store.getState().presets).toBe(before)
+      expect(storage.writes()).toBe(writes)
+    })
+  })
+
+  describe('addImportedPresets', () => {
+    it('adds each preset with a unique name and reports the renames', () => {
+      const store = createSettingsStore(memoryStorage())
+      store.getState().savePreset(make('A4'))
+      const out = store.getState().addImportedPresets([make('a4'), make('B'), make('B')])
+      expect(out).toEqual({
+        added: 3,
+        renamed: [
+          ['a4', 'a4 (2)'],
+          ['B', 'B (2)'],
+        ],
+        skippedFull: 0,
+      })
+      expect(names(store)).toEqual(['A4', 'a4 (2)', 'B', 'B (2)'])
+    })
+
+    it('stops at 20 and counts the rest', () => {
+      const store = createSettingsStore(memoryStorage())
+      for (let i = 0; i < 18; i++) store.getState().savePreset(make(`P${String(i)}`))
+      const out = store.getState().addImportedPresets([make('X'), make('Y'), make('Z'), make('W')])
+      expect(out).toEqual({ added: 2, renamed: [], skippedFull: 2 })
+      expect(names(store).slice(-2)).toEqual(['X', 'Y'])
+    })
+
+    it('sanitises imported presets and skips one whose name is unusable', () => {
+      const store = createSettingsStore(memoryStorage())
+      const bad = { ...make('x'), name: '' }
+      const big = { ...make('Big'), study: { ...study, blurPct: 900 } }
+      const out = store.getState().addImportedPresets([bad, big])
+      expect(out.added).toBe(1)
+      expect(store.getState().presets[0]?.study.blurPct).toBe(100)
+    })
+
+    it('writes storage once for a batch, and not at all when nothing is added', () => {
+      const storage = countingStorage()
+      const store = createSettingsStore(storage)
+      store.getState().addImportedPresets([make('A'), make('B'), make('C')])
+      expect(storage.writes()).toBe(1)
+      for (let i = 0; i < 17; i++) store.getState().savePreset(make(`P${String(i)}`))
+      const writes = storage.writes()
+      expect(store.getState().addImportedPresets([make('Q')])).toEqual({
+        added: 0,
+        renamed: [],
+        skippedFull: 1,
+      })
+      expect(storage.writes()).toBe(writes)
+    })
+  })
+
+  it("an equal save or rename doesn't write storage", () => {
+    const storage = countingStorage()
+    const store = createSettingsStore(storage)
+    store.getState().savePreset(make('A'))
+    const writes = storage.writes()
+    const before = store.getState().presets
+    const listened: unknown[] = []
+    store.subscribe((s) => listened.push(s))
+    expect(store.getState().savePreset(make('A'), { replace: true })).toBe('replaced')
+    expect(store.getState().renamePreset('A', ' A ')).toBe('renamed')
+    expect(storage.writes()).toBe(writes)
+    expect(listened).toEqual([])
+    expect(store.getState().presets).toBe(before)
+  })
+
+  it('partialize persists presets, and they reload', () => {
+    const storage = memoryStorage()
+    const store = createSettingsStore(storage)
+    store.getState().savePreset(make('A'))
+    store.getState().savePreset(make('B'))
+    const env = saved(storage)
+    expect(env.version).toBe(5)
+    expect(env.state.presets).toEqual([make('A'), make('B')])
+    expect(createSettingsStore(storage).getState().presets).toEqual([make('A'), make('B')])
+  })
+
+  it('reset clears the presets', () => {
+    const store = createSettingsStore(memoryStorage())
+    store.getState().savePreset(make('A'))
+    store.getState().reset()
+    expect(store.getState().presets).toEqual([])
   })
 })

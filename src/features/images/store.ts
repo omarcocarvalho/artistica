@@ -51,14 +51,27 @@ export interface ImagesState {
   updateStudy(id: ImageId, patch: StudyPatch): void
   /** Copies `fromId`'s whole StudySettings (versions included) to every image. Returns how many changed; 0, recording nothing, while an import runs (owner M2-2). */
   applyStudyToAll(fromId: ImageId): number
-  /** The study settings images created from now on start with. Not persisted here. */
-  setDefaultStudy(study: StudySettings): void
+  /** The study settings images created from now on start with. Not persisted here. `session` marks it as a preset's session default (M5-R6); any other call ends that. */
+  setDefaultStudy(study: StudySettings, opts?: DefaultOptions): void
   /** Patch one image's line settings (sanitized). Keeps the same state when nothing changes. */
   updateLines(id: ImageId, patch: LinesPatch): void
   /** Copies `fromId`'s whole LineSettings (types and style, owner Q8) to every image. Returns how many changed; 0, recording nothing, while an import runs (owner Q9). */
   applyLinesToAll(fromId: ImageId): number
-  /** The line settings images created from now on start with. Not persisted here. */
-  setDefaultLines(lines: LineSettings): void
+  /** The line settings images created from now on start with. Not persisted here. `session` as for `setDefaultStudy`. */
+  setDefaultLines(lines: LineSettings, opts?: DefaultOptions): void
+  /** What images created now start with, and whether each default is a session default. */
+  getDefaults(): ImageDefaults
+}
+
+export interface DefaultOptions {
+  readonly session?: boolean
+}
+
+export interface ImageDefaults {
+  readonly study: StudySettings
+  readonly lines: LineSettings
+  readonly sessionStudy: boolean
+  readonly sessionLines: boolean
 }
 
 export interface ImagesDeps {
@@ -80,6 +93,8 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
   let generation = 0
   let defaultStudy: StudySettings = DEFAULT_STUDY
   let defaultLines: LineSettings = DEFAULT_LINES
+  let sessionStudy = false
+  let sessionLines = false
   let nextSeq = 0
   let nextPaste = 1
 
@@ -314,8 +329,9 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
         return count
       },
 
-      setDefaultStudy: (study) => {
+      setDefaultStudy: (study, opts) => {
         defaultStudy = sanitizeStudy(study)
+        sessionStudy = opts?.session === true
       },
 
       updateLines: (id, patch) => {
@@ -347,9 +363,12 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
         return count
       },
 
-      setDefaultLines: (lines) => {
+      setDefaultLines: (lines, opts) => {
         defaultLines = sanitizeLines(lines)
+        sessionLines = opts?.session === true
       },
+
+      getDefaults: () => ({ study: defaultStudy, lines: defaultLines, sessionStudy, sessionLines }),
     }
   })
 }

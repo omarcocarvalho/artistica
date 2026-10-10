@@ -25,6 +25,51 @@ afterEach(() => {
 })
 
 describe('StudyDefaultsEffect', () => {
+  describe('session defaults from a preset (M5-R6)', () => {
+    const PRESET_STUDY = {
+      versions: ['original', 'values'] as const,
+      blurPct: 25,
+      values: { count: 4, hue: 230, neutral: false },
+    }
+
+    it('does not overwrite a session default in the same update', () => {
+      render(<StudyDefaultsEffect />)
+      act(() => {
+        useSettings.getState().setStudyDefaults({ blurPct: 25, values: PRESET_STUDY.values })
+        useImages
+          .getState()
+          .setDefaultStudy(
+            { ...PRESET_STUDY, versions: [...PRESET_STUDY.versions] },
+            { session: true },
+          )
+      })
+      expect(useImages.getState().getDefaults()).toMatchObject({
+        study: PRESET_STUDY,
+        sessionStudy: true,
+      })
+    })
+
+    it('a change to other study defaults replaces it, Original only', () => {
+      render(<StudyDefaultsEffect />)
+      act(() => {
+        useSettings.getState().setStudyDefaults({ blurPct: 25, values: PRESET_STUDY.values })
+        useImages
+          .getState()
+          .setDefaultStudy(
+            { ...PRESET_STUDY, versions: [...PRESET_STUDY.versions] },
+            { session: true },
+          )
+      })
+      act(() => {
+        useSettings.getState().setStudyDefaults({ blurPct: 26, values: PRESET_STUDY.values })
+      })
+      expect(useImages.getState().getDefaults()).toMatchObject({
+        study: { versions: ['original'], blurPct: 26, values: PRESET_STUDY.values },
+        sessionStudy: false,
+      })
+    })
+  })
+
   it('hands the saved defaults to the images store on start, with Original only (owner Q1/Q5, default)', () => {
     useSettings
       .getState()

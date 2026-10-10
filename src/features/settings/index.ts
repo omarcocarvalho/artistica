@@ -4,6 +4,7 @@ export {
   normalizeLineDefaults,
   normalizeStudyDefaults,
   parseSettings,
+  sanitizePresets,
   settingsSchema,
 } from './schema'
 export type { SettingsData, StudyDefaults, Theme } from './schema'
@@ -15,4 +16,10 @@ export {
   safeStorage,
   useSettings,
 } from './store'
-export type { PageSetupPatch, SettingsState } from './store'
+export type {
+  ImportedPresetsResult,
+  PageSetupPatch,
+  RenamePresetResult,
+  SavePresetResult,
+  SettingsState,
+} from './store'

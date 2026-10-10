@@ -1497,3 +1497,65 @@ describe('setDefaultLines', () => {
     expect(store.getState().images[0]?.study).toEqual(BLUR_VALUES)
   })
 })
+
+describe('session defaults (M5-R6)', () => {
+  const THIRDS: LineSettings = patchLines(STYLED, { thirds: true, grid: { on: true } })
+
+  it('start with no session default and report the current defaults', () => {
+    const { store } = setup()
+    expect(store.getState().getDefaults()).toEqual({
+      study: DEFAULT_STUDY,
+      lines: DEFAULT_LINES,
+      sessionStudy: false,
+      sessionLines: false,
+    })
+  })
+
+  it('a session study default keeps its versions for photos added later, and is reported as a session default', async () => {
+    const { store } = setup()
+    store.getState().setDefaultStudy(BLUR_VALUES, { session: true })
+    expect(store.getState().getDefaults()).toMatchObject({
+      study: BLUR_VALUES,
+      sessionStudy: true,
+      sessionLines: false,
+    })
+    await store.getState().addFiles([file('a.jpg')])
+    expect(store.getState().images[0]?.study).toEqual(BLUR_VALUES)
+  })
+
+  it('a session lines default keeps its types for photos added later', async () => {
+    const { store } = setup()
+    store.getState().setDefaultLines(THIRDS, { session: true })
+    expect(store.getState().getDefaults()).toMatchObject({
+      lines: THIRDS,
+      sessionStudy: false,
+      sessionLines: true,
+    })
+    await store.getState().addFiles([file('a.jpg')])
+    expect(store.getState().images[0]?.lines).toEqual(THIRDS)
+  })
+
+  it('a later write without session ends each session default on its own', () => {
+    const { store } = setup()
+    store.getState().setDefaultStudy(BLUR_VALUES, { session: true })
+    store.getState().setDefaultLines(THIRDS, { session: true })
+    store.getState().setDefaultStudy(DEFAULT_STUDY)
+    expect(store.getState().getDefaults()).toMatchObject({
+      study: DEFAULT_STUDY,
+      sessionStudy: false,
+      sessionLines: true,
+    })
+    store.getState().setDefaultLines(DEFAULT_LINES, { session: false })
+    expect(store.getState().getDefaults().sessionLines).toBe(false)
+  })
+
+  it('sanitises a session default and keeps it across clear()', () => {
+    const { store } = setup()
+    store.getState().setDefaultStudy({ ...BLUR_VALUES, blurPct: 900 }, { session: true })
+    store.getState().clear()
+    expect(store.getState().getDefaults()).toMatchObject({
+      study: { ...BLUR_VALUES, blurPct: 100 },
+      sessionStudy: true,
+    })
+  })
+})

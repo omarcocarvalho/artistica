@@ -1,12 +1,7 @@
 import { z } from 'zod'
 import { sanitizeLines, type LineSettings } from './lines'
-import { CUSTOM_PAPER_LIMITS, PAPER_IDS, type PaperId } from './paper'
-import {
-  DEFAULT_PAGE_SETUP,
-  normalizePageSetup,
-  type Orientation,
-  type PageSetup,
-} from './page-setup'
+import type { PageSetup } from './page-setup'
+import { parsePageSetup } from './page-setup-schema'
 import { DEFAULT_STUDY, sanitizeStudy, type StudySettings } from './study'
 
 /** A whitelist of settings (M5-R2): nothing in it is derived from a photo. */
@@ -71,32 +66,6 @@ export function uniqueName(name: string, taken: readonly string[]): string {
   }
 }
 
-const D = DEFAULT_PAGE_SETUP
-const { minMm, maxMm } = CUSTOM_PAPER_LIMITS
-const lengthMm = (max: number) => z.number().min(0).max(max)
-const paperIds = PAPER_IDS as [PaperId, ...PaperId[]]
-const orientations: [Orientation, ...Orientation[]] = ['auto', 'portrait', 'landscape']
-
-/** Each field falls back to its default on its own, with the same ranges as saved settings. */
-const pageSetupSchema = z.object({
-  paper: z.enum(paperIds).catch(D.paper),
-  customSize: z
-    .object({
-      w: z.number().min(minMm).max(maxMm),
-      h: z.number().min(minMm).max(maxMm),
-    })
-    .catch(D.customSize),
-  orientation: z.enum(orientations).catch(D.orientation),
-  safeAreaMm: lengthMm(100).catch(D.safeAreaMm),
-  gutter: z
-    .object({ enabled: z.boolean().catch(D.gutter.enabled), mm: lengthMm(100).catch(D.gutter.mm) })
-    .catch(D.gutter),
-  cropMarks: z.boolean().catch(D.cropMarks),
-  bleed: z
-    .object({ enabled: z.boolean().catch(D.bleed.enabled), mm: lengthMm(50).catch(D.bleed.mm) })
-    .catch(D.bleed),
-})
-
 /** Types only: ranges belong to `sanitizeStudy`. */
 const studySchema = z.object({
   versions: z.array(z.unknown()).catch([]),
@@ -113,13 +82,6 @@ const studySchema = z.object({
 const isRecord = (v: unknown): v is Readonly<Record<string, unknown>> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 
-function toPageSetup(raw: Readonly<Record<string, unknown>>): PageSetup {
-  const parsed = pageSetupSchema.parse(raw)
-  const { w, h } = parsed.customSize
-  const customSize = w <= h ? { w, h } : { w: h, h: w }
-  return normalizePageSetup({ ...parsed, customSize }).setup
-}
-
 function toLines(raw: Readonly<Record<string, unknown>>): LineSettings {
   const lines = sanitizeLines(raw as unknown as LineSettings)
   return { ...lines, edges: { ...lines.edges, on: false }, face: false, pose: false }
@@ -133,7 +95,7 @@ function build(
 ): Preset {
   return {
     name,
-    pageSetup: toPageSetup(pageSetup),
+    pageSetup: parsePageSetup(pageSetup),
     study: sanitizeStudy(studySchema.parse(study) as StudySettings),
     lines: toLines(lines),
   }
