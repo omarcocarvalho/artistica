@@ -9,6 +9,7 @@ import {
   LAZY_ONLY_MARKERS,
   lazyOnlyViolations,
   LOCALE_CHUNK_LIMIT_BYTES,
+  localeChunkSetViolations,
   localeChunkViolations,
   localeMarkers,
   localeMarkerViolations,
@@ -186,6 +187,50 @@ describe('localeChunkViolations', () => {
         { file: 'assets/app-3.js', gzipBytes: 200_000 },
       ]),
     ).toEqual(['assets/locale-ko-2.js: 15.0 KB of 15.0 KB (15001 bytes)'])
+  })
+})
+
+describe('localeChunkSetViolations', () => {
+  const codes = ['pt-BR', 'ja', 'zh-CN']
+  const one = ['assets/locale-ja-Ab-1.js', 'assets/locale-pt-BR-x.js', 'assets/locale-zh-CN-q-Z.js']
+
+  it('passes with one lazy chunk per locale folder', () => {
+    expect(localeChunkSetViolations(codes, one, ['assets/app-1.js'])).toEqual([])
+    expect(localeChunkSetViolations([], [], ['assets/app-1.js'])).toEqual([])
+  })
+
+  it('fails a locale folder with no chunk of its own, as when the chunk group misses it', () => {
+    expect(localeChunkSetViolations(codes, one.slice(1), [])).toEqual([
+      'ja: 0 locale chunks, expected 1',
+    ])
+  })
+
+  it('fails a language split over two chunks', () => {
+    expect(
+      localeChunkSetViolations(['ja'], ['assets/locale-ja-1.js', 'assets/locale-ja-2.js'], []),
+    ).toEqual(['ja: 2 locale chunks, expected 1'])
+  })
+
+  it('fails a locale chunk with no folder of that name', () => {
+    expect(
+      localeChunkSetViolations(['ja'], ['assets/locale-ja-1.js', 'assets/locale-ko-1.js'], []),
+    ).toEqual(['assets/locale-ko-1.js: no locale folder of that name'])
+  })
+
+  it('fails a locale chunk that is loaded up front', () => {
+    expect(
+      localeChunkSetViolations(['ja'], ['assets/locale-ja-1.js'], ['assets/locale-ja-1.js']),
+    ).toEqual(['assets/locale-ja-1.js: loaded up front'])
+  })
+
+  it('gives a chunk to the longest code it starts with', () => {
+    expect(
+      localeChunkSetViolations(
+        ['zh', 'zh-CN'],
+        ['assets/locale-zh-CN-1.js', 'assets/locale-zh-2.js'],
+        [],
+      ),
+    ).toEqual([])
   })
 })
 

@@ -8,6 +8,7 @@ import {
   isLocaleChunk,
   LOCALE_CHUNK_LIMIT_BYTES,
   lazyOnlyViolations,
+  localeChunkSetViolations,
   localeChunkViolations,
   localeMarkerViolations,
   stringLeaves,
@@ -76,6 +77,18 @@ const leaked = localeMarkerViolations(
 if (leaked.length > 0) {
   console.error(
     `Non-English strings are in an initial chunk; load every language but English through loadLanguage():\n  ${leaked.join('\n  ')}`,
+  )
+  process.exit(1)
+}
+const localeCodes = readdirSync(new URL('../src/locales/', import.meta.url), {
+  withFileTypes: true,
+})
+  .filter((entry) => entry.isDirectory() && entry.name !== 'en')
+  .map((entry) => entry.name)
+const misgrouped = localeChunkSetViolations(localeCodes, localeFiles, files)
+if (misgrouped.length > 0) {
+  console.error(
+    `Each language but English must be one lazy locale-<code> chunk (vite.config.ts codeSplitting groups):\n  ${misgrouped.join('\n  ')}`,
   )
   process.exit(1)
 }

@@ -113,3 +113,30 @@ export function* stringLeaves(tree: unknown): Generator<string> {
   else if (typeof tree === 'object' && tree !== null)
     for (const child of Object.values(tree)) yield* stringLeaves(child)
 }
+
+/**
+ * M6-R5: each non-English locale folder becomes exactly one `locale-<code>-<hash>.js` chunk, and no
+ * locale chunk is an initial chunk. `codes` are the folder names under `src/locales`, minus `en`.
+ */
+export function localeChunkSetViolations(
+  codes: readonly string[],
+  localeFiles: readonly string[],
+  initialFiles: readonly string[],
+): string[] {
+  const name = (file: string) => file.slice(file.lastIndexOf('/') + 1)
+  const owner = (file: string) =>
+    [...codes]
+      .sort((a, b) => b.length - a.length)
+      .find((code) => name(file).startsWith(`locale-${code}-`))
+  const perCode = codes.flatMap((code) => {
+    const count = localeFiles.filter((file) => owner(file) === code).length
+    return count === 1 ? [] : [`${code}: ${String(count)} locale chunks, expected 1`]
+  })
+  const unknown = localeFiles
+    .filter((file) => owner(file) === undefined)
+    .map((file) => `${file}: no locale folder of that name`)
+  const initial = localeFiles
+    .filter((file) => initialFiles.includes(file))
+    .map((file) => `${file}: loaded up front`)
+  return [...perCode, ...unknown, ...initial]
+}
