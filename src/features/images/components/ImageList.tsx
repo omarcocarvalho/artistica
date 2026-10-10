@@ -60,7 +60,7 @@ function Row({
             useImages.getState().select(image.id)
           }}
           aria-label={t('list.select', { name: image.name })}
-          className="text-ink block max-w-full truncate text-left font-medium"
+          className="text-ink touch:min-h-(--size-target) block max-w-full truncate text-left font-medium"
         >
           {image.name}
         </button>

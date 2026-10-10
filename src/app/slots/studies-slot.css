@@ -6,6 +6,7 @@
     padding: 4px;
   }
   .app-thumb-radio__item {
+    position: relative;
     flex: none;
     display: grid;
     width: 56px;
