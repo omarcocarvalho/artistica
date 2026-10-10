@@ -36,6 +36,8 @@ export const PT_BR: Bundles = {
     arrange: {
       blockName: '{{name}}, {{w}} × {{h}} {{unit}}, página {{page}}',
       sheetSummary: '{{w}} × {{h}} {{unit}}, página {{page}} de {{total}}',
+      placed:
+        '{{name}}, {{w}} × {{h}} {{unit}}, página {{page}}, {{x}} {{unit}} da esquerda, {{y}} {{unit}} do topo.',
     },
   },
   studies: {
