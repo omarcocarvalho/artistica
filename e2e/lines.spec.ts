@@ -636,8 +636,7 @@ test.describe('lines on desktop (all browsers)', () => {
     await tabTo(app.lineSwitch('Golden spiral'))
     await page.keyboard.press('Space')
     await tabTo(app.spiralCorner('Top left'))
-    // A plain press moves focus without selecting in chromium (Radix radio group).
-    await page.keyboard.press('ArrowRight', { delay: 50 })
+    await page.keyboard.press('ArrowRight')
     await expect(app.spiralCorner('Top right')).toHaveAttribute('aria-checked', 'true')
     await tabTo(app.lineHex)
     await page.keyboard.press('ControlOrMeta+a')

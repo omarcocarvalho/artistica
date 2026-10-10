@@ -212,6 +212,52 @@ test.describe('forced colors, Lines tab (chromium)', () => {
   })
 })
 
+// Radix moves roving focus on a timer, so each engine's key event timing is worth a run.
+test.describe('segmented controls, keyboard (desktop)', () => {
+  runOnly('chromium', 'firefox', 'webkit')
+  test.use({ viewport: { width: 1280, height: 900 } })
+
+  test('all four arrows move and select, wrapping; Home and End select the ends', async ({
+    page,
+  }) => {
+    const app = startApp(page)
+    await app.goto()
+    const units = page.getByRole('radiogroup', { name: 'Units' })
+    const orientation = page.getByRole('radiogroup', { name: 'Orientation' })
+    const radio = (group: Locator, name: string) => group.getByRole('radio', { name, exact: true })
+    await radio(units, 'mm').click()
+
+    const steps: [Locator, string, string][] = [
+      [units, 'ArrowDown', 'inches'],
+      [units, 'ArrowDown', 'mm'],
+      [units, 'ArrowUp', 'inches'],
+      [units, 'ArrowLeft', 'mm'],
+      [units, 'ArrowRight', 'inches'],
+      [units, 'Home', 'mm'],
+      [units, 'End', 'inches'],
+    ]
+    for (const [group, key, name] of steps) {
+      await page.keyboard.press(key)
+      await expect(radio(group, name)).toBeFocused()
+      await expect(radio(group, name)).toBeChecked()
+    }
+    await radio(units, 'mm').click()
+
+    await radio(orientation, 'Auto').click()
+    for (const [key, name] of [
+      ['End', 'Landscape'],
+      ['ArrowDown', 'Auto'],
+      ['ArrowUp', 'Landscape'],
+      ['ArrowUp', 'Portrait'],
+      ['Home', 'Auto'],
+    ] as const) {
+      await page.keyboard.press(key)
+      await expect(radio(orientation, name)).toBeFocused()
+      await expect(radio(orientation, name)).toBeChecked()
+    }
+  })
+})
+
 // Dialogs, notices and the custom-paper fields are plain DOM: one engine is enough.
 test.describe('dialogs and notices (chromium)', () => {
   runOnly('chromium')
@@ -461,6 +507,8 @@ test.describe('forced colors (chromium)', () => {
       expect(segOn.bg).not.toBe('rgba(0, 0, 0, 0)')
       expect(segOn.bg).not.toBe(group.bg)
       expect(segOn.color).not.toBe(segOn.bg)
+      // It opts out of forced colours, so an accent underline would keep its author colour.
+      expect(segOn.boxShadow).toBe('none')
     }
   })
 })

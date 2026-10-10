@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -122,8 +122,228 @@ describe('SegmentedControl', () => {
     expect(onValueChange).toHaveBeenLastCalledWith('landscape')
     screen.getByRole('radio', { name: 'Auto' }).focus()
     await userEvent.keyboard('{ArrowRight}')
-    // Roving focus: the arrow key moves focus to the next option (Radix then selects it).
     expect(screen.getByRole('radio', { name: 'Portrait' })).toHaveFocus()
+    expect(onValueChange).toHaveBeenLastCalledWith('portrait')
+  })
+
+  type Opt = 'a' | 'b' | 'c' | 'd'
+  const abcd: readonly { value: Opt; label: string; disabled?: boolean }[] = [
+    { value: 'a', label: 'A' },
+    { value: 'b', label: 'B' },
+    { value: 'c', label: 'C' },
+    { value: 'd', label: 'D' },
+  ]
+
+  function Controlled({
+    initial = 'a',
+    opts = abcd,
+    onChange,
+  }: {
+    initial?: Opt
+    opts?: readonly { value: Opt; label: string; disabled?: boolean }[]
+    onChange?: (v: Opt) => void
+  }) {
+    const [value, setValue] = useState<Opt>(initial)
+    return (
+      <SegmentedControl
+        label="Letters"
+        value={value}
+        onValueChange={(v) => {
+          setValue(v)
+          onChange?.(v)
+        }}
+        options={opts}
+      />
+    )
+  }
+
+  const radio = (name: string) => screen.getByRole('radio', { name })
+  const checkedName = () =>
+    screen.getAllByRole('radio').find((r) => r.getAttribute('aria-checked') === 'true')?.textContent
+
+  async function press(start: string, key: string): Promise<void> {
+    radio(start).focus()
+    await userEvent.keyboard(`{${key}}`)
+  }
+
+  it.each([
+    ['ArrowDown', 'A', 'B'],
+    ['ArrowRight', 'A', 'B'],
+    ['ArrowUp', 'B', 'A'],
+    ['ArrowLeft', 'B', 'A'],
+    ['ArrowDown', 'D', 'A'],
+    ['ArrowRight', 'D', 'A'],
+    ['ArrowUp', 'A', 'D'],
+    ['ArrowLeft', 'A', 'D'],
+  ])('{%s} from %s selects and focuses %s, wrapping at the ends', async (key, start, expected) => {
+    const onChange = vi.fn()
+    render(<Controlled initial={start.toLowerCase() as Opt} onChange={onChange} />)
+    await press(start, key)
+    expect(radio(expected)).toHaveFocus()
+    expect(checkedName()).toBe(expected)
+    expect(onChange).toHaveBeenLastCalledWith(expected.toLowerCase())
+  })
+
+  it('Home selects the first enabled option and End the last', async () => {
+    const opts = abcd.map((o) =>
+      o.value === 'a' || o.value === 'd' ? { ...o, disabled: true } : o,
+    )
+    const onChange = vi.fn()
+    render(<Controlled initial="c" opts={opts} onChange={onChange} />)
+    await press('C', 'Home')
+    expect(radio('B')).toHaveFocus()
+    expect(checkedName()).toBe('B')
+    expect(onChange).toHaveBeenLastCalledWith('b')
+    await userEvent.keyboard('{End}')
+    expect(radio('C')).toHaveFocus()
+    expect(checkedName()).toBe('C')
+    expect(onChange).toHaveBeenLastCalledWith('c')
+  })
+
+  it('Home and End select the first and last option when every option is enabled', async () => {
+    render(<Controlled initial="b" />)
+    await press('B', 'End')
+    expect(checkedName()).toBe('D')
+    await userEvent.keyboard('{Home}')
+    expect(checkedName()).toBe('A')
+  })
+
+  it.each(['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft', 'Home', 'End'])(
+    'disabled options are skipped by {%s}',
+    async (key) => {
+      const opts = abcd.map((o) =>
+        o.value === 'b' || o.value === 'd' ? { ...o, disabled: true } : o,
+      )
+      const onChange = vi.fn()
+      const start = key === 'End' ? 'A' : 'C'
+      render(<Controlled initial={start === 'A' ? 'a' : 'c'} opts={opts} onChange={onChange} />)
+      await press(start, key)
+      await userEvent.keyboard(`{${key}}`)
+      await userEvent.keyboard(`{${key}}`)
+      expect(onChange).toHaveBeenCalled()
+      for (const [value] of onChange.mock.calls) expect(['a', 'c']).toContain(value)
+      expect(['A', 'C']).toContain(checkedName())
+      expect(radio('B')).not.toHaveFocus()
+      expect(radio('D')).not.toHaveFocus()
+    },
+  )
+
+  it('a key held down until the focus has moved changes the value once', async () => {
+    const onChange = vi.fn()
+    render(<Controlled initial="a" onChange={onChange} />)
+    radio('A').focus()
+    await userEvent.keyboard('{ArrowDown>}')
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+    await userEvent.keyboard('{/ArrowDown}')
+    expect(radio('B')).toHaveFocus()
+    expect(onChange.mock.calls).toEqual([['b']])
+  })
+
+  it('Home on the first option and End on the last report no change', async () => {
+    const onChange = vi.fn()
+    render(<Controlled initial="a" onChange={onChange} />)
+    await press('A', 'Home')
+    await press('D', 'End')
+    expect(radio('D')).toHaveFocus()
+    expect(onChange.mock.calls).toEqual([['d']])
+  })
+
+  it('steps from the focused option when the value does not follow', async () => {
+    const onValueChange = vi.fn()
+    render(
+      <SegmentedControl label="Letters" value="a" onValueChange={onValueChange} options={abcd} />,
+    )
+    radio('A').focus()
+    await userEvent.keyboard('{ArrowDown}')
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+    expect(radio('B')).toHaveFocus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(onValueChange).toHaveBeenLastCalledWith('c')
+  })
+
+  it('ignores arrow keys with a modifier', async () => {
+    const onChange = vi.fn()
+    render(<Controlled initial="a" onChange={onChange} />)
+    radio('A').focus()
+    await userEvent.keyboard('{Shift>}{ArrowDown}{/Shift}')
+    await userEvent.keyboard('{Control>}{End}{/Control}')
+    expect(onChange).not.toHaveBeenCalled()
+    expect(checkedName()).toBe('A')
+  })
+
+  it('Tab enters on the checked option and leaves the group', async () => {
+    render(
+      <>
+        <button type="button">Before</button>
+        <Controlled initial="c" />
+        <button type="button">After</button>
+      </>,
+    )
+    screen.getByRole('button', { name: 'Before' }).focus()
+    await userEvent.tab()
+    expect(radio('C')).toHaveFocus()
+    await userEvent.tab()
+    expect(screen.getByRole('button', { name: 'After' })).toHaveFocus()
+    await userEvent.tab({ shift: true })
+    expect(radio('C')).toHaveFocus()
+  })
+
+  it.each([
+    ['ArrowLeft', 'C'],
+    ['ArrowRight', 'A'],
+    ['ArrowDown', 'C'],
+    ['ArrowUp', 'A'],
+  ])(
+    'in RTL, {%s} from B selects %s (Left and Right swap; Up and Down do not)',
+    async (key, expected) => {
+      render(
+        <div dir="rtl">
+          <Controlled initial="b" />
+        </div>,
+      )
+      await press('B', key)
+      expect(radio(expected)).toHaveFocus()
+      expect(checkedName()).toBe(expected)
+    },
+  )
+
+  it('draws in the inherited direction before it is focused', () => {
+    render(
+      <div dir="rtl">
+        <Controlled />
+      </div>,
+    )
+    expect(screen.getByRole('radiogroup')).toHaveAttribute('dir', 'rtl')
+  })
+
+  it.each([
+    ['PageUp', 'B'],
+    ['PageDown', 'C'],
+  ])('{%s} selects the option it moves the focus to', async (key, expected) => {
+    const opts = abcd.map((o) =>
+      o.value === 'a' || o.value === 'd' ? { ...o, disabled: true } : o,
+    )
+    render(<Controlled initial={expected === 'B' ? 'c' : 'b'} opts={opts} />)
+    await press(expected === 'B' ? 'C' : 'B', key)
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+    expect(radio(expected)).toHaveFocus()
+    expect(checkedName()).toBe(expected)
+  })
+
+  it('follows a direction that changes after mount when it gains focus', async () => {
+    render(
+      <div data-testid="wrapper" dir="ltr">
+        <Controlled initial="b" />
+      </div>,
+    )
+    expect(screen.getByRole('radiogroup')).toHaveAttribute('dir', 'ltr')
+    screen.getByTestId('wrapper').setAttribute('dir', 'rtl')
+    act(() => {
+      radio('B').focus()
+    })
+    expect(screen.getByRole('radiogroup')).toHaveAttribute('dir', 'rtl')
+    await userEvent.keyboard('{ArrowLeft}')
+    expect(checkedName()).toBe('C')
   })
 })
 
