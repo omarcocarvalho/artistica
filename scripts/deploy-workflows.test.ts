@@ -7,6 +7,7 @@ const WORKFLOWS = fileURLToPath(new URL('../.github/workflows/', import.meta.url
 const BUILD = 'pnpm build'
 const UPLOAD = 'actions/upload-pages-artifact@'
 const DEPLOY = 'actions/deploy-pages@'
+const MAX_TIMEOUT_MINUTES = 60
 const CHECKS = [
   'node scripts/check-bundle-budget.ts dist/app/index.html dist',
   'node scripts/audit-hosts.ts dist',
@@ -57,6 +58,61 @@ function deployChecksMissing(job: Pick<Job, 'steps'>): string[] {
     return []
   })
 }
+
+/** Why a job has no usable job-level timeout, or null when it has one or calls a reusable workflow. */
+function timeoutMissing(job: Pick<Job, 'text'>): string | null {
+  if (/^ {4}uses:/m.test(job.text)) return null
+  const value = /^ {4}timeout-minutes:[ \t]*(.+?)[ \t]*$/m.exec(job.text)?.[1]
+  if (value === undefined) return 'no job-level timeout-minutes'
+  const minutes = Number(value)
+  if (!Number.isInteger(minutes) || minutes < 1 || minutes > MAX_TIMEOUT_MINUTES)
+    return `timeout-minutes ${value} is not a whole number from 1 to ${String(MAX_TIMEOUT_MINUTES)}`
+  return null
+}
+
+describe('every workflow job', () => {
+  it('stops after a job-level timeout-minutes, unless it calls a reusable workflow', () => {
+    const jobs = allJobs()
+    expect(jobs.length).toBeGreaterThanOrEqual(10)
+    expect(jobs.map((j) => `${j.file}:${j.name}`)).toEqual(
+      expect.arrayContaining(['pr-title.yml:pr-title', 'release.yml:release-please', 'ci.yml:e2e']),
+    )
+    const missing = jobs.flatMap((j) => {
+      const problem = timeoutMissing(j)
+      return problem === null ? [] : [`${j.file}:${j.name}: ${problem}`]
+    })
+    expect(missing).toEqual([])
+  })
+})
+
+describe('timeoutMissing', () => {
+  const job = (...lines: string[]) => ({ text: ['  job:', ...lines, '    steps:', ''].join('\n') })
+
+  it('accepts a whole number of minutes on the job, and a reusable workflow call', () => {
+    expect(timeoutMissing(job('    runs-on: ubuntu-latest', '    timeout-minutes: 10'))).toBeNull()
+    expect(timeoutMissing(job(`    timeout-minutes: ${String(MAX_TIMEOUT_MINUTES)}`))).toBeNull()
+    expect(timeoutMissing(job('    uses: ./.github/workflows/deploy-pages.yml'))).toBeNull()
+  })
+
+  it('fails a job without one, with one only on a step, and with a value out of range', () => {
+    expect(timeoutMissing(job('    runs-on: ubuntu-latest'))).toBe('no job-level timeout-minutes')
+    expect(
+      timeoutMissing(
+        job('    runs-on: ubuntu-latest', '      - run: pnpm test', '        timeout-minutes: 5'),
+      ),
+    ).toBe('no job-level timeout-minutes')
+    for (const value of [
+      '0',
+      String(MAX_TIMEOUT_MINUTES + 1),
+      '360',
+      '2.5',
+      '${{ inputs.minutes }}',
+    ])
+      expect(timeoutMissing(job(`    timeout-minutes: ${value}`))).toBe(
+        `timeout-minutes ${value} is not a whole number from 1 to ${String(MAX_TIMEOUT_MINUTES)}`,
+      )
+  })
+})
 
 describe('every workflow that deploys to Pages', () => {
   const jobs = allJobs()
