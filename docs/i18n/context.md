@@ -45,7 +45,7 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | `images:dropzone.upload` `images:dropzone.paste` `images:dropzone.link` | three equal buttons with icons, Images panel | 6 | 3 | the 248 px panel gives each button 66 px; "Upload" is already clipped in English at 960 px and in the phone empty card |
 | `images:dropzone.uploadHero` `images:dropzone.linkHero` | primary buttons, Empty | 14 | 7 | the empty card wraps them; keep each one line |
 | `images:list.count` | count next to "Remove all images", Images panel | 10 | 5 | "1 image" already wraps onto two lines in English at 960 px |
-| `images:list.sizeAuto` `images:list.sizeFixed` | second line of an image row, Images panel | 14 | 7 | the row's text column is about 80 px at 960 px; "Fixed {{value}}" includes the formatted size |
+| `images:list.sizeAuto` `images:list.sizeFixed` | second line of an image row, Images panel | 14 | 7 | the row's text column is about 80 px at 960 px; "Fixed {{size}}" includes the formatted size and its unit |
 | `pageSetup:orientation.auto` `pageSetup:orientation.portrait` `pageSetup:orientation.landscape` | three segmented options, Page | 10 | 5 | 206 px shared by the three in a 288 px field |
 | `pageSetup:paper.unitMm` `pageSetup:paper.unitIn` | two segmented options, Page | 8 | 4 | short words; the field wraps the options if they don't fit |
 | `images:editSheet.size.auto` `images:editSheet.size.fixed` `images:editSheet.size.width` `images:editSheet.size.height` | segmented options, Edit | 10 | 5 | two options per control |
@@ -57,7 +57,7 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | `preview:guides.label` | switch label, Preview toolbar | 12 | 6 | as above |
 | `preview:guides.legend.safe` `preview:guides.legend.bleed` `preview:guides.legend.cut` `preview:guides.legend.mark` | legend items above the page, Preview | 14 | 7 | the legend wraps |
 | `lines:guides.onDevice` | badge with a shield icon next to the Guides heading, Lines | 14 | 7 | shares the heading row |
-| `app:mobile.lines.on` | badge next to the Lines heading, phone | 10 | 5 | "{{count}} on"; the count is a number |
+| `app:mobile.lines.on` | badge next to the Lines heading, phone | 10 | 5 | "{{count, number}} on"; the count is a number |
 | `pageSetup:suggestion.tip` `studies:blur.accent` `export:done.yay` | hand-written accent next to a heading | 18 | 9 | decorative, set in the hand-written font; one line |
 | `images:editSheet.crop.annotation` | hand-written note beside the crop area, Edit | 16 | 8 | one line |
 | `export:summary.pages` `export:summary.tiles` `export:summary.cropMarks` `export:summary.bleed` `export:summary.quality` | term column of the export summary, Export | 10 | 5 | 71 px at 320 px; longer text wraps |
@@ -67,14 +67,15 @@ Each row is a control whose text has a fixed room. Keep every language within th
 
 | Variable | What it holds |
 |---|---|
-| `{{count}}` | a whole number that also picks the plural form |
+| `{{count, number}}` | a whole number that also picks the plural form, formatted for the language; keep the `, number` exactly as English writes it (the locale check compares it) |
 | `{{name}}` | an image's file name (`quadrants.jpg`) or a preset's name, as the user gave it; never translated, may be in any script |
 | `{{from}}` `{{to}}` | a preset's old and new names |
 | `{{list}}` | a list already joined for the language (names, or line types) |
 | `{{current}}` `{{total}}` `{{page}}` `{{n}}` `{{pages}}` `{{tiles}}` `{{more}}` `{{max}}` `{{min}}` | numbers |
 | `{{w}}` `{{h}}` `{{x}}` `{{y}}` | sizes and positions; pixels in `images:list.*`, `images:editSheet.subtitle` and `images:editSheet.crop.status`, millimetres or inches elsewhere |
-| `{{mm}}` `{{pct}}` `{{deg}}` `{{mb}}` `{{loaded}}` `{{dpi}}` `{{value}}` `{{size}}` `{{gutter}}` `{{maxMb}}` `{{maxMp}}` | formatted numbers; check the English string at the freeze: a unit or sign written next to the variable in English (`{{mm}} mm`, `{{pct}}%`) stays next to it in the translation, and none is added where English has none |
-| `{{unit}}` | the unit symbol of the chosen unit (`mm`, `in`) as the code formats it for the language |
+| `{{value}}` `{{size}}` `{{gutter}}`, and `{{min}}` in `pageSetup:*` | a number already formatted for the language with its unit or sign (`12,5 mm`, `50 %`, `45°`, `4,2 MB`); add no unit or sign next to them. The one exception is `lines:thickness.value`, where `{{value}}` is the bare number and `{{unit}}` follows it |
+| `{{loaded}}` `{{dpi}}` `{{maxMb}}` `{{maxMp}}` | numbers; a unit written next to the variable in English (`{{dpi}} DPI`, `{{maxMb}} MB`, `{{loaded}} of {{total}} megabytes`) stays next to it in the translation, and none is added where English has none |
+| `{{unit}}` | the unit symbol of the chosen unit as the code formats it for the language (`mm`, `in`, `pol.`, `毫米`); it follows `{{w}} × {{h}}` or `{{value}}`, and the space before it may go where the language writes none (`{{w}} × {{h}}{{unit}}` in Chinese and Korean) |
 | `{{paper}}` | a paper name (`A4`, or the translated Letter, Legal, Tabloid, Custom) |
 | `{{orientation}}` | the translated word portrait or landscape, from the matching `orientation.*` key in the same namespace, in lower case mid-sentence |
 | `{{version}}` | a study version name from `studies:version.*` |
@@ -126,7 +127,6 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | Keys | Screen | Control | Notes |
 |---|---|---|---|
 | `common:theme.*` | Top bar | theme names | the same words as `app:theme.*` |
-| `common:units.*` | Page, Edit, Preview | unit symbols | M6 replaces them with the code's own symbols; translate only if still present at the freeze |
 | `common:app.comingSoon` `common:actions.*` | none | not used by any call site on `2380a82` | translate like any other key; the locale check needs every key |
 
 ## errors
@@ -208,7 +208,6 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | `pageSetup:paper.custom` | Page | the last option of the paper select | keeps its `…` |
 | `pageSetup:paper.dims` `.times` `.width` `.height` | Page | the size line under the select and the custom size fields | `times` is a glyph |
 | `pageSetup:paper.units` `.unitMm` `.unitIn` | Page | units control | options are tight |
-| `pageSetup:units.*` | Page | field suffixes | M6 replaces them; translate only if still present at the freeze |
 | `pageSetup:noRoom` | Preview | message in place of the preview | |
 | `pageSetup:orientation.label` `.auto` `.portrait` `.landscape` | Page | orientation control | options are tight; capitalised, as options |
 | `pageSetup:orientation.autoPicked` `.resolved.*` | Page | hint "Auto picked portrait: fewer pages." with the lower-case word | |
