@@ -160,3 +160,41 @@ test('the worker probe logs one new, post, prepare and terminate of a test worke
   expect(await workerPosts(page, 'selfcheck.worker')).toBe(1)
   expect(await maxLiveWorkers(page, 'selfcheck.worker')).toBe(1)
 })
+
+/** Two test workers start; the first is terminated twice; two more start while the second lives. */
+function overlapTestWorkers(): void {
+  const w = globalThis as unknown as TestWorkerWindow
+  const blob = w.URL.createObjectURL(new w.Blob([''], { type: 'text/javascript' }))
+  const a = new w.Worker(`${blob}#overlap.worker-0`)
+  const b = new w.Worker(`${blob}#overlap.worker-0`)
+  a.terminate()
+  a.terminate()
+  const c = new w.Worker(`${blob}#overlap.worker-0`)
+  const d = new w.Worker(`${blob}#overlap.worker-0`)
+  b.terminate()
+  c.terminate()
+  d.terminate()
+  w.URL.revokeObjectURL(blob)
+}
+
+test('the worker probe counts workers alive at once, and a second terminate of one worker once', async ({
+  page,
+}) => {
+  await installWorkerProbe(page)
+  await new AppPage(page).goto()
+  await page.evaluate(overlapTestWorkers)
+  const log = (await workerLog(page)).filter((e) => e.name === 'overlap.worker')
+  expect(log.map((e) => [e.ev, e.id - (log[0]?.id ?? 0)])).toEqual([
+    ['new', 0],
+    ['new', 1],
+    ['terminate', 0],
+    ['terminate', 0],
+    ['new', 2],
+    ['new', 3],
+    ['terminate', 1],
+    ['terminate', 2],
+    ['terminate', 3],
+  ])
+  expect(await maxLiveWorkers(page, 'overlap.worker')).toBe(3)
+  expect(await workerPosts(page, 'overlap.worker')).toBe(0)
+})
