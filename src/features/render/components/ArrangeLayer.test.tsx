@@ -108,7 +108,7 @@ describe('ArrangeLayer: blocks', () => {
     expect(a).toHaveAttribute('aria-roledescription', 'movable photo')
     expect(a).toHaveAccessibleName('a.jpg, 60 × 80 mm, page 1')
     expect(a).toHaveAccessibleDescription(
-      'Use the arrow keys to move, Shift and the arrow keys to resize, Enter to swap with another photo.',
+      'Use the arrow keys to move, Shift and the arrow keys to resize, Page Up and Page Down to move to another page, Enter to swap with another photo.',
     )
     expect(screen.queryByRole('button', { name: /^c\.jpg/ })).toBeNull()
   })
@@ -127,7 +127,7 @@ describe('ArrangeLayer: blocks', () => {
       selected: 'a',
     })
     expect(blockEl(/^a\.jpg/)).toHaveAccessibleDescription(
-      'Use the arrow keys to move, Shift and the arrow keys to resize, Enter to swap with another photo. Fixed size: change it in Edit.',
+      'Use the arrow keys to move, Shift and the arrow keys to resize, Page Up and Page Down to move to another page, Enter to swap with another photo. Fixed size: change it in Edit.',
     )
     expect(document.querySelectorAll('.arrange-handle')).toHaveLength(0)
   })
@@ -147,12 +147,29 @@ describe('ArrangeLayer: blocks', () => {
     expect(blockEl(/^b\.jpg/).style.height).toBe(`${String((50 / 297) * 100)}%`)
   })
 
-  it('selects on focus and on pointer down', async () => {
-    const { props, user } = setup()
+  it('focus alone never selects, in either direction', async () => {
+    const { props, user } = setup({ selected: 'b' })
     await user.tab()
-    expect(props.onSelect).toHaveBeenLastCalledWith('a')
+    await user.tab()
+    expect(blockEl(/^b\.jpg/)).toHaveFocus()
+    await user.tab({ shift: true })
+    expect(blockEl(/^a\.jpg/)).toHaveFocus()
+    await user.tab({ shift: true })
+    expect(props.onSelect).not.toHaveBeenCalled()
+  })
+
+  it('selects on pointer down and on click', () => {
+    const { props } = setup()
     down(blockEl(/^b\.jpg/), 220, 60)
     expect(props.onSelect).toHaveBeenLastCalledWith('b')
+    fireEvent.click(blockEl(/^a\.jpg/))
+    expect(props.onSelect).toHaveBeenLastCalledWith('a')
+  })
+
+  it('a click on the selected block does not select it again', () => {
+    const { props } = setup({ selected: 'a' })
+    fireEvent.click(blockEl(/^a\.jpg/))
+    expect(props.onSelect).not.toHaveBeenCalled()
   })
 })
 
@@ -371,6 +388,62 @@ describe('ArrangeLayer: keyboard', () => {
     expect(props.onPickUp).toHaveBeenCalledOnce()
   })
 
+  it.each([
+    ['PageDown', 1],
+    ['PageUp', -1],
+  ])('%s moves the block to the next or previous page', (key, page) => {
+    const { props } = setup({ blocks: [block({ id: 'c', page: 1 })] }, 1)
+    const notPrevented = fireEvent.keyDown(blockEl(/^c\.jpg/), { key })
+    expect(notPrevented).toBe(false)
+    expect(props.onCommit).toHaveBeenCalledExactlyOnceWith({
+      kind: 'page',
+      id: 'c',
+      page: 1 + page,
+    })
+  })
+
+  it('a held Page Down moves one page only', () => {
+    const { props } = setup()
+    const a = blockEl(/^a\.jpg/)
+    fireEvent.keyDown(a, { key: 'PageDown' })
+    fireEvent.keyDown(a, { key: 'PageDown', repeat: true })
+    expect(props.onCommit).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    ['ArrowRight', {}],
+    ['ArrowRight', { shiftKey: true }],
+    ['PageDown', {}],
+    ['Enter', {}],
+    [' ', {}],
+  ])('%s %o on a block selects it before acting', (key, mods) => {
+    const { props } = setup({ selected: 'a' })
+    fireEvent.keyDown(blockEl(/^b\.jpg/), { key, ...mods })
+    expect(props.onSelect).toHaveBeenCalledExactlyOnceWith('b')
+    const acted = [
+      ...vi.mocked(props.onCommit).mock.invocationCallOrder,
+      ...vi.mocked(props.onPickUp).mock.invocationCallOrder,
+    ]
+    expect(acted).toHaveLength(1)
+    expect(vi.mocked(props.onSelect).mock.invocationCallOrder[0]).toBeLessThan(acted[0] ?? 0)
+  })
+
+  it('a keyboard swap selects the picked-up photo, not the one it swaps with', () => {
+    const { props } = setup({ selected: 'a', pickedUp: 'a' })
+    fireEvent.keyDown(blockEl(/^b\.jpg/), { key: 'Enter' })
+    expect(props.onCommit).toHaveBeenCalledWith({ kind: 'swap', id: 'a', with: 'b' })
+    expect(props.onSelect).not.toHaveBeenCalled()
+  })
+
+  it('Escape and keys the block does not handle leave the selection alone', () => {
+    const { props } = setup({ selected: 'a', pickedUp: 'a' })
+    const b = blockEl(/^b\.jpg/)
+    fireEvent.keyDown(b, { key: 'Escape' })
+    fireEvent.keyDown(b, { key: 'Tab' })
+    fireEvent.keyDown(b, { key: 'Delete' })
+    expect(props.onSelect).not.toHaveBeenCalled()
+  })
+
   it('Delete does nothing', () => {
     const { props } = setup()
     fireEvent.keyDown(blockEl(/^a\.jpg/), { key: 'Delete' })
@@ -414,10 +487,10 @@ describe('ArrangeLayer: focus', () => {
     expect(props.onFocused).not.toHaveBeenCalled()
   })
 
-  it('selecting through focus does not re-select the selected block', () => {
+  it('focusing a block leaves the selection where it is', () => {
     const { props } = setup({ selected: 'a' })
     act(() => {
-      blockEl(/^a\.jpg/).focus()
+      blockEl(/^b\.jpg/).focus()
     })
     expect(props.onSelect).not.toHaveBeenCalled()
   })

@@ -26,8 +26,7 @@ import { useArrange } from './arrange-store'
 import { useArrangeUi } from './arrange-ui'
 import { usePages } from './pages-store'
 
-export type ArrangeOp =
-  ArrangeIntent | { readonly kind: 'page'; readonly id: BlockId; readonly page: number }
+export type ArrangeOp = ArrangeIntent
 
 let lastDescriptors: unknown = null
 let lastItems: LayoutItemInput[] = []
@@ -166,7 +165,7 @@ function refusalKey(op: ArrangeOp, reason: OpRefusal, fellBack: boolean, current
     case 'swap':
       return 'swap'
     case 'page':
-      return 'noRoomOnPage'
+      return op.page < 0 ? 'firstPage' : 'noRoomOnPage'
   }
 }
 
@@ -219,6 +218,11 @@ export function undoArrange(): void {
   if (useArrange.getState().undo.length === 0) return
   useArrange.getState().undoLast()
   useArrangeUi.getState().announce(i18n.t('preview:arrange.undone'))
+}
+
+/** After Undo from a photo, focus that photo wherever the restored arrangement puts it. */
+export function refocusBlock(id: BlockId): void {
+  if (shownManual()?.blocks.some((b) => b.blockId === id)) useArrangeUi.getState().requestFocus(id)
 }
 
 export function rerunAutoLayout(): void {

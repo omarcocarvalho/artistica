@@ -19,6 +19,7 @@ const h = vi.hoisted(() => ({
   arranges: [] as unknown[],
   view: { manual: null as object | null, blocks: [] as { id: string }[] },
   undo: vi.fn(),
+  refocus: vi.fn(),
   registry: {
     register: () => () => undefined,
     at: () => ({ page: 1, box: {} as DOMRect }),
@@ -31,6 +32,7 @@ vi.mock('../arrange-controller', () => ({
   previewOp: vi.fn(() => ({ ok: false })),
   selectBlock: vi.fn(),
   undoArrange: h.undo,
+  refocusBlock: h.refocus,
   rerunAutoLayout: vi.fn(),
   setArrangeMode: (on: boolean) => {
     useArrange.getState().setMode(on)
@@ -58,6 +60,7 @@ vi.mock('../../features/render', () => ({
     return (
       <button
         type="button"
+        data-block-id={p.arrange ? 'a#0' : undefined}
         onClick={() => {
           p.onSelect('a' as ImageId)
         }}
@@ -116,6 +119,7 @@ beforeEach(() => {
   h.arranges = []
   h.view = { manual: null, blocks: [] }
   h.undo.mockClear()
+  h.refocus.mockClear()
   useArrange.setState(useArrange.getInitialState(), true)
   useArrangeUi.setState(useArrangeUi.getInitialState(), true)
   useAppUi.setState({ editingId: null })
@@ -490,6 +494,20 @@ describe('PreviewSlot in Arrange mode (B4)', () => {
     render(<PreviewSlot />)
     fireEvent.keyDown(screen.getByRole('button', { name: /Page 1 of 1/ }), { key: 'z', ...mods })
     expect(h.undo).toHaveBeenCalledTimes(calls)
+  })
+
+  it('Ctrl + Z on a photo keeps focus on that photo after the undo, even on another page', () => {
+    arranged()
+    render(<PreviewSlot />)
+    fireEvent.keyDown(screen.getByRole('button', { name: /Page 1 of 1/ }), {
+      key: 'z',
+      ctrlKey: true,
+    })
+    expect(h.undo).toHaveBeenCalledOnce()
+    expect(h.refocus).toHaveBeenCalledExactlyOnceWith('a#0')
+    expect(h.undo.mock.invocationCallOrder[0]).toBeLessThan(
+      h.refocus.mock.invocationCallOrder[0] ?? 0,
+    )
   })
 
   it('Ctrl + Z does nothing outside Arrange mode', () => {

@@ -13,6 +13,7 @@ const STEPS: Readonly<Record<string, readonly [number, number]>> = {
   ArrowUp: [0, -1],
   ArrowDown: [0, 1],
 }
+const PAGE_STEPS: Readonly<Record<string, number>> = { PageUp: -1, PageDown: 1 }
 
 export interface ArrangeLayerProps {
   readonly arrange: ArrangeProps
@@ -51,6 +52,10 @@ export function ArrangeLayer({ arrange, page, pageSize, sheet, warnings }: Arran
     onFocused(focusId)
   })
 
+  const choose = (id: string) => {
+    if (id !== arrange.selected) arrange.onSelect(id)
+  }
+
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>, b: ArrangeBlock) => {
     const step = STEPS[e.key]
     if (step) {
@@ -60,16 +65,29 @@ export function ArrangeLayer({ arrange, page, pageSize, sheet, warnings }: Arran
       const intent: ArrangeIntent = e.shiftKey
         ? { kind: 'resize', id: b.id, tileW: b.tileW + (dx + dy > 0 ? 1 : -1), anchor: 'tl' }
         : { kind: 'nudge', id: b.id, dx, dy }
+      choose(b.id)
       heldRefusal.current = arrange.onCommit(intent) ? null : e.key
+      return
+    }
+    const pageStep = PAGE_STEPS[e.key]
+    if (pageStep !== undefined) {
+      e.preventDefault()
+      if (e.repeat) return
+      choose(b.id)
+      arrange.onCommit({ kind: 'page', id: b.id, page: b.page + pageStep })
       return
     }
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       if (e.repeat) return
       const picked = arrange.pickedUp
-      if (picked !== null && picked !== b.id)
+      if (picked !== null && picked !== b.id) {
+        choose(picked)
         arrange.onCommit({ kind: 'swap', id: picked, with: b.id })
-      else arrange.onPickUp(picked === b.id ? null : b.id)
+      } else {
+        choose(b.id)
+        arrange.onPickUp(picked === b.id ? null : b.id)
+      }
       return
     }
     if (e.key === 'Escape' && arrange.pickedUp !== null) {
@@ -119,11 +137,11 @@ export function ArrangeLayer({ arrange, page, pageSize, sheet, warnings }: Arran
               height: pct(b.rect.h, pageSize.h),
             }}
             onPointerDown={(e) => {
-              if (!selected) arrange.onSelect(b.id)
+              choose(b.id)
               start(e, b, null)
             }}
-            onFocus={() => {
-              if (!selected) arrange.onSelect(b.id)
+            onClick={() => {
+              choose(b.id)
             }}
             onKeyDown={(e) => {
               onKeyDown(e, b)

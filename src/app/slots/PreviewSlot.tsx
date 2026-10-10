@@ -17,6 +17,7 @@ import {
   commitOp,
   pickUpBlock,
   previewOp,
+  refocusBlock,
   selectBlock,
   undoArrange,
   useArrangeView,
@@ -137,7 +138,9 @@ export function PreviewSlot() {
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (!arrange || e.shiftKey || !(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') return
     e.preventDefault()
+    const from = e.target instanceof HTMLElement ? e.target.dataset.blockId : undefined
     undoArrange()
+    if (from !== undefined) refocusBlock(from)
   }
 
   return (

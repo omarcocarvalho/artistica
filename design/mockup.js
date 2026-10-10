@@ -428,10 +428,10 @@
       $$("[data-nudge]", root).forEach(function (n) { n.addEventListener("click", function () { var b = $(".block.is-selected", root); if (b) move(b, n.getAttribute("data-nudge")); }); });
       blocks.forEach(function (b) {
         b.addEventListener("click", function () { select(b); });
-        b.addEventListener("focus", function () { select(b); });
         b.addEventListener("keydown", function (e) {
           if (!root.classList.contains("is-arranging")) return;
           var r = box(b), k = e.key, d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[k];
+          if (d || k === "Enter" || k === " ") select(picked && !d ? picked : b);
           if (d) {
             e.preventDefault();
             if (e.shiftKey) {
