@@ -40,7 +40,7 @@ export default defineConfig([
   },
   {
     // Literal strings in JSX (text and attributes such as aria-label, title, placeholder) must go
-    // through i18n. Tests, e2e, landing and index.html are exempt.
+    // through i18n. Tests, e2e and the landing page are exempt.
     files: ['src/**/*.tsx'],
     ignores: ['**/*.test.tsx'],
     ...i18next.configs['flat/recommended'],

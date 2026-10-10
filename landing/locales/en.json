@@ -1,0 +1,125 @@
+{
+  "meta": {
+    "title": "Artistica: printable reference sheets for artists",
+    "description": "Turn reference photos into print-ready sheets. Pack photos onto A4 or Letter pages, add crop marks and bleed, and export a PDF. Free, private, in your browser."
+  },
+  "share": {
+    "title": "Artistica: printable reference sheets for artists",
+    "description": "Drop in your photos and get print-ready sheets with crop marks and bleed. Free, private, in your browser.",
+    "imageAlt": "Artistica: reference photos packed onto printable sheets"
+  },
+  "structured": {
+    "description": "Turn reference photos into print-ready sheets with crop marks and bleed. Runs entirely in your browser.",
+    "operatingSystem": "Any (web browser)",
+    "browserRequirements": "Requires JavaScript. Latest Chrome, Edge, Firefox or Safari."
+  },
+  "header": {
+    "skip": "Skip to content",
+    "home": "Artistica home",
+    "nav": "Main",
+    "how": "How it works",
+    "features": "Features",
+    "privacy": "Privacy",
+    "faq": "FAQ",
+    "openApp": "Open the app"
+  },
+  "theme": {
+    "auto": "Auto",
+    "light": "Light",
+    "dark": "Dark",
+    "changeAuto": "Change theme: Auto",
+    "changeLight": "Change theme: Light",
+    "changeDark": "Change theme: Dark"
+  },
+  "hero": {
+    "hand": "for drawing & painting",
+    "title": "Turn reference photos into print-ready sheets.",
+    "lead": "Drop in your photos. Artistica packs them onto pages at a good drawing size and adds crop marks and bleed. Then print, cut and draw.",
+    "start": "Start a sheet",
+    "seeHow": "See how it works",
+    "points": "Photos never leave your device · Free · No sign-up",
+    "tip": "tip! 4 per page"
+  },
+  "how": {
+    "title": "How it works",
+    "subtitle": "Three steps, under a minute.",
+    "add": {
+      "title": "Add photos",
+      "body": "Upload, drag in, paste, or use a link. JPG, PNG, WebP, GIF and iPhone HEIC."
+    },
+    "paper": {
+      "title": "Pick your paper",
+      "body": "A4, Letter and more. Artistica finds a layout with the fewest pages and the biggest images."
+    },
+    "print": {
+      "title": "Print & cut",
+      "body": "Download a PDF with crop marks and optional bleed. Print at 100% and cut along the marks."
+    }
+  },
+  "features": {
+    "title": "Made to help you see",
+    "packing": {
+      "title": "Smart packing",
+      "body": "Sizes each photo for drawing, never past what its pixels allow at 300 DPI."
+    },
+    "marks": {
+      "title": "Crop marks and bleed",
+      "body": "Printer-style marks, optional bleed, and a safe area, so cutting is easy."
+    },
+    "edit": {
+      "title": "Edit each photo",
+      "body": "Crop, rotate, flip, print copies, or fix an exact size."
+    },
+    "phone": {
+      "title": "Works on your phone",
+      "body": "A step-by-step flow on small screens, side panels on desktop, light and dark."
+    },
+    "nextLabel": "Coming next:",
+    "next": "blur and value studies, composition lines."
+  },
+  "privacy": {
+    "title": "Your photos stay with you",
+    "claims": {
+      "1": "Everything runs in your browser. Nothing is uploaded.",
+      "2": "Photos are never saved. Refreshing the page clears them.",
+      "3": "Only your settings are remembered, on this device.",
+      "4": "No accounts and no tracking."
+    }
+  },
+  "faq": {
+    "title": "Questions",
+    "free": {
+      "q": "Is it free?",
+      "a": "Yes. Free and open source (MIT)."
+    },
+    "size": {
+      "q": "Will my prints be the right size?",
+      "a": "Yes, if you print at 100% (“Actual size”). Pages are made at the exact paper size you pick."
+    },
+    "link": {
+      "q": "Why won't an image link work?",
+      "a": "Some sites block other apps from reading their images. Download the image and upload it instead."
+    },
+    "bleed": {
+      "q": "What do “bleed” and “crop marks” mean?",
+      "a": "Crop marks show where to cut. Bleed prints a little extra past the cut, so a slightly-off cut leaves no white edge."
+    },
+    "uploaded": {
+      "q": "Are my photos uploaded anywhere?",
+      "a": "No. Everything runs in your browser. Photos are never uploaded or saved, and refreshing the page clears them."
+    },
+    "guides": {
+      "q": "What finds the face and pose guides?",
+      "a": "Face and pose guides use Google's MediaPipe models, running on your device."
+    },
+    "phone": {
+      "q": "Does it work on my phone?",
+      "a": "Yes: latest Chrome, Edge, Firefox and Safari on desktop, iPhone and Android."
+    }
+  },
+  "footer": {
+    "licence": "Artistica · MIT licence ·",
+    "source": "Source on GitHub",
+    "language": "Language"
+  }
+}
