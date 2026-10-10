@@ -36,7 +36,7 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | Keys | Control and screen | Latin max | CJK max | Room measured |
 |---|---|---|---|---|
 | `presets:button` | button with an icon, Top bar, every width | 10 | 5 | about 50 px at 320 px once the language menu joins the bar; the app name truncates first |
-| `app:mobile.names.images` `app:mobile.names.page` `app:mobile.names.studies` `app:mobile.names.preview` `app:mobile.names.export` | five equal step tabs, phone | 8 | 4 | 56 px each at 320 px (64 px column, 4 px padding each side) |
+| `app:mobile.names.images` `app:mobile.names.page` `app:mobile.names.studies` `app:mobile.names.preview` `app:mobile.names.export` | five equal step tabs, phone | 8 | 4 | 56 px each at 320 px (64 px column, 4 px padding each side); the current step is semibold. "Imágenes" (64 px), "Immagini" (62 px), "Anteprima" (67 px) and "Vista previa" (76 px) don't fit and have no shorter equivalent: a layout fix, not a shorter translation |
 | `app:settingsTabs.page` `app:settingsTabs.studies` `app:settingsTabs.lines` | three tabs, Page panel header, desktop | 10 | 5 | 216 px shared by the three at 960 px |
 | `app:topBar.export` | primary button with an icon, Top bar, desktop | 14 | 7 | the bar has room; keep it a short verb phrase |
 | `app:topBar.privacy` | pill with a lock icon, Top bar, from 640 px | 28 | 14 | 160 px of text in English at 960 px; it shares the bar with the language menu from 640 px |

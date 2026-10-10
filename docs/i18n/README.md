@@ -25,7 +25,7 @@ A language is reviewed before it merges by a second agent working in that langua
 
 ## The check and the stamps
 
-`corepack pnpm i18n:check` compares every language with English and fails when a key is missing or extra, a value is empty, the `{{variables}}` or `<0>…</0>` tags differ from English, a plural key lacks a form the language needs (or has one it doesn't use), or a translation is stale. It warns, without failing, when a value is the same as the English one and the key is not on its reviewed list (`PDF`, `DPI`, `A4` and the like).
+`corepack pnpm i18n:check` compares every language with English and fails when a key is missing or extra, a value is empty, the `{{variables}}` or the tags (`<name/>`, `<0>…</0>`) differ from English, a plural key lacks a form the language needs (or has one it doesn't use), or a translation is stale. It warns, without failing, when a value is the same as the English one and the key is not on its reviewed list (`PDF`, `DPI`, `A4` and the like).
 
 A translation is stale when the English text changed after it was translated. The check knows because `src/locales/translated-from.json` records the hash of the English each translation came from. After translating or correcting a key, stamp it:
 
@@ -34,7 +34,7 @@ corepack pnpm i18n:stamp <code> [keys…]   # e.g. corepack pnpm i18n:stamp ja s
 corepack pnpm i18n:check
 ```
 
-Stamping without keys stamps every key of that language, so only do that after reading the whole language against the current English.
+A key is `namespace:key` (a plural key by its base name stamps every form; a landing key is `landing:<key>`). Stamping without keys stamps every key of that language, so only do that after reading the whole language against the current English.
 
 ## Proposing a correction
 

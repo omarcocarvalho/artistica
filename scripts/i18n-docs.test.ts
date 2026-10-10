@@ -144,12 +144,14 @@ describe('docs/i18n', () => {
       expect(headings.some((h) => h.startsWith(`${code} `) || h === code)).toBe(true)
   })
 
-  it('every glossary row gives the term in all seven languages', () => {
+  it('every glossary row gives the term in all seven languages and a definition', () => {
     const rows = glossaryRows(doc('glossary.md'))
     expect(rows.length).toBeGreaterThanOrEqual(REQUIRED_TERMS.length)
     for (const row of rows)
-      for (let i = 0; i < GLOSSARY_HEADER.length; i++)
-        expect(row[i] ?? '', `${row[0] ?? '?'} / ${GLOSSARY_HEADER[i] ?? '?'}`).not.toBe('')
+      for (let i = 0; i <= GLOSSARY_HEADER.length; i++)
+        expect(row[i] ?? '', `${row[0] ?? '?'} / ${GLOSSARY_HEADER[i] ?? 'definition'}`).not.toBe(
+          '',
+        )
   })
 
   it('the glossary covers every term the plan lists', () => {
@@ -178,6 +180,16 @@ describe('docs/i18n', () => {
       expect(row[2] ?? '', `${row[0] ?? '?'} latin`).toMatch(/^\d+$/)
       expect(row[3] ?? '', `${row[0] ?? '?'} CJK`).toMatch(/^\d+$/)
     }
+  })
+
+  it('every app key a privacy claim names is an English key', () => {
+    const keys = englishKeys()
+    const app = doc('privacy-claims.md').split('## Claims in the app')[1] ?? ''
+    const named = [...app.matchAll(/^### .*$/gm)].flatMap((h) =>
+      [...h[0].matchAll(/`([a-zA-Z]+:[\w.]+)`/g)].map((m) => m[1]),
+    )
+    expect(named.length).toBeGreaterThan(5)
+    expect(named.filter((k) => !keys.has(k))).toEqual([])
   })
 
   it('every privacy claim names at least one backing test, and every named test exists', () => {
