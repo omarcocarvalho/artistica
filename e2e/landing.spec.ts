@@ -48,6 +48,35 @@ test.describe('landing page', () => {
     expect(og.headers()['content-type']).toContain('image/png')
   })
 
+  for (const path of ['./', './app/']) {
+    test(`${path} serves its favicon and home-screen icon at their sizes`, async ({
+      page,
+      request,
+    }) => {
+      await page.goto(path)
+      const href = async (rel: string) =>
+        new URL((await page.locator(`link[rel="${rel}"]`).getAttribute('href')) ?? '', page.url())
+          .href
+      const icon = await href('icon')
+      const touch = await href('apple-touch-icon')
+      expect(icon).toMatch(/\/artistica\/favicon\.svg$/)
+      expect(touch).toMatch(/\/artistica\/apple-touch-icon\.png$/)
+      const svg = await request.get(icon)
+      expect(svg.ok()).toBe(true)
+      expect(svg.headers()['content-type']).toContain('image/svg+xml')
+      expect(await svg.text()).toContain('viewBox="0 0 32 32"')
+      const png = await request.get(touch)
+      expect(png.ok()).toBe(true)
+      const body = await png.body()
+      expect([body.readUInt32BE(16), body.readUInt32BE(20)]).toEqual([180, 180])
+    })
+  }
+
+  test('serves the share image at 1200x630', async ({ request }) => {
+    const body = await (await request.get('og-image.png')).body()
+    expect([body.readUInt32BE(16), body.readUInt32BE(20)]).toEqual([1200, 630])
+  })
+
   test('CTA opens the app', async ({ page }) => {
     await page.goto('./')
     await page.getByRole('link', { name: 'Start a sheet' }).click()

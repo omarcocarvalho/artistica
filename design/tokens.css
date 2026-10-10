@@ -65,6 +65,7 @@
   /* ---- Colour: print preview (identical in both themes) ----------------- */
   --color-paper: #ffffff;           /* the sheet is always white (R4) */
   --color-paper-edge: rgb(0 0 0 / 0.08);
+  --color-brand: #b0432a;           /* the logo's tile, the same in both themes */
   --color-guide-safe: #2a7ab8;      /* safe area (screen-only guide) */
   --color-guide-bleed: #d63a78;     /* bleed boundary (screen-only guide) */
   --color-guide-cut: rgb(0 0 0 / 0.35); /* cut line (screen-only guide) */

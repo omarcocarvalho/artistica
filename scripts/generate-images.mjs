@@ -1,4 +1,5 @@
-// Renders scripts/og-image.html to public/og-image.png (1200x630). Run manually: node scripts/generate-og-image.mjs
+// Renders scripts/og-image.html to public/og-image.png (1200x630) and scripts/apple-touch-icon.html
+// to public/apple-touch-icon.png (180x180). Run manually: node scripts/generate-images.mjs
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -23,13 +24,25 @@ const html = readFileSync(join(root, 'scripts/og-image.html'), 'utf8')
   .replace('{{CAVEAT}}', font('@fontsource-variable/caveat', 'caveat-latin-wght-normal.woff2'))
 
 // file:// pages may load file:// fonts; about:blank (setContent) may not.
-const tmp = join(mkdtempSync(join(tmpdir(), 'artistica-og-')), 'og.html')
-writeFileSync(tmp, html)
-
+const tmp = mkdtempSync(join(tmpdir(), 'artistica-images-'))
 const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 })
-await page.goto(pathToFileURL(tmp).href)
-await page.evaluate(() => document.fonts.ready)
-await page.screenshot({ path: join(root, 'public/og-image.png'), type: 'png' })
+
+async function render(source, out, width, height) {
+  const file = join(tmp, `${out}.html`)
+  writeFileSync(file, source)
+  const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 })
+  await page.goto(pathToFileURL(file).href)
+  await page.evaluate(() => document.fonts.ready)
+  await page.screenshot({ path: join(root, 'public', out), type: 'png' })
+  await page.close()
+  console.log(`wrote public/${out}`)
+}
+
+await render(html, 'og-image.png', 1200, 630)
+await render(
+  readFileSync(join(root, 'scripts/apple-touch-icon.html'), 'utf8'),
+  'apple-touch-icon.png',
+  180,
+  180,
+)
 await browser.close()
-console.log('wrote public/og-image.png')
