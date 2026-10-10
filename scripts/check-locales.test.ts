@@ -122,6 +122,31 @@ describe('checkLocales plural rules', () => {
     ])
   })
 
+  it('compares a form with the English form of the same category when English has it', () => {
+    const enOne: LocaleTree = { ns: { n_one: 'Add another cat', n_other: '{{count}} cats' } }
+    const check = (n_one: string) =>
+      checkLocales({
+        en: enOne,
+        others: { xx: { ns: { n_one, n_few: '{{count}} b', n_other: '{{count}} c' } } },
+        stamps: stamp(enOne, 'xx'),
+        pluralCategories: fake,
+      }).problems
+    expect(check('Mais um gato')).toEqual([])
+    expect(check('{{count}} gato')).toEqual([problem('xx', 'ns', 'n_one', 'variables')])
+  })
+
+  it('names each English plural form whose stamp is out of date', () => {
+    const older: LocaleTree = { ns: { n_one: '{{count}} cat', n_other: '{{count}} kittens' } }
+    expect(
+      checkLocales({
+        en,
+        others: { yy: { ns: { n_other: '{{count}} d' } } },
+        stamps: stamp(older, 'yy'),
+        pluralCategories: fake,
+      }).problems,
+    ).toEqual([problem('yy', 'ns', 'n_other', 'stale')])
+  })
+
   it('treats a plain key where English has plurals as extra, and the forms as missing', () => {
     expect(run({ yy: { ns: { n: '{{count}} cats' } } })).toEqual([
       problem('yy', 'ns', 'n', 'extra'),
@@ -201,6 +226,13 @@ describe('stamp', () => {
     expect(stamp(en, 'ja', ['common:ok'], previous)).toEqual({
       ja: { 'app:title': 'old00000', 'common:ok': hashOf('OK') },
       ko: { 'common:ok': 'x' },
+    })
+  })
+
+  it('drops the entries of English strings that no longer exist', () => {
+    const previous = { ja: { 'app:title': 'old00000', 'app:gone': 'old22222' } }
+    expect(stamp(en, 'ja', ['common:ok'], previous)).toEqual({
+      ja: { 'app:title': 'old00000', 'common:ok': hashOf('OK') },
     })
   })
 
