@@ -228,6 +228,27 @@ describe('commitOp', () => {
     expect(useArrange.getState().undo).toHaveLength(0)
   })
 
+  it('Page Up to a full page says there is no room, not that it is the first page', () => {
+    show([loaded('a'), loaded('b')])
+    commitOp({ kind: 'page', id: 'b#0', page: 1 }, { fromBlock: true })
+    const grow = (id: string) => {
+      const tileW = useArrange.getState().manual?.blocks.find((x) => x.blockId === id)?.tileW
+      return commitOp(
+        { kind: 'resize', id, tileW: (tileW ?? 0) + 5, anchor: 'tl' },
+        { fromBlock: true },
+      )
+    }
+    for (const id of ['a#0', 'b#0']) {
+      let steps = 0
+      while (steps < 100 && grow(id)) steps++
+      expect(steps).toBeGreaterThan(0)
+    }
+    const before = useArrange.getState().manual
+    expect(commitOp({ kind: 'page', id: 'b#0', page: 0 }, { fromBlock: true })).toBe(false)
+    expect(said()).toBe("Can't place it there: there is no room for it on that page.")
+    expect(useArrange.getState().manual).toBe(before)
+  })
+
   it('nudging into the margin is "blocked"', () => {
     show([loaded('a')])
     const m = base()
@@ -337,6 +358,13 @@ describe('undo, re-run, pick-up, select, mode', () => {
     show([loaded('a'), loaded('b')])
     refocusBlock('zz#0')
     expect(useArrangeUi.getState().focusId).toBeNull()
+    refocusBlock('b#0')
+    expect(useArrangeUi.getState().focusId).toBe('b#0')
+  })
+
+  it('refocusing after Undo asks for the photo Undo was pressed on, not the selected one', () => {
+    show([loaded('a'), loaded('b')])
+    selectBlock('a#0')
     refocusBlock('b#0')
     expect(useArrangeUi.getState().focusId).toBe('b#0')
   })

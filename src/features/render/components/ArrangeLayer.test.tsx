@@ -435,6 +435,15 @@ describe('ArrangeLayer: keyboard', () => {
     expect(props.onSelect).not.toHaveBeenCalled()
   })
 
+  it('a keyboard swap selects the picked-up photo when another photo was selected since', () => {
+    const { props } = setup({ selected: 'b', pickedUp: 'a' })
+    fireEvent.keyDown(blockEl(/^b\.jpg/), { key: 'Enter' })
+    expect(props.onSelect).toHaveBeenCalledExactlyOnceWith('a')
+    expect(vi.mocked(props.onSelect).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(props.onCommit).mock.invocationCallOrder[0] ?? 0,
+    )
+  })
+
   it('Escape and keys the block does not handle leave the selection alone', () => {
     const { props } = setup({ selected: 'a', pickedUp: 'a' })
     const b = blockEl(/^b\.jpg/)
