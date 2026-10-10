@@ -89,10 +89,10 @@ export const REVIEWED_INCOMPLETE: readonly ReviewedIncomplete[] = [
   },
 ]
 
-/** Reasons axe gives when part of a node is outside its scroller or under another element. */
 /** Marks a node replaced since axe looked at it (a redrawn tile): the scan is run again. */
 const GONE = 'gone: '
 
+/** Reasons axe gives when part of a node is outside its scroller or under another element. */
 const OBSCURED = new Set(['elmPartiallyObscured', 'elmPartiallyObscuring', 'outsideViewport'])
 
 interface AnimationLike {

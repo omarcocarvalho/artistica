@@ -184,7 +184,9 @@ describe('saving', () => {
     const field = within(dialog).getByRole('textbox', { name: 'Preset name' })
     await user.type(field, 'a4 VALUE studies{Enter}')
     const alert = await within(dialog).findByRole('alert')
-    expect(alert).toHaveTextContent('A preset with this name exists.')
+    await waitFor(() => {
+      expect(alert).toHaveTextContent('A preset with this name exists.')
+    })
     expect(field).toHaveAttribute('aria-invalid', 'true')
     expect(useSettings.getState().presets[0]?.pageSetup.paper).toBe('A4')
 
@@ -454,9 +456,10 @@ describe('renaming', () => {
     expect(save).toHaveAttribute('aria-disabled', 'true')
     expect(save).toHaveAccessibleDescription('Give the preset a name.')
     await user.type(field, 'two{Enter}')
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      'A preset with this name exists.',
-    )
+    const alert = await within(dialog).findByRole('alert')
+    await waitFor(() => {
+      expect(alert).toHaveTextContent('A preset with this name exists.')
+    })
     expect(field).toHaveAttribute('aria-invalid', 'true')
     expect(useSettings.getState().presets.map((p) => p.name)).toEqual(['One', 'Two'])
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))

@@ -113,7 +113,9 @@ describe('PageSetupPanel', () => {
     render(<PageSetupPanel />)
     await setField(user, 'Gutter size', '4')
     expect(useSettings.getState().pageSetup.gutter.mm).toBe(6)
-    expect(screen.getByRole('status')).toHaveTextContent('Gutter raised to 6 mm')
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Gutter raised to 6 mm')
+    })
   })
 
   it('shows the safe-area note when the store raises it', async () => {
