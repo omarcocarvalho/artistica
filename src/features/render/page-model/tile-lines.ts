@@ -71,7 +71,7 @@ export function tileLinesFor(
   const { colour, widthMm, opacityPct } = lines.style
   const strokes: LineStroke[] = [
     { dashMm: [], cmds: solid },
-    { dashMm: [...centreDashMm(widthMm)], cmds: place(true) },
+    { dashMm: [...centreDashMm(widthMm, Math.min(trim.w, trim.h))], cmds: place(true) },
   ].filter((s) => s.cmds.length > 0)
   const types: LineType[] = [...paths.map((p) => p.type), ...found.map((g) => g.type)]
   return {

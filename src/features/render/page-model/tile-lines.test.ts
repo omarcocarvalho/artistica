@@ -144,7 +144,7 @@ describe('tileLinesFor', () => {
     const tl = compo(patchLines(thirds, { centre: true, golden: true }), trim, false, 0)
     expect(tl?.strokes.map((s) => s.dashMm)).toEqual([
       [],
-      [...centreDashMm(DEFAULT_LINES.style.widthMm)],
+      [...centreDashMm(DEFAULT_LINES.style.widthMm, 30)],
     ])
     expect(tl?.strokes[0]?.cmds).toHaveLength(16)
     expect(tl?.strokes[0]?.cmds.slice(0, 8)).toEqual(
@@ -156,17 +156,31 @@ describe('tileLinesFor', () => {
   it('omits the solid batch when only centre lines are on', () => {
     const tl = compo(patchLines(DEFAULT_LINES, { centre: true }), trim, false, 0)
     expect(tl?.strokes).toHaveLength(1)
-    expect(tl?.strokes[0]?.dashMm).toEqual([...centreDashMm(DEFAULT_LINES.style.widthMm)])
+    expect(tl?.strokes[0]?.dashMm).toEqual([...centreDashMm(DEFAULT_LINES.style.widthMm, 30)])
   })
 
   it('dashes scale with the width', () => {
     const tl = compo(
       patchLines(DEFAULT_LINES, { centre: true, style: { widthMm: 1.5 } }),
-      trim,
+      { x: 10, y: 20, w: 80, h: 60 },
       false,
       0,
     )
     expect(tl?.strokes[0]?.dashMm).toEqual([9, 6])
+  })
+
+  it('tileLinesFor passes the tile’s short side, whichever side it is and either turn (M5-R20)', () => {
+    const centre = patchLines(DEFAULT_LINES, { centre: true, style: { widthMm: 1 } })
+    for (const t of [
+      { x: 10, y: 20, w: 15, h: 40 },
+      { x: 10, y: 20, w: 40, h: 15 },
+    ])
+      for (const turned of [false, true]) {
+        const dash = compo(centre, t, turned, 0)?.strokes[0]?.dashMm
+        expect(dash).toEqual([...centreDashMm(1, 15)])
+        expect(dash?.[0]).toBeCloseTo(3, 9)
+        expect(dash?.[1]).toBeCloseTo(2, 9)
+      }
   })
 
   it('maps every command with frameToPage, solid types first, in canonical order', () => {
@@ -229,12 +243,15 @@ describe('tileLinesFor', () => {
   })
 })
 
+const m3Dash = (w: number) => [Math.max(1.5, 6 * w), Math.max(1, 4 * w)]
+
 /** M3's tileLinesFor, frozen: without guides the page model must not change by a byte. */
 function m3TileLinesFor(
   lines: LineSettings,
   t: RectMm,
   turned: boolean,
   tileIndex: number,
+  dashMm: readonly number[] = m3Dash(lines.style.widthMm),
 ): TileLines | null {
   const paths = compositionPaths(lines, frameOf(t, turned))
   if (paths.length === 0) return null
@@ -245,7 +262,7 @@ function m3TileLinesFor(
   const { colour, widthMm, opacityPct } = lines.style
   const strokes: LineStroke[] = [
     { dashMm: [], cmds: place(false) },
-    { dashMm: [...centreDashMm(widthMm)], cmds: place(true) },
+    { dashMm: [...dashMm], cmds: place(true) },
   ].filter((s) => s.cmds.length > 0)
   return {
     tileIndex,
@@ -320,7 +337,19 @@ describe('tileLinesFor with guides (M4-R11, R12, R17)', () => {
     fc.assert(
       fc.property(arbLineSettings, guideSwitches, anyTrim, fc.boolean(), (lines, g, t, turned) => {
         const img = on(patchLines(lines, g))
+        const dash = centreDashMm(lines.style.widthMm, Math.min(t.w, t.h))
         expect(JSON.stringify(tileLinesFor(img, NO_GUIDES, t, turned, 2))).toBe(
+          JSON.stringify(m3TileLinesFor(lines, t, turned, 2, dash)),
+        )
+      }),
+    )
+  })
+
+  it('on every tile whose short side is at least 30 × the line width, the tile lines equal M3’s, byte for byte (property)', () => {
+    fc.assert(
+      fc.property(arbLineSettings, anyTrim, fc.boolean(), (lines, t, turned) => {
+        fc.pre(Math.min(t.w, t.h) >= 30 * lines.style.widthMm)
+        expect(JSON.stringify(compo(lines, t, turned, 2))).toBe(
           JSON.stringify(m3TileLinesFor(lines, t, turned, 2)),
         )
       }),
