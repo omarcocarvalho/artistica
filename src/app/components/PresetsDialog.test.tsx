@@ -184,7 +184,9 @@ describe('saving', () => {
     const field = within(dialog).getByRole('textbox', { name: 'Preset name' })
     await user.type(field, 'a4 VALUE studies{Enter}')
     const alert = await within(dialog).findByRole('alert')
-    expect(alert).toHaveTextContent('A preset with this name exists.')
+    await waitFor(() => {
+      expect(alert).toHaveTextContent('A preset with this name exists.')
+    })
     expect(field).toHaveAttribute('aria-invalid', 'true')
     expect(useSettings.getState().presets[0]?.pageSetup.paper).toBe('A4')
 
@@ -454,9 +456,10 @@ describe('renaming', () => {
     expect(save).toHaveAttribute('aria-disabled', 'true')
     expect(save).toHaveAccessibleDescription('Give the preset a name.')
     await user.type(field, 'two{Enter}')
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      'A preset with this name exists.',
-    )
+    const alert = await within(dialog).findByRole('alert')
+    await waitFor(() => {
+      expect(alert).toHaveTextContent('A preset with this name exists.')
+    })
     expect(field).toHaveAttribute('aria-invalid', 'true')
     expect(useSettings.getState().presets.map((p) => p.name)).toEqual(['One', 'Two'])
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
@@ -577,9 +580,11 @@ describe('Import', () => {
       expect(within(dialog).getByRole('alert')).not.toBe(first)
     })
     expect(first).not.toBeInTheDocument()
-    expect(within(dialog).getByRole('alert')).toHaveTextContent(
-      "This file isn't a presets file from Artistica.",
-    )
+    await waitFor(() => {
+      expect(within(dialog).getByRole('alert')).toHaveTextContent(
+        "This file isn't a presets file from Artistica.",
+      )
+    })
   })
 
   it('reports presets that did not fit under the device limit', async () => {
@@ -627,7 +632,9 @@ describe('Import', () => {
   ])('refuses a file that is %s with an alert', async (_label, file, message) => {
     const { user, dialog } = await openDialog()
     await user.upload(fileInput(dialog), file)
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(message)
+    await waitFor(() => {
+      expect(within(dialog).getByRole('alert')).toHaveTextContent(message)
+    })
     expect(useSettings.getState().presets).toEqual([])
   })
 

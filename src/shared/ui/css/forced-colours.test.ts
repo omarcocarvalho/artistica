@@ -23,3 +23,16 @@ describe('segmented control in forced colours', () => {
     expect(rule).toMatch(/box-shadow:\s*none;/)
   })
 })
+
+const overlaysCss = readFileSync(fileURLToPath(new URL('./overlays.css', import.meta.url)), 'utf8')
+
+describe('dialogs and sheets in forced colours', () => {
+  it('keep a CanvasText border, since forced colours drop the shadow that outlines them', () => {
+    const start = overlaysCss.indexOf('@media (forced-colors: active)')
+    expect(start).toBeGreaterThan(-1)
+    const block = overlaysCss.slice(start)
+    const at = block.indexOf('.ds-dialog,\n    .ds-sheet {')
+    expect(at).toBeGreaterThan(-1)
+    expect(block.slice(at, block.indexOf('}', at))).toMatch(/border:\s*1px solid CanvasText;/)
+  })
+})

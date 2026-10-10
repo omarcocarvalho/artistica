@@ -1,6 +1,7 @@
 import { RadioGroup } from 'radix-ui'
 import { useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { cx } from './cx'
+import { leaveOnShiftTab } from './roving'
 
 export interface SegmentedOption<T extends string> {
   value: T
@@ -85,6 +86,7 @@ export function SegmentedControl<T extends string>({
   }, [])
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    leaveOnShiftTab(event)
     if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
     const target = keyTarget(options, event.key, dir, optionValue(event.target))
     if (target !== undefined && target !== value) onValueChange(target)

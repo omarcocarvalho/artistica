@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initI18n } from '../../../shared/i18n'
@@ -155,7 +155,7 @@ describe('ExportDialog', () => {
       run.reject(new ExportError('unsupported'))
       await Promise.resolve()
     })
-    expect(screen.getByText(/can't make PDFs/)).toBeInTheDocument()
+    expect(await screen.findByText(/can't make PDFs/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
 
@@ -167,7 +167,7 @@ describe('ExportDialog', () => {
       run.reject(new Error('QuotaExceededError'))
       await Promise.resolve()
     })
-    expect(screen.getByText(/Something went wrong/)).toBeInTheDocument()
+    expect(await screen.findByText(/Something went wrong/)).toBeInTheDocument()
   })
 
   it('revokes the object URL when starting over', async () => {
@@ -222,7 +222,9 @@ describe('ExportDialog', () => {
       run.reject(new ExportError('failed'))
       await Promise.resolve()
     })
-    expect(screen.getByRole('alert')).toHaveTextContent(/Something went wrong/)
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/Something went wrong/)
+    })
   })
 
   it('treats an AbortError as a quiet return to the summary', async () => {

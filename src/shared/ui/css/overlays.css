@@ -144,6 +144,10 @@
       center / 100% 100% no-repeat;
   }
   @media (forced-colors: active) {
+    .ds-dialog,
+    .ds-sheet {
+      border: 1px solid CanvasText;
+    }
     .ds-tab[aria-selected='true']::after {
       forced-color-adjust: none;
       background: Highlight;

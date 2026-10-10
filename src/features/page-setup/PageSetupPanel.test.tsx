@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { initI18n } from '../../shared/i18n'
@@ -100,7 +100,9 @@ describe('PageSetupPanel', () => {
     render(<PageSetupPanel />)
     await user.click(screen.getByRole('switch', { name: 'Bleed' }))
     expect(screen.getByRole('switch', { name: 'Gutter between images' })).toBeChecked()
-    expect(screen.getByRole('status')).toHaveTextContent('Gutter turned on') // notes are live regions
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Gutter turned on') // notes are live regions
+    })
   })
 
   it('raises a too-small gutter to 2 × bleed and shows the value', async () => {
@@ -111,13 +113,15 @@ describe('PageSetupPanel', () => {
     render(<PageSetupPanel />)
     await setField(user, 'Gutter size', '4')
     expect(useSettings.getState().pageSetup.gutter.mm).toBe(6)
-    expect(screen.getByRole('status')).toHaveTextContent('Gutter raised to 6 mm')
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Gutter raised to 6 mm')
+    })
   })
 
-  it('shows the safe-area note when the store raises it', () => {
+  it('shows the safe-area note when the store raises it', async () => {
     useSettings.getState().setPageSetup({ safeAreaMm: 1 })
     render(<PageSetupPanel />)
-    expect(screen.getByText('Safe area raised to 3 mm, the minimum.')).toBeInTheDocument()
+    expect(await screen.findByText('Safe area raised to 3 mm, the minimum.')).toBeInTheDocument()
     expect(DEFAULT_PAGE_SETUP.safeAreaMm).toBe(5)
   })
 

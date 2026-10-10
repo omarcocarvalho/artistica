@@ -150,9 +150,7 @@ export function PreviewSlot() {
         aria-busy={computing}
         onKeyDown={onKeyDown}
         className={
-          isDesktop
-            ? 'flex flex-col items-center gap-8 p-6'
-            : 'flex snap-x snap-mandatory gap-4 overflow-x-auto p-4'
+          isDesktop ? 'flex flex-col items-center gap-8 p-6' : 'flex flex-col gap-4 px-4 pt-4'
         }
       >
         <VisuallyHidden role="status">{statusText}</VisuallyHidden>
@@ -167,33 +165,41 @@ export function PreviewSlot() {
           </Callout>
         )}
         {showGuides && pages.length > 0 && <GuidesLegend />}
-        {pages.map((model, i) => (
-          <div key={model.index} className="relative w-full max-w-3xl shrink-0 snap-center">
-            <PagePreview
-              model={model}
-              getSource={getPreviewSource}
-              studyTiles={appStudyProvider}
-              scrollAxis={isDesktop ? 'y' : 'x'}
-              onDrawn={markDrawn}
-              getName={getName}
-              selectedId={selectedId}
-              onSelect={selectImage}
-              guides={showGuides}
-              arrange={arrange}
-              label={t('app:preview.pageCaption', {
-                current: i + 1,
-                total: pages.length,
-                paper: paperLabel,
-                orientation,
-              })}
-            />
-            <ul aria-label={t('app:preview.pageItems', { current: i + 1 })} className="sr-only">
-              {describePage(model, names, linesOf).map((d, k) => (
-                <li key={`${d.imageId}-${String(k)}`}>{describeTile(d)}</li>
-              ))}
-            </ul>
-          </div>
-        ))}
+        <div
+          className={
+            isDesktop
+              ? 'contents'
+              : '-mx-4 -mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto p-4'
+          }
+        >
+          {pages.map((model, i) => (
+            <div key={model.index} className="relative w-full max-w-3xl shrink-0 snap-center">
+              <PagePreview
+                model={model}
+                getSource={getPreviewSource}
+                studyTiles={appStudyProvider}
+                scrollAxis={isDesktop ? 'y' : 'x'}
+                onDrawn={markDrawn}
+                getName={getName}
+                selectedId={selectedId}
+                onSelect={selectImage}
+                guides={showGuides}
+                arrange={arrange}
+                label={t('app:preview.pageCaption', {
+                  current: i + 1,
+                  total: pages.length,
+                  paper: paperLabel,
+                  orientation,
+                })}
+              />
+              <ul aria-label={t('app:preview.pageItems', { current: i + 1 })} className="sr-only">
+                {describePage(model, names, linesOf).map((d, k) => (
+                  <li key={`${d.imageId}-${String(k)}`}>{describeTile(d)}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       </div>
     </>
   )

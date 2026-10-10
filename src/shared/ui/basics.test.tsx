@@ -1,7 +1,7 @@
 // Node types are only needed to read the stylesheets (tsconfig.app.json lists just vite/client).
 /// <reference types="node" />
 import { readFileSync } from 'node:fs'
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -209,7 +209,7 @@ describe('Callout', () => {
     ['danger', 'alert'],
   ] as const)(
     'a live %s callout mounts its %s region empty, then inserts the message',
-    (tone, role) => {
+    async (tone, role) => {
       const seen: string[] = []
       render(
         <FirstCommit seen={seen}>
@@ -219,7 +219,10 @@ describe('Callout', () => {
         </FirstCommit>,
       )
       expect(seen).toEqual([`${role}:`])
-      expect(screen.getByRole(role)).toHaveTextContent('Heads upCareful')
+      expect(screen.getByRole(role).textContent).toBe('')
+      await waitFor(() => {
+        expect(screen.getByRole(role)).toHaveTextContent('Heads upCareful')
+      })
     },
   )
 
@@ -234,7 +237,7 @@ describe('Callout', () => {
     expect(container).toHaveTextContent('Careful')
   })
 
-  it('a live callout keeps its region and swaps the message in place', () => {
+  it('a live callout keeps its region and swaps the message in place', async () => {
     const { rerender } = render(
       <Callout tone="warning" live>
         First
@@ -247,7 +250,9 @@ describe('Callout', () => {
       </Callout>,
     )
     expect(screen.getByRole('status')).toBe(region)
-    expect(region).toHaveTextContent('Second')
+    await waitFor(() => {
+      expect(region).toHaveTextContent('Second')
+    })
   })
 
   it('renders actions', () => {

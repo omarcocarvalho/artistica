@@ -25,6 +25,8 @@ const limitVars = () => ({
 export interface ImportDropzoneProps {
   variant?: 'compact' | 'card'
   onOutcomes?: (outcomes: ImportOutcome[]) => void
+  /** Off when another dropzone on screen already announces the shared import progress. */
+  announceProgress?: boolean
 }
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
@@ -58,9 +60,9 @@ function IssueCallout({ issue, onDismiss }: { issue: Issue; onDismiss: () => voi
     tone = 'info'
   }
   return (
-    <div role={tone === 'danger' ? 'alert' : undefined} className="flex items-start gap-2">
+    <div className="flex items-start gap-2">
       <div className="grow">
-        <Callout tone={tone} title={title}>
+        <Callout tone={tone} title={title} live={tone === 'danger'}>
           {message}
         </Callout>
       </div>
@@ -69,7 +71,11 @@ function IssueCallout({ issue, onDismiss }: { issue: Issue; onDismiss: () => voi
   )
 }
 
-export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzoneProps) {
+export function ImportDropzone({
+  variant = 'compact',
+  onOutcomes,
+  announceProgress = true,
+}: ImportDropzoneProps) {
   const { t } = useTranslation('images')
   const importing = useImages((s) => s.importing)
 
@@ -212,6 +218,13 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
   const card = variant === 'card'
   const buttonSize = card ? 'lg' : 'md'
   const urlKeys = urlError ? importErrorKeys(urlError.error) : null
+
+  const progress = importing > 0 && (
+    <div>
+      <ProgressBar value={null} label={t('dropzone.importingLabel')} />
+      <span className="text-sm">{t('dropzone.importing', { count: importing })}</span>
+    </div>
+  )
 
   return (
     <section
@@ -387,25 +400,23 @@ export function ImportDropzone({ variant = 'compact', onOutcomes }: ImportDropzo
 
       <div className="mt-3 flex items-start gap-2 text-left">
         {/* Always mounted so screen readers announce what is added to it. */}
-        <div role="status" className="flex grow flex-col gap-2">
-          {importing > 0 && (
-            <div>
-              <ProgressBar value={null} label={t('dropzone.importingLabel')} />
-              <span className="text-sm">{t('dropzone.importing', { count: importing })}</span>
-            </div>
-          )}
-          {stopped && importing === 0 && <p className="text-sm">{t('dropzone.stopped')}</p>}
-          {issues
-            .filter((issue) => issue.kind !== 'error')
-            .map((issue) => (
-              <IssueCallout
-                key={issue.id}
-                issue={issue}
-                onDismiss={() => {
-                  dismiss(issue.id)
-                }}
-              />
-            ))}
+        <div className="flex grow flex-col gap-2">
+          {!announceProgress && progress}
+          <div role="status" className="flex flex-col gap-2">
+            {announceProgress && progress}
+            {stopped && importing === 0 && <p className="text-sm">{t('dropzone.stopped')}</p>}
+            {issues
+              .filter((issue) => issue.kind !== 'error')
+              .map((issue) => (
+                <IssueCallout
+                  key={issue.id}
+                  issue={issue}
+                  onDismiss={() => {
+                    dismiss(issue.id)
+                  }}
+                />
+              ))}
+          </div>
         </div>
         {importing > 0 && (
           <Button variant="ghost" aria-label={t('dropzone.cancelLabel')} onClick={cancelImports}>

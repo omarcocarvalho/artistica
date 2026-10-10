@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initI18n } from '../../shared/i18n'
@@ -294,27 +294,45 @@ describe('PreviewSlot', () => {
     const { container } = render(<PreviewSlot />)
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull()
   })
-  it('says the page setup leaves no room when there are images but no pages (CR-B2)', () => {
+  it('keeps the legend and callouts above the phone carousel, not squeezed into it as a slide (WCAG 1.4.10)', () => {
+    stubDesktop(false)
+    act(() => {
+      useAppUi.setState({ showGuides: true })
+      usePages.setState({ status: 'error' })
+    })
+    render(<PreviewSlot />)
+    const page = screen.getByRole('button', { name: /anna\.jpg/ })
+    const carousel = page.closest('.snap-x')
+    expect(carousel).not.toBeNull()
+    expect(carousel).toContainElement(page)
+    expect(carousel).not.toContainElement(screen.getByText('legend'))
+    expect(carousel).not.toContainElement(screen.getByRole('alert'))
+  })
+  it('says the page setup leaves no room when there are images but no pages (CR-B2)', async () => {
     act(() => {
       usePages.setState({ layout: layout(0), pages: [] })
     })
     render(<PreviewSlot />)
     expect(
-      screen.getByText(/This page setup leaves no room for images\./).closest('[role="status"]'),
+      (await screen.findByText(/This page setup leaves no room for images\./)).closest(
+        '[role="status"]',
+      ),
     ).not.toBeNull()
   })
   it('keeps the status live region mounted and empty while idle', () => {
     render(<PreviewSlot />)
     expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
-  it('shows a persistent error callout while the layout has failed', () => {
+  it('shows a persistent error callout while the layout has failed', async () => {
     act(() => {
       usePages.setState({ status: 'error', layout: null, pages: [] })
     })
     render(<PreviewSlot />)
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'The layout could not be computed. Change a setting or reload the page.',
-    )
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'The layout could not be computed. Change a setting or reload the page.',
+      )
+    })
     act(() => {
       usePages.setState({ status: 'idle', layout: layout(1) })
     })

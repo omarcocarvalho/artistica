@@ -95,6 +95,28 @@ describe('SegmentedControl', () => {
     expect(onValueChange).not.toHaveBeenCalled()
   })
 
+  it('leaves the Tab order on Shift+Tab before the browser moves the focus, so Firefox can tab back out', () => {
+    render(
+      <SegmentedControl
+        label="Orientation"
+        value="auto"
+        onValueChange={vi.fn()}
+        options={options}
+      />,
+    )
+    const group = screen.getByRole('radiogroup', { name: 'Orientation' })
+    const radio = screen.getByRole('radio', { name: 'Auto' })
+    radio.focus()
+    let duringEvent: string | null = null
+    const read = () => {
+      duringEvent = group.getAttribute('tabindex')
+    }
+    document.addEventListener('keydown', read)
+    fireEvent.keyDown(radio, { key: 'Tab', shiftKey: true })
+    document.removeEventListener('keydown', read)
+    expect(duringEvent).toBe('-1')
+  })
+
   it('is a named radio group with the current value checked', () => {
     render(
       <SegmentedControl

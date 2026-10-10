@@ -1,16 +1,10 @@
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { IconButton } from '../../shared/ui'
+import { IconButton, useAfterPaint } from '../../shared/ui'
 import { useNotices, type Notice } from '../state/useNotices'
 
 function Toast({ notice, role }: { notice: Notice; role?: 'alert' }) {
   const { t } = useTranslation('app')
-  const [mounted, setMounted] = useState(role === undefined)
-  useEffect(() => {
-    // A second commit, so the live region is in the page before its message.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true)
-  }, [])
+  const mounted = useAfterPaint(role !== undefined)
   return (
     <div
       role={role}
