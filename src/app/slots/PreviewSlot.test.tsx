@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initI18n } from '../../shared/i18n'
@@ -15,6 +15,21 @@ const h = vi.hoisted(() => ({
   mark: vi.fn(),
   provider: { name: 'app study provider' },
   lines: undefined as LineSettings | undefined,
+  arranges: [] as unknown[],
+  view: { manual: null as object | null, blocks: [] as { id: string }[] },
+  undo: vi.fn(),
+}))
+vi.mock('../arrange-controller', () => ({
+  useArrangeView: () => h.view,
+  commitOp: vi.fn(() => true),
+  pickUpBlock: vi.fn(),
+  previewOp: vi.fn(() => ({ ok: false })),
+  selectBlock: vi.fn(),
+  undoArrange: h.undo,
+  rerunAutoLayout: vi.fn(),
+  setArrangeMode: (on: boolean) => {
+    useArrange.getState().setMode(on)
+  },
 }))
 vi.mock('../perf-marks', () => ({ mark: h.mark }))
 vi.mock('../study-provider', () => ({
@@ -29,7 +44,9 @@ vi.mock('../../features/render', () => ({
     studyTiles?: unknown
     scrollAxis?: unknown
     onDrawn?: (page: number) => void
+    arrange?: unknown
   }) => {
+    h.arranges.push(p.arrange)
     h.studyTiles.push(p.studyTiles)
     h.scrollAxes.push(p.scrollAxis)
     if (p.onDrawn) h.onDrawn.push(p.onDrawn)
@@ -46,6 +63,7 @@ vi.mock('../../features/render', () => ({
   },
   GuidesToggle: () => null,
   GuidesLegend: () => <p>legend</p>,
+  createSheetRegistry: () => ({ register: () => () => undefined, at: () => null }),
 }))
 vi.mock('../../features/images', () => {
   const state = {
@@ -59,10 +77,13 @@ vi.mock('../../features/images', () => {
   }
   const useImages = Object.assign((sel: (s: typeof state) => unknown) => sel(state), {
     getState: () => state,
+    subscribe: () => () => undefined,
   })
-  return { useImages }
+  return { useImages, selectImageDescriptors: () => [] }
 })
 
+import { useArrange } from '../arrange-store'
+import { useArrangeUi } from '../arrange-ui'
 import { usePages } from '../pages-store'
 import { useAppUi } from '../state/useAppUi'
 import { PreviewSlot, PreviewToolbar, UPDATING_ANNOUNCE_DELAY_MS } from './PreviewSlot'
@@ -87,6 +108,11 @@ beforeEach(() => {
   h.onDrawn = []
   h.mark.mockClear()
   h.lines = undefined
+  h.arranges = []
+  h.view = { manual: null, blocks: [] }
+  h.undo.mockClear()
+  useArrange.setState(useArrange.getInitialState(), true)
+  useArrangeUi.setState(useArrangeUi.getInitialState(), true)
   useAppUi.setState({ editingId: null })
   usePages.setState({
     status: 'idle',
@@ -380,5 +406,107 @@ describe('PreviewToolbar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Edit selected image' }))
     expect(h.select).toHaveBeenCalledWith('a')
     expect(useAppUi.getState().editingId).toBe('a')
+  })
+})
+
+describe('PreviewSlot in Arrange mode (B4)', () => {
+  const manual = { content: { x: 10, y: 10, w: 190, h: 277 }, gutter: 5, pageCount: 1, blocks: [] }
+  const arranged = () => {
+    h.view = { manual, blocks: [{ id: 'a#0' }] }
+    act(() => {
+      useArrange.setState({ mode: true })
+    })
+  }
+  const lastArrange = () => h.arranges.at(-1) as Record<string, unknown> | undefined
+
+  it('gives the pages no arrange props outside Arrange mode', () => {
+    h.view = { manual, blocks: [{ id: 'a#0' }] }
+    render(<PreviewSlot />)
+    expect(lastArrange()).toBeUndefined()
+  })
+
+  it('gives the pages the blocks, content box and gutter on desktop', () => {
+    arranged()
+    render(<PreviewSlot />)
+    expect(lastArrange()).toMatchObject({
+      blocks: [{ id: 'a#0' }],
+      content: manual.content,
+      gutter: 5,
+      selected: null,
+      pickedUp: null,
+    })
+  })
+
+  it('leaves the phone to its own Arrange step', () => {
+    stubDesktop(false)
+    arranged()
+    render(<PreviewSlot />)
+    expect(lastArrange()).toBeUndefined()
+  })
+
+  it('drops a selection or pick-up whose block is gone (ruling B1-3)', () => {
+    arranged()
+    act(() => {
+      useArrange.setState({ selected: 'gone#0' })
+      useArrangeUi.setState({ pickedUp: 'gone#1' })
+    })
+    render(<PreviewSlot />)
+    expect(lastArrange()).toMatchObject({ selected: null, pickedUp: null })
+    act(() => {
+      useArrange.setState({ selected: 'a#0' })
+    })
+    expect(lastArrange()).toMatchObject({ selected: 'a#0' })
+  })
+
+  it.each([
+    [{ ctrlKey: true }, 1],
+    [{ metaKey: true }, 1],
+    [{ ctrlKey: true, shiftKey: true }, 0],
+    [{}, 0],
+  ])('Ctrl/Cmd + Z in the preview undoes (%o)', (mods, calls) => {
+    arranged()
+    render(<PreviewSlot />)
+    fireEvent.keyDown(screen.getByRole('button', { name: /Page 1 of 1/ }), { key: 'z', ...mods })
+    expect(h.undo).toHaveBeenCalledTimes(calls)
+  })
+
+  it('Ctrl + Z does nothing outside Arrange mode', () => {
+    render(<PreviewSlot />)
+    fireEvent.keyDown(screen.getByRole('button', { name: /Page 1 of 1/ }), {
+      key: 'z',
+      ctrlKey: true,
+    })
+    expect(h.undo).not.toHaveBeenCalled()
+  })
+
+  it('announces in one polite region outside the busy preview, mounted before use', () => {
+    act(() => {
+      usePages.setState({ status: 'computing' })
+    })
+    const { container } = render(<PreviewSlot />)
+    const region = container.querySelector('[aria-live="polite"]')
+    expect(region).toBeEmptyDOMElement()
+    expect(region?.closest('[aria-busy]')).toBeNull()
+    act(() => {
+      useArrangeUi.getState().announce('Undone.')
+    })
+    const first = region?.textContent
+    expect(first?.trim()).toBe('Undone.')
+    act(() => {
+      useArrangeUi.getState().announce('Undone.')
+    })
+    expect(region?.textContent.trim()).toBe('Undone.')
+    expect(region?.textContent).not.toBe(first)
+  })
+})
+
+describe('PreviewToolbar in Arrange mode (B4)', () => {
+  it('has the Arrange toggle, and hides "Edit selected image" while arranging', async () => {
+    render(<PreviewToolbar />)
+    const toggle = screen.getByRole('button', { name: 'Arrange' })
+    expect(screen.getByRole('button', { name: 'Edit selected image' })).toBeInTheDocument()
+    await userEvent.click(toggle)
+    expect(useArrange.getState().mode).toBe(true)
+    expect(screen.queryByRole('button', { name: 'Edit selected image' })).toBeNull()
   })
 })

@@ -14,6 +14,16 @@ export {
 } from './page-model/tile-lines'
 // --- Preview (Task 5) ---
 export { PagePreview, type PagePreviewProps, type PreviewSource } from './components/PagePreview'
+export {
+  createSheetRegistry,
+  type ArrangeBlock,
+  type ArrangeCorner,
+  type ArrangeIntent,
+  type ArrangePreview,
+  type ArrangeProps,
+  type ArrangeRect,
+  type SheetRegistry,
+} from './components/arrange-types'
 export { GuidesToggle } from './components/GuidesToggle'
 export { GuidesLegend } from './components/GuidesLegend'
 export type { StudyTileProvider, StudyTileRequest } from './preview/study-tiles'

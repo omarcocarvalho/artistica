@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { initI18n } from '../../../shared/i18n'
 import { drawTile, id, pageModel } from '../test-support/fixtures'
 import { PagePreview } from './PagePreview'
+import { createSheetRegistry, type ArrangeProps } from './arrange-types'
 
 const drawSpy = vi.hoisted(() => vi.fn())
 vi.mock('../preview/draw-page', async (orig) => {
@@ -183,6 +184,150 @@ describe('PagePreview with a preview bitmap smaller than the image', () => {
     const fromBitmap = drawImage.mock.calls.filter((c) => c[0] === bitmap)
     expect(fromBitmap).toHaveLength(1)
     expect(fromBitmap[0]?.slice(1, 5)).toEqual([100, 50, 500, 250])
+    vi.restoreAllMocks()
+  })
+})
+
+function arrangeProps(over: Partial<ArrangeProps> = {}): ArrangeProps {
+  return {
+    blocks: [
+      {
+        id: 'a#0',
+        imageId: id('a'),
+        page: 0,
+        rect: { x: 20, y: 20, w: 100, h: 50 },
+        tileW: 100,
+        fixed: false,
+        name: 'portrait-anna.jpg, 100 × 50 mm, page 1',
+      },
+    ],
+    content: { x: 10, y: 10, w: 190, h: 277 },
+    gutter: 5,
+    selected: null,
+    pickedUp: null,
+    focusId: null,
+    sheets: createSheetRegistry(),
+    onSelect: vi.fn(),
+    onFocused: vi.fn(),
+    onPreview: vi.fn(() => ({ ok: false }) as const),
+    onCommit: vi.fn(() => true),
+    onPickUp: vi.fn(),
+    ...over,
+  }
+}
+
+describe('PagePreview in Arrange mode', () => {
+  it('renders movable blocks instead of the tile buttons', () => {
+    setup({ arrange: arrangeProps() })
+    expect(screen.queryByRole('button', { name: 'pears.heic' })).toBeNull()
+    const block = screen.getByRole('button', { name: 'portrait-anna.jpg, 100 × 50 mm, page 1' })
+    expect(block).toHaveAttribute('aria-roledescription', 'movable photo')
+  })
+
+  it('keeps the sheet full width and scopes the arrange styles to it', () => {
+    setup({ arrange: arrangeProps() })
+    expect(screen.getByRole('group', { name: 'Page 1 of 2 · A4 portrait' })).toHaveClass(
+      'relative',
+      'w-full',
+      'arrange-layer',
+    )
+  })
+
+  it('keeps the low-DPI and scaled-to-fit chips and puts them in the block description (M5-R12)', () => {
+    const base = arrangeProps()
+    const blocks = [
+      ...base.blocks,
+      {
+        id: 'b#2',
+        imageId: id('b'),
+        page: 1,
+        rect: { x: 20, y: 80, w: 60, h: 40 },
+        tileW: 60,
+        fixed: false,
+        name: 'pears.heic, 60 × 40 mm, page 2',
+      },
+      {
+        id: 'c#0',
+        imageId: id('c'),
+        page: 0,
+        rect: { x: 20, y: 80, w: 60, h: 40 },
+        tileW: 60,
+        fixed: false,
+        name: 'other.jpg, 60 × 40 mm, page 1',
+      },
+      {
+        id: 'b#1',
+        imageId: id('b'),
+        page: 0,
+        rect: { x: 20, y: 150, w: 60, h: 40 },
+        tileW: 60,
+        fixed: false,
+        name: 'pears.heic copy, 60 × 40 mm, page 1',
+      },
+      {
+        id: 'b#0',
+        imageId: id('b'),
+        page: 0,
+        rect: { x: 20, y: 80, w: 60, h: 40 },
+        tileW: 60,
+        fixed: false,
+        name: 'pears.heic, 60 × 40 mm, page 1',
+      },
+    ]
+    setup({ arrange: arrangeProps({ blocks }) })
+    expect(screen.getByText('203 DPI')).toBeInTheDocument()
+    expect(screen.getByText('Scaled to fit')).toBeInTheDocument()
+    const instructions =
+      'Use the arrow keys to move, Shift and the arrow keys to resize, Enter to swap with another photo.'
+    expect(screen.getByRole('button', { name: /^pears\.heic, / })).toHaveAccessibleDescription(
+      `${instructions} Low resolution: 203 DPI`,
+    )
+    expect(screen.getByRole('button', { name: /^portrait-anna/ })).toHaveAccessibleDescription(
+      `${instructions} Scaled down to fit the page`,
+    )
+    expect(screen.getByRole('button', { name: /^pears\.heic copy/ })).toHaveAccessibleDescription(
+      instructions,
+    )
+    expect(screen.getByRole('button', { name: /^other\.jpg/ })).toHaveAccessibleDescription(
+      instructions,
+    )
+  })
+
+  it('registers its sheet so a drag can land on it', () => {
+    const sheets = createSheetRegistry()
+    const register = vi.spyOn(sheets, 'register')
+    setup({ arrange: arrangeProps({ sheets }) })
+    expect(register).toHaveBeenCalledWith(
+      0,
+      screen.getByRole('group', { name: 'Page 1 of 2 · A4 portrait' }),
+    )
+  })
+
+  it('does not redraw the canvas during 50 pointer moves (M5-R19)', () => {
+    drawSpy.mockClear()
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+      fakeCtx() as unknown as RenderingContext,
+    )
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(420)
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      top: 0,
+      width: 420,
+      height: 594,
+      right: 420,
+      bottom: 594,
+    } as DOMRect)
+    const arrange = arrangeProps()
+    setup({ arrange })
+    const draws = drawSpy.mock.calls.length
+    expect(draws).toBeGreaterThan(0)
+    const block = screen.getByRole('button', { name: /^portrait-anna/ })
+    fireEvent.pointerDown(block, { pointerId: 1, button: 0, clientX: 60, clientY: 60 })
+    for (let i = 1; i <= 50; i++)
+      fireEvent.pointerMove(document, { pointerId: 1, clientX: 60 + i * 2, clientY: 60 + i })
+    expect(arrange.onPreview).toHaveBeenCalled()
+    expect(drawSpy.mock.calls.length).toBe(draws)
+    expect(arrange.onCommit).not.toHaveBeenCalled()
     vi.restoreAllMocks()
   })
 })

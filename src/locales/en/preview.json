@@ -21,6 +21,50 @@
     "dropped": {
       "paper": "The paper changed, so the photos were arranged automatically again.",
       "noLongerFits": "Your arrangement no longer fits the new margins, so the photos were arranged automatically again."
+    },
+    "toggle": "Arrange",
+    "undo": "Undo",
+    "rerun": "Re-run auto layout",
+    "rerunConfirm": "Re-run auto layout? Your moves and size changes will be lost.",
+    "rerunAction": "Re-run",
+    "cancel": "Cancel",
+    "close": "Close",
+    "selectedGroup": "Selected photo: {{name}}",
+    "moveToPage": "Move to page",
+    "pageOption": "Page {{page}}",
+    "newPage": "New page",
+    "swapWith": "Swap with…",
+    "swapChoose": "Choose a photo",
+    "swapOption": "{{name}}, page {{page}}",
+    "width": "Width",
+    "position": "Position",
+    "moveLeft": "Move left",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "moveRight": "Move right",
+    "roleDescription": "movable photo",
+    "blockName": "{{name}}, {{w}} × {{h}} {{unit}}, page {{page}}",
+    "instructions": "Use the arrow keys to move, Shift and the arrow keys to resize, Enter to swap with another photo.",
+    "fixedHint": "Fixed size: change it in Edit.",
+    "chip": {
+      "pickedUp": "Picked up",
+      "swap": "Swap",
+      "invalid": "Can't place here"
+    },
+    "placed": "{{name}}, {{w}} × {{h}} {{unit}}, page {{page}}, {{x}} {{unit}} from the left, {{y}} {{unit}} from the top.",
+    "pickedUp": "Picked up {{name}}. Move to another photo and press Enter to swap, or Escape to cancel.",
+    "pickUpCancelled": "Swap cancelled.",
+    "undone": "Undone.",
+    "rerunDone": "Photos arranged automatically.",
+    "refused": {
+      "overlap": "Can't place it there: it would overlap another photo.",
+      "outside": "Can't place it there: it would go past the margin.",
+      "noRoomOnPage": "Can't place it there: there is no room for it on that page.",
+      "blocked": "Can't move it further: another photo or the margin is in the way.",
+      "min": "It can't get any smaller.",
+      "grow": "Can't make it bigger: another photo or the margin is in the way.",
+      "fixed": "Fixed size: change it in Edit.",
+      "swap": "Can't swap: a photo doesn't fit the other one's place."
     }
   }
 }

@@ -61,6 +61,17 @@
   .ds-btn--ghost:hover {
     background: var(--color-surface-sunken);
   }
+  .ds-btn[aria-pressed='true'] {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+    color: var(--color-on-accent-soft);
+  }
+  @media (forced-colors: active) {
+    .ds-btn[aria-pressed='true'] {
+      border-color: Highlight;
+      box-shadow: inset 0 0 0 2px Highlight;
+    }
+  }
   .ds-btn--danger {
     --btn-ink: var(--color-danger);
   }
