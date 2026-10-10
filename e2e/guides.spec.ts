@@ -917,7 +917,13 @@ test.describe('timing and the export gate', () => {
     await app.applyLinesToAll()
     await expect(app.exportButton).toBeEnabled({ timeout: 120_000 })
     await app.expectPreviewSettled(60_000)
-    const sheets = await app.pageCanvases.count()
+    const pages = await app.pageCanvases.count()
+    const sheets = await app.drawnSheetCount()
+    expect(sheets).toBeGreaterThan(0)
+    testInfo.annotations.push({
+      type: 'drawn-sheets',
+      description: `${String(sheets)} of ${String(pages)}`,
+    })
     await countAppearances(page, RUNNING)
     const mark = guard?.mark() ?? 0
 

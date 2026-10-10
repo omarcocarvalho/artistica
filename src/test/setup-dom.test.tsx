@@ -8,6 +8,10 @@ describe('dom project', () => {
     expect(document.body).toBeInstanceOf(HTMLElement)
   })
 
+  it('has no IntersectionObserver, so the preview counts every page as near', () => {
+    expect(typeof IntersectionObserver).toBe('undefined')
+  })
+
   it('cleans up between tests', () => {
     expect(screen.queryByRole('button')).toBeNull()
   })

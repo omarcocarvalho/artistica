@@ -94,6 +94,7 @@ export function PreviewSlot() {
             model={model}
             getSource={getPreviewSource}
             studyTiles={appStudyProvider}
+            scrollAxis={isDesktop ? 'y' : 'x'}
             getName={getName}
             selectedId={selectedId}
             onSelect={selectImage}

@@ -467,6 +467,47 @@ describe('createStudyPreviewProvider: edge cases', () => {
     expect(p.stats()).toMatchObject({ running: 0, queued: 0 })
   })
 
+  describe('pages near the view (M5-R21)', () => {
+    const widths = () => f.renders.map((r) => r.plan.canvasW)
+
+    it('requests for near pages run before older requests for pages that went far', async () => {
+      const p = createStudyPreviewProvider(f.deps)
+      p.want('far', [
+        request('a', 'k1', { w: 10, slot: 'a|blurred|2:0' }),
+        request('a', 'k2', { w: 11, slot: 'a|blurred|2:1' }),
+        request('a', 'k3', { w: 12, slot: 'a|blurred|2:2' }),
+      ])
+      await f.settle()
+      p.want('near', [request('b', 'k4', { w: 20, slot: 'b|blurred|0:0' })])
+      p.want('far', [])
+      expect(p.stats()).toMatchObject({ running: 1, queued: 1 })
+      await f.finish(0)
+      expect(widths()).toEqual([10, 20])
+      await f.finish(1)
+      expect(widths()).toEqual([10, 20])
+      expect(p.stats()).toMatchObject({ running: 0, queued: 0 })
+    })
+
+    it('a re-wanted key keeps its place, and so does a key another page still wants', async () => {
+      const p = createStudyPreviewProvider(f.deps)
+      const p1 = [
+        request('a', 'k1', { w: 10, slot: 'a|blurred|0:0' }),
+        request('a', 'k2', { w: 11, slot: 'a|blurred|0:1' }),
+      ]
+      const p2 = [request('b', 'k3', { w: 12, slot: 'b|blurred|1:0' })]
+      p.want('p1', p1)
+      p.want('p2', p2)
+      await f.settle()
+      p.want('p2', p2)
+      p.want('p1', p1)
+      p.want('p3', [request('a', 'k2', { w: 11, slot: 'a|blurred|5:0' })])
+      p.want('p1', [])
+      await f.finish(0)
+      await f.finish(1)
+      expect(widths()).toEqual([10, 11, 12])
+    })
+  })
+
   it('a restarted renderer re-runs the job before the rest of the queue', async () => {
     const p = createStudyPreviewProvider(f.deps)
     p.want('page0', [request('a', 'k1'), request('b', 'k2', { w: 60, slot: 'b|blurred|0:1' })])
