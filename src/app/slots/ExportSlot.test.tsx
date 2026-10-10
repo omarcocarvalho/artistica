@@ -1,20 +1,30 @@
 import { act, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { GetSource } from '../../features/render'
-import type { ImageId } from '../../shared/model/image'
+import type { GetSource, PageModel } from '../../features/render'
+import { layoutFromManual } from '../../features/layout/manual'
+import { item } from '../../features/layout/test-support/fixtures'
+import { block, manualOf } from '../../features/layout/test-support/manual'
+import { NO_GUIDES } from '../../features/lines/guides/types'
+import { buildPageModels } from '../../features/render/page-model/build-page-models'
+import { DEFAULT_EDITS, type ImageDescriptor, type ImageId } from '../../shared/model/image'
+import { DEFAULT_LINES } from '../../shared/model/lines'
+import { DEFAULT_PAGE_SETUP } from '../../shared/model/page-setup'
+import { DEFAULT_STUDY } from '../../shared/model/study'
 
 const h = vi.hoisted(() => ({
   count: 1,
   images: [] as { id: string; pxW: number; pxH: number }[],
   getSource: undefined as GetSource | undefined,
+  pages: undefined as readonly PageModel[] | undefined,
   decodeFull: vi.fn((image: unknown) => Promise.resolve({ image })),
   provider: { pause: vi.fn(), resume: vi.fn() },
 }))
 vi.mock('../study-provider', () => ({ appStudyProvider: h.provider }))
 vi.mock('../state/hasImages', () => ({ useImageCount: () => h.count }))
 vi.mock('../../features/render', () => ({
-  ExportDialog: (p: { open: boolean; getSource: GetSource }) => {
+  ExportDialog: (p: { open: boolean; getSource: GetSource; pages: readonly PageModel[] }) => {
     h.getSource = p.getSource
+    h.pages = p.pages
     return <p data-testid="dialog">{String(p.open)}</p>
   },
 }))
@@ -130,6 +140,34 @@ describe('ExportSlot', () => {
     unmount()
     expect(h.provider.resume).toHaveBeenCalledTimes(1)
     expect('dispose' in h.provider).toBe(false)
+  })
+  it('hands an arranged layout’s pages to the export unchanged (M5-R18)', () => {
+    const setup = { ...DEFAULT_PAGE_SETUP, orientation: 'portrait' as const }
+    const items = [item('a', 1), item('b', 1.5)]
+    const manual = manualOf([block('a#0', 120, 40, 50), block('b#0', 14, 150, 60)])
+    const images: ImageDescriptor[] = ['a', 'b'].map((id) => ({
+      id: id as ImageId,
+      contentHash: `h-${id}`,
+      pxW: 3000,
+      pxH: 2000,
+      edits: DEFAULT_EDITS,
+      study: DEFAULT_STUDY,
+      lines: DEFAULT_LINES,
+    }))
+    const pages = buildPageModels(
+      layoutFromManual(manual, items, setup),
+      setup,
+      images,
+      () => NO_GUIDES,
+    )
+    usePages.setState({ pages })
+    useAppUi.setState({ exportOpen: true })
+    render(<ExportSlot />)
+    expect(h.pages).toBe(pages)
+    expect(h.pages?.[0]?.tiles.map((t) => [t.imageId, t.trim.x, t.trim.y])).toEqual([
+      ['a', 120, 40],
+      ['b', 14, 150],
+    ])
   })
   it('never opens the dialog in the phone step flow, and drops the request (M5-R28)', () => {
     stubDesktop(false)

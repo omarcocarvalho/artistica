@@ -16,5 +16,11 @@
       "cut": "Cut line",
       "mark": "Crop mark"
     }
+  },
+  "arrange": {
+    "dropped": {
+      "paper": "The paper changed, so the photos were arranged automatically again.",
+      "noLongerFits": "Your arrangement no longer fits the new margins, so the photos were arranged automatically again."
+    }
   }
 }

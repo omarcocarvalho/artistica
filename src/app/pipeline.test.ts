@@ -5,7 +5,7 @@ import { DEFAULT_EDITS } from '../shared/model/image'
 import { DEFAULT_LINES, patchLines } from '../shared/model/lines'
 import { DEFAULT_STUDY } from '../shared/model/study'
 import { createPipeline, type PipelineDeps, type PipelineSink } from './pipeline'
-import type { LayoutItemInput, LayoutResult } from '../features/layout'
+import type { LayoutItemInput, LayoutResult, ManualLayout } from '../features/layout'
 import { buildLayoutItems } from '../features/layout/build-items'
 import { computeLayout } from '../features/layout/compute-layout'
 import type { PageModel } from '../features/render'
@@ -30,6 +30,15 @@ const layoutOf = (n: number): LayoutResult => ({
   pages: [],
   suggestedPerPage: n,
 })
+
+const MANUAL: ManualLayout = {
+  orientation: 'portrait',
+  pageSize: { w: 210, h: 297 },
+  content: { x: 10, y: 10, w: 190, h: 277 },
+  gutter: 6,
+  pageCount: 1,
+  blocks: [{ blockId: 'a#0', page: 0, x: 12, y: 30, tileW: 80, turned: false }],
+}
 
 function setup() {
   const sink: PipelineSink = {
@@ -130,7 +139,7 @@ describe('createPipeline', () => {
     const { pipeline, deps, sink, resolvers } = setup()
     pipeline.schedule(DEFAULT_PAGE_SETUP, [])
     await vi.advanceTimersByTimeAsync(80)
-    expect(deps.layout).toHaveBeenCalledWith(DEFAULT_PAGE_SETUP, [])
+    expect(deps.layout).toHaveBeenCalledWith(DEFAULT_PAGE_SETUP, [], null)
     resolvers[0]?.(layoutOf(8))
     await vi.advanceTimersByTimeAsync(0)
     expect(deps.buildModels).not.toHaveBeenCalled()
@@ -230,6 +239,38 @@ describe('createPipeline', () => {
     pipeline.schedule({ ...DEFAULT_PAGE_SETUP, paper: 'A3' }, [img('a')])
     await vi.advanceTimersByTimeAsync(80)
     expect(deps.layout).toHaveBeenCalledTimes(2)
+  })
+
+  it('passes the manual layout to the engine, and none (null) by default', async () => {
+    const { deps, resolvers, pipeline } = setup()
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
+    await vi.advanceTimersByTimeAsync(80)
+    expect(deps.layout).toHaveBeenLastCalledWith(DEFAULT_PAGE_SETUP, [], null)
+    resolvers[0]?.(layoutOf(1))
+    await vi.advanceTimersByTimeAsync(0)
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')], undefined, MANUAL)
+    await vi.advanceTimersByTimeAsync(80)
+    expect(deps.layout).toHaveBeenLastCalledWith(DEFAULT_PAGE_SETUP, [], MANUAL)
+  })
+
+  it('the layout memo includes the manual layout: a changed arrangement runs the layout, an equal one reuses it', async () => {
+    const { deps, sink, resolvers, pipeline } = setup()
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
+    await vi.advanceTimersByTimeAsync(80)
+    resolvers[0]?.(layoutOf(1))
+    await vi.advanceTimersByTimeAsync(0)
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')], undefined, MANUAL)
+    await vi.advanceTimersByTimeAsync(80)
+    expect(deps.layout).toHaveBeenCalledTimes(2)
+    resolvers[1]?.(layoutOf(2))
+    await vi.advanceTimersByTimeAsync(0)
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')], undefined, structuredClone(MANUAL))
+    await vi.advanceTimersByTimeAsync(80)
+    expect(deps.layout).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(sink.done).mock.calls.at(-1)?.[0].suggestedPerPage).toBe(2)
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')], undefined, null)
+    await vi.advanceTimersByTimeAsync(80)
+    expect(deps.layout).toHaveBeenCalledTimes(3)
   })
 
   it('does not memoise a failed layout', async () => {

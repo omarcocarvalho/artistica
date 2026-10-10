@@ -1,4 +1,9 @@
-import { isAbortError, type LayoutItemInput, type LayoutResult } from '../features/layout'
+import {
+  isAbortError,
+  type LayoutItemInput,
+  type LayoutResult,
+  type ManualLayout,
+} from '../features/layout'
 import { NO_GUIDES, type ImageGuides } from '../features/lines'
 import type { PageModel } from '../features/render'
 import type { ImageDescriptor } from '../shared/model/image'
@@ -10,7 +15,11 @@ const noGuides: GuidesOf = () => NO_GUIDES
 export interface PipelineDeps {
   delayMs: number
   buildItems: (images: readonly ImageDescriptor[]) => LayoutItemInput[]
-  layout: (setup: PageSetup, items: readonly LayoutItemInput[]) => Promise<LayoutResult>
+  layout: (
+    setup: PageSetup,
+    items: readonly LayoutItemInput[],
+    manual: ManualLayout | null,
+  ) => Promise<LayoutResult>
   buildModels: (
     layout: LayoutResult,
     setup: PageSetup,
@@ -27,7 +36,12 @@ export interface PipelineSink {
 }
 export interface Pipeline {
   /** The layout memo ignores `guides`: a detection result only rebuilds the page models. */
-  schedule: (setup: PageSetup, images: readonly ImageDescriptor[], guides?: GuidesOf) => void
+  schedule: (
+    setup: PageSetup,
+    images: readonly ImageDescriptor[],
+    guides?: GuidesOf,
+    manual?: ManualLayout | null,
+  ) => void
   dispose: () => void
 }
 
@@ -41,13 +55,14 @@ export function createPipeline(deps: PipelineDeps, sink: PipelineSink): Pipeline
     setup: PageSetup,
     images: readonly ImageDescriptor[],
     guides: GuidesOf,
+    manual: ManualLayout | null,
   ): Promise<void> {
     const empty = images.length === 0
     try {
       // Even with no images the engine is asked (cheap), so "fits N per page" shows on an empty workspace (CR-B6).
       const items = deps.buildItems(images)
-      const key = JSON.stringify([setup, items])
-      const layout = memo?.key === key ? memo.layout : await deps.layout(setup, items)
+      const key = JSON.stringify([setup, items, manual])
+      const layout = memo?.key === key ? memo.layout : await deps.layout(setup, items, manual)
       if (mine !== seq) return
       memo = { key, layout }
       if (empty) sink.cleared(layout)
@@ -60,12 +75,12 @@ export function createPipeline(deps: PipelineDeps, sink: PipelineSink): Pipeline
   }
 
   return {
-    schedule(setup, images, guides = noGuides) {
+    schedule(setup, images, guides = noGuides, manual = null) {
       clearTimeout(timer)
       const mine = ++seq
       sink.computing()
       timer = setTimeout(() => {
-        void run(mine, setup, images, guides)
+        void run(mine, setup, images, guides, manual)
       }, deps.delayMs)
     },
     dispose() {
