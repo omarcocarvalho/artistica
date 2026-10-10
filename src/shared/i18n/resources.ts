@@ -2,24 +2,26 @@ import type { LanguageCode } from './languages'
 
 type NamespaceResources = Record<string, Record<string, unknown>>
 
-// Every `src/locales/<lang>/*.json` is picked up automatically, so adding a namespace file never
-// means editing this module. The file name (without `.json`) is the namespace.
-const files = import.meta.glob<Record<string, unknown>>('../../locales/*/*.json', {
+// English is the fallback, so it is bundled and synchronous. The file name (without `.json`) is
+// the namespace, so adding a namespace file never means editing this module.
+const englishFiles = import.meta.glob<Record<string, unknown>>('../../locales/en/*.json', {
   eager: true,
   import: 'default',
 })
 
-function buildResources(): Partial<Record<LanguageCode, NamespaceResources>> {
-  const out: Partial<Record<LanguageCode, NamespaceResources>> = {}
-  for (const [path, content] of Object.entries(files)) {
-    const match = /\/locales\/([^/]+)\/([^/]+)\.json$/.exec(path)
-    const lang = match?.[1] as LanguageCode | undefined
-    const ns = match?.[2]
-    if (!lang || !ns) continue
-    ;(out[lang] ??= {})[ns] = content
+/** Every other language: one loader per namespace file, split into a chunk per language (M6-R5). */
+export const lazyLocaleFiles = import.meta.glob<Record<string, unknown>>(
+  ['../../locales/*/*.json', '!../../locales/en/*.json'],
+  { import: 'default' },
+)
+
+function buildEnglish(): Partial<Record<LanguageCode, NamespaceResources>> {
+  const en: NamespaceResources = {}
+  for (const [path, content] of Object.entries(englishFiles)) {
+    const ns = /\/([^/]+)\.json$/.exec(path)?.[1]
+    if (ns) en[ns] = content
   }
-  return out
+  return { en }
 }
 
-/** Only English has resources in M1. Adding a language = adding `src/locales/<lang>/*.json` (M6). */
-export const resources = buildResources()
+export const resources = buildEnglish()
