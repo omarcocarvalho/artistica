@@ -24,20 +24,18 @@ import {
   countAppearances,
   exportSettled,
   guideTileLines,
-  installWorkerPostCounter,
-  maxLiveWorkers,
   previewMismatches,
   rgbPng,
   sourceToPage,
   subpaths,
   watchConsoleErrors,
-  workerPosts,
 } from './support/guides.ts'
 import { hexRgb, isTurned, strokeMismatches, trimOf, type RectMm } from './support/line-geometry.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { guideStrokes, summarizePdf, type PdfPageSummary } from './support/pdf.ts'
 import { paintedPixels } from './support/png.ts'
 import { runOnly } from './support/projects.ts'
+import { installWorkerProbe, maxLiveWorkers, workerPosts } from './support/workers.ts'
 
 // The e2e tsconfig has no DOM lib; the few browser globals used inside evaluate.
 declare const document: { activeElement: unknown }
@@ -157,7 +155,7 @@ test.describe('exit criterion 2 and unsupported (desktop)', () => {
     browserName,
   }) => {
     test.setTimeout(240_000)
-    await installWorkerPostCounter(page)
+    await installWorkerProbe(page)
     const app = await withPhotos(page, [FIXTURES.portraitJpg, FIXTURES.figureJpg], 2)
     const shellDone = guard?.mark() ?? 0
     await select(app, PORTRAIT.name)
@@ -431,7 +429,7 @@ test.describe('edge outline (desktop)', () => {
     page,
   }, testInfo) => {
     test.setTimeout(180_000)
-    await installWorkerPostCounter(page)
+    await installWorkerProbe(page)
     const app = await withPhotos(page, FIXTURES.portraitJpg, 1)
     await app.setGuide('edges', true)
     await app.setDetail(20)
@@ -721,7 +719,7 @@ test.describe('guides with real detections (chromium)', () => {
   }) => {
     test.setTimeout(180_000)
     const app = startApp(page)
-    await installWorkerPostCounter(page)
+    await installWorkerProbe(page)
     await app.goto()
     const sideways = await sidewaysPortrait(page)
     await page.getByRole('radio', { name: 'mm', exact: true }).click()
