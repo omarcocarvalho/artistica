@@ -173,6 +173,7 @@ describe.each([
           </button>
         ) : null}
         <button type="button">Fallback</button>
+        <button type="button">Elsewhere</button>
         <Overlay
           open={open}
           onOpenChange={setOpen}
@@ -223,6 +224,19 @@ describe.each([
     })
     expect(screen.queryByRole('dialog')).toBeNull()
     const moved = screen.getByRole('button', { name: 'Fallback' })
+    moved.focus()
+    await act(() => new Promise((resolve) => setTimeout(resolve, 20)))
+    expect(moved).toHaveFocus()
+  })
+
+  it('leaves focus where it was moved when the opener is gone, instead of the fallback', async () => {
+    render(<Harness returnFocus={() => screen.getByRole('button', { name: 'Fallback' })} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Open' }))
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Remove opener' }))
+    })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    const moved = screen.getByRole('button', { name: 'Elsewhere' })
     moved.focus()
     await act(() => new Promise((resolve) => setTimeout(resolve, 20)))
     expect(moved).toHaveFocus()

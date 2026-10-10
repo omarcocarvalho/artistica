@@ -16,7 +16,7 @@ export interface ModalSurfaceProps {
   footer?: ReactNode
   /** Where focus goes on close when the element that opened the overlay has left the document. */
   returnFocus?: () => HTMLElement | null
-  /** Called after the overlay has closed and focus has gone back. */
+  /** Called after the overlay has closed and focus has gone back, or stayed where it was moved. */
   onClosed?: () => void
   /** Called before Esc closes the overlay; `event.preventDefault()` keeps it open. */
   onEscapeKeyDown?: (event: KeyboardEvent) => void
