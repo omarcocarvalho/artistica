@@ -1,5 +1,9 @@
 {
   "title": "Artistica",
+  "documentTitle": "Artistica app",
+  "language": {
+    "loadFailed": "Couldn't load that language. Check your connection and try again."
+  },
   "skipToPreview": "Skip to preview",
   "topBar": {
     "home": "Artistica home",

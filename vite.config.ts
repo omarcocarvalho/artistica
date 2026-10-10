@@ -17,6 +17,19 @@ export default defineConfig({
         landing: fileURLToPath(new URL('./index.html', import.meta.url)),
         app: fileURLToPath(new URL('./app/index.html', import.meta.url)),
       },
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              debugName: 'locale',
+              name: (id) => {
+                const lang = /[\\/]src[\\/]locales[\\/](pt-BR|ja|ko|it|es|zh-CN)[\\/]/.exec(id)?.[1]
+                return lang ? `locale-${lang}` : null
+              },
+            },
+          ],
+        },
+      },
     },
   },
   test: {
@@ -34,6 +47,7 @@ export default defineConfig({
         'src/features/render/**',
         'src/features/studies/**',
         'src/shared/colour/**',
+        'src/shared/i18n/**',
         'src/shared/model/lines.ts',
         'src/shared/model/page-setup-schema.ts',
         'src/shared/model/preset.ts',
