@@ -9,3 +9,5 @@ design/
 .release-please-manifest.json
 # Verbatim copy of design/tokens.css (a test checks it); Prettier would change quote styles
 src/shared/theme/tokens.css
+# Preset files as the app writes them (JSON.stringify) and broken ones; their bytes are the test input
+e2e/fixtures/presets/

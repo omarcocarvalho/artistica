@@ -1,0 +1,24 @@
+{
+  "state": {
+    "pageSetup": {
+      "paper": "Letter",
+      "customSize": {
+        "w": 210,
+        "h": 297
+      },
+      "orientation": "landscape",
+      "safeAreaMm": 5,
+      "gutter": {
+        "enabled": true,
+        "mm": 6
+      },
+      "cropMarks": true,
+      "bleed": {
+        "enabled": true,
+        "mm": 3
+      }
+    },
+    "presets": []
+  },
+  "version": 5
+}
