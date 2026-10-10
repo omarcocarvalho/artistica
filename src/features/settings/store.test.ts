@@ -1115,6 +1115,19 @@ describe('presets (schema v5)', () => {
       expect(store.getState().presets[0]).not.toHaveProperty('imageId')
     })
 
+    it.each([
+      ['a rename', [make('Mine'), make('Renamed')]],
+      ['a replace', [make('Mine'), make('Theirs', { blurPct: 60 })]],
+      ['a reorder', [make('Theirs'), make('Mine')]],
+    ])('adopts a list of the same length that differs by %s', (_label, theirs) => {
+      const events = new EventTarget()
+      const store = createSettingsStore(memoryStorage(), 'mm', events)
+      store.getState().savePreset(make('Mine'))
+      store.getState().savePreset(make('Theirs'))
+      events.dispatchEvent(storageEvent(SETTINGS_STORAGE_KEY, envelope(theirs)))
+      expect(store.getState().presets).toEqual(theirs)
+    })
+
     it('an equal list changes nothing', () => {
       const events = new EventTarget()
       const store = createSettingsStore(memoryStorage(), 'mm', events)
