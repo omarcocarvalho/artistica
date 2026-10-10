@@ -1,8 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { initI18n } from '../../../shared/i18n'
+import { installFakeIntersectionObserver } from '../test-support/fake-intersection-observer'
 import { drawTile, id, pageModel } from '../test-support/fixtures'
+import type { StepLevelSlot } from '../pixels/render-tile'
+import type { PageModel } from '../types'
 import { PagePreview } from './PagePreview'
 import { createSheetRegistry, type ArrangeProps } from './arrange-types'
 
@@ -14,6 +17,18 @@ vi.mock('../preview/draw-page', async (orig) => {
     drawPage: (...a: Parameters<typeof actual.drawPage>) => {
       drawSpy(...a)
       actual.drawPage(...a)
+    },
+  }
+})
+
+const renderSpy = vi.hoisted(() => vi.fn())
+vi.mock('../pixels/render-tile', async (orig) => {
+  const actual = await orig<typeof import('../pixels/render-tile')>()
+  return {
+    ...actual,
+    renderTile: (...a: Parameters<typeof actual.renderTile>) => {
+      renderSpy(...a)
+      return actual.renderTile(...a)
     },
   }
 })
@@ -329,6 +344,79 @@ describe('PagePreview in Arrange mode', () => {
     expect(drawSpy.mock.calls.length).toBe(draws)
     expect(arrange.onCommit).not.toHaveBeenCalled()
     vi.restoreAllMocks()
+
+describe('PagePreview keeps the step-down of each photo between redraws', () => {
+  const bitmap = { width: 3000, height: 2000, close: vi.fn() } as unknown as ImageBitmap
+  const tileOf = (imageId: string, w: number, y = 20) =>
+    drawTile({
+      imageId: id(imageId),
+      trim: { x: 20, y, w, h: w / 2 },
+      crop: { x: 0, y: 0, w: 2000, h: 1000 },
+    })
+  const fromBitmap = (drawImage: ReturnType<typeof vi.fn>) =>
+    drawImage.mock.calls.filter((c) => c[0] === bitmap).length
+  const slots = () =>
+    renderSpy.mock.calls.map((c) => c[4] as StepLevelSlot<HTMLCanvasElement> | undefined)
+
+  function mount(model: PageModel) {
+    const drawImage = vi.fn()
+    const ctx = fakeCtx()
+    ctx.drawImage = drawImage
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+      ctx as unknown as RenderingContext,
+    )
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(400)
+    renderSpy.mockClear()
+    const props = {
+      getSource: () => ({ bitmap, pxW: 3000, pxH: 2000 }),
+      selectedId: null,
+      onSelect: vi.fn(),
+      guides: false,
+      label: 'p',
+    }
+    const utils = render(<PagePreview {...props} model={model} />)
+    const show = (next: PageModel) => {
+      utils.rerender(<PagePreview {...props} model={next} />)
+    }
+    return { drawImage, show, ...utils }
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  it('a tile drawn again at another size reads the photo once, from the kept step-down', () => {
+    const { drawImage, show } = mount(pageModel([tileOf('a', 100)]))
+    expect(fromBitmap(drawImage)).toBe(1)
+    show(pageModel([tileOf('a', 96)]))
+    expect(renderSpy).toHaveBeenCalledTimes(2)
+    expect(slots()[1]).toBe(slots()[0])
+    expect(fromBitmap(drawImage)).toBe(1)
+  })
+
+  it('releases the kept step-down of a photo that leaves the page, and the rest on unmount', () => {
+    const { show, unmount } = mount(pageModel([tileOf('a', 100), tileOf('b', 100, 80)]))
+    const [a, b] = slots().map((slot) => slot?.levels.at(-1)?.canvas)
+    expect(a?.width).toBeGreaterThan(0)
+    expect(b?.width).toBeGreaterThan(0)
+    show(pageModel([tileOf('a', 96)]))
+    expect(b?.width).toBe(0)
+    expect(a?.width).toBeGreaterThan(0)
+    unmount()
+    expect(a?.width).toBe(0)
+  })
+
+  it('releases the kept step-downs when the page goes far', () => {
+    const io = installFakeIntersectionObserver()
+    const { container } = mount(pageModel([tileOf('a', 100)], { index: 2 }))
+    const sheet = container.querySelector('[role="group"]')
+    if (!sheet) throw new Error('no sheet')
+    io.set(sheet, true)
+    const level = slots()[0]?.levels.at(-1)?.canvas
+    expect(level?.width).toBeGreaterThan(0)
+    io.set(sheet, false)
+    expect(level?.width).toBe(0)
   })
 })
 

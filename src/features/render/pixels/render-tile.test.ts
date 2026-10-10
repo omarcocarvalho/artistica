@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { valueRamp } from '../../studies/ramp'
 import { drawTile } from '../test-support/fixtures'
-import { FakeCanvas, fakeFactory } from '../test-support/fake-canvas'
+import { FakeCanvas, fakeFactory, type DrawableFake } from '../test-support/fake-canvas'
 import { extendEdges, fillPixel, repeatColumn, repeatRow } from './bleed'
-import { CanvasUnavailableError, releaseCanvas, renderTile } from './render-tile'
+import {
+  CanvasUnavailableError,
+  releaseCanvas,
+  releaseStepLevels,
+  renderTile,
+  type StepLevelSlot,
+} from './render-tile'
 import { forScaledSource, planTilePixels } from './tile-plan'
 
 const RED = [255, 0, 0, 255]
@@ -177,6 +183,174 @@ describe('renderTile', () => {
     expect(() => renderTile(source, planTilePixels(drawTile()), broken)).toThrow(
       CanvasUnavailableError,
     )
+  })
+
+  describe('with a step-down level slot', () => {
+    const emptySlot = (): StepLevelSlot<DrawableFake> => ({ levels: [] })
+    const tile = drawTile({ crop: { x: 0, y: 0, w: 3000, h: 1500 } })
+    const at = (dpi: number) => planTilePixels(tile, { dpi })
+    const lastDraw = (c: FakeCanvas) => c.draws.at(-1)
+    const kept = (slot: StepLevelSlot<DrawableFake>) =>
+      slot.levels.map((l) => [l.depth, l.canvas.width, l.canvas.height])
+    // At 100 mm wide from a 3000 px crop: dpi 600 needs no halving, 200 one, 100 two, 60 three, 40 four.
+
+    it('keeps the deepest level the render used and the one above it', () => {
+      const slot = emptySlot()
+      const made: FakeCanvas[] = []
+      renderTile(source, at(60), fakeFactory(made), null, slot)
+      expect(kept(slot)).toEqual([
+        [2, 750, 375],
+        [3, 375, 188],
+      ])
+      expect(slot.levels.map((l) => l.canvas)).toEqual([made[1], made[2]])
+      expect([made[0]?.width, made[0]?.height]).toEqual([0, 0])
+    })
+
+    it('a render at another size with the same halvings draws only the output, from the kept level', () => {
+      const slot = emptySlot()
+      renderTile(source, at(60), fakeFactory(), null, slot)
+      const before = [...slot.levels]
+      const made: FakeCanvas[] = []
+      const plan = at(58)
+      const out = renderTile(source, plan, fakeFactory(made), null, slot)
+      expect(made).toEqual([out])
+      expect(lastDraw(out)?.source).toBe(before[1]?.canvas)
+      expect(lastDraw(out)?.args).toEqual([0, 0, 375, 188, 0, 0, plan.scaledW, plan.scaledH])
+      expect(slot.levels).toEqual(before)
+    })
+
+    it('draws the output exactly as a render without the slot does', () => {
+      const slot = emptySlot()
+      renderTile(source, at(60), fakeFactory(), null, slot)
+      const plan = at(58)
+      const made: FakeCanvas[] = []
+      const fresh = renderTile(source, plan, fakeFactory(made))
+      const cached = renderTile(source, plan, fakeFactory(), null, slot)
+      expect(made.map((c) => c.draws.map((d) => d.args))).toEqual([
+        [[0, 0, 3000, 1500, 0, 0, 1500, 750]],
+        [[0, 0, 1500, 750, 0, 0, 750, 375]],
+        [[0, 0, 750, 375, 0, 0, 375, 188]],
+        [[0, 0, 375, 188, 0, 0, plan.scaledW, plan.scaledH]],
+      ])
+      expect(kept(slot).at(-1)?.slice(1)).toEqual(made.at(-2)?.draws[0]?.args.slice(6))
+      expect({ ...lastDraw(cached), source: null }).toEqual({ ...lastDraw(fresh), source: null })
+    })
+
+    it('one halving fewer draws from the level above, and keeps it', () => {
+      const slot = emptySlot()
+      renderTile(source, at(60), fakeFactory(), null, slot)
+      const [above, deepest] = slot.levels
+      const made: FakeCanvas[] = []
+      renderTile(source, at(100), fakeFactory(made), null, slot)
+      expect(made).toHaveLength(1)
+      expect(made[0]?.draws[0]?.source).toBe(above?.canvas)
+      expect(slot.levels).toEqual([above])
+      expect([deepest?.canvas.width, deepest?.canvas.height]).toEqual([0, 0])
+    })
+
+    it('more halvings continue from the deepest kept level', () => {
+      const slot = emptySlot()
+      renderTile(source, at(200), fakeFactory(), null, slot)
+      const [shallow] = slot.levels
+      expect(kept(slot)).toEqual([[1, 1500, 750]])
+      const made: FakeCanvas[] = []
+      renderTile(source, at(40), fakeFactory(made), null, slot)
+      expect(made[0]?.draws[0]?.source).toBe(shallow?.canvas)
+      expect(made[0]?.draws[0]?.args.slice(0, 4)).toEqual([0, 0, 1500, 750])
+      expect(slot.levels.map((l) => l.canvas)).toEqual([made[1], made[2]])
+      expect(kept(slot).map(([depth]) => depth)).toEqual([3, 4])
+      expect([shallow?.canvas.width, made[0]?.width]).toEqual([0, 0])
+    })
+
+    it('two or more halvings fewer start again from the source', () => {
+      const slot = emptySlot()
+      renderTile(source, at(40), fakeFactory(), null, slot)
+      const old = [...slot.levels]
+      const made: FakeCanvas[] = []
+      renderTile(source, at(200), fakeFactory(made), null, slot)
+      expect(made[0]?.draws[0]?.source).toBe(source)
+      expect(kept(slot)).toEqual([[1, 1500, 750]])
+      expect(old.map((l) => l.canvas.width)).toEqual([0, 0])
+    })
+
+    it('levels of another source or crop are not used, and are released', () => {
+      const slot = emptySlot()
+      renderTile(source, at(60), fakeFactory(), null, slot)
+      const old = [...slot.levels]
+      const other = {} as CanvasImageSource
+      const fromOther: FakeCanvas[] = []
+      renderTile(other, at(58), fakeFactory(fromOther), null, slot)
+      expect(fromOther[0]?.draws[0]?.source).toBe(other)
+      expect(old.map((l) => l.canvas.width)).toEqual([0, 0])
+      const moved = { ...at(58), src: { x: 1, y: 0, w: 2999, h: 1500 } }
+      const fromMoved: FakeCanvas[] = []
+      renderTile(other, moved, fakeFactory(fromMoved), null, slot)
+      expect(fromMoved[0]?.draws[0]?.source).toBe(other)
+      expect(fromMoved[0]?.draws[0]?.args.slice(0, 4)).toEqual([1, 0, 2999, 1500])
+    })
+
+    it('never keeps a step that the output size shaped', () => {
+      const slot = emptySlot()
+      const clamped = { ...at(60), src: { x: 0, y: 0, w: 1000, h: 100 }, scaledW: 200, scaledH: 80 }
+      const made: FakeCanvas[] = []
+      renderTile(source, clamped, fakeFactory(made), null, slot)
+      expect(made[0]?.draws[0]?.args.slice(6)).toEqual([500, 80])
+      expect(slot.levels).toEqual([])
+      expect([made[0]?.width, made[0]?.height]).toEqual([0, 0])
+    })
+
+    it('keeps the halvings before a step that the output size shaped', () => {
+      const slot = emptySlot()
+      const plan = { ...at(60), src: { x: 0, y: 0, w: 4000, h: 400 }, scaledW: 400, scaledH: 90 }
+      const made: FakeCanvas[] = []
+      renderTile(source, plan, fakeFactory(made), null, slot)
+      expect(made.slice(0, -1).map((c) => c.draws[0]?.args.slice(6))).toEqual([
+        [2000, 200],
+        [1000, 100],
+        [500, 90],
+      ])
+      expect(slot.levels.map((l) => [l.depth, l.canvas])).toEqual([
+        [1, made[0]],
+        [2, made[1]],
+      ])
+    })
+
+    it('a render that fails leaves the slot as it was', () => {
+      const slot = emptySlot()
+      renderTile(source, at(60), fakeFactory(), null, slot)
+      const before = [...slot.levels]
+      const made: FakeCanvas[] = []
+      const factory = (w: number, h: number) => {
+        const c = fakeFactory(made)(w, h)
+        c.getContext = () => null
+        return c
+      }
+      expect(() => renderTile(source, at(30), factory, null, slot)).toThrow(CanvasUnavailableError)
+      expect(slot.levels).toEqual(before)
+      expect(kept(slot)).toEqual([
+        [2, 750, 375],
+        [3, 375, 188],
+      ])
+      expect(made.map((c) => c.width)).toEqual([0])
+    })
+
+    it('a render without halvings leaves the slot empty and releases the old levels', () => {
+      const slot = emptySlot()
+      renderTile(source, at(60), fakeFactory(), null, slot)
+      const old = [...slot.levels]
+      renderTile(source, at(600), fakeFactory(), null, slot)
+      expect(slot.levels).toEqual([])
+      expect(old.map((l) => l.canvas.width)).toEqual([0, 0])
+    })
+
+    it('releaseStepLevels releases every kept level and empties the slot', () => {
+      const slot = emptySlot()
+      renderTile(source, at(60), fakeFactory(), null, slot)
+      const old = [...slot.levels]
+      releaseStepLevels(slot)
+      expect(slot.levels).toEqual([])
+      expect(old.map((l) => l.canvas.width)).toEqual([0, 0])
+    })
   })
 
   it('releaseCanvas zeroes the backing store', () => {

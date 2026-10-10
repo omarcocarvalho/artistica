@@ -2,7 +2,12 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ImageId } from '../../../shared/model/image'
 import { Badge, cx } from '../../../shared/ui'
-import { releaseCanvas, renderTile } from '../pixels/render-tile'
+import {
+  releaseCanvas,
+  releaseStepLevels,
+  renderTile,
+  type StepLevelSlot,
+} from '../pixels/render-tile'
 import { forScaledSource, planTilePixels, tileRenderKey } from '../pixels/tile-plan'
 import { readDrawColors } from '../preview/draw-colors'
 import { drawPage } from '../preview/draw-page'
@@ -115,6 +120,7 @@ export function PagePreview({
   const sheetRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [cache] = useState(() => new Map<string, HTMLCanvasElement>())
+  const [stepLevels] = useState(() => new Map<string, StepLevelSlot<HTMLCanvasElement>>())
   const width = useElementWidth(sheetRef)
   const dpr = useDevicePixelRatio()
   const getSourceRef = useRef(getSource)
@@ -162,6 +168,7 @@ export function PagePreview({
         canvas.height = 0
       }
       releaseAllTileCanvases(cache, releaseCanvas)
+      releaseAllTileCanvases(stepLevels, releaseStepLevels)
       return
     }
     const dpi = previewDpi(scale)
@@ -185,19 +192,28 @@ export function PagePreview({
       if (!source) return null
       const plan = planTilePixels(tile, { dpi })
       const { bitmap, pxW, pxH } = source
+      const scaled = forScaledSource(plan, bitmap.width / pxW, bitmap.height / pxH)
+      const { x, y, w, h } = scaled.src
       return {
         bitmap,
-        plan: forScaledSource(plan, bitmap.width / pxW, bitmap.height / pxH),
+        plan: scaled,
         key: tileRenderKey(tile, plan),
+        levelKey: `${tile.imageId}|${String(x)},${String(y)},${String(w)},${String(h)}`,
       }
     })
+    const slots = syncTileCanvasCache(
+      stepLevels,
+      jobs.map((j) => j?.levelKey ?? null),
+      () => ({ levels: [] }),
+      releaseStepLevels,
+    )
     const rendered = syncTileCanvasCache(
       cache,
       jobs.map((j) => j?.key ?? null),
       (i) => {
         const job = jobs[i]
         if (!job) throw new Error('unreachable: no job for a keyed tile')
-        return renderTile(job.bitmap, job.plan, createDomCanvas)
+        return renderTile(job.bitmap, job.plan, createDomCanvas, null, slots[i] ?? undefined)
       },
       releaseCanvas,
     )
@@ -211,13 +227,26 @@ export function PagePreview({
       },
     })
     onDrawnRef.current?.(model.index)
-  }, [model, scale, width, guides, cache, studyTiles, consumer, studyTick, near, undecided])
+  }, [
+    model,
+    scale,
+    width,
+    guides,
+    cache,
+    stepLevels,
+    studyTiles,
+    consumer,
+    studyTick,
+    near,
+    undecided,
+  ])
 
   useEffect(
     () => () => {
       releaseAllTileCanvases(cache, releaseCanvas)
+      releaseAllTileCanvases(stepLevels, releaseStepLevels)
     },
-    [cache],
+    [cache, stepLevels],
   )
 
   const nameOf = (id: ImageId, index: number): string =>

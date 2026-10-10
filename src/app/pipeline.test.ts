@@ -290,6 +290,80 @@ describe('createPipeline', () => {
   })
 })
 
+describe('createPipeline timing: a single change runs at once, a burst waits for the debounce', () => {
+  it('a single change runs the layout at once, without waiting for the debounce', async () => {
+    const { pipeline, deps, sink, resolvers } = setup()
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
+    expect(deps.layout).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(deps.layout).toHaveBeenCalledTimes(1)
+    resolvers[0]?.(layoutOf(1))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(sink.done).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(200)
+    expect(deps.layout).toHaveBeenCalledTimes(1)
+  })
+
+  it('changes in the same task run once at once, with the last input', async () => {
+    const { pipeline, deps } = setup()
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a'), img('b')])
+    await vi.advanceTimersByTimeAsync(0)
+    expect(deps.layout).toHaveBeenCalledTimes(1)
+    expect(deps.buildItems).toHaveBeenCalledTimes(1)
+    expect(deps.buildItems).toHaveBeenCalledWith([img('a'), img('b')])
+    await vi.advanceTimersByTimeAsync(200)
+    expect(deps.layout).toHaveBeenCalledTimes(1)
+  })
+
+  it('changes within the debounce of the previous one run once more when they stop, with the last input', async () => {
+    const { pipeline, deps, sink, resolvers } = setup()
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
+    await vi.advanceTimersByTimeAsync(30)
+    expect(deps.layout).toHaveBeenCalledTimes(1)
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('b')])
+    await vi.advanceTimersByTimeAsync(50)
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('c')])
+    await vi.advanceTimersByTimeAsync(79)
+    expect(deps.layout).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(deps.layout).toHaveBeenCalledTimes(2)
+    expect(deps.buildItems).toHaveBeenLastCalledWith([img('c')])
+    resolvers[0]?.(layoutOf(1))
+    resolvers[1]?.(layoutOf(3))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(sink.done).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(sink.done).mock.calls[0]?.[0].suggestedPerPage).toBe(3)
+  })
+
+  it('after a quiet debounce interval the next change runs at once again', async () => {
+    const { pipeline, deps } = setup()
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
+    await vi.advanceTimersByTimeAsync(80)
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('b')])
+    await vi.advanceTimersByTimeAsync(0)
+    expect(deps.layout).toHaveBeenCalledTimes(2)
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('c')])
+    await vi.advanceTimersByTimeAsync(80)
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('d')])
+    await vi.advanceTimersByTimeAsync(0)
+    expect(deps.layout).toHaveBeenCalledTimes(4)
+  })
+
+  it('a memoised change superseded in the same task never reaches the sink', async () => {
+    const { pipeline, sink, resolvers } = setup()
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
+    await vi.advanceTimersByTimeAsync(0)
+    resolvers[0]?.(layoutOf(1))
+    await vi.advanceTimersByTimeAsync(80)
+    vi.mocked(sink.done).mockClear()
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
+    pipeline.dispose()
+    await vi.advanceTimersByTimeAsync(200)
+    expect(sink.done).not.toHaveBeenCalled()
+  })
+})
+
 describe('createPipeline performance marks (M5-R27)', () => {
   function logged() {
     perfLog.length = 0
@@ -343,7 +417,7 @@ describe('createPipeline performance marks (M5-R27)', () => {
   it('a superseded layout marks no end; the current one does', async () => {
     const { pipeline, resolvers } = logged()
     pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
-    await vi.advanceTimersByTimeAsync(80)
+    await vi.advanceTimersByTimeAsync(30)
     pipeline.schedule(DEFAULT_PAGE_SETUP, [img('b')])
     resolvers[0]?.(layoutOf(1))
     await vi.advanceTimersByTimeAsync(0)
