@@ -109,6 +109,10 @@ interface ElementLike {
 declare const document: {
   getAnimations(): AnimationLike[]
   querySelector(selector: string): ElementLike | null
+  createElement(tag: 'template'): {
+    innerHTML: string
+    content: { firstElementChild: ElementLike | null }
+  }
 }
 declare function matchMedia(query: string): { matches: boolean }
 
@@ -143,39 +147,41 @@ function selectorOf(node: NodeResult): string | null {
   return parts[0]
 }
 
-/** Scrolls the node to the middle of its scrollers, asks axe about its contrast, and scrolls back. */
+interface RecheckResult {
+  verdict: 'passes' | 'gone' | 'violation' | 'incomplete'
+  detail: string
+}
+
+/**
+ * Scrolls the node to the middle of its scrollers, asks axe (already in the page from the scan)
+ * about its contrast, and scrolls back, in one round trip.
+ */
 async function recheckContrast(page: Page, selector: string): Promise<string> {
-  const saved = await page.evaluate((sel) => {
-    const el = document.querySelector(sel)
-    if (!el) return null
-    const scrolls: [number, number][] = []
-    for (let p = el.parentElement; p; p = p.parentElement) scrolls.push([p.scrollTop, p.scrollLeft])
-    el.scrollIntoView({ block: 'center', inline: 'center' })
-    return scrolls
-  }, selector)
-  if (!saved) return 'gone'
-  const results = await new AxeBuilder({ page })
-    .withRules(['color-contrast'])
-    .include(selector)
-    .analyze()
-  await page.evaluate(
-    ([sel, scrolls]) => {
+  const r = await page.evaluate<RecheckResult>(
+    `(async (sel) => {
       const el = document.querySelector(sel)
-      let i = 0
-      for (let p = el?.parentElement ?? null; p; p = p.parentElement) {
-        const s = scrolls.at(i++)
-        if (!s) break
-        p.scrollTop = s[0]
-        p.scrollLeft = s[1]
+      if (!el) return { verdict: 'gone', detail: '' }
+      const scrolls = []
+      for (let p = el.parentElement; p; p = p.parentElement) scrolls.push([p, p.scrollTop, p.scrollLeft])
+      el.scrollIntoView({ block: 'center', inline: 'center' })
+      try {
+        const res = await window.axe.run(el, { runOnly: ['color-contrast'] })
+        const v = res.violations[0]
+        if (v) return { verdict: 'violation', detail: v.nodes[0] ? v.nodes[0].failureSummary : '' }
+        const i = res.incomplete[0]
+        if (i) {
+          const d = i.nodes[0] && i.nodes[0].any[0] && i.nodes[0].any[0].data
+          return { verdict: 'incomplete', detail: (d && d.messageKey) || 'no reason' }
+        }
+        return { verdict: 'passes', detail: '' }
+      } finally {
+        for (const [p, top, left] of scrolls) { p.scrollTop = top; p.scrollLeft = left }
       }
-    },
-    [selector, saved] as const,
+    })(${JSON.stringify(selector)})`,
   )
-  const violation = results.violations.at(0)
-  if (violation) return `${violation.id}: ${violation.nodes.at(0)?.failureSummary ?? ''}`
-  const still = results.incomplete.at(0)?.nodes.at(0)
-  if (still) return `still incomplete (${messageKey(still) ?? 'no reason'})`
-  return 'passes'
+  if (r.verdict === 'passes' || r.verdict === 'gone') return r.verdict
+  if (r.verdict === 'violation') return `color-contrast: ${r.detail}`
+  return `still incomplete (${r.detail})`
 }
 
 /** Incomplete nodes that no reviewed entry covers, as readable lines. */
@@ -201,13 +207,19 @@ export async function unreviewedIncomplete(
           (!r.messageKeys || (key !== undefined && r.messageKeys.includes(key))) &&
           (!r.forcedColors || forced),
       )
+      // Firefox sometimes reports a node's target as `:root`; its markup still identifies it.
       const covered = await page.evaluate(
-        ([sel, selectors]) => {
-          const el = document.querySelector(sel)
+        ([sel, html, selectors]) => {
+          let el = document.querySelector(sel)
+          if (sel === ':root') {
+            const t = document.createElement('template')
+            t.innerHTML = html
+            el = t.content.firstElementChild
+          }
           if (el === null) return 'gone'
           return selectors.some((s) => el.matches(s)) ? 'yes' : 'no'
         },
-        [selector, candidates.map((c) => c.selector)] as const,
+        [selector, node.html, candidates.map((c) => c.selector)] as const,
       )
       if (covered === 'yes') continue
       if (covered === 'gone') {
