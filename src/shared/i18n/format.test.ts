@@ -144,7 +144,7 @@ describe('formatNumber', () => {
   })
 
   it("follows i18next's current language when none is given", async () => {
-    const i18n = await initI18n({ savedLanguage: 'en' })
+    const i18n = await initI18n({ language: 'en' })
     await i18n.changeLanguage('pt-BR')
     expect(formatLength(12.5, 'mm')).toBe('12,5 mm')
     await i18n.changeLanguage('en')

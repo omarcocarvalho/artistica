@@ -32,7 +32,7 @@ function Harness({
 
 describe('NumberField in Portuguese (Brazil)', () => {
   beforeAll(async () => {
-    const i18n = await initI18n({ savedLanguage: 'en' })
+    const i18n = await initI18n({ language: 'en' })
     i18n.addResourceBundle('pt-BR', 'common', { actions: { close: 'Fechar' } })
     await i18n.changeLanguage('pt-BR')
   })
