@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../shared/ui'
+import { ArrangeToolbar } from '../components/ArrangeToolbar'
 import { EmptyState } from '../components/EmptyState'
 import { ExportStepSlot } from '../slots/ExportSlot'
 import { EmptyActionsSlot, ImagesSlot } from '../slots/ImagesSlot'
@@ -74,7 +75,14 @@ export function MobileFlow() {
               <StudiesSlot variant="phone" />
             ))}
           {step === 'preview' &&
-            (noImages ? <EmptyState actions={<EmptyActionsSlot />} /> : <PreviewSlot />)}
+            (noImages ? (
+              <EmptyState actions={<EmptyActionsSlot />} />
+            ) : (
+              <>
+                <PreviewSlot />
+                <ArrangeToolbar variant="phone" />
+              </>
+            ))}
           {step === 'export' && <ExportStepSlot unavailableReason={reason} />}
         </section>
       </main>

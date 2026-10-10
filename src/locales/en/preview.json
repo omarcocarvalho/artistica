@@ -23,6 +23,9 @@
       "noLongerFits": "Your arrangement no longer fits the new margins, so the photos were arranged automatically again."
     },
     "toggle": "Arrange",
+    "barLabel": "Arrange photos",
+    "photoOptions": "Photo options",
+    "sheetSummary": "{{w}} × {{h}} {{unit}}, page {{page}} of {{total}}",
     "undo": "Undo",
     "rerun": "Re-run auto layout",
     "rerunConfirm": "Re-run auto layout? Your moves and size changes will be lost.",

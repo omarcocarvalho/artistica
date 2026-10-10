@@ -1,6 +1,6 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { selectImageDescriptors, useImages } from '../../features/images'
 import { buildLayoutItems } from '../../features/layout/build-items'
 import { computeLayout } from '../../features/layout/compute-layout'
@@ -266,5 +266,191 @@ describe('ArrangeToolbar: the selected photo', () => {
     })
     await user.click(screen.getByRole('button', { name: 'Move left' }))
     expect(said()).toBe("Can't move it further: another photo or the margin is in the way.")
+  })
+})
+
+describe('ArrangeToolbar on the phone (B5)', () => {
+  function phone() {
+    stubDesktop(false)
+    render(<ArrangeToolbar variant="phone" />)
+    return userEvent.setup()
+  }
+  function arranged(id: string | null) {
+    act(() => {
+      useArrange.getState().setMode(true)
+      useArrange.getState().select(id)
+    })
+  }
+  const bar = () => screen.getByRole('group', { name: 'Arrange photos' })
+
+  it('puts Arrange, Undo and Re-run in one group of 44 px buttons', () => {
+    show([loaded('a')])
+    phone()
+    const toggle = within(bar()).getByRole('button', { name: 'Arrange' })
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    expect(toggle).toHaveClass('ds-btn--lg')
+    for (const name of ['Undo', 'Re-run auto layout']) {
+      const b = within(bar()).getByRole('button', { name })
+      expect(b).toHaveClass('ds-btn--icon', 'ds-btn--lg')
+      expect(b).toHaveTextContent('')
+      expect(b).toBeDisabled()
+    }
+  })
+
+  it('shows no controls for the selected photo in the bar itself', () => {
+    show([loaded('a')])
+    phone()
+    arranged('a#0')
+    expect(screen.queryByRole('combobox', { name: 'Move to page' })).toBeNull()
+    expect(screen.queryByRole('spinbutton', { name: 'Width' })).toBeNull()
+  })
+
+  it('offers Photo options only for a selected photo in Arrange mode', () => {
+    show([loaded('a')])
+    phone()
+    expect(screen.queryByRole('button', { name: 'Photo options' })).toBeNull()
+    act(() => {
+      useArrange.getState().select('a#0')
+    })
+    expect(screen.queryByRole('button', { name: 'Photo options' })).toBeNull()
+    arranged(null)
+    expect(screen.queryByRole('button', { name: 'Photo options' })).toBeNull()
+    arranged('a#0')
+    expect(within(bar()).getByRole('button', { name: 'Photo options' })).toHaveClass('ds-btn--lg')
+  })
+
+  it("Photo options opens the selected photo's sheet: Move to page, Swap with, Width and 44 px Position", async () => {
+    show([loaded('a'), loaded('b')])
+    const user = phone()
+    arranged('a#0')
+    const { b } = blockOf('a#0')
+    await user.click(screen.getByRole('button', { name: 'Photo options' }))
+    const sheet = screen.getByRole('dialog', { name: 'a.jpg' })
+    expect(sheet).toHaveClass('ds-sheet')
+    expect(sheet).toHaveAccessibleDescription(
+      new RegExp(`^${String(Math.round(b.tileW))}(\\.\\d)? × [\\d.]+ mm, page 1 of 1$`),
+    )
+    expect(within(sheet).getByRole('combobox', { name: 'Move to page' })).toBeInTheDocument()
+    expect(within(sheet).getByRole('combobox', { name: 'Swap with…' })).toBeInTheDocument()
+    expect(within(sheet).getByRole('spinbutton', { name: 'Width' })).toBeInTheDocument()
+    for (const name of ['Move left', 'Move up', 'Move down', 'Move right'])
+      expect(within(sheet).getByRole('button', { name })).toHaveClass('ds-btn--icon', 'ds-btn--lg')
+    await user.click(within(sheet).getByRole('button', { name: 'Done' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('the sheet runs the operations and stays open, so several can follow', async () => {
+    show([loaded('a'), loaded('b')])
+    const user = phone()
+    arranged('b#0')
+    await user.click(screen.getByRole('button', { name: 'Photo options' }))
+    const sheet = screen.getByRole('dialog', { name: 'b.jpg' })
+    await user.selectOptions(
+      within(sheet).getByRole('combobox', { name: 'Move to page' }),
+      'New page',
+    )
+    expect(useArrange.getState().manual?.pageCount).toBe(2)
+    expect(said()).toMatch(/page 2, /)
+    expect(screen.getByRole('dialog', { name: 'b.jpg' })).toHaveAccessibleDescription(
+      /, page 2 of 2$/,
+    )
+    expect(useArrangeUi.getState().focusId).toBeNull()
+    await user.click(within(sheet).getByRole('button', { name: 'Done' }))
+    arranged('a#0')
+    await user.click(screen.getByRole('button', { name: 'Photo options' }))
+    expect(screen.getByRole('dialog', { name: 'a.jpg' })).toHaveAccessibleDescription(
+      /, page 1 of 2$/,
+    )
+  })
+
+  it('the sheet closes when its photo goes away', async () => {
+    show([loaded('a'), loaded('b')])
+    const user = phone()
+    arranged('b#0')
+    await user.click(screen.getByRole('button', { name: 'Photo options' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    act(() => {
+      useImages.setState({ images: [loaded('a')] })
+    })
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('a sheet closed because its photo went away stays closed when the photo comes back', async () => {
+    show([loaded('a'), loaded('b')])
+    const user = phone()
+    arranged('b#0')
+    await user.click(screen.getByRole('button', { name: 'Photo options' }))
+    act(() => {
+      useImages.setState({ images: [loaded('a')] })
+    })
+    act(() => {
+      useImages.setState({ images: [loaded('a'), loaded('b')] })
+    })
+    expect(screen.getByRole('button', { name: 'Photo options' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('closing the sheet brings the photo into view (it may be on another page now)', async () => {
+    show([loaded('a'), loaded('b')])
+    const user = phone()
+    arranged('b#0')
+    const block = document.createElement('div')
+    block.dataset.blockId = 'b#0'
+    let focusedAtScroll: Element | null = null
+    const scroll = vi.fn(() => {
+      focusedAtScroll = document.activeElement
+    })
+    block.scrollIntoView = scroll
+    document.body.append(block)
+    try {
+      await user.click(screen.getByRole('button', { name: 'Photo options' }))
+      await user.click(screen.getByRole('button', { name: 'Done' }))
+      expect(scroll).toHaveBeenCalledWith({ block: 'nearest', inline: 'center' })
+      expect(focusedAtScroll).toBe(screen.getByRole('button', { name: 'Photo options' }))
+    } finally {
+      block.remove()
+    }
+  })
+
+  it('when what opened the sheet is gone, closing it focuses the photo (a tapped block re-rendered on another page)', async () => {
+    show([loaded('a'), loaded('b')])
+    const user = phone()
+    arranged('b#0')
+    const block = document.createElement('div')
+    block.dataset.blockId = 'b#0'
+    block.tabIndex = 0
+    block.scrollIntoView = vi.fn()
+    const tapped = document.createElement('div')
+    tapped.tabIndex = 0
+    document.body.append(block, tapped)
+    try {
+      tapped.focus()
+      act(() => {
+        screen.getByRole('button', { name: 'Photo options' }).click()
+      })
+      expect(screen.getByRole('dialog', { name: 'b.jpg' })).toBeInTheDocument()
+      tapped.remove()
+      await user.click(screen.getByRole('button', { name: 'Done' }))
+      expect(document.activeElement).toBe(block)
+    } finally {
+      block.remove()
+      tapped.remove()
+    }
+  })
+
+  it('Re-run asks first on the phone too', async () => {
+    show([loaded('a'), loaded('b')])
+    const user = phone()
+    arranged('a#0')
+    act(() => {
+      useArrange.getState().apply((m) => ({ ok: true, manual: m }))
+    })
+    await user.click(within(bar()).getByRole('button', { name: 'Re-run auto layout' }))
+    const dialog = screen.getByRole('dialog', {
+      name: 'Re-run auto layout? Your moves and size changes will be lost.',
+    })
+    await user.click(within(dialog).getByRole('button', { name: 'Re-run' }))
+    expect(useArrange.getState().manual).toBeNull()
+    expect(said()).toBe('Photos arranged automatically.')
   })
 })
