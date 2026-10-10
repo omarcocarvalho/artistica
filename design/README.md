@@ -15,7 +15,7 @@ Clickable HTML mockups for every screen in spec §8 "D — Design". Open `index.
 | `index.html` | Gallery of all screens and the palette. |
 | `landing.html` | Public landing page (`/`): hero, how it works, features, privacy, FAQ. |
 | `workspace.html` | Desktop workspace: images panel · live page preview · settings tabs. |
-| `mobile-flow.html` | Phone flow (390 × 844) in a device frame: Images → Page → Studies → Preview → Export, plus the edit bottom sheet. |
+| `mobile-flow.html` | Phone flow (390 × 844) in a device frame: Images → Page → Studies → Preview → Export, plus the edit bottom sheet. Preview has the Arrange toolbar under the pages; two more phones show Arrange mode (44 px handles) and the selected photo's sheet (Move to page, Swap with…, Width, Position). Export is inline in its step. |
 | `image-edit.html` | Per-image edit dialog: crop and aspect, rotate, flip, copies, Auto/Fixed size, DPI meter and low-DPI warning. |
 | `page-setup.html` | Page tab with bleed on: guide legend, shortened crop marks, and the "gutter raised" note. |
 | `studies.html` | Studies tab: versions, blur, values 2–20, single-hue picker, generated ramp, apply to all; study groups on the page. |
@@ -23,6 +23,9 @@ Clickable HTML mockups for every screen in spec §8 "D — Design". Open `index.
 | `export.html` | Export dialog: summary → page-by-page progress → download, with a "print at 100%" tip. |
 | `empty-state.html` | First run with no images. Export is disabled and the reason is given. |
 | `errors.html` | CORS link, unsupported file / non-image paste / animated GIF, no face, low resolution, oversized fixed size, model download failure, export with 0 images. |
+| `presets.html` | Presets: the top-bar button; the dialog empty and with three presets; saving (no name, a taken name, a full list); renaming; the apply and delete confirmations; Export all and Import… with every result and error; the phone bottom sheet. |
+| `arrange.html` | Arrange mode: the preview toolbar off and on (Undo, Re-run auto layout, and Move to page, Swap with…, Width and Position for the selected photo); a keyboard-driven desk; drag ghosts (valid, invalid), a swap target, a keyboard pick-up, a fixed-size photo, the re-run confirmation, the "arranged automatically again" notices and what a screen reader hears. |
+| `logo.html` | Three logo directions on the sketchbook concept, recommended one first, at 512, 180, 32 and 16 px, in light, dark, forced colours and one colour. |
 
 ## Visual concept: "a sketchbook on a warm studio desk"
 
@@ -40,6 +43,8 @@ The **printed page is always pure white** in both themes and sits on the desk wi
 - printer crop marks outside the bleed. On sides that face a neighbour, marks are **shortened** to `gutter/2 − bleed − offset`. With 6 mm gutter and 3 mm bleed they disappear, as the spec requires (§2.3).
 
 Study groups (§2.4, R6) get a dashed group outline on screen.
+
+In Arrange mode (`arrange.html`) each photo with its study versions is one block with a dashed outline; the selected block has four corner handles (24 px hit areas, 44 px on phones). The sheet is white in both themes, so these outlines use fixed colours with at least 3:1 on white instead of theme tokens, and forced colours switch them to system colours.
 
 ## Palette
 
@@ -138,4 +143,4 @@ These are the intended fonts. They are self-hosted in the real app; the mockups 
 9. **Hue picker.** The mockup has 7 pigment swatches + neutral grey + a 0–360° hue slider. Is a full colour picker wanted instead, or is this enough?
 10. **Values preview with N ≠ 5.** The mockup always shows 5 tones on the page. The real preview shows exactly N. Confirm the ramp ends: near-black (L ≈ 0.20) to lightest tint (L ≈ 0.95).
 11. **Export file name.** The mockup proposes `artistica-<paper>-<date>.pdf`, editable before export.
-12. **Logo.** The mark is a placeholder: a tilted sheet with two tiles and an ochre squiggle. Do you want a proper logo pass?
+12. **Logo.** Answered (review round 1, D11: a proper logo pass in M5). The three directions are in `logo.html`; direction A, "Sheet and spiral", is recommended for v0.5.0, and the owner chooses at the v1.0.0 sign-off.

@@ -387,6 +387,113 @@
       });
     });
 
+    /* ---------- Arrange mode demo (keyboard; drag is shown as states) --- */
+    $$("[data-arrange-demo]").forEach(function (root) {
+      var SAFE = 5, GUTTER = 6, MIN = 20;
+      var live = $("[data-arrange-live]", root);
+      var undoBtn = $("[data-arrange-undo]", root);
+      var rerunBtn = $("[data-arrange-rerun-open]", root);
+      function changed(on) { undoBtn.disabled = undo.length === 0; if (rerunBtn) rerunBtn.disabled = !on; }
+      var blocks = $$("[data-block]", root);
+      var undo = [], picked = null;
+      function num(el, v) { return +el.style.getPropertyValue(v); }
+      function box(el) { return { x: num(el, "--x"), y: num(el, "--y"), w: num(el, "--w"), h: num(el, "--h") }; }
+      function pageOf(el) { return +el.closest("[data-page]").getAttribute("data-page"); }
+      function snapshot() { return blocks.map(function (b) { return { b: b, s: b.getAttribute("style"), t: $$(".tile", b).map(function (t) { return t.getAttribute("style"); }) }; }); }
+      function restore(snap) { snap.forEach(function (r) { r.b.setAttribute("style", r.s); $$(".tile", r.b).forEach(function (t, i) { t.setAttribute("style", r.t[i]); }); label(r.b); }); }
+      var initial = snapshot();
+      function say(text) { if (live) { live.textContent = ""; setTimeout(function () { live.textContent = text; }, 30); } }
+      function label(b) { var r = box(b); b.setAttribute("aria-label", b.getAttribute("data-name") + ", " + r.w + " × " + r.h + " mm, page " + pageOf(b)); }
+      function select(b) { blocks.forEach(function (o) { o.classList.toggle("is-selected", o === b); }); var w = $("[data-width]", root); if (w) { var t = $(".tile", b); w.value = t ? num(t, "--w") : box(b).w; } }
+      function refusal(b, r) {
+        if (r.x < SAFE || r.y < SAFE || r.x + r.w > 210 - SAFE || r.y + r.h > 297 - SAFE) return "it would go past the margin";
+        var p = pageOf(b);
+        for (var i = 0; i < blocks.length; i++) {
+          var o = blocks[i]; if (o === b || pageOf(o) !== p) continue;
+          var q = box(o);
+          if (r.x < q.x + q.w + GUTTER && q.x < r.x + r.w + GUTTER && r.y < q.y + q.h + GUTTER && q.y < r.y + r.h + GUTTER) return "it would overlap another photo";
+        }
+        return null;
+      }
+      function commit(b, r, scale) {
+        var why = refusal(b, r);
+        if (why) { say("Can't place it there: " + why + "."); return; }
+        undo.push(snapshot()); if (undo.length > 50) undo.shift(); changed(true);
+        b.style.setProperty("--x", r.x); b.style.setProperty("--y", r.y); b.style.setProperty("--w", r.w); b.style.setProperty("--h", r.h);
+        if (scale) $$(".tile", b).forEach(function (t) { ["--x", "--y", "--w", "--h"].forEach(function (v) { t.style.setProperty(v, Math.round(num(t, v) * scale * 10) / 10); }); });
+        label(b);
+        say(b.getAttribute("data-name") + ", " + r.w + " × " + r.h + " mm, page " + pageOf(b) + ", " + r.x + " mm from the left, " + r.y + " mm from the top.");
+      }
+      function move(b, k) { var r = box(b), d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[k]; commit(b, { x: r.x + d[0], y: r.y + d[1], w: r.w, h: r.h }); }
+      $$("[data-nudge]", root).forEach(function (n) { n.addEventListener("click", function () { var b = $(".block.is-selected", root); if (b) move(b, n.getAttribute("data-nudge")); }); });
+      blocks.forEach(function (b) {
+        b.addEventListener("click", function () { select(b); });
+        b.addEventListener("focus", function () { select(b); });
+        b.addEventListener("keydown", function (e) {
+          if (!root.classList.contains("is-arranging")) return;
+          var r = box(b), k = e.key, d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[k];
+          if (d) {
+            e.preventDefault();
+            if (e.shiftKey) {
+              if (b.getAttribute("data-fixed") === "1") { say("Fixed size: change it in Edit."); return; }
+              var first = $(".tile", b), tw = num(first, "--w"), grow = (k === "ArrowRight" || k === "ArrowDown") ? 1 : -1;
+              var ntw = tw + grow; if (Math.min(ntw, num(first, "--h") * ntw / tw) < MIN) { say("Can't make it smaller: photos keep at least 20 mm on their short side."); return; }
+              var s = ntw / tw;
+              commit(b, { x: r.x, y: r.y, w: Math.round(r.w * s * 10) / 10, h: Math.round(r.h * s * 10) / 10 }, s);
+            } else move(b, k);
+          } else if (k === "Enter" || k === " ") {
+            e.preventDefault();
+            if (picked && picked !== b) {
+              var a = box(picked), c = box(b);
+              undo.push(snapshot()); changed(true);
+              picked.style.setProperty("--x", c.x); picked.style.setProperty("--y", c.y);
+              b.style.setProperty("--x", a.x); b.style.setProperty("--y", a.y);
+              var pa = picked.closest("[data-page]"), pb = b.closest("[data-page]");
+              if (pa !== pb) { var mark = document.createComment(""); pa.replaceChild(mark, picked); pb.replaceChild(picked, b); pa.replaceChild(b, mark); }
+              picked.classList.remove("block--picked"); label(picked); label(b);
+              say("Swapped " + picked.getAttribute("data-name") + " and " + b.getAttribute("data-name") + ".");
+              picked = null;
+            } else if (picked === b) { b.classList.remove("block--picked"); picked = null; say("Cancelled."); }
+            else { picked = b; b.classList.add("block--picked"); say("Picked up " + b.getAttribute("data-name") + ". Move to another photo and press Enter to swap, or Escape to cancel."); }
+          } else if (k === "Escape" && picked) { picked.classList.remove("block--picked"); picked = null; say("Cancelled."); }
+        });
+      });
+      var toggle = $("[data-arrange-toggle]", root);
+      if (toggle) toggle.addEventListener("click", function () {
+        var on = toggle.getAttribute("aria-pressed") !== "true";
+        toggle.setAttribute("aria-pressed", on ? "true" : "false");
+        root.classList.toggle("is-arranging", on);
+        blocks.forEach(function (b) { if (on) { b.setAttribute("role", "button"); b.setAttribute("aria-roledescription", "movable photo"); } else { b.removeAttribute("aria-roledescription"); } });
+      });
+      if (undoBtn) undoBtn.addEventListener("click", function () { var s = undo.pop(); if (s) restore(s); undoBtn.disabled = undo.length === 0; say("Undone."); });
+      $$("[data-arrange-rerun]").forEach(function (b) { b.addEventListener("click", function () { restore(initial); undo = []; changed(false); say("Photos arranged automatically."); }); });
+      var w = $("[data-width]", root);
+      if (w) w.addEventListener("change", function () {
+        var b = $(".block.is-selected", root); if (!b || b.getAttribute("data-fixed") === "1") return;
+        var first = $(".tile", b), s = (parseFloat(w.value) || num(first, "--w")) / num(first, "--w"), r = box(b);
+        commit(b, { x: r.x, y: r.y, w: Math.round(r.w * s * 10) / 10, h: Math.round(r.h * s * 10) / 10 }, s);
+      });
+    });
+
+    /* Phone arrange toolbar: Arrange toggle and the selected-photo sheet */
+    $$("[data-m-arrange]").forEach(function (root) {
+      var toggle = $("[data-arrange-toggle]", root);
+      var opts = $$("[data-needs-selection]", root);
+      if (toggle) toggle.addEventListener("click", function () {
+        var on = toggle.getAttribute("aria-pressed") !== "true";
+        toggle.setAttribute("aria-pressed", on ? "true" : "false");
+        root.classList.toggle("is-arranging", on);
+        if (!on) { $$(".block.is-selected", root).forEach(function (b) { b.classList.remove("is-selected"); }); opts.forEach(function (o) { o.hidden = true; }); }
+      });
+      $$(".block", root).forEach(function (b) {
+        b.addEventListener("click", function () {
+          if (!root.classList.contains("is-arranging")) return;
+          $$(".block", root).forEach(function (o) { o.classList.toggle("is-selected", o === b); });
+          opts.forEach(function (o) { o.hidden = false; });
+        });
+      });
+    });
+
     /* ---------- Dropzone hover feedback -------------------------------- */
     $$(".dropzone").forEach(function (z) {
       ["dragenter", "dragover"].forEach(function (ev) { z.addEventListener(ev, function (e) { e.preventDefault(); z.classList.add("is-over"); }); });
