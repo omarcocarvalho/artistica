@@ -42,6 +42,8 @@ export type ArrangeIntent =
       readonly anchor: ArrangeCorner
     }
   | { readonly kind: 'swap'; readonly id: string; readonly with: string }
+  /** To that page at the first place with room; the page after the last one is a new page. */
+  | { readonly kind: 'page'; readonly id: string; readonly page: number }
 
 export type ArrangePreview =
   { readonly ok: true; readonly page: number; readonly rect: ArrangeRect } | { readonly ok: false }

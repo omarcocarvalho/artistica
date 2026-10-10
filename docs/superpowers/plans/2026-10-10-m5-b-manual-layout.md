@@ -162,6 +162,21 @@ All tests install the strict network guard; chromium, firefox and webkit.
 
 ---
 
+### Task B7: Arrange selection and moving between pages by keyboard
+
+**Branch:** `fix/arrange-keyboard` · **PR title:** `fix(preview): keep the arrange selection when tabbing back and move photos between pages by keyboard` · **Depends on:** B5, B6 · Added by the controller after the B6 review (WCAG 2.1.1, 2.4.3; Q19 in the M5 ledger).
+
+- [ ] **Step 1: Failing tests** (`ArrangeLayer.test.tsx`, `arrange-controller.test.tsx`, `PreviewSlot.test.tsx`):
+  - focus alone never selects a block, in either Tab direction; pointer down, a click (also a screen reader's activation), and every key the block handles (arrows, Shift + arrows, Page Up/Down, Enter, Space) select it before acting; a keyboard swap selects the picked-up photo; Escape and keys the block ignores leave the selection alone;
+  - Page Down on a block commits `{ kind: 'page', page: page + 1 }` and Page Up `page − 1` (M5-R13 through `moveToPage`: the page after the last is a new page), default prevented, a held key moves one page only; Page Up on the first page is refused with "It's already on the first page."; one undo step each, announced like the other moves, focus stays on the photo on its new page;
+  - Ctrl/Cmd + Z on a photo keeps focus on that photo when the undo moves it to another page;
+  - the block instructions add "Page Up and Page Down to move to another page".
+- [ ] **Step 2: RED, implement, GREEN.**
+- [ ] **Step 3: E2E** (`e2e/arrange.spec.ts`, chromium, firefox, webkit; `e2e/arrange-phone.spec.ts`, mobile-chromium, mobile-webkit): B-D6 asserts the toolbar acts on the photo just used and its log follows; **B-D8** choose a middle photo by keyboard, Shift+Tab back over the photos before it, the toolbar acts on it, and Tab alone changes nothing; **B-D9** Page Down and Page Up move a middle photo to page 2 and back by keyboard only, one undo step each, axe-clean; **B-P5** the same keys on the phone with a keyboard, the carousel follows the photo.
+- [ ] **Step 4: Pre-PR command (E2E port 4761), PR.**
+
+---
+
 ## Contract change requests
 
 **B2 (reconciliation), proposed by the implementer.** Ruled (accepted) in the B2 review; the binding text is the overview's "Contract change requests → Ruled → B2".

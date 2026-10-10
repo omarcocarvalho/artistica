@@ -14,6 +14,7 @@ import {
   commitOp,
   pickUpBlock,
   previewOp,
+  refocusBlock,
   rerunAutoLayout,
   selectBlock,
   setArrangeMode,
@@ -208,6 +209,46 @@ describe('commitOp', () => {
     expect(said()).toMatch(/^b\.jpg, .* page 2, /)
   })
 
+  it('Page Down on the last page makes a new page, as one undo step, and Page Up brings it back', () => {
+    show([loaded('a'), loaded('b')])
+    expect(commitOp({ kind: 'page', id: 'b#0', page: 1 }, { fromBlock: true })).toBe(true)
+    expect(useArrange.getState().manual?.pageCount).toBe(2)
+    expect(useArrange.getState().undo).toHaveLength(1)
+    expect(useArrangeUi.getState().focusId).toBe('b#0')
+    expect(said()).toMatch(/^b\.jpg, .* page 2, /)
+    expect(commitOp({ kind: 'page', id: 'b#0', page: 0 }, { fromBlock: true })).toBe(true)
+    expect(useArrange.getState().manual?.pageCount).toBe(1)
+    expect(said()).toMatch(/^b\.jpg, .* page 1, /)
+  })
+
+  it('Page Up on the first page is refused and says so', () => {
+    show([loaded('a'), loaded('b')])
+    expect(commitOp({ kind: 'page', id: 'a#0', page: -1 }, { fromBlock: true })).toBe(false)
+    expect(said()).toBe("It's already on the first page.")
+    expect(useArrange.getState().undo).toHaveLength(0)
+  })
+
+  it('Page Up to a full page says there is no room, not that it is the first page', () => {
+    show([loaded('a'), loaded('b')])
+    commitOp({ kind: 'page', id: 'b#0', page: 1 }, { fromBlock: true })
+    const grow = (id: string) => {
+      const tileW = useArrange.getState().manual?.blocks.find((x) => x.blockId === id)?.tileW
+      return commitOp(
+        { kind: 'resize', id, tileW: (tileW ?? 0) + 5, anchor: 'tl' },
+        { fromBlock: true },
+      )
+    }
+    for (const id of ['a#0', 'b#0']) {
+      let steps = 0
+      while (steps < 100 && grow(id)) steps++
+      expect(steps).toBeGreaterThan(0)
+    }
+    const before = useArrange.getState().manual
+    expect(commitOp({ kind: 'page', id: 'b#0', page: 0 }, { fromBlock: true })).toBe(false)
+    expect(said()).toBe("Can't place it there: there is no room for it on that page.")
+    expect(useArrange.getState().manual).toBe(before)
+  })
+
   it('nudging into the margin is "blocked"', () => {
     show([loaded('a')])
     const m = base()
@@ -311,6 +352,21 @@ describe('undo, re-run, pick-up, select, mode', () => {
     undoArrange()
     expect(useArrange.getState().undo).toHaveLength(0)
     expect(said()).toBe('Undone.')
+  })
+
+  it('refocusing after Undo asks for the block only while it is shown', () => {
+    show([loaded('a'), loaded('b')])
+    refocusBlock('zz#0')
+    expect(useArrangeUi.getState().focusId).toBeNull()
+    refocusBlock('b#0')
+    expect(useArrangeUi.getState().focusId).toBe('b#0')
+  })
+
+  it('refocusing after Undo asks for the photo Undo was pressed on, not the selected one', () => {
+    show([loaded('a'), loaded('b')])
+    selectBlock('a#0')
+    refocusBlock('b#0')
+    expect(useArrangeUi.getState().focusId).toBe('b#0')
   })
 
   it('re-run goes back to the automatic layout and says so', () => {

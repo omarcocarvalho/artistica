@@ -293,7 +293,7 @@ describe('PagePreview in Arrange mode', () => {
     expect(screen.getByText('203 DPI')).toBeInTheDocument()
     expect(screen.getByText('Scaled to fit')).toBeInTheDocument()
     const instructions =
-      'Use the arrow keys to move, Shift and the arrow keys to resize, Enter to swap with another photo.'
+      'Use the arrow keys to move, Shift and the arrow keys to resize, Page Up and Page Down to move to another page, Enter to swap with another photo.'
     expect(screen.getByRole('button', { name: /^pears\.heic, / })).toHaveAccessibleDescription(
       `${instructions} Low resolution: 203 DPI`,
     )

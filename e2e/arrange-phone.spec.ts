@@ -352,6 +352,30 @@ test.describe('Arrange on the phone (B5)', () => {
     await expect(bar(page).getByRole('button', { name: 'Undo' })).toBeDisabled()
   })
 
+  test('B-P5 with a keyboard, Page Down and Page Up move a photo to another page and back, and the carousel follows it', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000)
+    const app = await openArranging(page)
+    const said = page.locator('[aria-live="polite"]').filter({ hasText: /\S/ }).first()
+    const block = blockOf(page, NAMES[1])
+    await block.focus()
+    await expect(bar(page).getByRole('button', { name: 'Photo options' })).toHaveCount(0)
+
+    await page.keyboard.press('PageDown')
+    await expect(said).toContainText(/^portrait\.jpg, .*, page 2, /)
+    await expect(app.pageFigures).toHaveCount(2)
+    await expect(block).toBeFocused()
+    await expect(block).toBeInViewport()
+    await expect(bar(page).getByRole('button', { name: 'Photo options' })).toBeVisible()
+
+    await page.keyboard.press('PageUp')
+    await expect(said).toContainText(/^portrait\.jpg, .*, page 1, /)
+    await expect(app.pageFigures).toHaveCount(1)
+    await expect(block).toBeFocused()
+    await expect(block).toBeInViewport()
+  })
+
   test('B-P4 a long press on a photo selects no text, has no callout menu and moves nothing', async ({
     page,
   }) => {

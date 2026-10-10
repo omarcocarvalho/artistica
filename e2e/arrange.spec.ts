@@ -180,6 +180,9 @@ function gutterViolations(boxes: readonly PlacedBox[], gutter: number): string[]
   return out
 }
 
+/** A file name as a regular expression source. */
+const esc = (f: string) => f.replace('.', '\\.')
+
 const rectOf = (boxes: readonly PlacedBox[], file: string): PlacedBox => {
   const b = boxes.find((x) => x.name === file)
   if (!b) throw new Error(`no box for ${file}`)
@@ -765,18 +768,21 @@ test.describe('manual layout by keyboard only (desktop)', () => {
     await expect(arrange.block(PORTRAIT.name)).toBeFocused()
     await app.expectPreviewSettled()
 
-    // The selected photo's toolbar controls, reached backwards.
+    // The selected photo's toolbar controls, reached backwards: they act on the photo just used.
     for (let i = 0; i < 6 && steps.at(-1)?.name !== 'Move right'; i++) await press(back)
     await expect(arrange.nudgeButton('Move right')).toBeFocused()
-    const label = (await arrange.selectedGroup.getAttribute('aria-label')) ?? ''
-    const target = label.replace(/^Selected photo: /, '')
-    expect(target).toMatch(/\.jpg$/)
-    const other = target === PORTRAIT.name ? partner : PORTRAIT.name
+    await expect(arrange.selectedGroup).toHaveAttribute(
+      'aria-label',
+      `Selected photo: ${PORTRAIT.name}`,
+    )
+    const target = PORTRAIT.name
+    const other = partner
     const otherBox = await arrange.blockOf(other)
-    const esc = (f: string) => f.replace('.', '\\.')
+    for (let i = 0; i < 3; i++) await press(back)
+    await expect(arrange.nudgeButton('Move left')).toBeFocused()
     await press('Space')
-    await arrange.expectAnnouncement(new RegExp(`^${esc(target)}, .*, page 1, `))
-    for (let i = 0; i < 4; i++) await press(back)
+    await arrange.expectAnnouncement(new RegExp(`^${esc(target)}, .*, page 1, 10 mm from the left`))
+    await press(back)
     await expect(arrange.width).toBeFocused()
     await arrange.width.fill('60')
     await press('Enter')
@@ -805,10 +811,10 @@ test.describe('manual layout by keyboard only (desktop)', () => {
       'Picked up portrait.jpg. Move to another photo and press Enter to swap, or Escape to cancel.',
       'portrait.jpg, 76.2 × 114.7 mm, page 1, 108 mm from the left, 138.6 mm from the top.',
       'Undone.',
-      'a-4x3.jpg, 92 × 122.6 mm, page 1, 108 mm from the left, 10 mm from the top.',
-      'a-4x3.jpg, 45 × 60 mm, page 1, 108 mm from the left, 10 mm from the top.',
-      'a-4x3.jpg, 91 × 121.3 mm, page 1, 11 mm from the left, 11 mm from the top.',
-      'a-4x3.jpg, 121.3 × 91 mm, page 2, 10 mm from the left, 10 mm from the top.',
+      'portrait.jpg, 91 × 136.9 mm, page 1, 10 mm from the left, 11 mm from the top.',
+      'portrait.jpg, 60 × 90.3 mm, page 1, 10 mm from the left, 11 mm from the top.',
+      'portrait.jpg, 76.2 × 114.7 mm, page 1, 108 mm from the left, 138.6 mm from the top.',
+      'portrait.jpg, 114.7 × 76.2 mm, page 2, 10 mm from the left, 10 mm from the top.',
     ])
 
     for (const colorScheme of ['light', 'dark'] as const) {
@@ -823,6 +829,162 @@ test.describe('manual layout by keyboard only (desktop)', () => {
       const shown = await focusProbe(page)
       expect(shown.name).toMatch(/^portrait\.jpg, /)
       expect(shown.visible && shown.unobscured).toBe(true)
+      await expectNoAxeViolations(page)
+    }
+  })
+})
+
+/** The photos' file names in Tab order. */
+async function tabOrder(arrange: ArrangeArea): Promise<string[]> {
+  const names = await arrange.blocks.evaluateAll((els: FocusEl[]) =>
+    els.map((el) => el.getAttribute('aria-label') ?? ''),
+  )
+  return names.map(fileOf)
+}
+
+test.describe('manual layout by keyboard only: the chosen photo and other pages (desktop)', () => {
+  runOnly('chromium', 'firefox', 'webkit')
+  test.use({ viewport: { width: 1280, height: 900 } })
+
+  /** Four photos on one page, Arrange on by keyboard, focus on the Arrange button. */
+  async function arrangeByKeyboard(page: Page, browserName: string) {
+    const { app, arrange } = await start(page)
+    await load(app, [FIXTURES.portraitJpg, ...(await shapes(page, 3))])
+    await watchAnnouncements(arrange.liveRegion)
+    const tab = browserName === 'webkit' ? 'Alt+Tab' : 'Tab'
+    const back = browserName === 'webkit' ? 'Alt+Shift+Tab' : 'Shift+Tab'
+    await page.locator('body').click({ position: { x: 2, y: 2 } })
+    for (let i = 0; i < 40 && (await focusProbe(page)).name !== 'Arrange'; i++)
+      await page.keyboard.press(tab)
+    expect((await focusProbe(page)).name).toBe('Arrange')
+    await page.keyboard.press('Enter')
+    await expect(arrange.toggle).toHaveAttribute('aria-pressed', 'true')
+    const order = await tabOrder(arrange)
+    expect(order).toHaveLength(4)
+    return { app, arrange, tab, back, order }
+  }
+
+  test('B-D8 the toolbar acts on the photo chosen by keyboard after Shift+Tab back over the photos before it, and Tab alone changes nothing', async ({
+    page,
+    browserName,
+  }) => {
+    test.setTimeout(180_000)
+    const { app, arrange, tab, back, order } = await arrangeByKeyboard(page, browserName)
+    const middle = order[2] ?? ''
+    for (let i = 0; i < 3; i++) await page.keyboard.press(tab)
+    await expect(arrange.block(middle)).toBeFocused()
+    await expect(arrange.selectedGroup).toHaveCount(0)
+
+    await page.keyboard.press('ArrowDown')
+    await arrange.expectAnnouncement(new RegExp(`^${esc(middle)}, .*, page 1, `))
+    await expect(arrange.selectedGroup).toHaveAttribute('aria-label', `Selected photo: ${middle}`)
+    await app.expectPreviewSettled()
+    const before = await arrange.blockBoxes()
+
+    let backs = 0
+    for (; backs < 8 && (await focusProbe(page)).name !== 'Move right'; backs++)
+      await page.keyboard.press(back)
+    await expect(arrange.nudgeButton('Move right')).toBeFocused()
+    expect(backs).toBeGreaterThanOrEqual(3)
+    await expect(arrange.selectedGroup).toHaveAttribute('aria-label', `Selected photo: ${middle}`)
+
+    await page.keyboard.press('Space')
+    await arrange.expectAnnouncement(new RegExp(`^${esc(middle)}, .*, page 1, `))
+    await app.expectPreviewSettled()
+    const after = await arrange.blockBoxes()
+    for (const b of after) {
+      const was = rectOf(before, b.name)
+      if (b.name === middle) {
+        expect(b.rect.x).toBeCloseTo(was.rect.x + 1, 3)
+        expect(b.rect.y).toBeCloseTo(was.rect.y, 3)
+      } else expect(b).toEqual(was)
+    }
+
+    // Tab over every photo and back again without pressing anything else: still the same photo.
+    for (let i = 0; i < 4; i++) await page.keyboard.press(tab)
+    await expect(arrange.block(order[3] ?? '')).toBeFocused()
+    for (let i = 0; i < 4; i++) await page.keyboard.press(back)
+    await expect(arrange.nudgeButton('Move right')).toBeFocused()
+    await expect(arrange.selectedGroup).toHaveAttribute('aria-label', `Selected photo: ${middle}`)
+    expect(await arrange.blockBoxes()).toEqual(after)
+
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme })
+      await expectNoAxeViolations(page)
+    }
+  })
+
+  test('B-D9 Page Down and Page Up move a middle photo to another page and back, keyboard only, one undo step each, announced', async ({
+    page,
+    browserName,
+  }) => {
+    test.setTimeout(180_000)
+    const { app, arrange, tab, order } = await arrangeByKeyboard(page, browserName)
+    const middle = order[1] ?? ''
+    for (let i = 0; i < 2; i++) await page.keyboard.press(tab)
+    await expect(arrange.block(middle)).toBeFocused()
+    const auto = await arrange.blockBoxes()
+    const probes: FocusProbe[] = []
+
+    await page.keyboard.press('PageDown')
+    await arrange.expectAnnouncement(new RegExp(`^${esc(middle)}, .*, page 2, `))
+    await expect(app.pageFigures).toHaveCount(2)
+    await app.expectPreviewSettled()
+    await expect(arrange.block(middle)).toBeFocused()
+    probes.push(await focusProbe(page))
+    await expect(arrange.selectedGroup).toHaveAttribute('aria-label', `Selected photo: ${middle}`)
+    const moved = await arrange.blockBoxes()
+    expect(rectOf(moved, middle).page).toBe(1)
+    for (const b of moved.filter((x) => x.name !== middle)) expect(b).toEqual(rectOf(auto, b.name))
+
+    await page.keyboard.press('Control+z')
+    await arrange.expectAnnouncement('Undone.')
+    await expect(app.pageFigures).toHaveCount(1)
+    await app.expectPreviewSettled()
+    expect(await arrange.blockBoxes()).toEqual(auto)
+    await expect(arrange.undo).toBeDisabled()
+
+    await expect(arrange.block(middle)).toBeFocused()
+    await page.keyboard.press('PageDown')
+    await arrange.expectAnnouncement(new RegExp(`^${esc(middle)}, .*, page 2, `))
+    await app.expectPreviewSettled()
+    await page.keyboard.press('PageUp')
+    await arrange.expectAnnouncement(new RegExp(`^${esc(middle)}, .*, page 1, `))
+    await expect(app.pageFigures).toHaveCount(1)
+    await app.expectPreviewSettled()
+    await expect(arrange.block(middle)).toBeFocused()
+    probes.push(await focusProbe(page))
+    await page.keyboard.press('PageUp')
+    await arrange.expectAnnouncement("It's already on the first page.")
+    await page.keyboard.press('Control+z')
+    await arrange.expectAnnouncement('Undone.')
+    await app.expectPreviewSettled()
+    expect(rectOf(await arrange.blockBoxes(), middle).page).toBe(1)
+    await page.keyboard.press('Control+z')
+    await expect(app.pageFigures).toHaveCount(1)
+    await app.expectPreviewSettled()
+    await expect.poll(async () => arrange.blockBoxes()).toEqual(auto)
+    await expect(arrange.undo).toBeDisabled()
+
+    expect(probes.filter((x) => !x.visible || !x.unobscured)).toEqual([])
+    const log = await announcements(page)
+    const re = (r: string) => new RegExp(r)
+    const patterns = [
+      `^${esc(middle)}, .*, page 2, `,
+      '^Undone\\.$',
+      `^${esc(middle)}, .*, page 2, `,
+      `^${esc(middle)}, .*, page 1, `,
+      "^It's already on the first page\\.$",
+      '^Undone\\.$',
+      '^Undone\\.$',
+    ]
+    expect(log).toHaveLength(patterns.length)
+    patterns.forEach((p, i) => {
+      expect(log[i]).toMatch(re(p))
+    })
+
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme })
       await expectNoAxeViolations(page)
     }
   })

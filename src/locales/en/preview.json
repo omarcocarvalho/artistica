@@ -47,7 +47,7 @@
     "moveRight": "Move right",
     "roleDescription": "movable photo",
     "blockName": "{{name}}, {{w}} × {{h}} {{unit}}, page {{page}}",
-    "instructions": "Use the arrow keys to move, Shift and the arrow keys to resize, Enter to swap with another photo.",
+    "instructions": "Use the arrow keys to move, Shift and the arrow keys to resize, Page Up and Page Down to move to another page, Enter to swap with another photo.",
     "fixedHint": "Fixed size: change it in Edit.",
     "chip": {
       "pickedUp": "Picked up",
@@ -63,6 +63,7 @@
       "overlap": "Can't place it there: it would overlap another photo.",
       "outside": "Can't place it there: it would go past the margin.",
       "noRoomOnPage": "Can't place it there: there is no room for it on that page.",
+      "firstPage": "It's already on the first page.",
       "blocked": "Can't move it further: another photo or the margin is in the way.",
       "min": "It can't get any smaller.",
       "grow": "Can't make it bigger: another photo or the margin is in the way.",
