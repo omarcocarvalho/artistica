@@ -3,7 +3,11 @@ import { StrictMode } from 'react'
 import { tileRenderKey } from '../../features/render/pixels/tile-plan'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { selectImageDescriptors, useImages } from '../../features/images'
-import { computeLayout } from '../../features/layout'
+import { buildLayoutItems, computeLayout } from '../../features/layout'
+import { layoutFromManual } from '../../features/layout/manual'
+import { nudge } from '../../features/layout/manual-ops'
+import { NO_GUIDES } from '../../features/lines/guides/types'
+import { buildPageModels } from '../../features/render/page-model/build-page-models'
 import { detectionKey, INITIAL_DETECTIONS, useDetections } from '../../features/lines'
 import { useSettings } from '../../features/settings'
 import { initI18n } from '../../shared/i18n'
@@ -24,6 +28,7 @@ vi.mock('../../features/render', async (importOriginal) => {
   return { ...actual, PagePreview: () => <p>page</p>, GuidesLegend: () => null }
 })
 
+import { useArrange } from '../arrange-store'
 import { usePages } from '../pages-store'
 import { PreviewSlot } from '../slots/PreviewSlot'
 import { useNotices } from '../state/useNotices'
@@ -264,5 +269,203 @@ describe('PipelineEffect with guides (M4)', () => {
     expect(usePages.getState().status).toBe('idle')
     await new Promise((resolve) => setTimeout(resolve, 150))
     expect(usePages.getState().pages).toBe(pages)
+  })
+})
+
+describe('PipelineEffect with a manual layout (M5-R8, M5-R14)', () => {
+  const real = () => {
+    layoutAsync.mockImplementation((setup, items, manual) =>
+      Promise.resolve(computeLayout(setup, items, manual)),
+    )
+  }
+  const addB = () => {
+    const a = useImages.getState().images[0]
+    if (!a) throw new Error('no image')
+    useImages.setState({
+      images: [a, { ...a, id: 'b' as ImageId, name: 'bea.jpg', contentHash: 'h-b' }],
+    })
+  }
+  const items = () => buildLayoutItems(selectImageDescriptors(useImages.getState()))
+  const blockX = (id: string) =>
+    useArrange.getState().manual?.blocks.find((b) => b.blockId === id)?.x
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 250))
+
+  beforeEach(() => {
+    useArrange.setState(useArrange.getInitialState(), true)
+  })
+
+  async function arrangeOneMm(): Promise<void> {
+    real()
+    render(<PipelineEffect />)
+    await waitFor(() => {
+      expect(usePages.getState().pages).toHaveLength(1)
+    })
+    act(() => {
+      expect(useArrange.getState().apply((m) => nudge(m, 'a#0', 1, 0, items()))).toBeNull()
+    })
+    await waitFor(() => {
+      expect(usePages.getState().pages[0]?.tiles[0]?.trim.x).toBeCloseTo(11, 6)
+    })
+  }
+
+  it('an edit runs the pipeline at once with the manual layout, and the pages show it', async () => {
+    real()
+    render(<PipelineEffect />)
+    await waitFor(() => {
+      expect(usePages.getState().pages).toHaveLength(1)
+    })
+    expect(layoutAsync).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), null)
+    act(() => {
+      useArrange.getState().apply((m) => nudge(m, 'a#0', 1, 0, items()))
+    })
+    expect(usePages.getState().status).toBe('computing')
+    const manual = useArrange.getState().manual
+    await waitFor(() => {
+      expect(layoutAsync).toHaveBeenCalledWith(expect.anything(), expect.anything(), manual)
+    })
+    await waitFor(() => {
+      expect(usePages.getState().pages[0]?.tiles[0]?.trim.x).toBeCloseTo(11, 6)
+    })
+    if (!manual) throw new Error('not arranged')
+    const setup = useSettings.getState().pageSetup
+    expect(usePages.getState().pages).toEqual(
+      buildPageModels(
+        layoutFromManual(manual, items(), setup),
+        setup,
+        selectImageDescriptors(useImages.getState()),
+        () => NO_GUIDES,
+      ),
+    )
+  })
+
+  it('adopts a kept or adjusted outcome without an undo step, and settles', async () => {
+    await arrangeOneMm()
+    const undo = useArrange.getState().undo
+    act(() => {
+      addB()
+    })
+    await waitFor(() => {
+      expect(useArrange.getState().manual?.blocks.map((b) => b.blockId)).toEqual(['a#0', 'b#0'])
+    })
+    expect(useArrange.getState().undo).toBe(undo)
+    expect(blockX('a#0')).toBeCloseTo(11, 6)
+    await settle()
+    const calls = layoutAsync.mock.calls.length
+    await settle()
+    expect(layoutAsync).toHaveBeenCalledTimes(calls)
+    expect(usePages.getState().status).toBe('idle')
+  })
+
+  it('a paper change drops the arrangement with its notice', async () => {
+    await arrangeOneMm()
+    act(() => {
+      useSettings.getState().setPageSetup({ paper: 'A3' })
+    })
+    await waitFor(() => {
+      expect(useArrange.getState().manual).toBeNull()
+    })
+    expect(useArrange.getState().undo).toEqual([])
+    expect(useNotices.getState().notices.map((n) => [n.kind, n.message])).toEqual([
+      ['info', 'The paper changed, so the photos were arranged automatically again.'],
+    ])
+    await waitFor(() => {
+      expect(layoutAsync).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), null)
+    })
+  })
+
+  it('margins the arrangement no longer fits drop it with their notice', async () => {
+    await arrangeOneMm()
+    act(() => {
+      useSettings.getState().setPageSetup({ safeAreaMm: 20 })
+    })
+    await waitFor(() => {
+      expect(useArrange.getState().manual).toBeNull()
+    })
+    expect(useNotices.getState().notices.map((n) => [n.kind, n.message])).toEqual([
+      [
+        'info',
+        'Your arrangement no longer fits the new margins, so the photos were arranged automatically again.',
+      ],
+    ])
+  })
+
+  it('removing the last photo drops the arrangement with no notice', async () => {
+    await arrangeOneMm()
+    act(() => {
+      useImages.setState({ images: [] })
+    })
+    await waitFor(() => {
+      expect(usePages.getState().empty).toBe(true)
+    })
+    expect(useArrange.getState()).toMatchObject({ manual: null, undo: [] })
+    expect(useNotices.getState().notices).toEqual([])
+  })
+
+  it('an empty outcome from the engine posts no notice', async () => {
+    await arrangeOneMm()
+    const manual = useArrange.getState().manual
+    layoutAsync.mockImplementation((setup) =>
+      Promise.resolve({
+        ...computeLayout(setup, []),
+        manual: { kind: 'dropped', reason: 'empty' },
+      }),
+    )
+    act(() => {
+      useSettings.getState().setPageSetup({ cropMarks: false })
+    })
+    await waitFor(() => {
+      expect(useArrange.getState().manual).toBeNull()
+    })
+    expect(manual).not.toBeNull()
+    expect(useNotices.getState().notices).toEqual([])
+  })
+
+  it('a result computed for the previous arrangement never replaces a newer edit', async () => {
+    await arrangeOneMm()
+    const pending: (() => void)[] = []
+    layoutAsync.mockImplementation(
+      (setup, items, manual) =>
+        new Promise((resolve) => {
+          pending.push(() => {
+            resolve(computeLayout(setup, items, manual))
+          })
+        }),
+    )
+    act(() => {
+      addB()
+    })
+    await waitFor(() => {
+      expect(pending).toHaveLength(1)
+    })
+    pending[0]?.()
+    useArrange.getState().apply((m) => nudge(m, 'a#0', 1, 0, items()))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(blockX('a#0')).toBeCloseTo(12, 6)
+    await waitFor(() => {
+      expect(pending).toHaveLength(2)
+    })
+    pending[1]?.()
+    await waitFor(() => {
+      expect(
+        usePages.getState().pages[0]?.tiles.find((t) => t.imageId === 'a')?.trim.x,
+      ).toBeCloseTo(12, 6)
+    })
+    expect(blockX('a#0')).toBeCloseTo(12, 6)
+  })
+
+  it('undo and re-run auto layout run the pipeline with the restored state', async () => {
+    await arrangeOneMm()
+    act(() => {
+      useArrange.getState().undoLast()
+    })
+    await waitFor(() => {
+      expect(usePages.getState().pages[0]?.tiles[0]?.trim.x).toBeCloseTo(10, 6)
+    })
+    act(() => {
+      useArrange.getState().rerunAuto()
+    })
+    await waitFor(() => {
+      expect(layoutAsync).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), null)
+    })
   })
 })

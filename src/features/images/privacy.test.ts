@@ -32,6 +32,14 @@ describe('privacy and laziness guards', () => {
     for (const f of files) expect(code(f), f).not.toMatch(banned)
   })
 
+  it('the arrange store (manual layout, undo stack) is memory-only too (M5-R7)', () => {
+    const arrange = join(srcRoot, 'app', 'arrange-store.ts')
+    expect(allSrc).toContain(arrange)
+    expect(code(arrange)).not.toMatch(
+      /\b(localStorage|sessionStorage|indexedDB)\b|zustand\/middleware|\bpersist\s*\(/,
+    )
+  })
+
   it('only the URL fetcher and the store wiring touch fetch', () => {
     for (const f of files) {
       if (/\/(url|store)\.ts$/.test(f)) continue
