@@ -119,12 +119,15 @@ test.describe('desktop', () => {
     const photos = [FIXTURES.quadrantsPng, FIXTURES.valueRamp]
     await app.upload(photos)
     await app.expectImages(2)
-    await app.selectButton('quadrants.png').click()
-    await app.openStudiesTab()
-    await app.setVersions(['Original', 'Values'])
-    await app.setSlider('Number of values', 7)
-    await app.swatch('Sepia').click()
-    await app.setVersions(['Original'])
+    for (const photo of ['quadrants.png', 'value-ramp.png']) {
+      await app.selectButton(photo).click()
+      await app.openStudiesTab()
+      await app.setVersions(['Original', 'Values'])
+      await app.setSlider('Number of values', 7)
+      await app.swatch('Sepia').click()
+      await expect(app.swatch('Sepia')).toHaveAttribute('aria-pressed', 'true')
+      await app.setVersions(['Original'])
+    }
 
     await app.openPresets()
     expect(await app.presetNames()).toEqual(['Letter values'])
