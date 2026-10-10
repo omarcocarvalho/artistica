@@ -233,6 +233,66 @@ describe('PagePreview in Arrange mode', () => {
     )
   })
 
+  it('keeps the low-DPI and scaled-to-fit chips and puts them in the block description (M5-R12)', () => {
+    const base = arrangeProps()
+    const blocks = [
+      ...base.blocks,
+      {
+        id: 'b#2',
+        imageId: id('b'),
+        page: 1,
+        rect: { x: 20, y: 80, w: 60, h: 40 },
+        tileW: 60,
+        fixed: false,
+        name: 'pears.heic, 60 × 40 mm, page 2',
+      },
+      {
+        id: 'c#0',
+        imageId: id('c'),
+        page: 0,
+        rect: { x: 20, y: 80, w: 60, h: 40 },
+        tileW: 60,
+        fixed: false,
+        name: 'other.jpg, 60 × 40 mm, page 1',
+      },
+      {
+        id: 'b#1',
+        imageId: id('b'),
+        page: 0,
+        rect: { x: 20, y: 150, w: 60, h: 40 },
+        tileW: 60,
+        fixed: false,
+        name: 'pears.heic copy, 60 × 40 mm, page 1',
+      },
+      {
+        id: 'b#0',
+        imageId: id('b'),
+        page: 0,
+        rect: { x: 20, y: 80, w: 60, h: 40 },
+        tileW: 60,
+        fixed: false,
+        name: 'pears.heic, 60 × 40 mm, page 1',
+      },
+    ]
+    setup({ arrange: arrangeProps({ blocks }) })
+    expect(screen.getByText('203 DPI')).toBeInTheDocument()
+    expect(screen.getByText('Scaled to fit')).toBeInTheDocument()
+    const instructions =
+      'Use the arrow keys to move, Shift and the arrow keys to resize, Enter to swap with another photo.'
+    expect(screen.getByRole('button', { name: /^pears\.heic, / })).toHaveAccessibleDescription(
+      `${instructions} Low resolution: 203 DPI`,
+    )
+    expect(screen.getByRole('button', { name: /^portrait-anna/ })).toHaveAccessibleDescription(
+      `${instructions} Scaled down to fit the page`,
+    )
+    expect(screen.getByRole('button', { name: /^pears\.heic copy/ })).toHaveAccessibleDescription(
+      instructions,
+    )
+    expect(screen.getByRole('button', { name: /^other\.jpg/ })).toHaveAccessibleDescription(
+      instructions,
+    )
+  })
+
   it('registers its sheet so a drag can land on it', () => {
     const sheets = createSheetRegistry()
     const register = vi.spyOn(sheets, 'register')

@@ -19,6 +19,8 @@ export interface ArrangeLayerProps {
   readonly page: number
   readonly pageSize: SizeMm
   readonly sheet: () => HTMLElement | null
+  /** Low-DPI and scaled-to-fit warnings of the tiles in each block, by block id. */
+  readonly warnings?: ReadonlyMap<string, string>
 }
 
 const pct = (mm: number, of: number) => `${String((mm / of) * 100)}%`
@@ -30,7 +32,7 @@ const boxStyle = (g: GhostBox) => ({
 })
 
 /** Arrange mode (M5-R15): one focusable "movable photo" per block, with pointer and keyboard moves. */
-export function ArrangeLayer({ arrange, page, pageSize, sheet }: ArrangeLayerProps) {
+export function ArrangeLayer({ arrange, page, pageSize, sheet, warnings }: ArrangeLayerProps) {
   const { t } = useTranslation('preview')
   const helpId = useId()
   const fixedId = `${helpId}-fixed`
@@ -87,6 +89,8 @@ export function ArrangeLayer({ arrange, page, pageSize, sheet }: ArrangeLayerPro
       {blocks.map((b) => {
         const selected = b.id === arrange.selected
         const picked = b.id === arrange.pickedUp
+        const warning = warnings?.get(b.id)
+        const warningId = `${helpId}-warn-${b.id}`
         return (
           <div
             key={b.id}
@@ -98,7 +102,9 @@ export function ArrangeLayer({ arrange, page, pageSize, sheet }: ArrangeLayerPro
             tabIndex={0}
             aria-roledescription={t('arrange.roleDescription')}
             aria-label={b.name}
-            aria-describedby={b.fixed ? `${helpId} ${fixedId}` : helpId}
+            aria-describedby={[helpId, b.fixed ? fixedId : null, warning ? warningId : null]
+              .filter(Boolean)
+              .join(' ')}
             data-block-id={b.id}
             className={cx(
               'arrange-block',
@@ -126,6 +132,11 @@ export function ArrangeLayer({ arrange, page, pageSize, sheet }: ArrangeLayerPro
               heldRefusal.current = null
             }}
           >
+            {warning && (
+              <span id={warningId} className="sr-only">
+                {warning}
+              </span>
+            )}
             {picked && (
               <span className="arrange-chip arrange-chip--swap" aria-hidden="true">
                 {t('arrange.chip.pickedUp')}

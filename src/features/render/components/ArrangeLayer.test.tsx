@@ -47,12 +47,16 @@ const rect = (left: number, top: number, width: number, height: number) =>
     y: top,
   }) as DOMRect
 
+let scrolled = 0
+
 function setup(over: Partial<ArrangeProps> = {}, page = 0) {
+  scrolled = 0
   const sheets = createSheetRegistry()
   const sheet0 = document.createElement('div')
-  sheet0.getBoundingClientRect = () => rect(0, 0, PAGE.w * PX_PER_MM, PAGE.h * PX_PER_MM)
+  sheet0.getBoundingClientRect = () => rect(0, 0 - scrolled, PAGE.w * PX_PER_MM, PAGE.h * PX_PER_MM)
   const sheet1 = document.createElement('div')
-  sheet1.getBoundingClientRect = () => rect(0, 700, PAGE.w * PX_PER_MM, PAGE.h * PX_PER_MM)
+  sheet1.getBoundingClientRect = () =>
+    rect(0, 700 - scrolled, PAGE.w * PX_PER_MM, PAGE.h * PX_PER_MM)
   sheets.register(0, sheet0)
   sheets.register(1, sheet1)
   const onPreview = vi.fn<(i: ArrangeIntent) => ArrangePreview>((i) =>
@@ -255,6 +259,37 @@ describe('ArrangeLayer: pointer', () => {
     })
   })
 
+  it('follows the page when it scrolls during a drag', () => {
+    const { props } = setup()
+    down(blockEl(/^a\.jpg/), 60, 60)
+    move(160, 300)
+    scrolled = 100
+    fireEvent.scroll(document)
+    expect(screen.getByTestId('arrange-ghost').style.transform).toBe('translate(140px, 380px)')
+    move(160, 300)
+    expect(screen.getByTestId('arrange-ghost').style.transform).toBe('translate(140px, 380px)')
+    up(160, 300)
+    expect(props.onCommit).toHaveBeenCalledWith(expect.objectContaining({ x: 70, y: 190 }))
+  })
+
+  it('a scroll before the drag starts moves nothing', () => {
+    const { props } = setup()
+    down(blockEl(/^a\.jpg/), 60, 60)
+    scrolled = 100
+    fireEvent.scroll(document)
+    expect(screen.queryByTestId('arrange-ghost')).toBeNull()
+    up(60, 60)
+    expect(props.onCommit).not.toHaveBeenCalled()
+  })
+
+  it('ignores buttons other than the main one', () => {
+    const { props } = setup()
+    fireEvent.pointerDown(blockEl(/^a\.jpg/), { pointerId: 1, button: 2, clientX: 60, clientY: 60 })
+    move(160, 300)
+    up(160, 300)
+    expect(props.onCommit).not.toHaveBeenCalled()
+  })
+
   it('dragging a corner handle resizes with the opposite corner fixed', () => {
     const { props } = setup({ selected: 'a' })
     const br = document.querySelector('[data-block-id="a"] [data-corner="br"]')
@@ -329,6 +364,13 @@ describe('ArrangeLayer: keyboard', () => {
     expect(props.onPickUp).toHaveBeenLastCalledWith(null)
   })
 
+  it('a held Enter does not toggle the pick-up again', () => {
+    const { props } = setup()
+    fireEvent.keyDown(blockEl(/^a\.jpg/), { key: 'Enter' })
+    fireEvent.keyDown(blockEl(/^a\.jpg/), { key: 'Enter', repeat: true })
+    expect(props.onPickUp).toHaveBeenCalledOnce()
+  })
+
   it('Delete does nothing', () => {
     const { props } = setup()
     fireEvent.keyDown(blockEl(/^a\.jpg/), { key: 'Delete' })
@@ -378,5 +420,18 @@ describe('ArrangeLayer: focus', () => {
       blockEl(/^a\.jpg/).focus()
     })
     expect(props.onSelect).not.toHaveBeenCalled()
+  })
+})
+
+describe('createSheetRegistry', () => {
+  it("an old sheet's unregister leaves the sheet that replaced it", () => {
+    const sheets = createSheetRegistry()
+    const old = document.createElement('div')
+    const fresh = document.createElement('div')
+    fresh.getBoundingClientRect = () => rect(0, 0, 100, 100)
+    const unregisterOld = sheets.register(0, old)
+    sheets.register(0, fresh)
+    unregisterOld()
+    expect(sheets.at(50, 50)?.page).toBe(0)
   })
 })

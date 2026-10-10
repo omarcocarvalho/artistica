@@ -50,6 +50,10 @@ describe('snapRect', () => {
     expect(snapRect({ x: 100, y: 86.2, w: 20, h: 20 }, content, gutter, others).y).toBe(85)
   })
 
+  it("snaps a bottom edge above a neighbour's top edge minus the gutter", () => {
+    expect(snapRect({ x: 100, y: 23.5, w: 20, h: 20 }, content, gutter, others).y).toBe(25)
+  })
+
   it("does not snap to a neighbour's edge without the gutter", () => {
     expect(snapRect({ x: 141, y: 55, w: 20, h: 20 }, content, gutter, others).x).toBe(141)
   })
@@ -111,5 +115,10 @@ describe('swapTargetAt', () => {
   it('ignores the dragged block and blocks whose centre is not covered', () => {
     expect(swapTargetAt(blocks, 'a', 0, { x: 15, y: 15, w: 50, h: 50 })).toBeNull()
     expect(swapTargetAt(blocks, 'a', 0, { x: 126, y: 10, w: 50, h: 50 })).toBeNull()
+  })
+
+  it('checks the centre against the ghost height, not its width', () => {
+    expect(swapTargetAt(blocks, 'a', 0, { x: 110, y: 0, w: 50, h: 30 })).toBeNull()
+    expect(swapTargetAt(blocks, 'a', 0, { x: 110, y: 30, w: 20, h: 40 })).toBe('b')
   })
 })

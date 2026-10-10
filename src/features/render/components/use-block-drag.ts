@@ -104,7 +104,9 @@ interface Session {
   readonly corner: ArrangeCorner | null
   readonly startX: number
   readonly startY: number
-  readonly origin: DOMRect
+  origin: DOMRect
+  lastX: number
+  lastY: number
   readonly grabX: Mm
   readonly grabY: Mm
   active: boolean
@@ -148,8 +150,12 @@ export function useBlockDrag({ arrange, page, pageW, sheet }: Options) {
     (clientX: number, clientY: number) => {
       const s = session.current
       if (!s) return
+      s.lastX = clientX
+      s.lastY = clientY
       if (!s.active && !movedEnough(clientX - s.startX, clientY - s.startY)) return
       s.active = true
+      const now = sheet()?.getBoundingClientRect()
+      if (now && now.width > 0) s.origin = now
       const a = arrangeRef.current
       const ppm = s.origin.width / pageW
       if (s.corner !== null) {
@@ -209,7 +215,7 @@ export function useBlockDrag({ arrange, page, pageW, sheet }: Options) {
         swapTarget: targetBlock ? toBox(targetBlock.rect, hit.box, s.origin, pageW) : null,
       })
     },
-    [page, pageW],
+    [page, pageW, sheet],
   )
 
   useEffect(() => {
@@ -226,6 +232,10 @@ export function useBlockDrag({ arrange, page, pageW, sheet }: Options) {
     const onCancel = (e: globalThis.PointerEvent) => {
       if (e.pointerId === session.current?.pointerId) end()
     }
+    const onScroll = () => {
+      const s = session.current
+      if (s?.active) track(s.lastX, s.lastY)
+    }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && session.current) {
         e.preventDefault()
@@ -237,7 +247,9 @@ export function useBlockDrag({ arrange, page, pageW, sheet }: Options) {
     document.addEventListener('pointerup', onUp)
     document.addEventListener('pointercancel', onCancel)
     document.addEventListener('keydown', onKey, true)
+    document.addEventListener('scroll', onScroll, true)
     return () => {
+      document.removeEventListener('scroll', onScroll, true)
       document.removeEventListener('pointermove', onMove)
       document.removeEventListener('pointerup', onUp)
       document.removeEventListener('pointercancel', onCancel)
@@ -260,6 +272,8 @@ export function useBlockDrag({ arrange, page, pageW, sheet }: Options) {
         startX: e.clientX,
         startY: e.clientY,
         origin,
+        lastX: e.clientX,
+        lastY: e.clientY,
         grabX: (e.clientX - origin.left) / ppm - block.rect.x,
         grabY: (e.clientY - origin.top) / ppm - block.rect.y,
         active: false,

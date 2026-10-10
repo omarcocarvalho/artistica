@@ -170,6 +170,7 @@ describe('ArrangeToolbar: the selected photo', () => {
     await user.selectOptions(select, 'New page')
     expect(useArrange.getState().manual?.pageCount).toBe(2)
     expect(said()).toMatch(/page 2, /)
+    expect(useArrangeUi.getState().focusId).toBeNull()
   })
 
   it('Swap with lists the other photos by name and page, and swaps', async () => {
@@ -186,6 +187,7 @@ describe('ArrangeToolbar: the selected photo', () => {
     await user.selectOptions(select, 'b.jpg, page 1')
     expect(blockOf('a#0').b.x).toBeCloseTo(before.b.x)
     expect(select).toHaveValue('')
+    expect(useArrangeUi.getState().focusId).toBeNull()
   })
 
   it('Width shows the tile width in the user unit and resizes on Enter', async () => {
@@ -198,6 +200,9 @@ describe('ArrangeToolbar: the selected photo', () => {
     await user.clear(width)
     await user.type(width, '30{Enter}')
     expect(blockOf('a#0').b.tileW).toBeCloseTo(30)
+    expect(blockOf('a#0').b.x).toBeCloseTo(b.x)
+    expect(blockOf('a#0').b.y).toBeCloseTo(b.y)
+    expect(useArrangeUi.getState().focusId).toBeNull()
   })
 
   it('Width is off for a fixed-size photo and says why', () => {

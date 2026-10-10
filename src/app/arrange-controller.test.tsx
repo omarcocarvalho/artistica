@@ -262,6 +262,19 @@ describe('commitOp', () => {
     expect(said()).toBe('')
   })
 
+  it('offers nothing for a photo added since the arrangement was stored (ruling B1-3)', () => {
+    show([loaded('a')])
+    useArrange.getState().apply((m) => ({ ok: true, manual: m }))
+    useImages.setState({ images: [loaded('a'), loaded('b')] })
+    const before = useArrange.getState()
+    expect(() =>
+      commitOp({ kind: 'nudge', id: 'b#0', dx: 1, dy: 0 }, { fromBlock: true }),
+    ).not.toThrow()
+    expect(useArrange.getState()).toBe(before)
+    expect(previewOp({ kind: 'swap', id: 'a#0', with: 'b#0' }).ok).toBe(false)
+    expect(said()).toBe('')
+  })
+
   it('offers nothing when no layout is shown', () => {
     expect(commitOp({ kind: 'nudge', id: 'a#0', dx: 1, dy: 0 }, { fromBlock: true })).toBe(false)
   })

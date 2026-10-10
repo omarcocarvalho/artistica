@@ -6,7 +6,12 @@ import { releaseCanvas, renderTile } from '../pixels/render-tile'
 import { forScaledSource, planTilePixels, tileRenderKey } from '../pixels/tile-plan'
 import { readDrawColors } from '../preview/draw-colors'
 import { drawPage } from '../preview/draw-page'
-import { previewDpi, previewScale, tileHitAreas } from '../preview/preview-geometry'
+import {
+  previewDpi,
+  previewScale,
+  tileHitAreas,
+  type TileHitArea,
+} from '../preview/preview-geometry'
 import { indexedStudyRequests } from '../preview/study-requests'
 import type { StudyTileProvider } from '../preview/study-tiles'
 import { releaseAllTileCanvases, syncTileCanvasCache } from '../preview/tile-cache'
@@ -14,7 +19,7 @@ import { useDevicePixelRatio, useElementWidth } from '../preview/use-element-wid
 import { useNearViewport, type ScrollAxis } from '../preview/use-near-viewport'
 import type { PageModel } from '../types'
 import { ArrangeLayer } from './ArrangeLayer'
-import type { ArrangeProps } from './arrange-types'
+import type { ArrangeBlock, ArrangeProps } from './arrange-types'
 
 /** A bitmap of the whole image, at any size; page models are planned against pxW x pxH. */
 export interface PreviewSource {
@@ -44,6 +49,38 @@ export interface PagePreviewProps {
   readonly onDrawn?: (pageIndex: number) => void
   /** Arrange mode: movable blocks replace the tile buttons. */
   readonly arrange?: ArrangeProps
+}
+
+/** Arrange mode: the warnings of the tiles inside each block, by block id. */
+function blockWarnings(
+  areas: readonly TileHitArea[],
+  blocks: readonly ArrangeBlock[],
+  page: number,
+  size: { readonly w: number; readonly h: number },
+  labels: { readonly lowDpi: (dpi: number) => string; readonly scaledToFit: string },
+): ReadonlyMap<string, string> {
+  const texts = new Map<string, Set<string>>()
+  for (const area of areas) {
+    const cx = ((area.leftPct + area.widthPct / 2) / 100) * size.w
+    const cy = ((area.topPct + area.heightPct / 2) / 100) * size.h
+    const block = blocks.find(
+      (b) =>
+        b.page === page &&
+        b.imageId === area.imageId &&
+        cx >= b.rect.x &&
+        cx <= b.rect.x + b.rect.w &&
+        cy >= b.rect.y &&
+        cy <= b.rect.y + b.rect.h,
+    )
+    if (!block) continue
+    const set = texts.get(block.id) ?? new Set<string>()
+    if (area.lowDpi) set.add(labels.lowDpi(area.dpi))
+    if (area.scaledToFit) set.add(labels.scaledToFit)
+    texts.set(block.id, set)
+  }
+  return new Map(
+    [...texts].filter(([, set]) => set.size > 0).map(([id, set]) => [id, [...set].join(' ')]),
+  )
 }
 
 const createDomCanvas = (w: number, h: number): HTMLCanvasElement => {
@@ -200,12 +237,54 @@ export function PagePreview({
           aria-hidden="true"
           className="absolute inset-0 block h-full w-full"
         />
+        {arrange
+          ? areas.map(
+              (area) =>
+                area.firstInGroup &&
+                (area.lowDpi || area.scaledToFit) && (
+                  <span
+                    key={area.key}
+                    aria-hidden="true"
+                    className="pointer-events-none absolute"
+                    style={{
+                      left: `${String(area.leftPct)}%`,
+                      top: `${String(area.topPct)}%`,
+                      width: `${String(area.widthPct)}%`,
+                      height: `${String(area.heightPct)}%`,
+                    }}
+                  >
+                    {area.lowDpi && (
+                      <Badge
+                        tone="warning"
+                        icon="warning"
+                        className="absolute right-1 bottom-1 text-[10px] shadow-xs"
+                      >
+                        {t('tile.lowDpi', { dpi: area.dpi })}
+                      </Badge>
+                    )}
+                    {area.scaledToFit && (
+                      <Badge
+                        tone="warning"
+                        icon="warning"
+                        className="absolute bottom-1 left-1 text-[10px] shadow-xs"
+                      >
+                        {t('tile.scaledToFit')}
+                      </Badge>
+                    )}
+                  </span>
+                ),
+            )
+          : null}
         {arrange ? (
           <ArrangeLayer
             arrange={arrange}
             page={model.index}
             pageSize={model.size}
             sheet={() => sheetRef.current}
+            warnings={blockWarnings(areas, arrange.blocks, model.index, model.size, {
+              lowDpi: (dpi) => t('tile.lowDpiLabel', { dpi }),
+              scaledToFit: t('tile.scaledToFitLabel'),
+            })}
           />
         ) : null}
         {!arrange &&
