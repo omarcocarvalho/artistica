@@ -225,6 +225,58 @@ describe.each([
   })
 })
 
+describe('focused fields in an overlay body', () => {
+  it.each([
+    ['BottomSheet', BottomSheet],
+    ['Dialog', Dialog],
+  ] as const)(
+    '%s scrolls a focused field into view, nearest edge, and leaves buttons alone',
+    (_, Surface) => {
+      const scroll = vi
+        .spyOn(Element.prototype, 'scrollIntoView')
+        .mockImplementation(() => undefined)
+      try {
+        render(
+          <Surface
+            open
+            onOpenChange={() => undefined}
+            title="Edit image"
+            closeLabel="Close"
+            footer={<button type="button">Done</button>}
+          >
+            <button type="button">Rotate</button>
+            <label>
+              Copies <input type="number" />
+            </label>
+            <label>
+              Note <textarea />
+            </label>
+            <label>
+              Page{' '}
+              <select>
+                <option>Page 1</option>
+              </select>
+            </label>
+          </Surface>,
+        )
+        fireEvent.focus(screen.getByRole('button', { name: 'Rotate' }))
+        fireEvent.focus(screen.getByRole('button', { name: 'Done' }))
+        expect(scroll).not.toHaveBeenCalled()
+        fireEvent.focus(screen.getByRole('spinbutton', { name: 'Copies' }))
+        expect(scroll).toHaveBeenCalledTimes(1)
+        expect(scroll).toHaveBeenLastCalledWith({ block: 'nearest', inline: 'nearest' })
+        expect(scroll.mock.contexts[0]).toBe(screen.getByRole('spinbutton', { name: 'Copies' }))
+        fireEvent.focus(screen.getByRole('textbox', { name: 'Note' }))
+        expect(scroll).toHaveBeenCalledTimes(2)
+        fireEvent.focus(screen.getByRole('combobox', { name: 'Page' }))
+        expect(scroll).toHaveBeenCalledTimes(3)
+      } finally {
+        scroll.mockRestore()
+      }
+    },
+  )
+})
+
 describe('Tabs', () => {
   function Harness() {
     const [value, setValue] = useState('page')

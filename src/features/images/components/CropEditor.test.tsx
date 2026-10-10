@@ -1,5 +1,8 @@
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
+import type { CropRect } from '../../../shared/model/image'
 import { renderWithProviders } from '../test-utils'
 import { CROP_STAGE_FALLBACK_PX, CropEditor, type CropEditorProps } from './CropEditor'
 
@@ -129,7 +132,7 @@ describe('CropEditor', () => {
   it('shows a text readout of the rectangle at all times (CR-E6)', () => {
     renderWithProviders(<CropEditor {...base()} />)
     expect(screen.getByRole('status')).toHaveTextContent('Crop 100 × 100 px at 100, 100')
-    expect(screen.getByRole('group', { name: /crop/i })).toBeInTheDocument()
+    expect(area()).toBeInTheDocument()
   })
 
   it('arrow keys move and Shift+arrows resize', () => {
@@ -236,5 +239,121 @@ describe('CropEditor', () => {
     expect(fireEvent.keyDown(area(), { key: 'ArrowRight', altKey: true })).toBe(true)
     expect(fireEvent.keyDown(area(), { key: 'ArrowRight', metaKey: true })).toBe(true)
     expect(props.onChange).not.toHaveBeenCalled()
+  })
+
+  describe('single-pointer controls (WCAG 2.5.7)', () => {
+    const BUTTONS: readonly [string, string, boolean][] = [
+      ['Move left', 'ArrowLeft', false],
+      ['Move up', 'ArrowUp', false],
+      ['Move down', 'ArrowDown', false],
+      ['Move right', 'ArrowRight', false],
+      ['Narrower', 'ArrowLeft', true],
+      ['Wider', 'ArrowRight', true],
+      ['Shorter', 'ArrowUp', true],
+      ['Taller', 'ArrowDown', true],
+    ]
+    const controls = () => screen.getByRole('group', { name: 'Crop position and size' })
+
+    it('offers the eight steps as plain buttons in a named group, outside the draggable area', () => {
+      renderWithProviders(<CropEditor {...base()} />)
+      const group = controls()
+      const position = within(group).getByRole('group', { name: 'Position' })
+      const size = within(group).getByRole('group', { name: 'Size' })
+      expect(
+        within(position)
+          .getAllByRole('button')
+          .map((b) => b.getAttribute('aria-label')),
+      ).toEqual(['Move left', 'Move up', 'Move down', 'Move right'])
+      expect(
+        within(size)
+          .getAllByRole('button')
+          .map((b) => b.getAttribute('aria-label')),
+      ).toEqual(['Narrower', 'Wider', 'Shorter', 'Taller'])
+      for (const b of within(group).getAllByRole('button')) {
+        expect(b).toHaveAttribute('type', 'button')
+        expect(area().contains(b)).toBe(false)
+      }
+    })
+
+    it.each(BUTTONS)('%s commits once, by a click alone', async (name) => {
+      const props = base()
+      renderWithProviders(<CropEditor {...props} />)
+      await userEvent.click(screen.getByRole('button', { name }))
+      expect(props.onChange).toHaveBeenCalledTimes(1)
+    })
+
+    it.each([
+      ['Move left', { x: 98, y: 100, w: 100, h: 100 }],
+      ['Move up', { x: 100, y: 98, w: 100, h: 100 }],
+      ['Move down', { x: 100, y: 102, w: 100, h: 100 }],
+      ['Move right', { x: 102, y: 100, w: 100, h: 100 }],
+      ['Narrower', { x: 100, y: 100, w: 98, h: 100 }],
+      ['Wider', { x: 100, y: 100, w: 102, h: 100 }],
+      ['Shorter', { x: 100, y: 100, w: 100, h: 98 }],
+      ['Taller', { x: 100, y: 100, w: 100, h: 102 }],
+    ])('%s moves or sizes the crop by one keyboard step', (name, want) => {
+      const props = base()
+      renderWithProviders(<CropEditor {...props} />)
+      fireEvent.click(screen.getByRole('button', { name }))
+      expect(props.onChange).toHaveBeenLastCalledWith(want)
+    })
+
+    const VIEWS = [
+      { rotation: 0, flipH: false, flipV: false },
+      { rotation: 90, flipH: false, flipV: false },
+      { rotation: 180, flipH: true, flipV: false },
+      { rotation: 270, flipH: false, flipV: true },
+    ] as const
+    it.each(VIEWS.flatMap((view) => [null, 1, 4 / 3].map((ratio) => ({ view, ratio }))))(
+      'each button gives exactly the crop its key gives (rotation $view.rotation, ratio $ratio)',
+      ({ view, ratio }) => {
+        const props = base({ view, ratio, crop: { x: 120, y: 90, w: 120, h: 90 } })
+        renderWithProviders(<CropEditor {...props} />)
+        const onChange = props.onChange as ReturnType<typeof vi.fn>
+        for (const [name, key, shiftKey] of BUTTONS) {
+          fireEvent.keyDown(area(), { key, shiftKey })
+          const byKey: unknown = onChange.mock.lastCall?.[0]
+          fireEvent.click(screen.getByRole('button', { name }))
+          expect(onChange.mock.lastCall?.[0], name).toEqual(byKey)
+          expect(byKey, name).not.toEqual(props.crop)
+        }
+      },
+    )
+
+    it('keeps a locked shape when sizing by button', () => {
+      const props = base({ ratio: 4 / 3, crop: { x: 100, y: 100, w: 120, h: 90 } })
+      renderWithProviders(<CropEditor {...props} />)
+      for (const name of ['Narrower', 'Wider', 'Shorter', 'Taller']) {
+        fireEvent.click(screen.getByRole('button', { name }))
+        const [crop] = (props.onChange as ReturnType<typeof vi.fn>).mock.lastCall as [CropRect]
+        expect(crop.w / crop.h, name).toBeCloseTo(4 / 3, 9)
+      }
+    })
+
+    it('stays inside the image at its edge, as the arrow keys do', () => {
+      const corner = { x: 300, y: 200, w: 100, h: 100 }
+      const props = base({ crop: corner })
+      renderWithProviders(<CropEditor {...props} />)
+      for (const name of ['Move right', 'Move down', 'Wider', 'Taller']) {
+        fireEvent.click(screen.getByRole('button', { name }))
+        expect(props.onChange, name).toHaveBeenLastCalledWith(corner)
+      }
+    })
+
+    it('announces the new crop in the status region after each press, like a key press', async () => {
+      function Controlled() {
+        const [crop, setCrop] = useState<CropRect>({ x: 100, y: 100, w: 100, h: 100 })
+        return <CropEditor {...base({ crop, onChange: setCrop })} />
+      }
+      renderWithProviders(<Controlled />)
+      const status = screen.getByRole('status')
+      await userEvent.click(screen.getByRole('button', { name: 'Move right' }))
+      expect(status).toHaveTextContent('Crop 100 × 100 px at 102, 100')
+      await userEvent.click(screen.getByRole('button', { name: 'Taller' }))
+      expect(status).toHaveTextContent('Crop 100 × 102 px at 102, 100')
+      fireEvent.keyDown(area(), { key: 'ArrowLeft' })
+      expect(status).toHaveTextContent('Crop 100 × 102 px at 100, 100')
+      expect(screen.getByRole('button', { name: 'Taller' })).toHaveFocus()
+    })
   })
 })

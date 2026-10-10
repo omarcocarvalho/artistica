@@ -16,7 +16,7 @@ Clickable HTML mockups for every screen in spec §8 "D — Design". Open `index.
 | `landing.html` | Public landing page (`/`): hero, how it works, features, privacy, FAQ. |
 | `workspace.html` | Desktop workspace: images panel · live page preview · settings tabs. |
 | `mobile-flow.html` | Phone flow (390 × 844) in a device frame: Images → Page → Studies → Preview → Export, plus the edit bottom sheet. Preview has the Arrange toolbar under the pages; two more phones show Arrange mode (44 px handles) and the selected photo's sheet (Move to page, Swap with…, Width, Position). Export is inline in its step. |
-| `image-edit.html` | Per-image edit dialog: crop and aspect, rotate, flip, copies, Auto/Fixed size, DPI meter and low-DPI warning. |
+| `image-edit.html` | Per-image edit dialog: crop and aspect (drag, arrow keys, or the Position and Size buttons under the crop), rotate, flip, copies, Auto/Fixed size, DPI meter and low-DPI warning. |
 | `page-setup.html` | Page tab with bleed on: guide legend, shortened crop marks, and the "gutter raised" note. |
 | `studies.html` | Studies tab: versions, blur, values 2–20, single-hue picker, generated ramp, apply to all; study groups on the page. |
 | `lines.html` | Lines tab: grid, thirds, armature, golden ratio/spiral (start corner), centre, edge outline, face, pose; style; model download notice. |

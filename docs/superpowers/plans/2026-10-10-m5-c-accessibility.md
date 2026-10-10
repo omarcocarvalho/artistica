@@ -31,6 +31,7 @@ As in the overview. E2E ports 67xx. A fix that changes a shared component lists 
 | `src/shared/ui/Callout.tsx`, `src/app/components/NoticeRegion.tsx` (+ tests) | C2 | live regions mounted before their content |
 | `src/shared/ui/css/overlays.css` | C2 | the selected-tab underline in dark mode and forced colours |
 | `e2e/support/axe.ts`, `e2e/a11y.spec.ts`, `e2e/a11y-audit.spec.ts` | C3 | the audit |
+| `src/features/images/crop-step.ts`, `components/CropEditor.tsx` (+ tests), `e2e/crop-single-pointer.spec.ts`, `design/image-edit.html`, `design/mobile-flow.html`, `src/shared/ui/ModalSurface.tsx` | C4 | crop without dragging (2.5.7, Q21) |
 
 ---
 
@@ -88,6 +89,23 @@ The audit is a fresh pass, by a reviewer who did not build the UI, against WCAG 
 - [ ] **Step 4: Screen reader pass (manual, recorded):** VoiceOver on macOS Safari for desktop and the Presets dialog and Arrange mode (rotor, announcements, roledescription). The iPhone VoiceOver pass is on the v1.0.0 sign-off checklist (overview).
 - [ ] **Step 5: Fixes:** each finding is fixed in this PR when small (≤ 50 lines), else in its own `fix:` PR with a failing test first; each is listed in the ledger with its PR.
 - [ ] **Step 6: Pre-PR command (6703), PR.**
+
+---
+
+### Task C4: Move and resize the crop without dragging
+
+**Branch:** `fix/crop-single-pointer` · **PR title:** `fix(images): move and resize the crop without dragging` · **Depends on:** C3 (added by the controller after the C3 audit found the 2.5.7 gap; Q21, accepted default)
+
+WCAG 2.5.7: in the edit dialog the crop box moves and resizes only by dragging or by the arrow keys. Under the crop, a group "Crop position and size" adds single-pointer buttons, like Arrange's Position group (B4, B5).
+
+- [ ] **Step 1: Failing tests:**
+  - `crop-step.test.ts`: `stepCrop(crop, step, { pxW, pxH, ratio, view })` is one `keyboardStep` in the displayed frame for each of `left`, `up`, `down`, `right` (move) and `narrower`, `wider`, `shorter`, `taller` (resize, displayed top-left fixed); it keeps a locked shape, stops at the image edge and at the minimum size, follows rotation and flips, and (property) always returns a valid crop, the same one for the same inputs; `cropStepForKey` maps arrows and Shift + arrows to those steps.
+  - `CropEditor.test.tsx`: the group holds "Position" (Move left, up, down, right) and "Size" (Narrower, Wider, Shorter, Taller) as plain buttons outside the draggable area; each click commits once; each button gives exactly the crop its key gives, over four views and three ratios; the status readout announces the new crop as for a key press.
+- [ ] **Step 2: RED, implement, GREEN.** The keyboard handler and the buttons both call `stepCrop`, so the two paths cannot disagree. Buttons are `IconButton`s: 32 px on desktop, 44 px on coarse pointers and the phone layout (`basics.css`).
+- [ ] **Step 3: E2E** `e2e/crop-single-pointer.spec.ts`: clicks alone on desktop (three engines) and taps alone on both phones move and resize the crop with no drag and no key, at ≥ 24 px and ≥ 44 px; the buttons give the same crop as the keys; axe clean in light and dark.
+- [ ] **Step 3b: Focus not obscured (2.4.11):** the taller crop area pushes the Copies field to the bottom of the phone edit sheet, where mobile WebKit leaves a focused text field under the footer; `ModalSurface`'s body scrolls a focused field into view (`block: 'nearest'`), with a unit test, and C3's phone keyboard walk passes.
+- [ ] **Step 4: Mockups** `design/image-edit.html` and `design/mobile-flow.html` show the group.
+- [ ] **Step 5: Pre-PR command (4781), PR.**
 
 ---
 
