@@ -120,13 +120,17 @@ describe('PreviewSlot', () => {
     await userEvent.click(screen.getByRole('button', { name: /Page 1 of 1/ }))
     expect(h.select).toHaveBeenCalledWith('a')
   })
-  it('marks artistica:draw:end with the page index when a page reports a draw (M5-R27)', () => {
-    render(<PreviewSlot />)
-    expect(h.onDrawn).not.toHaveLength(0)
-    expect(h.mark).not.toHaveBeenCalled()
-    h.onDrawn.at(-1)?.(3)
-    expect(h.mark.mock.calls).toEqual([['draw:end', { page: 3 }]])
-  })
+  it.each([true, false])(
+    'marks artistica:draw:end with the page index when a page reports a draw (desktop %s, M5-R27)',
+    (desktop) => {
+      stubDesktop(desktop)
+      render(<PreviewSlot />)
+      expect(h.onDrawn).not.toHaveLength(0)
+      expect(h.mark).not.toHaveBeenCalled()
+      h.onDrawn.at(-1)?.(3)
+      expect(h.mark.mock.calls).toEqual([['draw:end', { page: 3 }]])
+    },
+  )
   it('passes the one app study provider to every page', () => {
     act(() => {
       usePages.setState({

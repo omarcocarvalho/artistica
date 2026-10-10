@@ -135,6 +135,19 @@ All on mobile-chromium (the memory sampler needs CDP), `@slow`, with the strict 
 
 ---
 
+### Task D8: Meet the preview update budget
+
+**Branch:** `perf/preview-update` · **PR title:** `perf(app): update the preview within 200 ms of a setting change` · **Depends on:** D6 · **Blocks:** F
+
+Added by the D6 review (ledger "D6", overview Ruled "D6"). D6's T2 missed the 200 ms budget on CI chromium (run 38022647750, medians: paper 241, orientation 361 with two visible pages, gutter 210, crop marks 218; study version 168, line type 90 and line width 89 pass). Locally about 80 ms is the pipeline's debounce and about 50–70 ms (CI about 120–140 ms) per near page is the sheet redraw, half of it `renderTile`'s first high-quality step-down from the 2048 px preview bitmap, because every tile renders again when its size changes.
+
+- [ ] **Step 1:** a profile on CI-like load (4× slowdown locally) confirming the split above before choosing the fix (record it in the PR).
+- [ ] **Step 2:** the fix. Candidates from D6: run the pipeline at once for a single discrete change and keep the 80 ms debounce for bursts (Arrow-key repeats, slider drags), keeping one layout per settled change and the superseded-run rules; and cut the per-tile resample cost on a size change (for example a cached per-photo half-size level for the preview). Preview = PDF and determinism unchanged; no new dependency.
+- [ ] **Step 3:** empty `PREVIEW_UPDATE_KNOWN_MISSES` in `e2e/performance.spec.ts`, so every T2 kind is asserted again; the PR body records the new CI medians and run id. The budget stays 200 ms (owner Q11 default).
+- [ ] **Step 4:** pre-PR command, PR.
+
+---
+
 ## Contract change requests
 
 None yet.

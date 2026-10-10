@@ -120,6 +120,19 @@ describe('perf marks (M5-R27)', () => {
     expect(named('layout:end')).toHaveLength(1)
   })
 
+  it('a second layout end without a new start measures nothing', () => {
+    const { perf, at } = clocked()
+    const mark = createPerfMarks(perf)
+    at(10)
+    mark('layout:start')
+    at(30)
+    mark('layout:end')
+    at(90)
+    mark('layout:end')
+    expect(named('layout')).toHaveLength(1)
+    expect(named('layout')[0]?.duration).toBe(20)
+  })
+
   it('records the drawn page in the draw mark, and nothing else', () => {
     const { perf } = clocked()
     createPerfMarks(perf)('draw:end', { page: 3 })

@@ -304,10 +304,13 @@ describe('createPipeline performance marks (M5-R27)', () => {
       perfLog.push('buildModels')
       return buildModels(...a)
     })
+    s.sink.done = vi.fn(() => {
+      perfLog.push('done')
+    })
     return s
   }
 
-  it('marks layout:start before the layout call, layout:end after it, and models:end after the page models', async () => {
+  it('marks layout:start before the layout call, layout:end after it, and models:end after the page models and before the sink', async () => {
     const { pipeline, resolvers } = logged()
     pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
     await vi.advanceTimersByTimeAsync(80)
@@ -320,6 +323,7 @@ describe('createPipeline performance marks (M5-R27)', () => {
       'mark layout:end',
       'buildModels',
       'mark models:end',
+      'done',
     ])
   })
 
@@ -333,7 +337,7 @@ describe('createPipeline performance marks (M5-R27)', () => {
     perfLog.length = 0
     pipeline.schedule(DEFAULT_PAGE_SETUP, [withStudy(img('a'), 41)])
     await vi.advanceTimersByTimeAsync(80)
-    expect(perfLog).toEqual(['buildModels', 'mark models:end'])
+    expect(perfLog).toEqual(['buildModels', 'mark models:end', 'done'])
   })
 
   it('a superseded layout marks no end; the current one does', async () => {
@@ -355,6 +359,7 @@ describe('createPipeline performance marks (M5-R27)', () => {
       'mark layout:end',
       'buildModels',
       'mark models:end',
+      'done',
     ])
   })
 
