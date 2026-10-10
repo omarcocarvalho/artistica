@@ -185,7 +185,7 @@ export function resizeBlock(
 }
 
 /** `block` fitted inside `box`, anchored at its top-left: its own size when fixed, else the largest. */
-function fitInto(
+export function fitInto(
   block: ManualBlock,
   item: LayoutItemInput,
   box: RectMm,

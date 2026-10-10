@@ -13,6 +13,12 @@ import type { LayoutItemInput, LayoutResult, Placement, PlacementWarning, RectMm
 
 export type BlockId = string
 
+/** A photo copy's tile aspect and tile count when its block was placed. */
+export interface BlockShape {
+  readonly aspect: number
+  readonly tiles: number
+}
+
 export interface ManualBlock {
   readonly blockId: BlockId
   readonly page: number
@@ -20,6 +26,7 @@ export interface ManualBlock {
   readonly y: Mm
   readonly tileW: Mm // one tile, unturned
   readonly turned: boolean
+  readonly shape?: BlockShape // absent: reconciliation cannot tell a shape change (M5-R14)
 }
 
 export interface ManualLayout {
@@ -137,12 +144,13 @@ export function manualFromLayout(
   items: readonly LayoutItemInput[],
   setup: PageSetup,
 ): ManualLayout {
-  const keys = new Set(items.map((it) => it.key))
+  const byKey = new Map(items.map((it) => [it.key, it]))
   const blocks: ManualBlock[] = []
   result.pages.forEach((page, index) => {
     for (const p of page.placements) {
       const tile = p.tiles[0]
-      if (!keys.has(p.key) || tile === undefined) continue
+      const item = byKey.get(p.key)
+      if (item === undefined || tile === undefined) continue
       blocks.push({
         blockId: blockIdOf(p),
         page: index,
@@ -150,6 +158,7 @@ export function manualFromLayout(
         y: p.block.y,
         tileW: p.turned ? tile.h : tile.w,
         turned: p.turned,
+        shape: { aspect: item.aspect, tiles: item.tiles },
       })
     }
   })

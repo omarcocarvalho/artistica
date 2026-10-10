@@ -164,7 +164,17 @@ All tests install the strict network guard; chromium, firefox and webkit.
 
 ## Contract change requests
 
-None yet.
+**B2 (reconciliation), proposed by the implementer.** Ruled (accepted) in the B2 review; the binding text is the overview's "Contract change requests → Ruled → B2".
+1. `ManualBlock` gains `shape?: BlockShape` (`{ aspect, tiles }` of the photo copy when the block was placed). Without it the engine cannot tell that a crop, rotation or study change altered a block, nor find the old box to refit into (M5-R14 row 3): `computeLayout` only sees the current items. `manualFromLayout`, `packAround` and refits fill it; the operations carry it unchanged. A block without one is treated as unchanged and is packed again if its current shape no longer fits.
+2. `ManualOutcome` lives in `types.ts` as the overview shows; the barrel also exports `ManualLayout`, `ManualBlock` and `BlockId` as types for B3.
+3. The automatic engine moves verbatim from `compute-layout.ts` to `auto-layout.ts` (`computeLayout` there is renamed `autoLayout`; `validateItems` and `orientedSize` are exported) so `manual-reconcile.ts` can use the search without an import cycle. `compute-layout.ts` holds `computeLayout(setup, items, manual?)` and re-exports the search helpers.
+4. Reconciliation rules the M5-R14 table leaves open:
+   - A safe-area, gutter, crop-mark or bleed change judges the arrangement as it was (old boxes, new margins and gutter); only a block past the margin or within the gutter of another drops it. A block that is merely under the minimum in the new setup is packed again.
+   - A refit that would put an auto photo under the minimum, a refit of a fixed size that fits neither turn, and a changed fixed size that is not valid at its corner are packed again like a new photo. A fixed size and a shape that change together are refitted at the new fixed size.
+   - Packing around: the photos to pack are sized by the auto search on their own, placed largest first, on the first page (existing pages, then pages added for them) whose free space holds them at the minimum or more, at the largest size up to the auto size that fits, at the `findSpot(…, 'bssf', 'free')` spot; a fixed size is never scaled.
+   - A photo that fits no empty page at all (gutters wider than the page) drops the arrangement with `no-longer-fits`, and the auto layout is the "no room" state.
+   - With orientation `auto` the arrangement keeps its own orientation; a forced orientation that changes the page size drops it (`paper`); a custom size equal to the current page size keeps it.
+   - `kept`: no block added, dropped, refitted, resized or packed again (the content box and gutter may have changed). Two items with the same block id throw `RangeError`.
 
 ## Open questions for the owner
 

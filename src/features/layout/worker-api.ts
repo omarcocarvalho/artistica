@@ -1,10 +1,15 @@
 import type { PageSetup } from '../../shared/model/page-setup'
 import { computeLayout } from './compute-layout'
+import type { ManualLayout } from './manual'
 import type { LayoutItemInput, LayoutResult } from './types'
 
 /** What layout.worker.ts exposes over Comlink. Kept outside the worker file so it is testable in node. */
 export interface LayoutWorkerApi {
-  computeLayout(setup: PageSetup, items: readonly LayoutItemInput[]): LayoutResult
+  computeLayout(
+    setup: PageSetup,
+    items: readonly LayoutItemInput[],
+    manual?: ManualLayout | null,
+  ): LayoutResult
 }
 
 export const layoutWorkerApi: LayoutWorkerApi = { computeLayout }
