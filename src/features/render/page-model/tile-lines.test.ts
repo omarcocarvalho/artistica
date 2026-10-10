@@ -12,7 +12,7 @@ import {
 } from '../../../shared/model/lines'
 import { compositionPaths } from '../../lines/composition'
 import { MAX_EDGE_VERTICES } from '../../lines/edges/outline'
-import { centreDashMm } from '../../lines/geometry'
+import { centreDashMm, centreDashPhaseMm } from '../../lines/geometry'
 import { circlePath } from '../../lines/guides/curves'
 import { edgePaths } from '../../lines/guides/edge-paths'
 import { facePaths, MAX_CMDS_PER_FACE, MAX_FACES } from '../../lines/guides/face'
@@ -20,6 +20,7 @@ import { applyAffine, sourceToFrame } from '../../lines/guides/map'
 import { MAX_CMDS_PER_POSE, MAX_POSES, poseFigure } from '../../lines/guides/pose'
 import { NO_GUIDES, type ImageGuides, type PoseLandmarks } from '../../lines/guides/types'
 import { frameOf, frameToPage } from '../../lines/place'
+import { clearGaps } from '../../lines/test-support/dash'
 import type { PathCmd } from '../../lines/types'
 import type { RectMm } from '../../layout/types'
 import {
@@ -81,6 +82,52 @@ function inside(r: RectMm, [x, y]: [number, number]): boolean {
 
 const cmdCount = (lines: typeof DEFAULT_LINES, turned = false): number =>
   compo(lines, trim, turned, 0)?.strokes.reduce((k, s) => k + s.cmds.length, 0) ?? 0
+
+/** On a tile under 30 × the width, whether phase 0 leaves a centre line without a whole gap off the crossing (on each side whose half holds a period). */
+function needsCentring(t: RectMm, widthMm: number): boolean {
+  if (Math.min(t.w, t.h) >= 30 * widthMm) return false
+  const [dash, gap] = centreDashMm(widthMm, Math.min(t.w, t.h))
+  return [t.w, t.h].some((length) => {
+    const half = length / 2
+    const { before, after } = clearGaps(length, dash, gap, 0, half, widthMm)
+    const period = dash + gap
+    return !(before + after > 0 && (half < period || before > 0) && (half < period || after > 0))
+  })
+}
+
+/** Each segment M a L b split at its midpoint m into the arms M m L a and M m L b. */
+function armsOf(cmds: readonly PathCmd[]): PathCmd[] {
+  const out: PathCmd[] = []
+  for (let i = 0; i + 1 < cmds.length; i += 2) {
+    const a = cmds[i]
+    const b = cmds[i + 1]
+    if (a?.op !== 'M' || b?.op !== 'L') throw new Error('not a segment')
+    const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+    out.push(
+      { op: 'M', ...m },
+      { op: 'L', x: a.x, y: a.y },
+      { op: 'M', ...m },
+      { op: 'L', x: b.x, y: b.y },
+    )
+  }
+  return out
+}
+
+/** The tile's dashed batch as the page model must hold it: M3's centre lines, or their arms with the centred phase. */
+function expectedDashed(lines: LineSettings, t: RectMm, turned: boolean): LineStroke | null {
+  const cmds = compositionPaths(lines, frameOf(t, turned))
+    .filter((p) => p.dashed)
+    .flatMap((p) => p.cmds.map((c) => frameToPage(c, t, turned)))
+  if (cmds.length === 0) return null
+  const dashMm = [...centreDashMm(lines.style.widthMm, Math.min(t.w, t.h))]
+  if (!needsCentring(t, lines.style.widthMm)) return { dashMm, cmds }
+  return { dashMm, cmds: armsOf(cmds), dashPhaseMm: (dashMm[0] ?? 0) / 2 }
+}
+
+const armLength = (arm: readonly PathCmd[]): number => {
+  const [a, b] = arm
+  return a && b && a.op !== 'C' && b.op !== 'C' ? Math.hypot(b.x - a.x, b.y - a.y) : NaN
+}
 
 describe('tileLinesFor', () => {
   it('null when nothing is on', () => {
@@ -193,7 +240,8 @@ describe('tileLinesFor', () => {
             .flatMap((p) => p.cmds.map((c) => frameToPage(c, t, turned)))
         const tl = compo(lines, t, turned, 0)
         const all = tl?.strokes.flatMap((s) => s.cmds) ?? []
-        expect(all).toEqual([...placed(false), ...placed(true)])
+        const dashed = needsCentring(t, lines.style.widthMm) ? armsOf(placed(true)) : placed(true)
+        expect(all).toEqual([...placed(false), ...dashed])
       }),
     )
   })
@@ -238,6 +286,133 @@ describe('tileLinesFor', () => {
     fc.assert(
       fc.property(arbLineSettings, (lines) => {
         expect(cmdCount(sanitizeLines(lines))).toBeLessThanOrEqual(MAX_LINE_CMDS_PER_TILE)
+      }),
+    )
+  })
+})
+
+describe('centre lines on the smallest tiles (dash phase)', () => {
+  const centre2 = patchLines(DEFAULT_LINES, { centre: true, style: { widthMm: 2 } })
+  const small: readonly [string, RectMm][] = [
+    ['12 × 8', { x: 10, y: 20, w: 12, h: 8 }],
+    ['8 × 12', { x: 10, y: 20, w: 8, h: 12 }],
+  ]
+
+  it.each(small)(
+    'the %s mm tile at 2 mm: one dashed stroke, the centre lines split at the crossing, phase dash / 2',
+    (_, t) => {
+      for (const turned of [false, true]) {
+        const tl = compo(centre2, t, turned, 0)
+        expect(tl?.strokes).toHaveLength(1)
+        const s = tl?.strokes[0]
+        const [dash = NaN, gap = NaN] = s?.dashMm ?? []
+        expect(dash).toBeCloseTo(3, 9)
+        expect(gap).toBeCloseTo(2, 9)
+        expect(s?.dashPhaseMm).toBeCloseTo(1.5, 9)
+        expect(s?.cmds).toHaveLength(8)
+        expect(s).toEqual(expectedDashed(centre2, t, turned))
+        const centre = { x: t.x + t.w / 2, y: t.y + t.h / 2 }
+        for (let i = 0; i < 8; i += 2) {
+          const start = s?.cmds[i]
+          expect(start?.op).toBe('M')
+          expect(
+            start && start.op !== 'C' && Math.hypot(start.x - centre.x, start.y - centre.y),
+          ).toBeLessThan(1e-9)
+        }
+      }
+    },
+  )
+
+  it.each(small)(
+    'the %s mm tile at 2 mm: every arm shows a whole gap off the crossing line, with a dash past it',
+    (_, t) => {
+      const s = compo(centre2, t, false, 0)?.strokes[0]
+      const [dash = NaN, gap = NaN] = s?.dashMm ?? []
+      for (let i = 0; i < 8; i += 4) {
+        const arm = s?.cmds.slice(i, i + 2) ?? []
+        const length = armLength(arm)
+        const gaps = clearGaps(length, dash, gap, s?.dashPhaseMm ?? 0, 0, 2)
+        expect(gaps.after).toBeGreaterThan(0)
+        expect((s?.dashPhaseMm ?? 0) + length).toBeGreaterThan(dash + gap)
+      }
+    },
+  )
+
+  it('before the phase, the 8 mm line’s only gap fell under the crossing line', () => {
+    const [dash, gap] = centreDashMm(2, 8)
+    expect(clearGaps(8, dash, gap, 0, 4, 2)).toEqual({ before: 0, after: 0 })
+    expect(needsCentring({ x: 0, y: 0, w: 12, h: 8 }, 2)).toBe(true)
+  })
+
+  it.each([
+    ['20 × 20', { x: 10, y: 20, w: 20, h: 20 }],
+    ['20 × 15', { x: 10, y: 20, w: 20, h: 15 }],
+    ['16 × 12', { x: 10, y: 20, w: 16, h: 12 }],
+  ] as const)('a %s mm tile at 2 mm keeps M3’s centre lines with no phase', (_, t) => {
+    for (const turned of [false, true]) {
+      const s = compo(centre2, t, turned, 0)?.strokes[0]
+      expect(s).toEqual({
+        dashMm: [...centreDashMm(2, Math.min(t.w, t.h))],
+        cmds: compositionPaths(centre2, frameOf(t, turned)).flatMap((p) =>
+          p.cmds.map((c) => frameToPage(c, t, turned)),
+        ),
+      })
+      expect(s && 'dashPhaseMm' in s).toBe(false)
+    }
+  })
+
+  it('the phase is 0 whenever the tile’s short side is at least 30 × the width, even where the floor period leaves no gap off the crossing (property)', () => {
+    const lines = patchLines(DEFAULT_LINES, { centre: true, style: { widthMm: 0.1 } })
+    const t = { x: 0, y: 0, w: 3, h: 3 }
+    expect(clearGaps(3, 1.5, 1, 0, 1.5, 0.1)).toEqual({ before: 0, after: 0 })
+    expect(compo(lines, t, false, 0)?.strokes[0]).toEqual({
+      dashMm: [1.5, 1],
+      cmds: compositionPaths(lines, t).flatMap((p) => p.cmds.map((c) => frameToPage(c, t, false))),
+    })
+    fc.assert(
+      fc.property(arbLineSettings, anyTrim, fc.boolean(), (lines, t, turned) => {
+        fc.pre(lines.centre && Math.min(t.w, t.h) >= 30 * lines.style.widthMm)
+        const tl = compo(lines, t, turned, 0)
+        for (const s of tl?.strokes ?? []) expect('dashPhaseMm' in s).toBe(false)
+      }),
+    )
+  })
+
+  it('splits the centre lines exactly when phase 0 leaves one without a whole gap off the crossing (property)', () => {
+    fc.assert(
+      fc.property(arbLineSettings, anyTrim, fc.boolean(), (lines, t, turned) => {
+        const dashed = compo(lines, t, turned, 0)?.strokes.find((s) => s.dashMm.length > 0)
+        expect(dashed ?? null).toEqual(expectedDashed(lines, t, turned))
+        if (dashed) {
+          const [dash = NaN, gap = NaN] = dashed.dashMm
+          const need =
+            Math.min(t.w, t.h) < 30 * lines.style.widthMm &&
+            [t.w, t.h].some(
+              (l) => centreDashPhaseMm(l, dash, gap, l / 2, lines.style.widthMm) !== 0,
+            )
+          expect('dashPhaseMm' in dashed).toBe(need)
+        }
+      }),
+    )
+  })
+
+  it('on a split tile, every arm long enough for half a dash and a gap shows a whole gap off the crossing (property)', () => {
+    const widths = fc.integer({ min: 1, max: 20 }).map((k) => k / 10)
+    const sides = fc.double({ min: 1, max: 80, noNaN: true })
+    fc.assert(
+      fc.property(widths, sides, sides, fc.boolean(), (widthMm, w, h, turned) => {
+        const t = { x: 5, y: 7, w, h }
+        fc.pre(needsCentring(t, widthMm))
+        const lines = patchLines(DEFAULT_LINES, { centre: true, style: { widthMm } })
+        const s = compo(lines, t, turned, 0)?.strokes[0]
+        const [dash = NaN, gap = NaN] = s?.dashMm ?? []
+        for (let i = 0; i < 8; i += 2) {
+          const length = armLength(s?.cmds.slice(i, i + 2) ?? [])
+          if (length < dash / 2 + gap) continue
+          expect(
+            clearGaps(length, dash, gap, s?.dashPhaseMm ?? 0, 0, widthMm).after,
+          ).toBeGreaterThan(0)
+        }
       }),
     )
   })
@@ -338,8 +513,15 @@ describe('tileLinesFor with guides (M4-R11, R12, R17)', () => {
       fc.property(arbLineSettings, guideSwitches, anyTrim, fc.boolean(), (lines, g, t, turned) => {
         const img = on(patchLines(lines, g))
         const dash = centreDashMm(lines.style.widthMm, Math.min(t.w, t.h))
+        const m3 = m3TileLinesFor(lines, t, turned, 2, dash)
+        const want = m3 && {
+          ...m3,
+          strokes: m3.strokes.map((s) =>
+            s.dashMm.length > 0 ? (expectedDashed(lines, t, turned) ?? s) : s,
+          ),
+        }
         expect(JSON.stringify(tileLinesFor(img, NO_GUIDES, t, turned, 2))).toBe(
-          JSON.stringify(m3TileLinesFor(lines, t, turned, 2, dash)),
+          JSON.stringify(want),
         )
       }),
     )

@@ -345,44 +345,119 @@ test.describe('exit criterion (all browsers)', () => {
     )
     expect(onSheet.length).toBeGreaterThan(0)
     const last = onSheet[onSheet.length - 1].dash
+    expect(onSheet[onSheet.length - 1].offset).toBe(0)
     expect(last).toHaveLength(2)
     want.forEach((d, i) => {
       expect(last[i]).toBeCloseTo(d * k, 6)
     })
   })
+
+  test('L-X1 a 12 × 8 mm tile at 2 mm width keeps a gap of each centre line off the crossing: the PDF dash and phase equal the page model’s, and the preview’s scaled', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000)
+    await recordLineDashes(page)
+    const app = await withPhotos(page, [FIXTURES.valueRamp])
+    await app.editButton(RAMP).click()
+    const sheet = page.getByRole('dialog')
+    await sheet.getByRole('radio', { name: 'Fixed' }).click()
+    await sheet.getByRole('radio', { name: 'Width' }).click()
+    const width = sheet.getByRole('spinbutton', { name: 'Width' })
+    await width.fill('12')
+    await width.blur()
+    await sheet.getByRole('button', { name: 'Done' }).click()
+    await expect(sheet).toHaveCount(0)
+    const lines = lineSettings({
+      centre: true,
+      style: { colour: BLUE, widthMm: 2, opacityPct: 100 },
+    })
+    await app.setLineSwitch('Centre lines', true)
+    await app.setLineStyle({ colour: BLUE, widthMm: 2, opacityPct: 100 })
+    await app.expectPreviewSettled()
+
+    const { info } = await exported(app)
+    const p = firstPage(info)
+    expect(p.draws).toHaveLength(1)
+    const trim = tileBox(p.draws[0], info)
+    expect(trim.w).toBeCloseTo(12, 1)
+    expect(trim.h).toBeCloseTo(8, 1)
+    const want = tileLinesFor(lines, trim, isTurned(p.draws[0], 900, 600))
+    expect(want.strokes).toHaveLength(1)
+    const [dash = NaN, gap = NaN] = want.strokes[0].dashMm
+    const phase = want.strokes[0].dashPhaseMm ?? NaN
+    expect(dash + gap).toBeCloseTo(5, 6)
+    expect(phase).toBeCloseTo(dash / 2, 9)
+    expect(p.lineStrokes).toHaveLength(1)
+    expect(p.lineStrokes[0].dashPt.map((d) => d / PT_PER_MM)).toEqual([
+      expect.closeTo(dash, 3),
+      expect.closeTo(gap, 3),
+    ])
+    expect(p.lineStrokes[0].dashPhasePt / PT_PER_MM).toBeCloseTo(phase, 3)
+    expect(strokeMismatches(p.lineStrokes, want, p.heightPt)).toEqual([])
+
+    const k = await pxPerMm(app, info)
+    const canvasWidth = await app.pageCanvases.first().evaluate((c: SheetCanvas) => c.width)
+    const dashes = await page.evaluate(() => (globalThis as unknown as DashWindow).__lineDashes)
+    const onSheet = dashes.filter(
+      (d) => d.canvasWidth === canvasWidth && d.strokeStyle === BLUE && d.dash.length > 0,
+    )
+    expect(onSheet.length).toBeGreaterThan(0)
+    const last = onSheet[onSheet.length - 1]
+    expect(last.dash).toEqual([expect.closeTo(dash * k, 6), expect.closeTo(gap * k, 6)])
+    expect(last.offset).toBeCloseTo(phase * k, 6)
+
+    // On the sheet: the crossing is drawn, and the middle of the first gap on every arm shows the photo.
+    const c = { x: trim.x + trim.w / 2, y: trim.y + trim.h / 2 }
+    const mid = dash / 2 + gap / 2
+    const gaps = [
+      { x: c.x, y: c.y - mid },
+      { x: c.x, y: c.y + mid },
+      { x: c.x - mid, y: c.y },
+      { x: c.x + mid, y: c.y },
+    ]
+    const lit = await pixelsAt(app, k, [c, ...gaps])
+    await app.setLineSwitch('Centre lines', false)
+    await app.expectPreviewSettled()
+    const bare = await pixelsAt(app, k, gaps)
+    const line = hexRgb(BLUE)
+    expect(rgbDistance(lit[0], line)).toBeLessThanOrEqual(60)
+    expect(
+      failing('gap', gaps, lit.slice(1), (px, i) => rgbDistance(px, bare[i] ?? []) <= 30),
+    ).toEqual([])
+  })
 })
 
 interface DashWindow {
-  __lineDashes: { canvasWidth: number; strokeStyle: unknown; dash: number[] }[]
+  __lineDashes: { canvasWidth: number; strokeStyle: unknown; dash: number[]; offset: number }[]
 }
 
 interface SheetCanvas {
   readonly width: number
 }
 
-/** Records, in the page, every setLineDash call on a 2D canvas with its canvas width and stroke style. */
+/** Records, in the page, every dashed or solid stroke on a 2D canvas: its canvas width, stroke style, dash and dash offset. */
 async function recordLineDashes(page: Page): Promise<void> {
   await page.addInitScript(() => {
+    interface Ctx {
+      canvas: SheetCanvas
+      strokeStyle: unknown
+      lineDashOffset: number
+      getLineDash: () => number[]
+    }
     const w = globalThis as unknown as DashWindow & {
-      CanvasRenderingContext2D: {
-        prototype: {
-          setLineDash: (
-            this: { canvas: SheetCanvas; strokeStyle: unknown },
-            segments: number[],
-          ) => void
-        }
-      }
+      CanvasRenderingContext2D: { prototype: { stroke: (this: Ctx, ...args: unknown[]) => void } }
     }
     w.__lineDashes = []
     const proto = w.CanvasRenderingContext2D.prototype
-    const native = proto.setLineDash
-    proto.setLineDash = function (segments) {
+    const native = proto.stroke
+    proto.stroke = function (...args) {
       w.__lineDashes.push({
         canvasWidth: this.canvas.width,
         strokeStyle: this.strokeStyle,
-        dash: [...segments],
+        dash: this.getLineDash(),
+        offset: this.lineDashOffset,
       })
-      native.call(this, segments)
+      native.apply(this, args)
     }
   })
 }
