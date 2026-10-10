@@ -57,6 +57,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
   border-radius: var(--radius-md); box-shadow: var(--shadow-md);
 }
 .skip-link:focus { top: var(--space-2); }
+/* Off-screen is not enough when a tall mock banner sits above the top bar. */
+.skip-link:not(:focus) { clip-path: inset(50%); }
 
 /* ---------- Typography helpers ------------------------------------------ */
 .hand { font-family: var(--font-hand); font-size: var(--text-hand); line-height: 1.1; font-weight: 600; }
@@ -1002,6 +1004,7 @@ dialog.dialog--sm { width: min(480px, calc(100vw - 32px)); }
 .block--origin::after { border-style: dotted; }
 .block--origin .tile__img { opacity: 0.4; }
 .block--ghost { cursor: grabbing; z-index: 8; background: rgb(47 76 158 / 0.12); box-shadow: 0 6px 14px rgb(0 0 0 / 0.25); }
+.block--ghost .tile { opacity: 0.75; }
 .block--ghost::after { border: 2px solid var(--on-paper-select); }
 .block--ghost.is-invalid { background: rgb(163 38 27 / 0.14); }
 .block--ghost.is-invalid::after { border: 2px dotted var(--on-paper-danger); }
@@ -1063,7 +1066,10 @@ dialog.dialog--sm { width: min(480px, calc(100vw - 32px)); }
 }
 .device__screen > [data-sheet], .device__screen > .m-sheet-host { position: absolute; inset: 0; z-index: 30; }
 @media (max-width: 600px) {
-  .topbar { flex-wrap: wrap; }
+  .topbar { flex-wrap: wrap; height: auto; min-height: var(--size-topbar); padding-block: var(--space-2); row-gap: var(--space-2); }
+  .preset-row { grid-template-columns: minmax(0, 1fr); }
+  .preset-row__actions { justify-content: flex-start; }
+  .toolbar-sep { display: none; }
   .state-grid { grid-template-columns: minmax(0, 1fr); padding-inline: var(--space-4); }
   .stage { padding: var(--space-3); overflow: hidden; }
   .desk__toolbar .arrange-controls { width: 100%; }
