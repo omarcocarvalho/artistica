@@ -148,20 +148,28 @@ export class AppPage {
     if (await dialog.isVisible()) await dialog.getByRole('button', { name: 'Remove all' }).click()
   }
 
+  /** The phone Export step, where the export runs inline (M5-R28). */
+  get exportStep(): Locator {
+    return this.page.getByRole('region', { name: 'Step 5 of 5: Export' })
+  }
+
   /**
-   * Open the export dialog, create the PDF, return its bytes. `via: 'step'` uses the phone Export
-   * step's "Create PDF" button. The dialog internals ("Create PDF", "Download PDF") are not merged
-   * yet; adjust here when the export dialog lands.
+   * Create the PDF and return its bytes: through the top bar's Export and its dialog, or with
+   * `via: 'step'` inline in the phone Export step (which must be shown), with one press.
    */
   async exportPdf(
     via: 'top-bar' | 'step' = 'top-bar',
   ): Promise<{ bytes: Buffer; fileName: string }> {
-    if (via === 'step') await this.page.getByRole('button', { name: 'Create PDF' }).first().click()
-    else await this.exportButton.click()
-    const dialog = this.page.getByRole('dialog')
-    await dialog.getByRole('button', { name: /create pdf/i }).click()
+    let scope: Locator
+    if (via === 'step') {
+      scope = this.exportStep
+    } else {
+      await this.exportButton.click()
+      scope = this.page.getByRole('dialog')
+    }
+    await scope.getByRole('button', { name: /create pdf/i }).click()
     const download = this.page.waitForEvent('download', { timeout: 120_000 })
-    await dialog.getByRole('link', { name: /download pdf/i }).click()
+    await scope.getByRole('link', { name: /download pdf/i }).click()
     const d = await download
     const stream = await d.createReadStream()
     const chunks: Buffer[] = []

@@ -86,10 +86,13 @@ test('M1 phone flow: Images, edit sheet, Page, Preview, Export, parse the PDF', 
     .evaluate((el: { scrollWidth: number; clientWidth: number }) => el.scrollWidth - el.clientWidth)
   expect(overflow).toBeLessThanOrEqual(0)
 
-  // Owner Q10: the phone Export step opens the same dialog as desktop.
+  // M5-R28: the export is inline in the Export step, with one Create PDF and no top-bar Export.
   await page.getByRole('button', { name: 'Next' }).click()
-  await expect(page.getByText('2 images are ready to print.')).toBeVisible()
+  await expect(app.exportStep.getByText('2 from 2 images')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Create PDF' })).toHaveCount(1)
+  await expect(app.exportButton).toHaveCount(0)
   const { bytes, fileName } = await app.exportPdf('step')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
   expect(fileName).toMatch(/^artistica-Letter-/)
   const info = await summarizePdf(bytes)
   expect(info.pageCount).toBe(1)
@@ -303,7 +306,7 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line and guide on
     workers = summarizeLandmarkWorkers(await workerLog(page))
 
     await page.getByRole('button', { name: 'Next' }).click()
-    await expect(page.getByText('22 images are ready to print.')).toBeVisible()
+    await expect(app.exportStep.getByText(/ from 22 images$/)).toBeVisible()
     memory.phase('export')
     pdf = (await app.exportPdf('step')).bytes
   } finally {
@@ -441,8 +444,7 @@ test('H1 phone: the link field and the export file name are 44 px tall with 16 p
   await expectTouchTargets([link])
   await expectNoFocusZoom([link])
   await app.goToStep('Export')
-  await page.getByRole('button', { name: 'Create PDF' }).first().click()
-  const fileName = page.getByRole('dialog').getByRole('textbox', { name: 'File name' })
+  const fileName = app.exportStep.getByRole('textbox', { name: 'File name' })
   await expectTouchTargets([fileName])
   await expectNoFocusZoom([fileName])
 })
@@ -487,13 +489,79 @@ test('S-P1 phone: Studies step, a 3-version group in the preview, export parses 
   }
   const previewPages = await app.pageCanvases.count()
   await page.getByRole('button', { name: 'Next' }).click()
+  await expect(page.getByRole('button', { name: 'Create PDF' })).toHaveCount(1)
   const { bytes } = await app.exportPdf('step')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
   expect((await summarizePdf(bytes)).pageCount).toBe(previewPages)
   const draws = await pdfDraws(bytes)
   expect(draws).toHaveLength(4)
   expect(draws.filter((d) => d.filter === 'DCTDecode')).toHaveLength(3)
   expect(draws.filter((d) => d.filter === 'FlateDecode').map((d) => d.colours)).toEqual([5])
 })
+
+interface DecodeHold {
+  __releaseDecodes?: () => void
+  createImageBitmap: (...args: unknown[]) => Promise<unknown>
+}
+
+/** Holds every decode started from now on until the returned function runs, so the export stays on its progress. */
+async function holdDecodes(page: Page): Promise<() => Promise<void>> {
+  await page.evaluate(() => {
+    const w = globalThis as unknown as DecodeHold
+    const decode = w.createImageBitmap.bind(w)
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    w.__releaseDecodes = release
+    w.createImageBitmap = async (...args: unknown[]) => {
+      await gate
+      return decode(...args)
+    }
+  })
+  return async () => {
+    await page.evaluate(() => {
+      ;(globalThis as unknown as DecodeHold).__releaseDecodes?.()
+    })
+  }
+}
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`E-P1 phone: axe on the inline export when unavailable, ready, running and done (${scheme})`, async ({
+    page,
+  }) => {
+    test.setTimeout(120_000)
+    await page.emulateMedia({ colorScheme: scheme })
+    const app = startApp(page)
+    await app.goto()
+    await app.goToStep('Export')
+    const create = app.exportStep.getByRole('button', { name: 'Create PDF' })
+    await expect(create).toHaveAttribute('aria-disabled', 'true')
+    await expect(create).toHaveAccessibleDescription('Add at least one image to export.')
+    await expect(app.exportStep.getByText('Add at least one image to export.')).toBeVisible()
+    await expectNoAxeViolations(page)
+
+    await app.goToStep('Images')
+    await app.upload([FIXTURES.quadrantsJpg])
+    await app.expectImages(1)
+    await app.goToStep('Export')
+    await expect(create).not.toHaveAttribute('aria-disabled')
+    await expectNoAxeViolations(page)
+
+    const release = await holdDecodes(page)
+    await create.click()
+    await expect(app.exportStep.getByRole('progressbar', { name: 'PDF progress' })).toBeVisible()
+    await expect(app.exportStep.getByRole('button', { name: 'Cancel' })).toBeVisible()
+    await expectNoAxeViolations(page)
+
+    await release()
+    await expect(app.exportStep.getByRole('link', { name: 'Download PDF' })).toBeVisible({
+      timeout: 60_000,
+    })
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expectNoAxeViolations(page)
+  })
+}
 
 test('S-P2 phone: every Studies-step control is at least 44 px tall', async ({ page }) => {
   const app = startApp(page)

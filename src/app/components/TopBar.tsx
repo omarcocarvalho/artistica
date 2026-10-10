@@ -1,12 +1,13 @@
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, Icon, VisuallyHidden } from '../../shared/ui'
+import { Button, Icon, Tooltip, VisuallyHidden } from '../../shared/ui'
+import { useIsDesktop } from '../hooks/useIsDesktop'
 import { Logo } from './Logo'
 import { ThemeToggle } from './ThemeToggle'
 
 export interface TopBarProps {
   readonly onExport: () => void
-  /** Non-null disables Export and is announced as its description. */
+  /** Non-null disables Export; it is the button's description and its tooltip (M5-R29). */
   readonly exportDisabledReason: string | null
 }
 
@@ -14,6 +15,7 @@ export function TopBar({ onExport, exportDisabledReason }: TopBarProps) {
   const { t } = useTranslation('app')
   const reasonId = useId()
   const disabled = exportDisabledReason !== null
+  const showExport = useIsDesktop()
   return (
     <header className="border-line bg-surface flex min-w-0 items-center gap-2 border-b px-4 py-2">
       <a
@@ -32,16 +34,22 @@ export function TopBar({ onExport, exportDisabledReason }: TopBarProps) {
       </span>
       <span className="min-w-0 flex-1" />
       <ThemeToggle />
-      <Button
-        variant="primary"
-        aria-disabled={disabled || undefined}
-        aria-describedby={disabled ? reasonId : undefined}
-        icon="download"
-        onClick={disabled ? undefined : onExport}
-      >
-        {t('topBar.export')}
-      </Button>
-      {disabled && <VisuallyHidden id={reasonId}>{exportDisabledReason}</VisuallyHidden>}
+      {showExport && (
+        <>
+          <Tooltip content={exportDisabledReason ?? ''} disabled={!disabled}>
+            <Button
+              variant="primary"
+              aria-disabled={disabled || undefined}
+              aria-describedby={disabled ? reasonId : undefined}
+              icon="download"
+              onClick={disabled ? undefined : onExport}
+            >
+              {t('topBar.export')}
+            </Button>
+          </Tooltip>
+          {disabled && <VisuallyHidden id={reasonId}>{exportDisabledReason}</VisuallyHidden>}
+        </>
+      )}
     </header>
   )
 }

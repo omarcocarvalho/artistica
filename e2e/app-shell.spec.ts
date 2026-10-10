@@ -39,6 +39,42 @@ test.describe('desktop layout', () => {
     await expect(page.getByLabel('Paper size')).toHaveValue('A4')
   })
 
+  test('X-D the disabled Export shows its reason as a tooltip on hover and on keyboard focus (WCAG 1.4.13)', async ({
+    page,
+  }) => {
+    await page.goto('app/')
+    const exportButton = page.getByRole('button', { name: 'Export PDF' })
+    const reason = 'Add at least one image to export.'
+    const tip = page.locator('.ds-tooltip')
+    await expect(exportButton).toHaveAttribute('aria-disabled', 'true')
+    await expect(exportButton).toHaveAccessibleDescription(reason)
+
+    await exportButton.hover()
+    await expect(tip).toBeVisible()
+    await expect(tip).toHaveText(reason)
+    const box = await tip.boundingBox()
+    if (!box) throw new Error('no tooltip box')
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 5 })
+    await expect(tip).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(tip).toHaveCount(0)
+    await page.mouse.move(5, 400)
+
+    await exportButton.focus()
+    await expect(tip).toBeVisible()
+    await expect(tip).toHaveText(reason)
+    await page.keyboard.press('Escape')
+    await expect(tip).toHaveCount(0)
+    await expect(exportButton).toBeFocused()
+    // WebKit on macOS does not Tab to buttons, so focus moves with focus().
+    const home = page.getByRole('link', { name: 'Artistica home' })
+    await home.focus()
+    await exportButton.focus()
+    await expect(tip).toBeVisible()
+    await home.focus()
+    await expect(tip).toHaveCount(0)
+  })
+
   test('uses the narrower panels between 960 and 1199 px', async ({ page }) => {
     await page.setViewportSize({ width: 1000, height: 800 })
     await page.goto('app/')
@@ -122,6 +158,7 @@ test.describe('phone layout', () => {
       'aria-disabled',
       'true',
     )
+    await expect(page.getByRole('button', { name: 'Export PDF' })).toHaveCount(0)
     await page.getByRole('button', { name: 'Back' }).click()
     await expect(page.getByRole('region', { name: 'Step 4 of 5: Preview' })).toBeVisible()
   })

@@ -24,3 +24,8 @@ export { ExportError, type ExportErrorCode } from './export/errors'
 export { pdfFileName } from './export/file-name'
 // --- Export dialog (Task 6) ---
 export { ExportDialog, type ExportDialogProps } from './components/ExportDialog'
+export {
+  ExportPanel,
+  type ExportPanelHandle,
+  type ExportPanelProps,
+} from './components/ExportPanel'
