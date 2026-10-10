@@ -377,6 +377,8 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line and guide on
 const M5_PHOTO = { w: 4000, h: 3000 }
 /** M5b: the settled memory after every page has been near the view, over the first 10 pages' (M5-R21). */
 const PAGES_GROWTH_MB = 150
+/** A decode's peak lasts well under the sampler's default 250 ms. */
+const DECODE_SAMPLE_MS = 50
 
 function skipUnlessChromium(projectName: string): void {
   test.skip(
@@ -396,7 +398,7 @@ test('M5a @slow 20 x 12 MP photos with default settings on A4: import, preview a
   const photos = await syntheticJpegsApart(browser, 20, M5_PHOTO.w, M5_PHOTO.h, { noisy: true })
   const app = startApp(page)
   await app.goto()
-  const memory = sampleBrowserMemory(browser)
+  const memory = sampleBrowserMemory(browser, DECODE_SAMPLE_MS)
   let pdf: Buffer
   let previewPages: number
   let settled: number
@@ -529,8 +531,7 @@ test('M5c @slow a 100 MP photo imports on a phone within the memory budget, and 
       ).matches,
   )
   expect(coarse, 'the phone project has a coarse pointer').toBe(true)
-  // A decode's peak lasts well under the default 250 ms between samples.
-  const memory = sampleBrowserMemory(browser, 50)
+  const memory = sampleBrowserMemory(browser, DECODE_SAMPLE_MS)
   const settled: Record<string, number> = {}
   let refusal: string
   try {
