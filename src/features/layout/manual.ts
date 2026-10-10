@@ -7,6 +7,7 @@ import {
 } from '../../shared/model/page-setup'
 import type { Mm } from '../../shared/model/units'
 import { blockSize, maxFitTileWidth, tileRects, tileShortSide } from './geometry'
+import { sizeRange } from './sizing'
 import { suggestedPerPage } from './suggest'
 import { EPS_MM } from './tolerances'
 import type { LayoutItemInput, LayoutResult, Placement, PlacementWarning, RectMm } from './types'
@@ -173,8 +174,8 @@ export function manualFromLayout(
 
 /**
  * The pages of a manual layout. Geometry comes from the manual layout alone; `suggestedPerPage` from
- * `setup` on its page size. Blocks with no matching item are left out. `scaled-to-fit` is never set:
- * a manual size is the user's choice.
+ * `setup` on its page size. Blocks with no matching item are left out. `scaled-to-fit` marks a fixed
+ * size larger than the manual layout's content box, as the automatic engine does.
  */
 export function layoutFromManual(
   manual: ManualLayout,
@@ -187,6 +188,7 @@ export function layoutFromManual(
     const item = byBlock.get(b.blockId)
     if (item === undefined) continue
     const warnings: PlacementWarning[] = b.tileW > item.maxPrintWidthMm + EPS_MM ? ['low-dpi'] : []
+    if (sizeRange(item, manual.gutter, manual.content).scaledToFit) warnings.push('scaled-to-fit')
     pages[b.page]?.push({
       key: item.key,
       imageId: item.imageId,

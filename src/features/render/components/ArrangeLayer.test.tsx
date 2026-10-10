@@ -320,6 +320,26 @@ describe('ArrangeLayer: pointer', () => {
     expect(intent?.kind === 'resize' ? intent.tileW : 0).toBeCloseTo(60 * 1.5, 0)
   })
 
+  it.each([
+    ['tl', 'br', -40, -40],
+    ['tr', 'bl', 40, -40],
+    ['bl', 'tr', -40, 40],
+    ['br', 'tl', 40, 40],
+  ] as const)('the %s handle resizes about the opposite corner (%s)', (corner, anchor, dx, dy) => {
+    const { props } = setup({ selected: 'a' })
+    const handle = document.querySelector(`[data-block-id="a"] [data-corner="${corner}"]`)
+    if (!handle) throw new Error('no handle')
+    down(handle, 160, 200)
+    move(160 + dx, 200 + dy)
+    up(160 + dx, 200 + dy)
+    expect(props.onCommit).toHaveBeenCalledOnce()
+    expect(vi.mocked(props.onCommit).mock.calls[0]?.[0]).toMatchObject({
+      kind: 'resize',
+      id: 'a',
+      anchor,
+    })
+  })
+
   it('a drag commits nothing during 50 pointer moves (M5-R19)', () => {
     const { props } = setup()
     down(blockEl(/^a\.jpg/), 60, 60)

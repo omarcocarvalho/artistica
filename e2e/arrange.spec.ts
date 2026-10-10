@@ -747,6 +747,10 @@ test.describe('manual layout by keyboard only (desktop)', () => {
     await press('Enter')
     await expect(arrange.toggle).toHaveAttribute('aria-pressed', 'true')
     await press(tab)
+    expect(steps.at(-1)?.name).toBe('Undo')
+    await press(tab)
+    expect(steps.at(-1)?.name).toBe('Re-run auto layout')
+    await press(tab)
     expect(steps.at(-1)?.name).toMatch(/^portrait\.jpg, /)
     for (const key of [
       'ArrowRight',
@@ -817,6 +821,28 @@ test.describe('manual layout by keyboard only (desktop)', () => {
       'portrait.jpg, 114.7 × 76.2 mm, page 2, 10 mm from the left, 10 mm from the top.',
     ])
 
+    // Re-run and the last Undo turn themselves off and keep focus (WCAG 2.4.3).
+    for (let i = 0; i < 6 && steps.at(-1)?.name !== 'Re-run auto layout'; i++) await press(back)
+    await expect(arrange.rerun).toBeFocused()
+    await press('Enter')
+    await page.getByRole('dialog').getByRole('button', { name: 'Re-run', exact: true }).focus()
+    await press('Enter')
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(arrange.rerun).toBeFocused()
+    await expect(arrange.rerun).toBeDisabled()
+    for (let i = 0; i < 6 && !(steps.at(-1)?.name ?? '').startsWith('portrait.jpg, '); i++)
+      await press(tab)
+    await press('Shift+ArrowLeft')
+    await app.expectPreviewSettled()
+    for (let i = 0; i < 12 && steps.at(-1)?.name !== 'Undo'; i++) await press(back)
+    await expect(arrange.undo).toBeFocused()
+    await press('Enter')
+    await arrange.expectAnnouncement('Undone.')
+    await expect(arrange.undo).toBeFocused()
+    await expect(arrange.undo).toBeDisabled()
+    await expect(arrange.rerun).toBeDisabled()
+    await app.expectPreviewSettled()
+
     for (const colorScheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme })
       await expectNoAxeViolations(page)
@@ -859,6 +885,11 @@ test.describe('manual layout by keyboard only: the chosen photo and other pages 
     expect((await focusProbe(page)).name).toBe('Arrange')
     await page.keyboard.press('Enter')
     await expect(arrange.toggle).toHaveAttribute('aria-pressed', 'true')
+    // Undo and Re-run stay in the Tab order while off (aria-disabled).
+    await page.keyboard.press(tab)
+    await expect(arrange.undo).toBeFocused()
+    await page.keyboard.press(tab)
+    await expect(arrange.rerun).toBeFocused()
     const order = await tabOrder(arrange)
     expect(order).toHaveLength(4)
     return { app, arrange, tab, back, order }

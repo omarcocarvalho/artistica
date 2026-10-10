@@ -153,6 +153,20 @@ export function ArrangeToolbar({ variant = 'desktop' }: { readonly variant?: Var
   const imageName = (b: ArrangeBlock) => names.get(b.imageId) ?? ''
   const pageCount = manual?.pageCount ?? 0
   const phone = variant === 'phone'
+  const canRerun = stored !== null
+  // aria-disabled, not disabled: a control that turns itself off keeps focus (WCAG 2.4.3).
+  const undoProps = {
+    'aria-disabled': !canUndo || undefined,
+    onClick: canUndo ? undoArrange : undefined,
+  }
+  const rerunProps = {
+    'aria-disabled': !canRerun || undefined,
+    onClick: canRerun
+      ? () => {
+          setConfirming(true)
+        }
+      : undefined,
+  }
   if (optionsFor !== null && optionsFor !== block?.id) setOptionsFor(null)
 
   const toggle = (
@@ -167,9 +181,6 @@ export function ArrangeToolbar({ variant = 'desktop' }: { readonly variant?: Var
       {t('arrange.toggle')}
     </Button>
   )
-  const openConfirm = () => {
-    setConfirming(true)
-  }
   const confirm = (
     <Dialog
       open={confirming}
@@ -205,10 +216,10 @@ export function ArrangeToolbar({ variant = 'desktop' }: { readonly variant?: Var
     return (
       <>
         {toggle}
-        <Button icon="undo" disabled={!canUndo} onClick={undoArrange}>
+        <Button icon="undo" {...undoProps}>
           {t('arrange.undo')}
         </Button>
-        <Button icon="rerun" disabled={stored === null} onClick={openConfirm}>
+        <Button icon="rerun" {...rerunProps}>
           {t('arrange.rerun')}
         </Button>
         {confirm}
@@ -243,16 +254,14 @@ export function ArrangeToolbar({ variant = 'desktop' }: { readonly variant?: Var
           size="lg"
           variant="neutral"
           label={t('arrange.undo')}
-          disabled={!canUndo}
-          onClick={undoArrange}
+          {...undoProps}
         />
         <IconButton
           icon="rerun"
           size="lg"
           variant="neutral"
           label={t('arrange.rerun')}
-          disabled={stored === null}
-          onClick={openConfirm}
+          {...rerunProps}
         />
         {block && (
           <Button

@@ -453,6 +453,30 @@ describe('PipelineEffect with a manual layout (M5-R8, M5-R14)', () => {
     expect(blockX('a#0')).toBeCloseTo(12, 6)
   })
 
+  it('undoing every edit goes back to the automatic layout: a paper change then posts no notice', async () => {
+    await arrangeOneMm()
+    act(() => {
+      useArrange.getState().undoLast()
+    })
+    await waitFor(() => {
+      expect(layoutAsync).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), null)
+    })
+    await waitFor(() => {
+      expect(usePages.getState().pages[0]?.tiles[0]?.trim.x).toBeCloseTo(10, 6)
+    })
+    await settle()
+    expect(useArrange.getState().manual).toBeNull()
+    act(() => {
+      useSettings.getState().setPageSetup({ paper: 'A3' })
+    })
+    await waitFor(() => {
+      expect(usePages.getState().layout?.pageSize.w).toBeCloseTo(297, 6)
+    })
+    await settle()
+    expect(useArrange.getState().manual).toBeNull()
+    expect(useNotices.getState().notices).toEqual([])
+  })
+
   it('undo and re-run auto layout run the pipeline with the restored state', async () => {
     await arrangeOneMm()
     act(() => {

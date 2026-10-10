@@ -84,30 +84,54 @@ describe('ArrangeToolbar: Arrange, Undo, Re-run', () => {
     show([loaded('a'), loaded('b')])
     const user = setup()
     const undo = screen.getByRole('button', { name: 'Undo' })
-    expect(undo).toBeDisabled()
+    expect(undo).toHaveAttribute('aria-disabled', 'true')
     act(() => {
       useArrange.getState().setMode(true)
       useArrange.getState().select('b#0')
     })
     await user.click(screen.getByRole('button', { name: 'Move down' }))
-    expect(undo).toBeEnabled()
+    expect(undo).not.toHaveAttribute('aria-disabled')
     await user.click(undo)
     expect(useArrange.getState().undo).toHaveLength(0)
-    expect(undo).toBeDisabled()
+    expect(useArrange.getState().manual).toBeNull()
+    expect(undo).toHaveAttribute('aria-disabled', 'true')
     expect(said()).toBe('Undone.')
+  })
+
+  it('the last Undo keeps focus on Undo, which then does nothing (WCAG 2.4.3)', async () => {
+    show([loaded('a'), loaded('b')])
+    const user = setup()
+    act(() => {
+      useArrange.getState().setMode(true)
+      useArrange.getState().select('b#0')
+    })
+    await user.click(screen.getByRole('button', { name: 'Move down' }))
+    const undo = screen.getByRole('button', { name: 'Undo' })
+    undo.focus()
+    await user.keyboard('{Enter}')
+    expect(useArrange.getState().manual).toBeNull()
+    expect(undo).toHaveFocus()
+    expect(undo).toBeEnabled()
+    act(() => {
+      useArrangeUi.getState().announce('')
+    })
+    await user.keyboard('{Enter}')
+    expect(said()).toBe('')
   })
 
   it('Re-run is off while the layout is automatic, and asks before going back', async () => {
     show([loaded('a'), loaded('b')])
     const user = setup()
     const rerun = screen.getByRole('button', { name: 'Re-run auto layout' })
-    expect(rerun).toBeDisabled()
+    expect(rerun).toHaveAttribute('aria-disabled', 'true')
+    await user.click(rerun)
+    expect(screen.queryByRole('dialog')).toBeNull()
     act(() => {
       useArrange.getState().setMode(true)
       useArrange.getState().select('b#0')
     })
     await user.click(screen.getByRole('button', { name: 'Move down' }))
-    expect(rerun).toBeEnabled()
+    expect(rerun).not.toHaveAttribute('aria-disabled')
     await user.click(rerun)
     const dialog = screen.getByRole('dialog', {
       name: 'Re-run auto layout? Your moves and size changes will be lost.',
@@ -118,6 +142,26 @@ describe('ArrangeToolbar: Arrange, Undo, Re-run', () => {
     await user.click(screen.getByRole('button', { name: 'Re-run' }))
     expect(useArrange.getState()).toMatchObject({ manual: null, undo: [] })
     expect(said()).toBe('Photos arranged automatically.')
+  })
+
+  it('after Re-run is confirmed, focus returns to Re-run, still focusable (WCAG 2.4.3)', async () => {
+    show([loaded('a'), loaded('b')])
+    const user = setup()
+    act(() => {
+      useArrange.getState().setMode(true)
+      useArrange.getState().select('b#0')
+    })
+    await user.click(screen.getByRole('button', { name: 'Move down' }))
+    const rerun = screen.getByRole('button', { name: 'Re-run auto layout' })
+    rerun.focus()
+    await user.keyboard('{Enter}')
+    const dialog = screen.getByRole('dialog')
+    within(dialog).getByRole('button', { name: 'Re-run' }).focus()
+    await user.keyboard('{Enter}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(useArrange.getState().manual).toBeNull()
+    expect(rerun).toHaveFocus()
+    expect(rerun).toHaveAttribute('aria-disabled', 'true')
   })
 })
 
@@ -293,8 +337,31 @@ describe('ArrangeToolbar on the phone (B5)', () => {
       const b = within(bar()).getByRole('button', { name })
       expect(b).toHaveClass('ds-btn--icon', 'ds-btn--lg')
       expect(b).toHaveTextContent('')
-      expect(b).toBeDisabled()
+      expect(b).toHaveAttribute('aria-disabled', 'true')
     }
+  })
+
+  it('the last Undo and a confirmed Re-run keep focus in the bar (WCAG 2.4.3)', async () => {
+    show([loaded('a'), loaded('b')])
+    const user = phone()
+    arranged('a#0')
+    act(() => {
+      useArrange.getState().apply((m) => ({ ok: true, manual: m }))
+    })
+    const undo = within(bar()).getByRole('button', { name: 'Undo' })
+    await user.click(undo)
+    expect(useArrange.getState().manual).toBeNull()
+    expect(undo).toHaveFocus()
+    expect(undo).toHaveAttribute('aria-disabled', 'true')
+    act(() => {
+      useArrange.getState().apply((m) => ({ ok: true, manual: m }))
+    })
+    const rerun = within(bar()).getByRole('button', { name: 'Re-run auto layout' })
+    await user.click(rerun)
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Re-run' }))
+    expect(useArrange.getState().manual).toBeNull()
+    expect(rerun).toHaveFocus()
+    expect(rerun).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('shows no controls for the selected photo in the bar itself', () => {
