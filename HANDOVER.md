@@ -1,4 +1,4 @@
-# Handover: Artistica (state as of 2026-10-10)
+# Handover: Artistica (state as of 2026-10-11)
 
 This is for the next developer and their AI agent. Read it first, then [CLAUDE.md](CLAUDE.md) for conventions. The default branch is **`master`**. There is no `main` branch.
 
@@ -15,12 +15,14 @@ Artistica is a free, static web app for artists:
 - Draw composition lines on each photo (grid, rule of thirds, diagonals and armature, golden ratio lines, golden spiral, centre lines), as vector paths in the PDF.
 - Draw guides from the photo (an edge outline, face construction lines, a body pose figure), found in the browser; face and pose use MediaPipe models downloaded once on request.
 
-Later milestones add polish and translations.
+- Save named presets of the settings (with a JSON file to move them between devices), and arrange photos by hand on the page (drag, swap, resize, move to another page), with keyboard and tap-only paths.
+
+The last milestone adds translations.
 
 - **Everything runs in the browser.** Photos are never uploaded or persisted.
 - **Hosting:** GitHub Pages. The landing page is at `/artistica/` and the tool at `/artistica/app/`.
 - **Product spec:** [docs/spec.md](docs/spec.md). It is the source of truth.
-- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (released), M4 → `v0.4.0` (released), M5 → `v0.5.0` (in progress), M6 → `v1.0.0`.
+- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (released), M4 → `v0.4.0` (released), M5 → `v0.5.0` (signed off by the controller; release PR #164 being merged), M6 → `v1.0.0` (next).
 
 ## Current status
 
@@ -50,24 +52,27 @@ Later milestones add polish and translations.
 - **Phone memory** (M3 in `e2e/mobile-flow.spec.ts`, every line and guide on, CI mobile-chromium, master `8202465`): studies 1354, guides 1368, preview with guides 1270, settled after guides −46 against settled after studies, export 1328 MB, against budgets of 1500 / 1500 / 1500 / +100 / 1700 MB. The figures of the five master runs after #145 are in the ledger.
 - **Release:** [#124](https://github.com/omarcocarvalho/artistica/pull/124) (`chore(master): release 0.4.0`) merged as `2f0054f`, which created the [`v0.4.0`](https://github.com/omarcocarvalho/artistica/releases/tag/v0.4.0) release and deployed it to Pages.
 
-**M5 ("Polish" → `v0.5.0`) is planned, approved and in progress.** The owner delegated M5 on 2026-10-10: "draft the M5 plan, and you can auto approve the changes and keep implementing, only waiting for the 1.0.0 sign off". The controller approved the plan under that delegation, with every recommended default built (Q1–Q12, and Q-H2–Q-H12 for the M1 questions below). Plan: [`2026-10-10-m5-overview.md`](docs/superpowers/plans/2026-10-10-m5-overview.md) and sub-plans A–E (presets, manual layout, accessibility, performance and memory, mockups and polish): 24 tasks in six waves, then the final review F.
+**M5 ("Polish" → `v0.5.0`) is built and signed off by the controller under the owner's delegation.** The owner delegated M5 on 2026-10-10: "draft the M5 plan, and you can auto approve the changes and keep implementing, only waiting for the 1.0.0 sign off". So the controller approved the plan (PR #152), accepted every recommended default and signed off M5 on 2026-10-11; the owner reviews it all at the v1.0.0 sign-off. Plan: [`2026-10-10-m5-overview.md`](docs/superpowers/plans/2026-10-10-m5-overview.md) and sub-plans A–E (presets, manual layout, accessibility, performance and memory, mockups and polish). Every task is merged: A1–A4, B1–B7, C1–C4, D1–D8 and E1–E4 (#153–#162, #166–#182). The milestone-wide final review ran in three parts (layout and render; state, privacy and performance; UI and accessibility) and found no blockers; its fixes are PRs #183 (CI job timeouts), #184 (presets across tabs, failed-save warning) and #185 (full undo and focus in Arrange). The full record — per-task reviews, rulings, the final review with its mutation results, the §3 evidence table, the triage of deferred items, the controller sign-off and every delegated question — is in [`docs/superpowers/ledgers/m5.md`](docs/superpowers/ledgers/m5.md).
 
-- **Exit:** the spec §3 targets met and measured on CI (layout of 50 images in the worker < 500 ms, a preview update < 200 ms for 20 images, 20 × 12 MP photos → PDF within the phone memory budgets, the bundle budget, memory independent of page count), with the evidence in the M5 ledger.
-- **Sign-off:** the controller signs off M5 (final review in three parts plus automated real-browser evidence) and merges the v0.5.0 release PR. The owner's phone checklist for M5 is folded into the v1.0.0 sign-off.
-- **No new dependency** (M5-R1). Presets and manual arrangements never hold anything derived from a photo; arrangements are never persisted.
+- **Presets:** up to 20 named presets (page setup, studies, lines; never anything from a photo, never a guide switched on), kept in settings v5, shared live between open tabs, exported and imported as one JSON file.
+- **Arrange mode:** drag, swap, resize and move photos between pages on the preview, with Undo (50 steps), Re-run auto layout, keyboard paths (arrows, Shift + arrows, Enter, Page Up/Down) and tap-only buttons (Position, Width, Swap with…, Move to page). Arrangements live in memory only and are never persisted; the automatic engine and its golden snapshot are unchanged.
+- **Exit criterion** (spec §3 met and measured): on master `5d4dd67` (CI run 38071760003) layout of 50 photos in the worker 47 ms (< 500), preview update for 20 photos 14–68 ms per setting kind (< 200), 100 × 12 MP layout 129 ms, initial app JS 229.0 KB (< 250), the spec's 20 × 12 MP case 1023 / 1128 / 1050 MB at import / preview / export (< 1500 / 1500 / 1700), and phone memory that doesn't grow with page count (+9 MB over 60 pages). The full table is in the ledger, "F" → "§3 evidence".
+- **Accessibility:** a WCAG 2.2 AA audit over every screen (C3, `e2e/a11y-audit.spec.ts`), single-pointer alternatives for every drag including the crop (C4), and a stricter axe helper that also gates reviewed `incomplete` results. VoiceOver is still to be run by a person (v1.0.0 checklist).
+- **No new dependency** (M5-R1).
+- **Release:** [#164](https://github.com/omarcocarvalho/artistica/pull/164) (`chore(master): release 0.5.0`) is being merged by the controller (close and reopen, green checks, squash merge), which creates `v0.5.0` and deploys it to Pages.
 
 ## Branch map
 
 | Branch | Use |
 |---|---|
-| `master` | all M1–M4 work; base for new work |
-| `release-please--branches--master--components--artistica` | bot-managed; release-please opens the next release PR here. Don't touch it; merge only after the owner signs off a milestone |
+| `master` | all M1–M5 work; base for new work |
+| `release-please--branches--master--components--artistica` | bot-managed; release-please opens the next release PR here. Don't touch it; merge only after a milestone is signed off (M5: the controller, under the owner's delegation; v1.0.0: the owner) |
 
 ## Next steps (in order)
 
-1. **Execute M5** from [`2026-10-10-m5-overview.md`](docs/superpowers/plans/2026-10-10-m5-overview.md), wave by wave (task graph in the overview), recording each task in `docs/superpowers/ledgers/m5.md`.
-2. **Release v0.5.0** when the final review F is clean and master CI is green (controller sign-off under the owner's delegation; no owner phone run for M5).
-3. **Plan M6** (translations and 1.0). The v1.0.0 sign-off includes the M5 phone checklist and the owner's review of the M5 questions (overview, "Phone checklist for the v1.0.0 sign-off" and "Questions for the owner").
+1. **Release v0.5.0:** the controller merges release PR #164 (close and reopen it, wait for green checks, `gh pr merge 164 --squash`), then records the merge commit in the M5 ledger and runs the one deferred release step: `curl -sI` on a deployed `.task` model to record the Content-Type GitHub Pages sends.
+2. **Plan M6, "Translations & 1.0"** (spec §8): write `docs/superpowers/plans/` for M6 first; under the owner's delegation the controller approves it, then it is built like M5. Start from the M5 ledger's triage (items deferred to M6) and the "i18n (M6)" list below; lazy-load the locale resources (bundle headroom).
+3. **The v1.0.0 sign-off, the only owner gate left:** the owner runs the checklist in the M5 overview, ["Phone checklist for the v1.0.0 sign-off"](docs/superpowers/plans/2026-10-10-m5-overview.md) (iPhone items, the macOS Safari VoiceOver pass, WebKit offline, the M4 timings, the final logo), reviews every delegated default in the M5 ledger's "Questions", and signs off before the v1.0.0 release PR merges.
 
 ## Owner answers from M2 (2026-10-07)
 
@@ -98,23 +103,7 @@ The owner accepted every recommended default of the M4 plan (Q1–Q14 and the bu
 
 **Answered from M4 (2026-10-10):** Q17 (small faces in full-body photos may not be found), Q18 (no running progress announcement) and Q19 (only the result is announced after a Detail change), each with its recommended default, already built. Details in the M4 overview.
 
-The spec doesn't answer the questions below. Nothing was changed for them.
-
-**Triaged in the M5 plan (2026-10-10):** questions 2–12 below each have a recommended default in the [M5 overview](docs/superpowers/plans/2026-10-10-m5-overview.md) (Q-H2–Q-H12), accepted by the controller under the owner's delegation: Q2 inline phone export, Q3 a tooltip for the disabled Export reason, Q5 a Cancel for pending imports and Q10 drop wording are built in M5; Q7 is measured in M5 and limited only if a very large photo goes over the memory budget; Q12 adds one line to the spec; Q4, Q6, Q8, Q9 and Q11 stay as built. The owner can override any of them at the v1.0.0 sign-off.
-
-**Left open from M1** (Q1 was answered in M2 as H1: phone controls are now 44 px; for Q5 and Q6 the owner accepted the M3 defaults H1 and H2 — unchanged in M3, cancelling to be decided in M5 — so both stay open; the M4 defaults H1–H3, accepted on 2026-10-08, again leave Q5, Q6 and Q7 unchanged, with cancelling still for M5):
-
-2. **Phone export:** export opens the same centred dialog as on desktop (ruling Q10). `design/mobile-flow.html` shows it inline in the Export step, and the user currently meets two "Create PDF" buttons in a row. Keep it, make it a bottom sheet, or put it inline?
-3. **Disabled Export button:** should the reason it is disabled be visible? Today it is only announced to screen readers. M4 adds one more reason, "Finding guides in your photos…" (owner Q13), shown the same way.
-4. **Export file name:** `artistica-A4-…` (as in the spec's D10 example) or `artistica-a4-…` (as in the mockup)?
-5. **Cancelling imports:** should the user be able to cancel a pending import, such as a slow link? "Remove all" is hidden while no image has loaded yet. Since M2-2, a pending import also keeps the Studies controls disabled until it ends (a link stalls out after 30 s without progress).
-6. **Duplicate photos:** the same file added twice is kept as two images. Keep that, merge them, or flag them?
-7. **Phone image limit:** decoding up to 200 MP is allowed and will likely crash a phone tab. Should phones get a lower limit?
-8. **Custom paper vs the 5100 px downscale cap:** custom paper goes up to 1200 mm, but 5100 px covers only about 432 mm at 300 DPI. Large custom pages show early low-DPI warnings. Raise the cap for Custom, or accept the limit?
-9. **Crop marks with bleed:** at the minimum gutter (2 × bleed), marks between neighbouring photos are dropped (spec §2.3). In an irregular layout an interior photo can end up with no marks. Should the gutter grow when marks and bleed are both on?
-10. **Drop copy:** dropping something with no image says "No image on the clipboard". Should drops get their own wording?
-11. **Empty state:** it uses the *compact* dropzone, because the card variant repeated the EmptyState headline.
-12. **Default unit:** the locale-based default unit (Q8: inches for en-US and en-CA) is recorded only in the plan overview. Should `docs/spec.md` mention it?
+**M5, accepted under the delegation:** every M5 question has a default that was built: the plan's Q1–Q12, the M1 questions 2–12 that were still open (Q-H2–Q-H12: inline phone export, a tooltip for the disabled Export reason, the file name as built, Cancel for pending imports, duplicates kept, a 100 MP limit on touch screens, the 5100 px cap kept, crop marks at the minimum gutter as built, drop wording, the compact dropzone, the default unit in spec §2.3), and Q13–Q25 raised during execution and the final review. They are listed in one place, the M5 ledger's ["Questions"](docs/superpowers/ledgers/m5.md) section. Each was accepted by the controller under the delegation; the owner may override any of them at the v1.0.0 sign-off. No M1 question is left open.
 
 ## Key decisions & context
 
@@ -162,7 +151,18 @@ The spec doesn't answer the questions below. Nothing was changed for them.
 - **Real face and pose detection runs in CI on chromium and mobile-chromium only.** MediaPipe needs WebGL even on the CPU delegate: CI's Linux Firefox has none (it covers the "needs WebGL" path, owner Q15), and CI's Linux WebKit has it on the page only (the main-thread engine, covered by unit tests). The pose fixture recorded on macOS differs from Linux chromium by up to 1.44e-3 mm, so E2E compares it within `POSE_RECORDING_TOL_MM` (0.01 mm).
 - **Memory: CI Linux is the gate, not your Mac.** The memory test M3 fails locally on macOS arm64 (settled after guides about +155 to +185 MB, sometimes over 1500 MB in the guides phase) because RSS there counts reclaimable pages the browser has already given back; the renderer's footprint shows dirty memory flat while reclaimable memory grows. CI's Linux meets every budget. A local macOS failure of that test alone is not a regression; a CI failure is.
 - **Release on drain.** The scheduler closes the landmark worker and drops the model bytes as soon as the landmark queue drains (and the edge worker likewise), so every detection after an idle moment starts a worker and reads the model from Cache Storage again: about 0.5 s on CI for a later face as well as the first. A guide switched off during a job keeps the engine for 2 s, so quick toggles don't churn workers.
-- **The WebKit CI job sometimes hangs in "Install OS deps only (cache hit)".** The hang is in that setup step, before any test runs; re-run the failed job (`gh run rerun <run-id> --failed`) and it clears.
+- **The WebKit CI job sometimes hangs in "Install OS deps only (cache hit)".** The hang is in that setup step, before any test runs; re-run the failed job (`gh run rerun <run-id> --failed`) and it clears. Since #183 every job has a `timeout-minutes` (e2e 50 min), so a hang fails the job instead of holding CI for GitHub's 360-minute default.
+
+**M5 gotchas**
+
+- **Memory: CI Linux is still the gate, not your Mac.** The M5 memory tests (M5a, M5b, M5c in `e2e/mobile-flow.spec.ts`, mobile-chromium) read high on macOS arm64 like M3 does: M3's guides phase reached 1521 MB and M5b grew +333 MB under parallel load locally, while CI stays inside every budget. A local macOS failure alone is not a regression; a CI failure is. Run M5b alone when you need a local figure.
+- **`aria-disabled`, not `disabled`, for a button that can turn itself off while focused** (Undo, Re-run auto layout, Apply, Create PDF, the preset buttons, the crop buttons). Native `disabled` drops focus to `<body>` (WCAG 2.4.3). Use `aria-disabled` with a guarded click; the shared style is `.ds-btn[aria-disabled='true']`, and Playwright's `toBeDisabled` honours it. Such a button stays a Tab stop while off.
+- **axe `incomplete` results are gated.** `expectNoAxeViolations` in `e2e/support/axe.ts` fails on any `incomplete` node not covered by `REVIEWED_INCOMPLETE` (rule, selector and reason, each entry naming the check that backs it). A new screen with an unjudgeable node needs a re-check, a fix or a reviewed entry, never a blanket one. Every axe call in `e2e/` goes through this helper.
+- **Live messages in unit tests:** `Callout live` and error toasts mount their text two animation frames after the region (`useAfterPaint`), so a unit test reads a live message with `waitFor` or `findBy`, never right after an `await` (C3 Ruled item 2).
+- **Touch screens refuse photos over 100 MP** (`MAX_DECODED_PIXELS_TOUCH` in `src/features/images/limits.ts`, read through `decodedPixelLimit()` when a photo is added, primary pointer `coarse`). Desktop keeps 200 MP, and export decodes up to 200 MP, so a photo already added always exports. A higher touch limit needs a measured size within 1500 MB first (D7).
+- **Bundle headroom for M6:** initial app JS is 229.0 of 250 KB gzip at `5d4dd67`. `src/shared/i18n/resources.ts` loads every `src/locales/*/*.json` with an eager `import.meta.glob`, so adding six languages as they are would put them all in the main chunk; M6 should lazy-load the locale resources. The required `build` job fails above 250 KB.
+- **Presets sync between tabs, the rest of the settings don't.** The settings store adopts another tab's presets from a `storage` event (same envelope version only) without writing back; page setup, unit, theme and language stay per tab. Arrangements are never persisted.
+- **The pipeline runs a change at once after 80 ms of quiet** and waits for a trailing 80 ms in a burst (D8). An E2E test that adds photos and then clicks a tile must wait for the preview to settle (`app.expectPreviewSettled()` from `e2e/support/app.ts`; the preview is `aria-busy` until the trailing run), or the click can land on a tile the next run moved.
 
 **Service worker recovery**
 
@@ -176,7 +176,8 @@ From E2 on, production registers a service worker (`/artistica/sw.js`, scope `/a
 
 Plans were executed with subagent-driven development: one worktree and PR per task, an independent review (often with mutation testing), fix rounds, then a squash merge.
 
-- Every ruling made during execution is recorded in the ledgers (`docs/superpowers/ledgers/m1-*.md`, `m2.md`, `m3.md`, [`m4.md`](docs/superpowers/ledgers/m4.md)).
+- Every ruling made during execution is recorded in the ledgers (`docs/superpowers/ledgers/m1-*.md`, `m2.md`, `m3.md`, `m4.md`, [`m5.md`](docs/superpowers/ledgers/m5.md)).
+- Under a delegation (M5 onwards), the controller approves plans and accepts each question's recommended default; the questions are collected in the ledger for the owner's review at the next owner sign-off.
 - Contract changes are in the overview's "Ruled" section (CR-*/CCR-*).
 
 **Rejected or overridden approaches**
@@ -210,19 +211,25 @@ pnpm build && pnpm preview     # production build → http://localhost:4173/arti
 - `gh` CLI, logged in.
 - Merging the release PR needs maintainer rights.
 
-**CI** has 8 required checks: `lint`, `typecheck`, `unit`, `build` (with the bundle budget and the host audit), `e2e (chromium)`, `e2e (firefox)`, `e2e (webkit)` and `pr-title`. The webkit leg also runs the `mobile-webkit` project. Merges are squash-only, with Conventional Commit PR titles.
+**CI** has 8 required checks (every job with a `timeout-minutes`, which `scripts/deploy-workflows.test.ts` requires): `lint`, `typecheck`, `unit`, `build` (with the bundle budget and the host audit), `e2e (chromium)`, `e2e (firefox)`, `e2e (webkit)` and `pr-title`. The webkit leg also runs the `mobile-webkit` project. Merges are squash-only, with Conventional Commit PR titles.
 
 ## Known issues (deferred)
 
 The final review triaged every "minor (deferred)" line in `docs/superpowers/ledgers/*.md`. The items below are the ones that matter after M1. The other ledger minors are deferred to M2+ or judged not to be issues.
 
-**Memory (M5)**
+**Memory**
 
-- **Per-image memory:** each image keeps its compressed source Blob and a preview ImageBitmap of at most `PREVIEW_LONG_SIDE_PX` (2048 px, about 12.6 MB). Export decodes one image at a time at full size from the source. The M3 E2E test guards the browser's RSS with 22 × 24 MP photos and three study versions. Export is slower than holding full-size bitmaps, because every image is decoded again.
-- **Pages:** every mounted page keeps its canvases and its wanted study tiles, so phone memory grows with the page count. Wanting study tiles only for pages near the viewport is the planned fix, deferred to M5 (M2-7 default).
-- **Study worker:** a worker killed without an `error` event leaves the preview study queue busy (no job timeout). Export is unaffected.
-- **Downloads waiting to decode:** finished URL downloads wait for a decode slot without holding a download slot. Memory is bounded only by how fast links download compared with how fast images decode.
-- **CORS probe:** the probe request after a failed fetch keeps its own 8 s timeout and is not cancelled by "Remove all". Its result is discarded.
+- **Per-image memory:** each image keeps its compressed source Blob and a preview ImageBitmap of at most `PREVIEW_LONG_SIDE_PX` (2048 px, about 12.6 MB). Export decodes one image at a time at full size from the source, so export is slower than holding full-size bitmaps (by design, #75).
+- **Fixed in M5:** pages far from the view release their canvases and study tiles (D1, so phone memory no longer grows with the page count), a stalled study job ends after 20 s (D2), waiting downloads hold a download slot and Cancel or Remove all aborts them and the CORS probe (D3), and WebKit decodes large photos straight to their downscaled size (D5).
+- **Many photos on a phone (Q17):** 60 photos of 12 MP settle at about 1565 MB before the preview on CI's phone emulation, above the 1500 MB budget of the spec's 20 photos. There is no count limit; the v1.0.0 phone checklist loads 60 photos, and a warning is M6 work only if the tab closes.
+
+**Deferred to M6 by the M5 final review** (triage table in the [M5 ledger](docs/superpowers/ledgers/m5.md), "F"):
+
+- A centre line on the tiniest tiles (about 12 × 8 mm) can look solid where its only gap falls under the crossing line; the fix is a dash phase.
+- The "Can't place here" drag ghost is clipped when a photo is dragged past the preview scroller (the refused drop is still announced).
+- No auto-scroll near the edge during a desktop drag (the wheel, Move to page and Page Up/Down cover it).
+- Bundle headroom: lazy-load the locale resources (see the M5 gotchas).
+- Optional: a committed E2E test for Cancel.
 
 **i18n (M6)**
 
@@ -232,6 +239,7 @@ Only English ships until M6, so these don't show yet:
 - The export summary shows the raw paper id ("Custom").
 - The unit codes `mm`/`in` are interpolated raw in `ImageEditSheet` and `ImageList`.
 - Some strings are built by concatenation in `ThemeToggle`, `import-notices` and `PageSetupPanel`. Each needs to become one key with interpolation.
+- Slider numbers are not formatted by locale.
 
 **Tests**
 
@@ -250,7 +258,6 @@ The M4 final review triaged every deferred item; the table is in the [M4 ledger]
 
 - **Known limit of the worker guard:** native `import()` syntax and the imports of a `blob:` module are fetched by the browser, not through the worker's APIs, so no guard can refuse them. MediaPipe 0.10.35 uses neither; the exact pin and the host audit are the controls.
 - **E2E gaps that CI can't close:** Firefox with WebGL (face and pose there were checked by hand in the final review) and WebKit offline (the owner's iPhone run).
-- **M5:** merge the two E2E worker probes (`installWorkerProbe`, `installWorkerPostCounter`); "Updating layout…" is announced in the same moment as a guide's result on desktop (as for M3 lines); with reduced motion the brief indeterminate progress bar looks like a fixed 40% fill.
 
 ## Related links
 
