@@ -127,6 +127,7 @@ Artistica is a free, static web app for artists. You load reference photos, and 
 ### 2.3 Page setup (M1)
 - **Paper:** A3, A4, A5, A6, Letter, Legal, Tabloid, Custom (width × height).
 - **Units:** mm or inches, switchable at any time (values are stored internally in mm).
+  - The default unit follows the locale: inches for en-US and en-CA, millimetres elsewhere (read from the browser language on first run; the user's choice is remembered).
 - **Orientation:** Auto (default; the engine picks whichever gives the better layout), or forced Portrait or Landscape (R2).
 - **Safe area (page-edge margin):** default 5 mm. Adjustable, minimum 3 mm, cannot be turned off (R3).
 - **Gutter (gap between images, for cutting):** on/off. Default on, 6 mm (R3).
