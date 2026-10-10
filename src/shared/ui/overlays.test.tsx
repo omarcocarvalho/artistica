@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -173,6 +173,7 @@ describe.each([
           </button>
         ) : null}
         <button type="button">Fallback</button>
+        <button type="button">Elsewhere</button>
         <Overlay
           open={open}
           onOpenChange={setOpen}
@@ -213,6 +214,32 @@ describe.each([
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Open' })).toHaveFocus()
     })
+  })
+
+  it('leaves focus where it was moved after the overlay closed, before focus would go back', async () => {
+    render(<Harness />)
+    await userEvent.click(screen.getByRole('button', { name: 'Open' }))
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    const moved = screen.getByRole('button', { name: 'Fallback' })
+    moved.focus()
+    await act(() => new Promise((resolve) => setTimeout(resolve, 20)))
+    expect(moved).toHaveFocus()
+  })
+
+  it('leaves focus where it was moved when the opener is gone, instead of the fallback', async () => {
+    render(<Harness returnFocus={() => screen.getByRole('button', { name: 'Fallback' })} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Open' }))
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Remove opener' }))
+    })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    const moved = screen.getByRole('button', { name: 'Elsewhere' })
+    moved.focus()
+    await act(() => new Promise((resolve) => setTimeout(resolve, 20)))
+    expect(moved).toHaveFocus()
   })
 
   it('focuses the returnFocus fallback when the opener is gone', async () => {
