@@ -12,19 +12,25 @@ declare const document: { elementFromPoint(x: number, y: number): ElementLike | 
 declare function getComputedStyle(
   el: ElementLike,
   pseudo?: string,
-): { backgroundColor: string; color: string; fontSize: string }
+): { backgroundColor: string; color: string; fontSize: string; boxShadow: string }
 
 export interface PaintStyle {
   bg: string
   color: string
   fontSizePx: number
+  boxShadow: string
 }
 
-/** The element's (or its pseudo-element's) computed background, text colour and font size. */
+/** The element's (or its pseudo-element's) computed background, text colour, font size and shadow. */
 export async function paintStyle(target: Locator, pseudo?: string): Promise<PaintStyle> {
   return target.evaluate((el: ElementLike, p) => {
     const cs = getComputedStyle(el, p)
-    return { bg: cs.backgroundColor, color: cs.color, fontSizePx: Number.parseFloat(cs.fontSize) }
+    return {
+      bg: cs.backgroundColor,
+      color: cs.color,
+      fontSizePx: Number.parseFloat(cs.fontSize),
+      boxShadow: cs.boxShadow,
+    }
   }, pseudo)
 }
 

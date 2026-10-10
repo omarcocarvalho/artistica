@@ -120,6 +120,24 @@ describe('ImageEditSheet', () => {
     expect(screen.queryByText('Low resolution')).not.toBeInTheDocument()
   })
 
+  it('size mode and axis select with every arrow key, Home and End', async () => {
+    load()
+    renderWithProviders(<ImageEditSheet imageId={ID} />)
+    screen.getByRole('radio', { name: 'Auto' }).focus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(edits()?.size.kind).toBe('fixed')
+    screen.getByRole('radio', { name: 'Width' }).focus()
+    await userEvent.keyboard('{ArrowUp}')
+    expect(edits()?.size).toMatchObject({ kind: 'fixed', axis: 'height' })
+    await userEvent.keyboard('{Home}')
+    expect(edits()?.size).toMatchObject({ kind: 'fixed', axis: 'width' })
+    await userEvent.keyboard('{End}')
+    expect(edits()?.size).toMatchObject({ kind: 'fixed', axis: 'height' })
+    screen.getByRole('radio', { name: 'Fixed' }).focus()
+    await userEvent.keyboard('{Home}')
+    expect(edits()?.size.kind).toBe('auto')
+  })
+
   it('Fixed size: choosing it reveals the field; the readout follows the typed size', async () => {
     load() // 480 x 640
     renderWithProviders(<ImageEditSheet imageId={ID} />)

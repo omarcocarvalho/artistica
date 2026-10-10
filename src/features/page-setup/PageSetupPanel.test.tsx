@@ -135,6 +135,23 @@ describe('PageSetupPanel', () => {
     expect(screen.getByText('Auto picked landscape: fewer pages.')).toBeInTheDocument()
   })
 
+  it('units and orientation select with every arrow key, Home and End', async () => {
+    render(<PageSetupPanel />)
+    screen.getByRole('radio', { name: 'mm' }).focus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(useSettings.getState().unit).toBe('in')
+    await userEvent.keyboard('{ArrowUp}')
+    expect(useSettings.getState().unit).toBe('mm')
+    screen.getByRole('radio', { name: 'Auto' }).focus()
+    await userEvent.keyboard('{End}')
+    expect(useSettings.getState().pageSetup.orientation).toBe('landscape')
+    await userEvent.keyboard('{ArrowUp}')
+    expect(useSettings.getState().pageSetup.orientation).toBe('portrait')
+    await userEvent.keyboard('{Home}')
+    expect(useSettings.getState().pageSetup.orientation).toBe('auto')
+    expect(screen.getByRole('radio', { name: 'Auto' })).toHaveFocus()
+  })
+
   it('has no language control (D4)', () => {
     render(<PageSetupPanel />)
     expect(screen.queryByLabelText(/language/i)).not.toBeInTheDocument()

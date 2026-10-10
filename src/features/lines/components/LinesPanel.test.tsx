@@ -212,14 +212,30 @@ describe('LinesPanel', () => {
     expect(screen.getByRole('radio', { name: 'Top left' })).toBeChecked()
     await user.click(screen.getByRole('radio', { name: 'Bottom left' }))
     expect(lines(A)?.spiral).toEqual({ on: true, corner: 'bottomLeft' })
-    // Roving focus: the arrow key moves focus to the next corner (Radix selects it in browsers).
     await user.keyboard('{ArrowRight}')
     expect(screen.getByRole('radio', { name: 'Bottom right' })).toHaveFocus()
-    await user.keyboard(' ')
     expect(lines(A)?.spiral.corner).toBe('bottomRight')
     expect(screen.getByRole('radio', { name: 'Bottom right' })).toBeChecked()
     await user.click(screen.getByRole('switch', { name: 'Golden spiral' }))
     expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument()
+  })
+
+  it('the spiral corner picker selects with every arrow key, Home and End', async () => {
+    const user = userEvent.setup()
+    render(<LinesPanel imageId={A} />)
+    await user.click(screen.getByRole('switch', { name: 'Golden spiral' }))
+    screen.getByRole('radio', { name: 'Top left' }).focus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(lines(A)?.spiral.corner).toBe('topRight')
+    await userEvent.keyboard('{End}')
+    expect(lines(A)?.spiral.corner).toBe('bottomRight')
+    await userEvent.keyboard('{ArrowDown}')
+    expect(lines(A)?.spiral.corner).toBe('topLeft')
+    await userEvent.keyboard('{ArrowUp}')
+    expect(lines(A)?.spiral.corner).toBe('bottomRight')
+    await userEvent.keyboard('{Home}')
+    expect(lines(A)?.spiral.corner).toBe('topLeft')
+    expect(screen.getByRole('radio', { name: 'Top left' })).toHaveFocus()
   })
 
   it('colour: a labelled colour input with the hex shown, patching the style', () => {

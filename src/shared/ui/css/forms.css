@@ -388,6 +388,7 @@
       forced-color-adjust: none;
       background: Highlight;
       color: HighlightText;
+      box-shadow: none;
     }
     .ds-slider input[type='range']::-webkit-slider-runnable-track {
       forced-color-adjust: none;
