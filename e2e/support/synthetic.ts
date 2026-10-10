@@ -74,3 +74,33 @@ export async function syntheticJpegs(
     buffer: Buffer.from(bytes),
   }))
 }
+
+/** Width : height of the photos `mixedJpegs` cycles through: landscape, portrait and square. */
+export const MIXED_ASPECTS = [4 / 3, 3 / 4, 1, 3 / 2, 2 / 3, 16 / 9] as const
+
+/**
+ * `count` synthetic JPEGs whose long side is `longSide` px, cycling through MIXED_ASPECTS, named
+ * `mixed-001.jpg` onwards in that order.
+ */
+export async function mixedJpegs(
+  page: Page,
+  count: number,
+  longSide: number,
+  options: { noisy?: boolean } = {},
+): Promise<UploadFile[]> {
+  const byAspect: UploadFile[][] = []
+  for (const [k, aspect] of MIXED_ASPECTS.entries()) {
+    const n = Math.ceil((count - k) / MIXED_ASPECTS.length)
+    const w = aspect >= 1 ? longSide : Math.round(longSide * aspect)
+    const h = aspect >= 1 ? Math.round(longSide / aspect) : longSide
+    byAspect.push(n > 0 ? await syntheticJpegs(page, n, w, h, options) : [])
+  }
+  const rounds = Math.max(...byAspect.map((files) => files.length))
+  const interleaved = Array.from({ length: rounds }, (_, r) =>
+    byAspect.flatMap((f) => f.slice(r, r + 1)),
+  ).flat()
+  return interleaved.map((file, i) => ({
+    ...file,
+    name: `mixed-${String(i + 1).padStart(3, '0')}.jpg`,
+  }))
+}

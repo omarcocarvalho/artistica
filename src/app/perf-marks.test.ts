@@ -182,7 +182,9 @@ describe('perf marks (M5-R27)', () => {
         mark('draw:end', { page: 0 })
       }
     }).not.toThrow()
-    expect(() => { createPerfMarks(undefined)('layout:start'); }).not.toThrow()
+    expect(() => {
+      createPerfMarks(undefined)('layout:start')
+    }).not.toThrow()
   })
 
   it('stays in the page: no request, no storage', () => {
