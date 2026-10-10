@@ -24,14 +24,15 @@ interface Paint {
   size: [number, number]
   matrix: Matrix
 }
-function makeDeps(over: Partial<DecodeDeps> = {}) {
+function makeDeps({ createImageBitmap: decodeOver, ...over }: Partial<DecodeDeps> = {}) {
   const paints: Paint[] = []
   const canvases: [number, number][] = []
   const decoded: { options: ImageBitmapOptions | undefined }[] = []
+  const decode = decodeOver ?? (() => Promise.resolve(bitmap(64, 48)))
   const deps: DecodeDeps = {
-    createImageBitmap: vi.fn((_blob: Blob, options?: ImageBitmapOptions) => {
+    createImageBitmap: vi.fn((blob: Blob, options?: ImageBitmapOptions) => {
       decoded.push({ options })
-      return Promise.resolve(bitmap(64, 48))
+      return decode(blob, options)
     }),
     createCanvas: (w, h) => {
       canvases.push([w, h])
@@ -49,6 +50,7 @@ function makeDeps(over: Partial<DecodeDeps> = {}) {
       return c
     },
     browserAppliesExif: () => Promise.resolve(false),
+    resizeOnDecode: () => Promise.resolve(false),
     loadHeicConverter: () => Promise.resolve((b: Blob) => Promise.resolve(b)),
     createObjectURL: () => 'blob:thumb',
     ...over,
@@ -526,5 +528,149 @@ describe('decodeFullImage', () => {
       decodeFullImage(blobOf(skeletonJpeg(5712, 4284)), 'a.jpg', deps),
     ).rejects.toMatchObject({ code: 'decode-failed' })
     expect(decoded.close).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('decoding straight to the needed size', () => {
+  const sized = (_blob: Blob, o?: ImageBitmapOptions) =>
+    Promise.resolve(bitmap(o?.resizeWidth ?? 64, o?.resizeHeight ?? 48))
+  const resizing = (over: Partial<DecodeDeps> = {}) =>
+    makeDeps({
+      createImageBitmap: sized,
+      resizeOnDecode: () => Promise.resolve(true),
+      ...over,
+    })
+  const resizeKeys = (o: ImageBitmapOptions | undefined) =>
+    Object.keys(o ?? {}).filter((k) => k.startsWith('resize'))
+
+  it('when resize options are supported and the plan downscales, decodeImage asks for the planned size in one call', async () => {
+    const { deps, decoded, canvases } = resizing()
+    const blob = blobOf(skeletonJpeg(5712, 4284), 'image/jpeg')
+    const out = await decodeImage(blob, 'big.jpg', deps)
+    const full = planDownscale(5712, 4284)
+    expect(decoded).toEqual([
+      {
+        options: {
+          imageOrientation: 'from-image',
+          resizeWidth: 2048,
+          resizeHeight: 1536,
+          resizeQuality: 'high',
+        },
+      },
+    ])
+    expect([out.preview.width, out.preview.height]).toEqual([2048, 1536])
+    expect([out.pxW, out.pxH]).toEqual([full.w, full.h])
+    expect([out.originalPxW, out.originalPxH]).toEqual([5712, 4284])
+    expect(canvases).toEqual([[256, 192]])
+    expect(out.source).toBe(blob)
+  })
+
+  it('decodeFullImage asks for the capped size in one call and returns that bitmap', async () => {
+    const { deps, decoded, canvases } = resizing()
+    const full = await decodeFullImage(blobOf(skeletonJpeg(8000, 6000)), 'big.jpg', deps)
+    const plan = planDownscale(8000, 6000)
+    expect(decoded).toHaveLength(1)
+    expect(decoded[0]?.options).toMatchObject({ resizeWidth: plan.w, resizeHeight: plan.h })
+    expect([full.width, full.height]).toEqual([plan.w, plan.h])
+    expect(canvases).toEqual([])
+  })
+
+  it('import and export agree on the size of a resized decode', async () => {
+    const blob = blobOf(skeletonJpeg(9000, 4000, 8), 'image/jpeg')
+    const exif = { browserAppliesExif: () => Promise.resolve(true) }
+    const imported = await decodeImage(blob, 'a.jpg', resizing(exif).deps)
+    const full = await decodeFullImage(blob, 'a.jpg', resizing(exif).deps)
+    expect([full.width, full.height]).toEqual([imported.pxW, imported.pxH])
+  })
+
+  it('EXIF orientation is applied before the resize: it asks for the upright planned size', async () => {
+    const { deps, decoded } = resizing({ browserAppliesExif: () => Promise.resolve(true) })
+    const out = await decodeImage(blobOf(skeletonJpeg(5712, 4284, 6), 'image/jpeg'), 'r.jpg', deps)
+    expect(decoded[0]?.options).toEqual({
+      imageOrientation: 'from-image',
+      resizeWidth: 1536,
+      resizeHeight: 2048,
+      resizeQuality: 'high',
+    })
+    expect([out.pxW, out.pxH]).toEqual([planDownscale(4284, 5712).w, planDownscale(4284, 5712).h])
+    expect([out.originalPxW, out.originalPxH]).toEqual([4284, 5712])
+  })
+
+  it('keeps the two-step path for a rotated JPEG when the browser does not apply EXIF', async () => {
+    const { deps, decoded } = resizing({
+      createImageBitmap: () => Promise.resolve(bitmap(5712, 4284)),
+    })
+    const out = await decodeImage(blobOf(skeletonJpeg(5712, 4284, 6), 'image/jpeg'), 'r.jpg', deps)
+    expect(decoded.map((d) => d.options)).toEqual([{ imageOrientation: 'none' }])
+    expect([out.preview.width, out.preview.height]).toEqual([1536, 2048])
+  })
+
+  it('a browser without the options keeps the two-step path', async () => {
+    const { deps, decoded, canvases } = makeDeps({
+      createImageBitmap: () => Promise.resolve(bitmap(5712, 4284)),
+    })
+    await decodeImage(blobOf(skeletonJpeg(5712, 4284), 'image/jpeg'), 'big.jpg', deps)
+    await decodeFullImage(blobOf(skeletonJpeg(5712, 4284)), 'big.jpg', deps)
+    expect(decoded.map((d) => resizeKeys(d.options))).toEqual([[], []])
+    expect(canvases[0]).toEqual([2048, 1536])
+  })
+
+  it('decodes at full size when nothing needs downscaling', async () => {
+    const { deps, decoded } = resizing()
+    await decodeImage(blobOf(skeletonJpeg(1600, 1200), 'image/jpeg'), 'a.jpg', deps)
+    await decodeFullImage(blobOf(skeletonJpeg(4032, 3024)), 'a.jpg', deps)
+    expect(decoded.map((d) => resizeKeys(d.options))).toEqual([[], []])
+  })
+
+  it.each([
+    ['WebP', () => blobOf(webpHeader(), 'image/webp'), 'a.webp'],
+    ['GIF', () => blobOf(ANIMATED_GIF, 'image/gif'), 'a.gif'],
+    ['HEIC', () => blobOf(heicHeader('heic'), 'image/heic'), 'a.heic'],
+  ])('does not resize a %s, whose header gives no size', async (_n, make, name) => {
+    const { deps, decoded } = resizing({
+      createImageBitmap: () => Promise.resolve(bitmap(6000, 4000)),
+    })
+    await decodeImage(make(), name, deps)
+    expect(decoded.map((d) => resizeKeys(d.options))).toEqual([[]])
+  })
+
+  it('keeps the two-step path when the header declares a zero side', async () => {
+    const { deps, decoded } = resizing({
+      createImageBitmap: () => Promise.resolve(bitmap(8000, 6000)),
+    })
+    const out = await decodeImage(blobOf(skeletonJpeg(8000, 0), 'image/jpeg'), 'dnl.jpg', deps)
+    expect(decoded.map((d) => resizeKeys(d.options))).toEqual([[]])
+    expect([out.originalPxW, out.originalPxH]).toEqual([8000, 6000])
+  })
+
+  it('flattens a resized PNG onto white at the requested size and closes the resized decode', async () => {
+    const resized = bitmap(2048, 1024)
+    const { deps, decoded, paints } = resizing({
+      createImageBitmap: () => Promise.resolve(resized),
+    })
+    const out = await decodeImage(blobOf(pngHeader(8000, 4000), 'image/png'), 'a.png', deps)
+    expect(decoded[0]?.options).toMatchObject({ resizeWidth: 2048, resizeHeight: 1024 })
+    expect(paints[0]).toEqual({ size: [2048, 1024], matrix: [1, 0, 0, 1, 0, 0] })
+    expect(resized.close).toHaveBeenCalledTimes(1)
+    expect([out.originalPxW, out.originalPxH]).toEqual([8000, 4000])
+  })
+
+  it('scales the decode itself when the browser returns another size', async () => {
+    const ignored = bitmap(5712, 4284)
+    const { deps, paints } = resizing({ createImageBitmap: () => Promise.resolve(ignored) })
+    const out = await decodeImage(blobOf(skeletonJpeg(5712, 4284), 'image/jpeg'), 'a.jpg', deps)
+    expect(paints[0]).toEqual({
+      size: [2048, 1536],
+      matrix: [2048 / 5712, 0, 0, 1536 / 4284, 0, 0],
+    })
+    expect([out.preview.width, out.preview.height]).toEqual([2048, 1536])
+    expect(ignored.close).toHaveBeenCalledTimes(1)
+  })
+
+  it('maps a rejected resized decode to decode-failed', async () => {
+    const { deps } = resizing({ createImageBitmap: () => Promise.reject(new Error('oom')) })
+    await expect(
+      decodeImage(blobOf(skeletonJpeg(5712, 4284)), 'a.jpg', deps),
+    ).rejects.toMatchObject({ code: 'decode-failed' })
   })
 })
