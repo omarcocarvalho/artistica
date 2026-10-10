@@ -182,7 +182,7 @@ test.describe('export focus and axe (chromium)', () => {
 test.describe('phone', () => {
   runOnly('mobile-chromium')
 
-  test('closing the edit sheet and the export dialog returns focus to the opener', async ({
+  test('closing the edit sheet returns focus to the opener; the inline export moves focus to Download', async ({
     page,
   }) => {
     const app = await withFiles(page, [FIXTURES.quadrantsJpg])
@@ -197,10 +197,11 @@ test.describe('phone', () => {
     // Create PDF is aria-disabled until the layout after the import is done; a press before that does nothing.
     await expect(create).not.toHaveAttribute('aria-disabled')
     await press(create)
-    const dialog = page.getByRole('dialog', { name: 'Export PDF' })
-    await expect(dialog).toBeVisible()
-    await page.keyboard.press('Escape')
-    await expect(dialog).toHaveCount(0)
+    await expect(app.exportStep.getByRole('link', { name: 'Download PDF' })).toBeFocused({
+      timeout: 60_000,
+    })
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await press(app.exportStep.getByRole('button', { name: 'Make another' }))
     await expect(create).toBeFocused()
   })
 

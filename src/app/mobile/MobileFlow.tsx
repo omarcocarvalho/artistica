@@ -1,7 +1,8 @@
-import { useEffect, useId, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../shared/ui'
 import { EmptyState } from '../components/EmptyState'
+import { ExportStepSlot } from '../slots/ExportSlot'
 import { EmptyActionsSlot, ImagesSlot } from '../slots/ImagesSlot'
 import { PreviewSlot } from '../slots/PreviewSlot'
 import { SettingsSlot } from '../slots/SettingsSlot'
@@ -15,12 +16,11 @@ export function MobileFlow() {
   const { t } = useTranslation('app')
   const step = useAppUi((s) => s.step)
   const imageCount = useImageCount()
-  const { block, reason } = useExportGate()
+  const { reason } = useExportGate()
   const setStep = (next: StepId) => {
     useAppUi.getState().setStep(next)
   }
   const headingRef = useRef<HTMLHeadingElement>(null)
-  const reasonId = useId()
   const first = useRef(true)
 
   useEffect(() => {
@@ -75,32 +75,7 @@ export function MobileFlow() {
             ))}
           {step === 'preview' &&
             (noImages ? <EmptyState actions={<EmptyActionsSlot />} /> : <PreviewSlot />)}
-          {step === 'export' && (
-            <div className="flex flex-col gap-3">
-              <p>{t('mobile.export.summary', { count: imageCount })}</p>
-              <Button
-                variant="primary"
-                size="lg"
-                aria-disabled={block !== null || undefined}
-                aria-describedby={block !== null ? reasonId : undefined}
-                onClick={
-                  block !== null
-                    ? undefined
-                    : () => {
-                        useAppUi.getState().openExport()
-                      }
-                }
-              >
-                {t('mobile.export.create')}
-              </Button>
-              {reason !== null && (
-                <p id={reasonId} className="text-ink-muted text-sm">
-                  {reason}
-                </p>
-              )}
-              <p className="text-ink-muted text-sm">{t('mobile.export.tip')}</p>
-            </div>
-          )}
+          {step === 'export' && <ExportStepSlot unavailableReason={reason} />}
         </section>
       </main>
 

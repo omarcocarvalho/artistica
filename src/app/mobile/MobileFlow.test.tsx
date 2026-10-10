@@ -1,9 +1,11 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useImages } from '../../features/images'
 import { makeLoadedImage } from '../../features/images/test-utils'
 import type { LayoutResult } from '../../features/layout'
+import { exportPdf, type ExportOptions } from '../../features/render'
+import { drawTile, id, pageModel } from '../../features/render/test-support/fixtures'
 import type { ImageId } from '../../shared/model/image'
 import { initI18n } from '../../shared/i18n'
 import { usePages } from '../pages-store'
@@ -11,6 +13,9 @@ import { useAppUi } from '../state/useAppUi'
 
 const imageCount = vi.hoisted(() => ({ value: 0 }))
 vi.mock('../state/hasImages', () => ({ useImageCount: () => imageCount.value }))
+const provider = vi.hoisted(() => ({ pause: vi.fn(), resume: vi.fn() }))
+vi.mock('../study-provider', () => ({ appStudyProvider: provider }))
+vi.mock('../../features/render/export/export-pdf', () => ({ exportPdf: vi.fn() }))
 
 import { MobileFlow } from './MobileFlow'
 
@@ -20,10 +25,13 @@ beforeAll(async () => {
   await initI18n()
 })
 beforeEach(() => {
+  provider.pause.mockClear()
+  provider.resume.mockClear()
+  vi.mocked(exportPdf).mockReset()
   imageCount.value = 0
   useAppUi.setState(useAppUi.getInitialState())
   useImages.setState({ images: [], selectedId: null })
-  usePages.setState({ status: 'idle', layout, pages: [{ index: 0 }] as never })
+  usePages.setState({ status: 'idle', layout, empty: false, pages: [pageModel([])] })
 })
 
 describe('MobileFlow', () => {
@@ -86,19 +94,86 @@ describe('MobileFlow', () => {
     await user.click(screen.getByRole('button', { name: 'Preview' }))
     expect(screen.getByRole('heading', { name: 'Preview', level: 2 })).toHaveFocus()
   })
-  it('export step: Create PDF is described as unavailable with no images, and opens the dialog with images', async () => {
+  it('export step: Create PDF is described as unavailable with no images, and does nothing', async () => {
     const user = userEvent.setup()
     useAppUi.getState().setStep('export')
-    const { rerender } = render(<MobileFlow />)
+    render(<MobileFlow />)
     const create = screen.getByRole('button', { name: 'Create PDF' })
     expect(create).toHaveAttribute('aria-disabled', 'true')
+    expect(create).toHaveAccessibleDescription('Add at least one image to export.')
+    expect(
+      within(screen.getByRole('region', { name: 'Step 5 of 5: Export' })).getByText(
+        'Add at least one image to export.',
+      ),
+    ).toBeVisible()
     await user.click(create)
+    expect(exportPdf).not.toHaveBeenCalled()
     expect(useAppUi.getState().exportOpen).toBe(false)
-    imageCount.value = 2
-    rerender(<MobileFlow />)
-    expect(screen.getByText('2 images are ready to print.')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Create PDF' }))
-    expect(useAppUi.getState().exportOpen).toBe(true)
+  })
+  describe('export step with pages', () => {
+    const pages = [pageModel([drawTile({ imageId: id('a') }), drawTile({ imageId: id('b') })])]
+    beforeEach(() => {
+      imageCount.value = 2
+      usePages.setState({ status: 'idle', layout, empty: false, pages })
+      useAppUi.getState().setStep('export')
+    })
+    function holdExport(): () => ExportOptions {
+      let options: ExportOptions = {}
+      vi.mocked(exportPdf).mockImplementation((_p, _g, opts = {}) => {
+        options = opts
+        return new Promise<Blob>(() => undefined)
+      })
+      return () => options
+    }
+
+    it('shows the export inline (summary, file name, one Create PDF) and opens no dialog', () => {
+      render(<MobileFlow />)
+      const step = screen.getByRole('region', { name: 'Step 5 of 5: Export' })
+      expect(within(step).getByText('1 · A4 portrait')).toBeInTheDocument()
+      const fileName = within(step).getByRole<HTMLInputElement>('textbox', { name: 'File name' })
+      expect(fileName.value).toMatch(/^artistica-A4-\d{4}-\d{2}-\d{2}\.pdf$/)
+      expect(screen.getAllByRole('button', { name: 'Create PDF' })).toHaveLength(1)
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+    it('one press of Create PDF starts the export in place', async () => {
+      holdExport()
+      render(<MobileFlow />)
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Create PDF' }))
+      expect(exportPdf).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(exportPdf).mock.calls[0]?.[0]).toBe(pages)
+      expect(useAppUi.getState().exportOpen).toBe(false)
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(screen.getByRole('progressbar', { name: 'PDF progress' })).toBeInTheDocument()
+    })
+    it('pauses the study preview on the Export step; leaving it mid-export cancels and resumes', async () => {
+      const options = holdExport()
+      render(<MobileFlow />)
+      expect(provider.pause).toHaveBeenCalledTimes(1)
+      expect(provider.resume).not.toHaveBeenCalled()
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Create PDF' }))
+      expect(options().signal?.aborted).toBe(false)
+      act(() => {
+        useAppUi.getState().setStep('page')
+      })
+      expect(options().signal?.aborted).toBe(true)
+      expect(provider.resume).toHaveBeenCalledTimes(1)
+      expect(provider.pause).toHaveBeenCalledTimes(1)
+    })
+    it('coming back to the Export step after leaving mid-export starts from Create PDF again', async () => {
+      holdExport()
+      render(<MobileFlow />)
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Create PDF' }))
+      act(() => {
+        useAppUi.getState().setStep('page')
+      })
+      act(() => {
+        useAppUi.getState().setStep('export')
+      })
+      expect(screen.getByRole('button', { name: 'Create PDF' })).not.toHaveAttribute(
+        'aria-disabled',
+      )
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    })
   })
   it('export step: Create PDF is described by the error reason when the layout failed', () => {
     imageCount.value = 2

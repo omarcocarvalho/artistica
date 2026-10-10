@@ -1,5 +1,5 @@
 import { act, render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GetSource } from '../../features/render'
 import type { ImageId } from '../../shared/model/image'
 
@@ -32,6 +32,7 @@ vi.mock('../../features/images', () => {
 
 import { usePages } from '../pages-store'
 import { useAppUi } from '../state/useAppUi'
+import { stubDesktop } from '../test-utils'
 import { ExportSlot } from './ExportSlot'
 
 const page = { index: 0, tiles: [] } as never
@@ -43,6 +44,10 @@ beforeEach(() => {
   h.provider.resume.mockClear()
   useAppUi.setState(useAppUi.getInitialState())
   usePages.setState({ status: 'idle', layout: null, pages: [] })
+  stubDesktop(true)
+})
+afterEach(() => {
+  vi.unstubAllGlobals()
 })
 
 describe('ExportSlot', () => {
@@ -125,5 +130,14 @@ describe('ExportSlot', () => {
     unmount()
     expect(h.provider.resume).toHaveBeenCalledTimes(1)
     expect('dispose' in h.provider).toBe(false)
+  })
+  it('never opens the dialog in the phone step flow, and drops the request (M5-R28)', () => {
+    stubDesktop(false)
+    usePages.setState({ pages: [page] })
+    useAppUi.setState({ exportOpen: true })
+    render(<ExportSlot />)
+    expect(screen.getByTestId('dialog')).toHaveTextContent('false')
+    expect(useAppUi.getState().exportOpen).toBe(false)
+    expect(h.provider.pause).not.toHaveBeenCalled()
   })
 })

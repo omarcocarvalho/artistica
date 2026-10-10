@@ -199,6 +199,27 @@ describe('Tooltip', () => {
     await userEvent.tab()
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Rotate 90 degrees')
   })
+  it('shows nothing while disabled, and shows on the focused trigger once enabled', async () => {
+    const { rerender } = render(
+      <Tooltip content="Why" disabled>
+        <button type="button">Go</button>
+      </Tooltip>,
+    )
+    const trigger = screen.getByRole('button', { name: 'Go' })
+    await userEvent.tab()
+    expect(trigger).toHaveFocus()
+    await new Promise((resolve) => {
+      setTimeout(resolve, 50)
+    })
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    rerender(
+      <Tooltip content="Why">
+        <button type="button">Go</button>
+      </Tooltip>,
+    )
+    expect(screen.getByRole('button', { name: 'Go' })).toBe(trigger)
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Why')
+  })
 })
 
 describe('overlay hygiene', () => {
