@@ -49,14 +49,15 @@ const rect = (left: number, top: number, width: number, height: number) =>
 
 let scrolled = 0
 
-function setup(over: Partial<ArrangeProps> = {}, page = 0) {
+function setup(over: Partial<ArrangeProps> = {}, page = 0, at = { x: 0, y: 0 }) {
   scrolled = 0
   const sheets = createSheetRegistry()
   const sheet0 = document.createElement('div')
-  sheet0.getBoundingClientRect = () => rect(0, 0 - scrolled, PAGE.w * PX_PER_MM, PAGE.h * PX_PER_MM)
+  sheet0.getBoundingClientRect = () =>
+    rect(at.x, at.y - scrolled, PAGE.w * PX_PER_MM, PAGE.h * PX_PER_MM)
   const sheet1 = document.createElement('div')
   sheet1.getBoundingClientRect = () =>
-    rect(0, 700 - scrolled, PAGE.w * PX_PER_MM, PAGE.h * PX_PER_MM)
+    rect(at.x, at.y + 700 - scrolled, PAGE.w * PX_PER_MM, PAGE.h * PX_PER_MM)
   sheets.register(0, sheet0)
   sheets.register(1, sheet1)
   const onPreview = vi.fn<(i: ArrangeIntent) => ArrangePreview>((i) =>
@@ -203,6 +204,41 @@ describe('ArrangeLayer: pointer', () => {
     expect(screen.queryByTestId('arrange-ghost')).toBeNull()
   })
 
+  it("draws the ghost outside the layer, in the viewport's coordinates, so no scroller clips it", () => {
+    const { view } = setup({}, 0, { x: 300, y: -40 })
+    down(blockEl(/^a\.jpg/), 360, 20)
+    move(460, 260)
+    const ghost = screen.getByTestId('arrange-ghost')
+    expect(view.container.contains(ghost)).toBe(false)
+    expect(ghost.parentElement).toBe(document.body)
+    expect(ghost).toHaveAttribute('aria-hidden', 'true')
+    expect(ghost.style.transform).toBe('translate(440px, 240px)')
+    expect(ghost.style.width).toBe('120px')
+    expect(ghost.style.height).toBe('160px')
+  })
+
+  it('keeps the swap target on the sheet, in its coordinates', () => {
+    const { view } = setup({}, 0, { x: 300, y: -40 })
+    down(blockEl(/^a\.jpg/), 360, 20)
+    move(540, 30)
+    const target = document.querySelector<HTMLElement>('.arrange-swap-target')
+    expect(target && view.container.contains(target)).toBe(true)
+    expect(target?.style.transform).toBe('translate(200px, 40px)')
+  })
+
+  it('removes the ghost from the page when the drag ends, is cancelled or the layer goes', () => {
+    const first = setup()
+    down(blockEl(/^a\.jpg/), 60, 60)
+    move(160, 300)
+    fireEvent.pointerCancel(document, { pointerId: 1 })
+    expect(document.querySelector('.arrange-ghost')).toBeNull()
+    down(blockEl(/^a\.jpg/), 60, 60)
+    move(160, 300)
+    expect(document.querySelector('.arrange-ghost')).not.toBeNull()
+    first.view.unmount()
+    expect(document.querySelector('.arrange-ghost')).toBeNull()
+  })
+
   it('snaps to the margin within 2 mm', () => {
     const { props } = setup()
     down(blockEl(/^a\.jpg/), 60, 60)
@@ -282,9 +318,9 @@ describe('ArrangeLayer: pointer', () => {
     move(160, 300)
     scrolled = 100
     fireEvent.scroll(document)
-    expect(screen.getByTestId('arrange-ghost').style.transform).toBe('translate(140px, 380px)')
+    expect(screen.getByTestId('arrange-ghost').style.transform).toBe('translate(140px, 280px)')
     move(160, 300)
-    expect(screen.getByTestId('arrange-ghost').style.transform).toBe('translate(140px, 380px)')
+    expect(screen.getByTestId('arrange-ghost').style.transform).toBe('translate(140px, 280px)')
     up(160, 300)
     expect(props.onCommit).toHaveBeenCalledWith(expect.objectContaining({ x: 70, y: 190 }))
   })
@@ -318,6 +354,18 @@ describe('ArrangeLayer: pointer', () => {
     const intent = vi.mocked(props.onCommit).mock.calls[0]?.[0]
     expect(intent).toMatchObject({ kind: 'resize', id: 'a', anchor: 'tl' })
     expect(intent?.kind === 'resize' ? intent.tileW : 0).toBeCloseTo(60 * 1.5, 0)
+  })
+
+  it("draws a resize ghost in the viewport's coordinates too", () => {
+    setup({ selected: 'a' }, 0, { x: 300, y: -40 })
+    const br = document.querySelector('[data-block-id="a"] [data-corner="br"]')
+    if (!br) throw new Error('no handle')
+    down(br, 460, 160)
+    move(520, 240)
+    const ghost = screen.getByTestId('arrange-ghost')
+    expect(ghost.parentElement).toBe(document.body)
+    expect(ghost.style.transform).toBe('translate(340px, 0px)')
+    expect(ghost.style.width).toBe('180px')
   })
 
   it.each([
