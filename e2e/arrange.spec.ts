@@ -828,12 +828,42 @@ test.describe('manual layout by keyboard only (desktop)', () => {
   })
 })
 
+interface ScrollEl {
+  scrollHeight: number
+  clientHeight: number
+  parentElement: ScrollEl | null
+  scrollBy(x: number, y: number): void
+}
+
+/** Scrolls the nearest scrollable ancestor of the second sheet (or the page) by dy px. */
+async function scrollPreviewBy(page: Page, dy: number): Promise<void> {
+  await page.evaluate((by) => {
+    const g = globalThis as unknown as {
+      document: {
+        querySelectorAll(s: string): Iterable<ScrollEl>
+        scrollingElement: ScrollEl | null
+      }
+      getComputedStyle(el: ScrollEl): { overflowY: string }
+    }
+    let el: ScrollEl | null =
+      [...g.document.querySelectorAll('main figure > div[role="group"]')].at(1) ?? null
+    while (el) {
+      const o = g.getComputedStyle(el).overflowY
+      if ((o === 'auto' || o === 'scroll') && el.scrollHeight > el.clientHeight) break
+      el = el.parentElement
+    }
+    const target: ScrollEl | null = el ?? g.document.scrollingElement
+    target?.scrollBy(0, by)
+  }, dy)
+}
+
 test.describe('manual layout, scrolling and warnings while arranging (desktop)', () => {
   runOnly('chromium', 'firefox', 'webkit')
   test.use({ viewport: { width: 1280, height: 900 } })
 
   test('a drag keeps its ghost under the pointer when the preview scrolls, and drops on page 2 below the fold', async ({
     page,
+    browserName,
   }) => {
     test.setTimeout(240_000)
     const { app, arrange } = await start(page)
@@ -865,7 +895,9 @@ test.describe('manual layout, scrolling and warnings while arranging (desktop)',
     }
     for (let i = 0; i < 10 && (await targetY()) > 800; i++) {
       const y = (await arrange.sheetBox(1)).y
-      await page.mouse.wheel(0, 250)
+      // Linux WebKit ignores the wheel while a button is held; it still scrolls from script.
+      if (browserName === 'webkit') await scrollPreviewBy(page, 250)
+      else await page.mouse.wheel(0, 250)
       await expect.poll(async () => (await arrange.sheetBox(1)).y).toBeLessThan(y)
     }
     expect(await targetY()).toBeLessThanOrEqual(800)
