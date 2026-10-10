@@ -217,14 +217,18 @@ function devLanguage(url: string): LanguageCode | null {
 function serveDev(server: ViteDevServer, root: string): void {
   server.middlewares.use((req, res, next) => {
     const url = req.originalUrl ?? req.url ?? ''
-    const path = url.split(/[?#]/)[0]
+    const sitemap = url.split(/[?#]/)[0] === `${SITE_BASE}sitemap.xml`
+    const code = devLanguage(url)
+    if (!sitemap && code === null) {
+      next()
+      return
+    }
     const source = readSource(root)
-    if (path === `${SITE_BASE}sitemap.xml`) {
+    if (sitemap) {
       res.setHeader('Content-Type', 'application/xml')
       res.end(sitemapXml(SITE_ORIGIN, source.langs))
       return
     }
-    const code = devLanguage(url)
     if (code === null || !source.langs.includes(code)) {
       next()
       return

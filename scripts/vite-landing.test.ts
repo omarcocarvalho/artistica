@@ -282,7 +282,7 @@ describe('sitemapXml', () => {
   })
 })
 
-describe.runIf(existsSync(new URL('../dist/index.html', import.meta.url)))('the build', () => {
+describe.runIf(existsSync(new URL('../dist/app/index.html', import.meta.url)))('the build', () => {
   it('writes each landing page with its lang, and the sitemap', () => {
     const langs = landingLanguages(
       LANGUAGES.filter((c) =>
