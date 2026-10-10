@@ -251,6 +251,12 @@ describe('focused fields in an overlay body', () => {
             <label>
               Note <textarea />
             </label>
+            <label>
+              Page{' '}
+              <select>
+                <option>Page 1</option>
+              </select>
+            </label>
           </Surface>,
         )
         fireEvent.focus(screen.getByRole('button', { name: 'Rotate' }))
@@ -262,6 +268,8 @@ describe('focused fields in an overlay body', () => {
         expect(scroll.mock.contexts[0]).toBe(screen.getByRole('spinbutton', { name: 'Copies' }))
         fireEvent.focus(screen.getByRole('textbox', { name: 'Note' }))
         expect(scroll).toHaveBeenCalledTimes(2)
+        fireEvent.focus(screen.getByRole('combobox', { name: 'Page' }))
+        expect(scroll).toHaveBeenCalledTimes(3)
       } finally {
         scroll.mockRestore()
       }
