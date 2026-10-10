@@ -158,16 +158,80 @@ describe('centre lines', () => {
       { op: 'L', x: 300, y: 200 },
     ])
   })
-  it('dashes the centre lines 6 : 4 times the width, floored', () => {
-    expect(centreDashMm(0.35)[0]).toBeCloseTo(2.1, 9)
-    expect(centreDashMm(0.35)[1]).toBeCloseTo(1.4, 9)
-    expect(centreDashMm(0.1)).toEqual([1.5, 1])
-    expect(centreDashMm(2)).toEqual([12, 8])
+  it('dashes the centre lines 6 : 4 times the width, floored, on a large tile', () => {
+    expect(centreDashMm(0.35, 100)[0]).toBeCloseTo(2.1, 9)
+    expect(centreDashMm(0.35, 100)[1]).toBeCloseTo(1.4, 9)
+    expect(centreDashMm(0.1, 100)).toEqual([1.5, 1])
+    expect(centreDashMm(2, 100)).toEqual([12, 8])
   })
   it('floors the dash and the gap separately', () => {
-    expect(centreDashMm(0.2)).toEqual([1.5, 1])
-    expect(centreDashMm(0.3)[0]).toBeCloseTo(1.8, 9)
-    expect(centreDashMm(0.3)[1]).toBeCloseTo(1.2, 9)
+    expect(centreDashMm(0.2, 100)).toEqual([1.5, 1])
+    expect(centreDashMm(0.3, 100)[0]).toBeCloseTo(1.8, 9)
+    expect(centreDashMm(0.3, 100)[1]).toBeCloseTo(1.2, 9)
+  })
+
+  const table: readonly [w: number, short: number, dash: readonly [number, number]][] = [
+    [0.35, 100, [2.1, 1.4]],
+    [2, 100, [12, 8]],
+    [2, 60, [12, 8]],
+    [2, 30, [6, 4]],
+    [2, 12, [3, 2]],
+    [2, 6, [3, 2]],
+    [1.5, 30, [6, 4]],
+    [1, 15, [3, 2]],
+    [0.5, 9, [1.8, 1.2]],
+    [0.35, 6, [1.5, 1]],
+    [0.2, 3, [1.5, 1]],
+    [0.1, 3, [1.5, 1]],
+  ]
+  it.each(table)(
+    'scales the dash down to a third of the tile, never below the floor period: (%f, %f)',
+    (w, short, [dash, gap]) => {
+      const got = centreDashMm(w, short)
+      expect(got[0]).toBeCloseTo(dash, 9)
+      expect(got[1]).toBeCloseTo(gap, 9)
+    },
+  )
+
+  const m3 = (w: number) => [Math.max(1.5, 6 * w), Math.max(1, 4 * w)] as const
+  const widths = fc.double({ min: 0.1, max: 2, noNaN: true })
+  const shorts = fc.double({ min: 1, max: 500, noNaN: true })
+
+  it('whenever a third of the short side is at least the floor, the period is min(M3 period, short / 3) (property)', () => {
+    fc.assert(
+      fc.property(widths, shorts, (w, short) => {
+        fc.pre(short / 3 >= Math.max(2.5, 2.5 * w))
+        const [dash, gap] = centreDashMm(w, short)
+        const [m3Dash, m3Gap] = m3(w)
+        expect(dash + gap).toBeCloseTo(Math.min(m3Dash + m3Gap, short / 3), 9)
+        expect(short / 2 / (dash + gap)).toBeGreaterThanOrEqual(1.5 - 1e-9)
+      }),
+    )
+  })
+
+  it('keeps 6 : 4, never exceeds M3’s period, never goes below max(2.5, 2.5 × width) (property)', () => {
+    fc.assert(
+      fc.property(widths, shorts, (w, short) => {
+        const [dash, gap] = centreDashMm(w, short)
+        const [m3Dash, m3Gap] = m3(w)
+        expect(dash / gap).toBeCloseTo(1.5, 9)
+        expect(dash + gap).toBeLessThanOrEqual(m3Dash + m3Gap + 1e-9)
+        expect(dash + gap).toBeGreaterThanOrEqual(Math.max(2.5, 2.5 * w) - 1e-9)
+      }),
+    )
+  })
+
+  it('is M3’s dash, byte for byte, when the short side is exactly 30 × the width', () => {
+    for (const w of [0.267, 0.273, 0.284]) expect(centreDashMm(w, 30 * w)).toEqual(m3(w))
+  })
+
+  it('is M3’s dash, exactly, on every tile whose short side is at least 30 × the width (property)', () => {
+    fc.assert(
+      fc.property(widths, shorts, (w, short) => {
+        fc.pre(short >= 30 * w)
+        expect(centreDashMm(w, short)).toEqual(m3(w))
+      }),
+    )
   })
 })
 

@@ -56,7 +56,15 @@ export function armaturePaths({ w, h }: FrameSize): PathCmd[] {
   ]
 }
 
-/** M3-R14: the mockup's 6 : 4 dash, floored so thin lines still read as dashed. */
-export function centreDashMm(widthMm: Mm): readonly [Mm, Mm] {
-  return [Math.max(1.5, 6 * widthMm), Math.max(1, 4 * widthMm)]
+/**
+ * M3-R14, M5-R20: the mockup's 6 : 4 dash, floored so thin lines still read as dashed. When its
+ * period exceeds a third of the tile's short side, both parts shrink (6 : 4 kept) to that period,
+ * never below a period of max(2.5, 2.5 × width).
+ */
+export function centreDashMm(widthMm: Mm, tileShortMm: Mm): readonly [Mm, Mm] {
+  const dash = Math.max(1.5, 6 * widthMm)
+  const gap = Math.max(1, 4 * widthMm)
+  const period = Math.max(tileShortMm / 3, 2.5, 2.5 * widthMm)
+  if (dash + gap <= period) return [dash, gap]
+  return [(6 * period) / 10, (4 * period) / 10]
 }

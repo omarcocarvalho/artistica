@@ -5,6 +5,7 @@ import {
   FLAT_GREY_RGB,
   FLAT_GREY_W,
 } from '../src/features/images/__fixtures__/flat-grey.ts'
+import { centreDashMm } from '../src/features/lines/geometry.ts'
 import { PT_PER_MM } from '../src/shared/model/units.ts'
 import { AppPage, LINE_TYPE_NAMES, type StudyVersionName } from './support/app.ts'
 import { FIXTURES } from './support/fixtures.ts'
@@ -302,7 +303,89 @@ test.describe('exit criterion (all browsers)', () => {
       await expectSameSheet(on.bytes, off.bytes)
     })
   }
+
+  test('L-X1 a 12 mm tile at 2 mm width dashes its centre lines with centreDashMm(2, 12), in the PDF and the preview', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000)
+    await recordLineDashes(page)
+    const app = await withPhotos(page)
+    await app.editButton(GREY).click()
+    const sheet = page.getByRole('dialog')
+    await sheet.getByRole('radio', { name: 'Fixed' }).click()
+    await sheet.getByRole('radio', { name: 'Height' }).click()
+    const height = sheet.getByRole('spinbutton', { name: 'Height' })
+    await height.fill('12')
+    await height.blur()
+    await sheet.getByRole('button', { name: 'Done' }).click()
+    await expect(sheet).toHaveCount(0)
+    await app.setLineSwitch('Centre lines', true)
+    await app.setLineStyle({ colour: BLUE, widthMm: 2, opacityPct: 100 })
+    await app.expectPreviewSettled()
+
+    const want = centreDashMm(2, 12)
+    expect(want[0] + want[1]).toBeCloseTo(5, 9)
+    const { info } = await exported(app)
+    const p = firstPage(info)
+    expect(p.draws).toHaveLength(1)
+    const trim = tileBox(p.draws[0], info)
+    expect(Math.min(trim.w, trim.h)).toBeCloseTo(12, 1)
+    expect(p.lineStrokes).toHaveLength(1)
+    const dashPt = p.lineStrokes[0].dashPt
+    expect(dashPt).toHaveLength(2)
+    want.forEach((d, i) => {
+      expect(dashPt[i]).toBeCloseTo(d * PT_PER_MM, 2)
+    })
+
+    const k = await pxPerMm(app, info)
+    const width = await app.pageCanvases.first().evaluate((c: SheetCanvas) => c.width)
+    const dashes = await page.evaluate(() => (globalThis as unknown as DashWindow).__lineDashes)
+    const onSheet = dashes.filter(
+      (d) => d.canvasWidth === width && d.strokeStyle === BLUE && d.dash.length > 0,
+    )
+    expect(onSheet.length).toBeGreaterThan(0)
+    const last = onSheet[onSheet.length - 1].dash
+    expect(last).toHaveLength(2)
+    want.forEach((d, i) => {
+      expect(last[i]).toBeCloseTo(d * k, 6)
+    })
+  })
 })
+
+interface DashWindow {
+  __lineDashes: { canvasWidth: number; strokeStyle: unknown; dash: number[] }[]
+}
+
+interface SheetCanvas {
+  readonly width: number
+}
+
+/** Records, in the page, every setLineDash call on a 2D canvas with its canvas width and stroke style. */
+async function recordLineDashes(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const w = globalThis as unknown as DashWindow & {
+      CanvasRenderingContext2D: {
+        prototype: {
+          setLineDash: (
+            this: { canvas: SheetCanvas; strokeStyle: unknown },
+            segments: number[],
+          ) => void
+        }
+      }
+    }
+    w.__lineDashes = []
+    const proto = w.CanvasRenderingContext2D.prototype
+    const native = proto.setLineDash
+    proto.setLineDash = function (segments) {
+      w.__lineDashes.push({
+        canvasWidth: this.canvas.width,
+        strokeStyle: this.strokeStyle,
+        dash: [...segments],
+      })
+      native.call(this, segments)
+    }
+  })
+}
 
 const tileBox = (d: PdfDraw, info: PdfSummary): RectMm => trimOf(d, firstPage(info).heightPt)
 

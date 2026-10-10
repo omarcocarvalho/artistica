@@ -265,7 +265,7 @@ describe('composePdf lines (M3-R6–R8)', () => {
       expect([s?.cap, s?.join]).toEqual([0, 0])
     }
     expect(solid?.dashPt).toEqual([])
-    expect(dashed?.dashPt).toEqual(centreDashMm(1.5).map(pt))
+    expect(dashed?.dashPt).toEqual(centreDashMm(1.5, Math.min(trim.w, trim.h)).map(pt))
   })
 
   it('round-trips the page-model geometry within 0.001 mm, curves as c', async () => {

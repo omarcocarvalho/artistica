@@ -500,7 +500,7 @@ describe('drawPage composition lines', () => {
     }
     expect(strokes.slice(0, 2)).toEqual([
       { ...state, dash: [] },
-      { ...state, dash: centreDashMm(1.5).map((d) => d * k) },
+      { ...state, dash: centreDashMm(1.5, Math.min(trim.w, trim.h)).map((d) => d * k) },
     ])
   })
 
@@ -531,7 +531,9 @@ describe('drawPage composition lines', () => {
     const thin = linesOf(patchLines(every, { style: { widthMm: 0.1 } }))
     const thinRec = draw(withLines([thin]))
     expect(thinRec.strokes.slice(0, 2).map((s) => s.width)).toEqual([1, 1])
-    expect(thinRec.strokes[1]?.dash).toEqual(centreDashMm(0.1).map((d) => d * k))
+    expect(thinRec.strokes[1]?.dash).toEqual(
+      centreDashMm(0.1, Math.min(trim.w, trim.h)).map((d) => d * k),
+    )
     expect(blocksOf(thinRec.calls)).toEqual([blockFor(thin)])
     const thick = draw(withLines([linesOf(patchLines(every, { style: { widthMm: 1.5 } }))]))
     expect(thick.strokes.slice(0, 2).map((s) => s.width)).toEqual([3, 3])
