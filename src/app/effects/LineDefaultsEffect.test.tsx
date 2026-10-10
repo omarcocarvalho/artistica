@@ -29,6 +29,37 @@ afterEach(() => {
 })
 
 describe('LineDefaultsEffect', () => {
+  describe('session defaults from a preset (M5-R6)', () => {
+    const THIRDS: LineSettings = { ...DEFAULT_LINES, thirds: true, style: STYLE }
+
+    it('does not overwrite a session default in the same update', () => {
+      render(<LineDefaultsEffect />)
+      act(() => {
+        useSettings.getState().setLineDefaults(THIRDS)
+        useImages.getState().setDefaultLines(THIRDS, { session: true })
+      })
+      expect(useImages.getState().getDefaults()).toMatchObject({
+        lines: THIRDS,
+        sessionLines: true,
+      })
+    })
+
+    it('a change to other line defaults replaces it, every type off', () => {
+      render(<LineDefaultsEffect />)
+      act(() => {
+        useSettings.getState().setLineDefaults(THIRDS)
+        useImages.getState().setDefaultLines(THIRDS, { session: true })
+      })
+      act(() => {
+        useSettings.getState().setLineDefaults({ ...THIRDS, style: { ...STYLE, opacityPct: 30 } })
+      })
+      expect(useImages.getState().getDefaults()).toMatchObject({
+        lines: { ...DEFAULT_LINES, style: { ...STYLE, opacityPct: 30 } },
+        sessionLines: false,
+      })
+    })
+  })
+
   it('hands the saved defaults to the images store on start, every type off (owner Q7, default)', () => {
     useSettings.getState().setLineDefaults({
       ...DEFAULT_LINES,

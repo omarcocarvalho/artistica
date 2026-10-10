@@ -7,13 +7,9 @@ import {
   withoutLineTypes,
   type LineSettings,
 } from '../../shared/model/lines'
-import { CUSTOM_PAPER_LIMITS, PAPER_IDS, type PaperId } from '../../shared/model/paper'
-import {
-  DEFAULT_PAGE_SETUP,
-  normalizePageSetup,
-  type Orientation,
-  type PageSetup,
-} from '../../shared/model/page-setup'
+import { DEFAULT_PAGE_SETUP, type PageSetup } from '../../shared/model/page-setup'
+import { pageSetupSchema, parsePageSetup } from '../../shared/model/page-setup-schema'
+import { MAX_PRESETS, sameName, sanitizePreset, type Preset } from '../../shared/model/preset'
 import { DEFAULT_STUDY, sanitizeStudy, type StudySettings } from '../../shared/model/study'
 import type { Unit } from '../../shared/model/units'
 
@@ -31,6 +27,8 @@ export interface SettingsData {
   readonly studyDefaults: StudyDefaults
   /** What new photos start with: every line type off (owner Q7, default). */
   readonly lineDefaults: LineSettings
+  /** At most MAX_PRESETS, names unique case-insensitively (M5-R3). */
+  readonly presets: readonly Preset[]
 }
 
 const DS: StudyDefaults = { blurPct: DEFAULT_STUDY.blurPct, values: DEFAULT_STUDY.values }
@@ -42,40 +40,11 @@ export const DEFAULT_SETTINGS: SettingsData = {
   theme: 'auto',
   studyDefaults: DS,
   lineDefaults: DEFAULT_LINES,
+  presets: [],
 }
 
-const D = DEFAULT_PAGE_SETUP
-const { minMm, maxMm } = CUSTOM_PAPER_LIMITS
-
-const lengthMm = (max: number) => z.number().min(0).max(max)
-const paperIds = PAPER_IDS as [PaperId, ...PaperId[]]
-const orientations: [Orientation, ...Orientation[]] = ['auto', 'portrait', 'landscape']
-
 /**
- * Every field falls back to its default on its own (`.catch`), so one bad field never throws away
- * the others. The schema is deliberately total: `parse` never throws on any input that is an object.
- */
-const pageSetupSchema = z.object({
-  paper: z.enum(paperIds).catch(D.paper),
-  customSize: z
-    .object({
-      w: z.number().min(minMm).max(maxMm),
-      h: z.number().min(minMm).max(maxMm),
-    })
-    .catch(D.customSize),
-  orientation: z.enum(orientations).catch(D.orientation),
-  safeAreaMm: lengthMm(100).catch(D.safeAreaMm),
-  gutter: z
-    .object({ enabled: z.boolean().catch(D.gutter.enabled), mm: lengthMm(100).catch(D.gutter.mm) })
-    .catch(D.gutter),
-  cropMarks: z.boolean().catch(D.cropMarks),
-  bleed: z
-    .object({ enabled: z.boolean().catch(D.bleed.enabled), mm: lengthMm(50).catch(D.bleed.mm) })
-    .catch(D.bleed),
-})
-
-/**
- * Total, like pageSetupSchema, but it checks types only: ranges belong to `sanitizeStudy`, so a
+ * Total, like the page-setup schema, but it checks types only: ranges belong to `sanitizeStudy`, so a
  * stored value is clamped or wrapped exactly as `setStudyDefaults` would. Unknown keys (e.g. a
  * stored `versions`) are stripped.
  */
@@ -142,13 +111,25 @@ export function normalizeLineDefaults(lines: LineSettings): LineSettings {
   return withoutLineTypes(sanitizeLines(lines))
 }
 
+/** The one load path for stored presets: each through `sanitizePreset` alone, the first of equal names kept, at most MAX_PRESETS. */
+export function sanitizePresets(raw: readonly unknown[]): Preset[] {
+  const kept: Preset[] = []
+  for (const entry of raw) {
+    if (kept.length === MAX_PRESETS) break
+    const preset = sanitizePreset(entry)
+    if (preset !== null && !kept.some((p) => sameName(p.name, preset.name))) kept.push(preset)
+  }
+  return kept
+}
+
 export const settingsSchema = z.object({
-  pageSetup: pageSetupSchema.catch(D),
+  pageSetup: pageSetupSchema.catch(DEFAULT_PAGE_SETUP),
   unit: z.enum(['mm', 'in']).catch(DEFAULT_SETTINGS.unit),
   language: z.enum(LANGUAGES).nullable().catch(null),
   theme: z.enum(THEMES).catch(DEFAULT_SETTINGS.theme),
   studyDefaults: studyDefaultsSchema.catch(DS),
   lineDefaults: lineDefaultsSchema.catch(L),
+  presets: z.array(z.unknown()).catch([]),
 })
 
 let warned = false
@@ -169,15 +150,12 @@ export function parseSettings(input: unknown): SettingsData {
   }
   try {
     const parsed = settingsSchema.parse(input)
-    // customSize is stored portrait-normalised (w ≤ h).
-    const { w, h } = parsed.pageSetup.customSize
-    const customSize = w <= h ? { w, h } : { w: h, h: w }
-    const pageSetup = normalizePageSetup({ ...parsed.pageSetup, customSize }).setup
     return {
       ...parsed,
-      pageSetup,
+      pageSetup: parsePageSetup(parsed.pageSetup),
       studyDefaults: normalizeStudyDefaults(parsed.studyDefaults),
       lineDefaults: normalizeLineDefaults(parsed.lineDefaults),
+      presets: sanitizePresets(parsed.presets),
     }
   } catch (error) {
     warnOnce(error)

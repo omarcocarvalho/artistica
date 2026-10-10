@@ -2,7 +2,14 @@ export { ImportDropzone, type ImportDropzoneProps } from './components/ImportDro
 export { ImageList, type ImageListProps } from './components/ImageList'
 export { ImageEditSheet, type ImageEditSheetProps } from './components/ImageEditSheet'
 export { removalFocusTarget } from './focus-after-removal'
-export { useImages, selectImageDescriptors, decodeFull, type ImagesState } from './store'
+export {
+  useImages,
+  selectImageDescriptors,
+  decodeFull,
+  type DefaultOptions,
+  type ImageDefaults,
+  type ImagesState,
+} from './store'
 export { importErrorKeys } from './errors'
 export { MAX_FILE_BYTES, MAX_DECODED_PIXELS } from './limits'
 export type { LoadedImage, ImportOutcome, ImportErrorCode, ImportWarning } from './types'

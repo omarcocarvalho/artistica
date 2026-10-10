@@ -1,14 +1,24 @@
 import { useEffect } from 'react'
 import { useImages } from '../../features/images'
 import { useSettings } from '../../features/settings'
-import { DEFAULT_STUDY, studyEqual } from '../../shared/model/study'
+import { DEFAULT_STUDY, studyEqual, type StudySettings } from '../../shared/model/study'
+
+const remembered = (study: StudySettings): StudySettings => ({
+  ...study,
+  versions: DEFAULT_STUDY.versions,
+})
 
 /** Owner Q5/M2-1: the last-used blur and values (an edit to the selected image, or "Apply to all") become the defaults; versions never do (Q1). */
 export function StudyDefaultsEffect(): null {
   const defaults = useSettings((s) => s.studyDefaults)
 
   useEffect(() => {
-    useImages.getState().setDefaultStudy({ versions: DEFAULT_STUDY.versions, ...defaults })
+    const images = useImages.getState()
+    const next = { versions: DEFAULT_STUDY.versions, ...defaults }
+    // A preset's session default (M5-R6) survives the defaults its own apply wrote.
+    const current = images.getDefaults()
+    if (current.sessionStudy && studyEqual(remembered(current.study), next)) return
+    images.setDefaultStudy(next)
   }, [defaults])
 
   useEffect(

@@ -127,15 +127,17 @@ test('P2 nothing from the photos is persisted: storage stays small and a reload 
     version: number
     state: Record<string, unknown>
   }
-  expect(envelope.version).toBe(4)
+  expect(envelope.version).toBe(5)
   expect(Object.keys(envelope.state).sort()).toEqual([
     'language',
     'lineDefaults',
     'pageSetup',
+    'presets',
     'studyDefaults',
     'theme',
     'unit',
   ])
+  expect(envelope.state.presets).toEqual([])
   // Only numbers join the settings for studies: no versions, nothing from the photos.
   expect(envelope.state.studyDefaults).toEqual({
     blurPct: 63,
@@ -187,7 +189,7 @@ interface CacheWindow {
   }
 }
 
-test('G-P2 with guides: settings v4 keep only the detail; Cache Storage holds only AI assets; nothing from a photo', async ({
+test('G-P2 with guides: settings v5 keep only the detail; Cache Storage holds only AI assets; nothing from a photo', async ({
   page,
 }) => {
   test.setTimeout(150_000)
@@ -229,7 +231,7 @@ test('G-P2 with guides: settings v4 keep only the detail; Cache Storage holds on
     version: number
     state: { lineDefaults: Record<string, unknown> }
   }
-  expect(envelope.version).toBe(4)
+  expect(envelope.version).toBe(5)
   // The detail is remembered; the switches never are (owner Q8).
   expect(envelope.state.lineDefaults.edges).toEqual({ on: false, detailPct: 73 })
   expect(envelope.state.lineDefaults.face).toBe(false)
