@@ -346,6 +346,37 @@ describe('ImportDropzone', () => {
     expect(await screen.findAllByRole('alert')).toHaveLength(1)
   })
 
+  describe('the "too large" message names the limit for this device (owner Q-H7)', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+    it.each([
+      [true, 'Photos can be up to 100 MB and 100 megapixels. Try a smaller version.'],
+      [false, 'Photos can be up to 100 MB and 200 megapixels. Try a smaller version.'],
+    ])('coarse pointer %s', async (coarse, message) => {
+      vi.stubGlobal('matchMedia', (q: string) => ({ matches: q === '(pointer: coarse)' && coarse }))
+      const { addFiles } = mockStore()
+      addFiles.mockResolvedValue([{ ok: false, source: 'huge.jpg', error: 'too-large' }])
+      const { container } = renderWithProviders(<ImportDropzone />)
+      await userEvent.setup().upload(fileInput(container), [file('huge.jpg')])
+      const alert = await screen.findByRole('alert')
+      expect(alert).toHaveTextContent('huge.jpg is too large')
+      expect(alert).toHaveTextContent(message)
+    })
+
+    it('a link that is too large names the touch-screen limit too', async () => {
+      vi.stubGlobal('matchMedia', (q: string) => ({ matches: q === '(pointer: coarse)' }))
+      const { addFromUrl } = mockStore()
+      addFromUrl.mockResolvedValue({ ok: false, source: 'https://x.com/a.jpg', error: 'too-large' })
+      renderWithProviders(<ImportDropzone variant="card" />)
+      await userEvent.click(screen.getByRole('button', { name: /Add link/ }))
+      await userEvent.type(screen.getByLabelText('Image link'), 'https://x.com/a.jpg{enter}')
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Photos can be up to 100 MB and 100 megapixels.',
+      )
+    })
+  })
+
   describe('imports discarded by Remove all report nothing', () => {
     it('a picked file batch resolving to null shows no alert and reports no outcomes', async () => {
       const { addFiles } = mockStore()

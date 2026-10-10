@@ -504,7 +504,7 @@ const LARGE_PHOTOS = [
   { mp: 200, w: 16330, h: 12247 },
 ] as const
 
-test('M5c @slow one 100 MP and one 200 MP photo imported one at a time on a phone: the import peak', async ({
+test('M5c @slow a 100 MP photo imports on a phone within the memory budget, and a 200 MP one is refused before decoding (owner Q-H7)', async ({
   page,
   browser,
 }, testInfo) => {
@@ -519,20 +519,34 @@ test('M5c @slow one 100 MP and one 200 MP photo imported one at a time on a phon
       writeFileSync(file, photo.buffer)
     files.push(file)
   }
+  const [file100 = '', file200 = ''] = files
   const app = startApp(page)
   await app.goto()
+  const coarse = await page.evaluate(
+    () =>
+      (globalThis as unknown as { matchMedia(q: string): { matches: boolean } }).matchMedia(
+        '(pointer: coarse)',
+      ).matches,
+  )
+  expect(coarse, 'the phone project has a coarse pointer').toBe(true)
+  // A decode's peak lasts well under the default 250 ms between samples.
   const memory = sampleBrowserMemory(browser, 50)
   const settled: Record<string, number> = {}
+  let refusal: string
   try {
     settled.start = await settledRss(page, memory, 'start')
-    for (const [i, { mp }] of LARGE_PHOTOS.entries()) {
-      memory.phase(`import ${String(mp)} MP`)
-      await app.upload(files[i] ?? '')
-      await app.expectImages(1, 120_000)
-      settled[`${String(mp)} MP`] = await settledRss(page, memory, `settled ${String(mp)} MP`)
-      await app.removeAll()
-      await app.expectImages(0)
-    }
+    memory.phase('import 100 MP')
+    await app.upload(file100)
+    await app.expectImages(1, 120_000)
+    settled['100 MP'] = await settledRss(page, memory, 'settled 100 MP')
+    await app.removeAll()
+    await app.expectImages(0)
+    memory.phase('import 200 MP')
+    await app.upload(file200)
+    const alert = page.getByRole('alert').filter({ hasText: 'synthetic-200mp.jpg is too large' })
+    await expect(alert).toBeVisible({ timeout: 60_000 })
+    refusal = (await alert.textContent()) ?? ''
+    settled['200 MP'] = await settledRss(page, memory, 'settled 200 MP')
   } finally {
     await memory.stop()
   }
@@ -542,11 +556,10 @@ test('M5c @slow one 100 MP and one 200 MP photo imported one at a time on a phon
   testInfo.annotations.push({ type: 'memory', description: report })
 
   expect(crashed).toEqual([])
-  await expect(page.getByRole('alert')).toHaveCount(0)
-  for (const { mp } of LARGE_PHOTOS)
-    expect
-      .soft(peaks[`import ${String(mp)} MP`], `import ${String(mp)} MP`)
-      .toBeLessThan(AFTER_IMPORT_BUDGET_MB)
+  expect(refusal).toContain('Photos can be up to 100 MB and 100 megapixels.')
+  await expect(app.imageRows).toHaveCount(0)
+  expect.soft(peaks['import 100 MP'], 'import 100 MP').toBeLessThan(AFTER_IMPORT_BUDGET_MB)
+  expect.soft(peaks['import 200 MP'], 'import 200 MP').toBeLessThan(AFTER_IMPORT_BUDGET_MB)
 })
 
 test('M2 touch targets in the step bar and footer are at least 44px tall', async ({ page }) => {

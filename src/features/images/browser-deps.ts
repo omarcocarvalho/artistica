@@ -2,6 +2,7 @@ import type { Matrix } from './exif'
 import type { CanvasLike, DecodeDeps } from './decode'
 import { loadHeicConverter } from './heic'
 import { probeBrowserAppliesExif } from './orientation-probe'
+import { decodedPixelLimit } from './pixel-limit'
 import { probeResizeOnDecode, resizeOnDecodeSavesMemory } from './resize-probe'
 
 function createCanvas(w: number, h: number): CanvasLike {
@@ -49,6 +50,7 @@ export function createBrowserDecodeDeps(): DecodeDeps {
       (resizeProbe ??= resizeOnDecodeSavesMemory(navigator.userAgent)
         ? probeResizeOnDecode(deps)
         : Promise.resolve(false)),
+    maxDecodedPixels: decodedPixelLimit,
     loadHeicConverter,
     createObjectURL: (blob) => URL.createObjectURL(blob),
   }

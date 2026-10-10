@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createBrowserDecodeDeps } from './browser-deps'
+import { MAX_DECODED_PIXELS, MAX_DECODED_PIXELS_TOUCH } from './limits'
 
 const SAFARI =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15'
@@ -46,5 +47,17 @@ describe('createBrowserDecodeDeps: resizeOnDecode', () => {
     const decode = stubBrowser(CHROME)
     expect(await createBrowserDecodeDeps().resizeOnDecode()).toBe(false)
     expect(decode).not.toHaveBeenCalled()
+  })
+})
+
+describe('createBrowserDecodeDeps: maxDecodedPixels (owner Q-H7)', () => {
+  it('follows the primary pointer at each call', () => {
+    stubBrowser(CHROME)
+    let coarse = true
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q === '(pointer: coarse)' && coarse }))
+    const deps = createBrowserDecodeDeps()
+    expect(deps.maxDecodedPixels()).toBe(MAX_DECODED_PIXELS_TOUCH)
+    coarse = false
+    expect(deps.maxDecodedPixels()).toBe(MAX_DECODED_PIXELS)
   })
 })

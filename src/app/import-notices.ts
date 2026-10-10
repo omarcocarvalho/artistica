@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next'
 import {
+  decodedPixelLimit,
   importErrorKeys,
-  MAX_DECODED_PIXELS,
   MAX_FILE_BYTES,
   type ImportErrorCode,
   type ImportOutcome,
@@ -10,8 +10,11 @@ import type { ImageId } from '../shared/model/image'
 import { useNotices } from './state/useNotices'
 
 const MAX_SOURCES = 3
-/** Interpolation values for C's `errors:images.tooLarge.message`. */
-const TOO_LARGE = { maxMb: MAX_FILE_BYTES / (1024 * 1024), maxMp: MAX_DECODED_PIXELS / 1_000_000 }
+/** Interpolation values for C's `errors:images.tooLarge.message`, for this device now. */
+const tooLarge = () => ({
+  maxMb: MAX_FILE_BYTES / (1024 * 1024),
+  maxMp: decodedPixelLimit() / 1_000_000,
+})
 
 /**
  * Notices for the outcomes of E's own document paste listener (CR-E3, CR-X2). Imports started inside
@@ -46,7 +49,7 @@ export function reportPasteOutcomes(
     const shown = sources.slice(0, MAX_SOURCES).join(', ')
     const more = sources.length - MAX_SOURCES
     const list = more > 0 ? `${shown} ${t('app:import.more', { more })}` : shown
-    const params = { name: sources[0] ?? '', ...TOO_LARGE }
+    const params = { name: sources[0] ?? '', ...tooLarge() }
     notify('error', `${list}: ${t(keys.title, params)} ${t(keys.message, params)}`)
   }
 }
