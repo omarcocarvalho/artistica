@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { Browser, Page } from '@playwright/test'
 
 export interface UploadFile {
   name: string
@@ -103,4 +103,23 @@ export async function mixedJpegs(
     ...file,
     name: `mixed-${String(i + 1).padStart(3, '0')}.jpg`,
   }))
+}
+
+/**
+ * As `syntheticJpegs`, encoded in a page of a fresh browser context that is closed before this
+ * returns, so the encoder's canvas memory is gone before a memory test starts measuring.
+ */
+export async function syntheticJpegsApart(
+  browser: Browser,
+  count: number,
+  width: number,
+  height: number,
+  options: { noisy?: boolean } = {},
+): Promise<UploadFile[]> {
+  const context = await browser.newContext()
+  try {
+    return await syntheticJpegs(await context.newPage(), count, width, height, options)
+  } finally {
+    await context.close()
+  }
 }

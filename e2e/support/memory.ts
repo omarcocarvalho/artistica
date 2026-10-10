@@ -165,3 +165,26 @@ export async function heapByContext(page: Page): Promise<ContextHeap[]> {
     await cdp.detach()
   }
 }
+
+/** Runs a full garbage collection in the page's renderer (Chromium only). */
+export async function collectGarbage(page: Page): Promise<void> {
+  const cdp = await page.context().newCDPSession(page)
+  try {
+    await cdp.send('HeapProfiler.collectGarbage')
+  } finally {
+    await cdp.detach()
+  }
+}
+
+/**
+ * The settled RSS of the browser in phase `name`: a garbage collection, a second to let freed memory
+ * go back, then `name`'s peak over two more seconds of sampling.
+ */
+export async function settledRss(page: Page, memory: MemorySampler, name: string): Promise<number> {
+  await collectGarbage(page)
+  await page.waitForTimeout(1000)
+  memory.phase(name)
+  await page.waitForTimeout(2000)
+  await memory.sample()
+  return memory.peaks()[name] ?? NaN
+}
