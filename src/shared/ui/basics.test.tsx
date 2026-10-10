@@ -1,7 +1,7 @@
 // Node types are only needed to read the stylesheets (tsconfig.app.json lists just vite/client).
 /// <reference types="node" />
 import { readFileSync } from 'node:fs'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -300,6 +300,28 @@ describe('ProgressBar', () => {
       expect(fill()).toHaveClass('ds-progress__fill--indeterminate')
     })
 
+    it('follows a change of the motion preference while mounted', () => {
+      let reduce = false
+      const listeners = new Set<() => void>()
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        get matches() {
+          return query === '(prefers-reduced-motion: reduce)' && reduce
+        },
+        media: query,
+        addEventListener: (_: string, cb: () => void) => listeners.add(cb),
+        removeEventListener: (_: string, cb: () => void) => listeners.delete(cb),
+      }))
+      const { unmount } = render(<ProgressBar value={null} label="Loading" />)
+      expect(fill()).toHaveClass('ds-progress__fill--indeterminate')
+      act(() => {
+        reduce = true
+        for (const cb of listeners) cb()
+      })
+      expect(fill()).toHaveClass('ds-progress__fill--indeterminate-static')
+      unmount()
+      expect(listeners.size).toBe(0)
+    })
+
     it('keeps a determinate bar at its value', () => {
       stubReducedMotion(true)
       render(<ProgressBar value={0.25} label="Exporting" />)
@@ -336,6 +358,11 @@ describe('selected tab underline', () => {
     const body = ruleBody(overlaysCss, SELECTED)
     expect(body).not.toMatch(HEX)
     expect(body).toMatch(/background(-color)?:\s*(var\(--color-[a-z-]+\)|currentColor)/)
+  })
+
+  it('keeps the squiggle shape as a mask over that colour', () => {
+    const body = ruleBody(overlaysCss, SELECTED)
+    expect(body).toMatch(/\bmask:\s*url\("data:image\/svg\+xml;[^"]*<path /)
   })
 
   it('uses a system colour in forced colours', () => {
