@@ -11,6 +11,7 @@ import { indexedStudyRequests } from '../preview/study-requests'
 import type { StudyTileProvider } from '../preview/study-tiles'
 import { releaseAllTileCanvases, syncTileCanvasCache } from '../preview/tile-cache'
 import { useDevicePixelRatio, useElementWidth } from '../preview/use-element-width'
+import { useNearViewport, type ScrollAxis } from '../preview/use-near-viewport'
 import type { PageModel } from '../types'
 
 /** A bitmap of the whole image, at any size; page models are planned against pxW x pxH. */
@@ -35,6 +36,8 @@ export interface PagePreviewProps {
   readonly getName?: (id: ImageId) => string
   /** Renders study tiles off the main thread. Without it, study tiles draw as missing. */
   readonly studyTiles?: StudyTileProvider
+  /** The axis the page scroller moves along: 'y' for the desktop column, 'x' for the phone carousel. */
+  readonly scrollAxis?: ScrollAxis
 }
 
 const createDomCanvas = (w: number, h: number): HTMLCanvasElement => {
@@ -58,6 +61,7 @@ export function PagePreview({
   label,
   getName,
   studyTiles,
+  scrollAxis = 'y',
 }: PagePreviewProps) {
   const { t } = useTranslation(['preview', 'studies'])
   const captionId = useId()
@@ -74,19 +78,38 @@ export function PagePreview({
   })
   const scale = useMemo(() => previewScale(model.size, width, dpr), [model.size, width, dpr])
   const areas = useMemo(() => tileHitAreas(model), [model])
+  const seen = useNearViewport(sheetRef, scrollAxis)
+  const holdsSelection = selectedId !== null && model.tiles.some((t) => t.imageId === selectedId)
+  const near = seen === 'near' || model.index === 0 || holdsSelection
+  const undecided = seen === 'unknown' && !near
 
   useEffect(() => {
     if (!studyTiles) return
-    const unsubscribe = studyTiles.subscribe(() => {
-      setStudyTick((n) => n + 1)
-    })
     return () => {
-      unsubscribe()
       studyTiles.release(consumer)
     }
   }, [studyTiles, consumer])
 
   useEffect(() => {
+    if (!studyTiles || !near) return
+    return studyTiles.subscribe(() => {
+      setStudyTick((n) => n + 1)
+    })
+  }, [studyTiles, near])
+
+  useEffect(() => {
+    if (!near) {
+      studyTiles?.want(consumer, [])
+      if (undecided) sheetRef.current?.setAttribute('aria-busy', 'true')
+      else sheetRef.current?.removeAttribute('aria-busy')
+      const canvas = canvasRef.current
+      if (canvas) {
+        canvas.width = 0
+        canvas.height = 0
+      }
+      releaseAllTileCanvases(cache, releaseCanvas)
+      return
+    }
     const dpi = previewDpi(scale)
     const studies = indexedStudyRequests(model, dpi)
     studyTiles?.want(
@@ -133,7 +156,7 @@ export function PagePreview({
         return rendered[i] ?? null
       },
     })
-  }, [model, scale, width, guides, cache, studyTiles, consumer, studyTick])
+  }, [model, scale, width, guides, cache, studyTiles, consumer, studyTick, near, undecided])
 
   useEffect(
     () => () => {

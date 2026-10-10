@@ -1,9 +1,11 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { StrictMode } from 'react'
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initI18n } from '../../../shared/i18n'
 import { DEFAULT_LINES, type LinesPatch, patchLines } from '../../../shared/model/lines'
 import type { PageModel, TileLines } from '../types'
+import { installFakeIntersectionObserver } from '../test-support/fake-intersection-observer'
 import { fakeStudyTiles } from '../test-support/fake-study-tiles'
 import { compositionLinesFor, drawTile, id, pageModel } from '../test-support/fixtures'
 import { PagePreview, type PagePreviewProps } from './PagePreview'
@@ -330,5 +332,131 @@ describe('PagePreview study tiles', () => {
     expect(lastTileImage(1)).toBeNull()
     expect(screen.getAllByRole('button')).toHaveLength(3)
     expect(screen.getByRole('group', { name: 'p' })).not.toHaveAttribute('aria-busy')
+  })
+})
+
+describe('PagePreview near the view (M5-R21)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  const third = { ...group, index: 2 }
+  const sheetOf = (label = 'Page 1') => screen.getByRole('group', { name: label })
+  const canvasOf = (label = 'Page 1') => {
+    const canvas = sheetOf(label).querySelector('canvas')
+    if (!canvas) throw new Error('no sheet canvas')
+    return canvas
+  }
+
+  function observed(model: PageModel = third, extra: Partial<PagePreviewProps> = {}) {
+    const io = installFakeIntersectionObserver()
+    const f = fakeStudyTiles()
+    const utils = render(<PagePreview {...props(f, model, extra)} />)
+    return { io, f, ...utils }
+  }
+
+  it('wants the study tiles of a near page and nothing for a far one', () => {
+    const { io, f } = observed()
+    io.set(sheetOf(), true)
+    expect(f.wanted().map((r) => r.slot)).toEqual(['a|blurred|2:1', 'a|values|2:2'])
+    io.set(sheetOf(), false)
+    expect(f.wants.size).toBe(1)
+    expect(f.wanted()).toEqual([])
+    io.set(sheetOf(), true)
+    expect(f.wanted()).toHaveLength(2)
+  })
+
+  it('observes the page sheet along the scroll axis it is given (vertical by default)', () => {
+    const io = installFakeIntersectionObserver()
+    const f = fakeStudyTiles()
+    const { rerender } = render(<PagePreview {...props(f, third)} />)
+    expect(io.optionsFor(sheetOf()).map((o) => o.rootMargin)).toEqual(['100% 0px'])
+    rerender(<PagePreview {...props(f, third, { scrollAxis: 'x' })} />)
+    expect(io.optionsFor(sheetOf()).map((o) => o.rootMargin)).toEqual(['0px 100%'])
+  })
+
+  it('a far page keeps its size and tile buttons but releases its sheet canvas and tile cache; near again, it redraws from the model', async () => {
+    const onSelect = vi.fn()
+    const { io } = observed(third, { onSelect })
+    io.set(sheetOf(), true)
+    const canvas = canvasOf()
+    expect(canvas.width).toBeGreaterThan(0)
+    expect(renderSpy).toHaveBeenCalledTimes(1)
+    const draws = drawSpy.mock.calls.length
+
+    io.set(sheetOf(), false)
+    expect(canvas.width).toBe(0)
+    expect(canvas.height).toBe(0)
+    expect(releaseSpy).toHaveBeenCalledTimes(1)
+    expect(drawSpy.mock.calls.length).toBe(draws)
+    expect(sheetOf()).toHaveStyle({ aspectRatio: '210 / 297' })
+    expect(within(sheetOf()).getAllByRole('button')).toHaveLength(3)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'pears.heic, Values' }))
+    expect(onSelect).toHaveBeenCalledWith(id('a'))
+
+    io.set(sheetOf(), true)
+    expect(canvas.width).toBeGreaterThan(0)
+    expect(canvas.height).toBeGreaterThan(0)
+    expect(renderSpy).toHaveBeenCalledTimes(2)
+    expect(drawSpy.mock.calls.at(-1)?.[1]).toBe(third)
+  })
+
+  it('a far page is not busy; a near page is busy while its study tiles render', () => {
+    const { io, f } = observed()
+    io.set(sheetOf(), false)
+    expect(sheetOf()).not.toHaveAttribute('aria-busy')
+    io.set(sheetOf(), true)
+    expect(sheetOf()).toHaveAttribute('aria-busy', 'true')
+    act(() => {
+      for (const r of f.wanted()) f.resolve(r.key, image())
+    })
+    expect(sheetOf()).not.toHaveAttribute('aria-busy')
+  })
+
+  it('stays busy and draws nothing until the first observation says near or far', () => {
+    const { io, f } = observed()
+    expect(sheetOf()).toHaveAttribute('aria-busy', 'true')
+    expect(f.wanted()).toEqual([])
+    expect(drawSpy).not.toHaveBeenCalled()
+    expect(canvasOf().width).toBe(0)
+    io.set(sheetOf(), false)
+    expect(sheetOf()).not.toHaveAttribute('aria-busy')
+  })
+
+  it('a far page listens to no study tile notifications, and still releases on unmount', () => {
+    const { io, f, unmount } = observed()
+    io.set(sheetOf(), true)
+    expect(f.listenerCount()).toBe(1)
+    io.set(sheetOf(), false)
+    expect(f.listenerCount()).toBe(0)
+    unmount()
+    expect(f.released).toHaveLength(1)
+  })
+
+  it('the first page is always near', () => {
+    const { io, f } = observed(group)
+    expect(f.wanted()).toHaveLength(2)
+    io.set(sheetOf(), false)
+    expect(f.wanted()).toHaveLength(2)
+    expect(drawSpy).toHaveBeenCalled()
+    expect(canvasOf().width).toBeGreaterThan(0)
+  })
+
+  it('the page holding the selected image is near, and goes far when the selection leaves it', () => {
+    const { io, f, rerender } = observed(third, { selectedId: id('a') })
+    io.set(sheetOf(), false)
+    expect(f.wanted()).toHaveLength(2)
+    expect(canvasOf().width).toBeGreaterThan(0)
+    rerender(<PagePreview {...props(f, third, { selectedId: id('b') })} />)
+    expect(f.wanted()).toEqual([])
+    expect(canvasOf().width).toBe(0)
+  })
+
+  it('without IntersectionObserver every page counts as near', () => {
+    vi.stubGlobal('IntersectionObserver', undefined)
+    const f = fakeStudyTiles()
+    render(<PagePreview {...props(f, third)} />)
+    expect(f.wanted()).toHaveLength(2)
+    expect(canvasOf().width).toBeGreaterThan(0)
   })
 })

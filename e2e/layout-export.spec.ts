@@ -625,7 +625,13 @@ test.describe('study preview timing and races (chromium)', () => {
     await app.setGrid(20, 20)
     await app.setSpiralCorner('Top right')
     await app.expectPreviewSettled(60_000)
-    const sheets = await app.pageCanvases.count()
+    const pages = await app.pageCanvases.count()
+    const sheets = await app.drawnSheetCount()
+    expect(sheets).toBeGreaterThan(0)
+    testInfo.annotations.push({
+      type: 'drawn-sheets',
+      description: `${String(sheets)} of ${String(pages)}`,
+    })
     const tileItems = page.getByRole('list', { name: /^Page \d+ contents$/ }).getByRole('listitem')
     const withCentre = tileItems.filter({ hasText: /Centre lines$/ })
     await expect(withCentre).toHaveCount(3)

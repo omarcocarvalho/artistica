@@ -221,12 +221,39 @@ export class AppPage {
    * Waits until no sheet is busy (layout or study tiles pending), then checks again a couple of
    * frames later: a sheet marks itself busy in an effect that runs after its tiles are painted.
    */
+  /**
+   * No preview element is busy and every page sheet on screen is drawn (a page far from the view
+   * keeps a 0 × 0 canvas, M5-R21), on two checks two frames apart.
+   */
   async expectPreviewSettled(timeout = 30_000): Promise<void> {
-    const busy = this.page.locator('main [aria-busy="true"]')
+    const settled = () =>
+      this.page.evaluate(() => {
+        const w = globalThis as unknown as SettleWindow
+        const doc = w.document
+        if (doc.querySelector('main [aria-busy="true"]') !== null) return false
+        const onScreen = (el: SettleElement): boolean => {
+          let { left, top, right, bottom } = el.getBoundingClientRect()
+          for (let p = el.parentElement; p; p = p.parentElement) {
+            const s = w.getComputedStyle(p)
+            if (s.overflowX === 'visible' && s.overflowY === 'visible') continue
+            const c = p.getBoundingClientRect()
+            left = Math.max(left, c.left)
+            top = Math.max(top, c.top)
+            right = Math.min(right, c.right)
+            bottom = Math.min(bottom, c.bottom)
+          }
+          right = Math.min(right, w.innerWidth)
+          bottom = Math.min(bottom, w.innerHeight)
+          return right > Math.max(left, 0) && bottom > Math.max(top, 0)
+        }
+        return [...doc.querySelectorAll('main figure canvas')].every(
+          (c) => c.width > 0 || !onScreen(c),
+        )
+      })
     await expect
       .poll(
         async () => {
-          if ((await busy.count()) > 0) return false
+          if (!(await settled())) return false
           await this.page.evaluate(
             () =>
               new Promise<void>((done) => {
@@ -237,11 +264,33 @@ export class AppPage {
                 })
               }),
           )
-          return (await busy.count()) === 0
+          return settled()
         },
         { timeout },
       )
       .toBe(true)
+  }
+  /** Page sheets with a drawn canvas: those near the view (M5-R21). */
+  async drawnSheetCount(): Promise<number> {
+    const widths = await this.pageCanvases.evaluateAll((cs) =>
+      cs.map((c) => (c as unknown as { width: number }).width),
+    )
+    return widths.filter((w) => w > 0).length
+  }
+  /** Scrolls page `index` into view and waits until it and every other page on screen is drawn. */
+  async showPage(index: number): Promise<void> {
+    await this.showFigure(this.pageFigures.nth(index))
+  }
+  /** Scrolls the page holding `tile` into view and waits until every page on screen is drawn. */
+  async showTile(tile: Locator): Promise<void> {
+    await this.showFigure(tile.locator('xpath=ancestor::figure'))
+  }
+  private async showFigure(figure: Locator): Promise<void> {
+    await figure.scrollIntoViewIfNeeded()
+    await expect
+      .poll(async () => figure.locator('canvas').evaluate((c: { width: number }) => c.width))
+      .toBeGreaterThan(0)
+    await this.expectPreviewSettled()
   }
   /** Pixel at the centre of a preview tile, read from its page canvas, as [r,g,b,a]. */
   async tileCentrePixel(tile: Locator, pageIndex = 0): Promise<number[]> {
@@ -302,6 +351,8 @@ export class AppPage {
       ) => {
         const g = c.getContext('2d')
         if (!g) throw new Error('canvas is not 2d')
+        if (c.width === 0 || c.height === 0)
+          throw new Error('page canvas is released: show the page first')
         return Array.from(
           g.getImageData(Math.floor(c.width * x), Math.floor(c.height * y), 1, 1).data,
         )
@@ -336,6 +387,8 @@ export class AppPage {
       ) => {
         const g = c.getContext('2d')
         if (!g) throw new Error('canvas is not 2d')
+        if (c.width === 0 || c.height === 0)
+          throw new Error('page canvas is released: show the page first')
         return fractions.map(([x, y]) =>
           Array.from(g.getImageData(Math.floor(c.width * x), Math.floor(c.height * y), 1, 1).data),
         )
@@ -466,6 +519,8 @@ export class AppPage {
       (c: SheetCanvas, pts: [number, number][]) => {
         const g = c.getContext('2d')
         if (!g) throw new Error('canvas is not 2d')
+        if (c.width === 0 || c.height === 0)
+          throw new Error('page canvas is released: show the page first')
         const all = g.getImageData(0, 0, c.width, c.height).data
         return pts.map(([x, y]) => {
           const o = 4 * (Math.floor(y) * c.width + Math.floor(x))
@@ -591,6 +646,27 @@ const GUIDE_STATUS_TEXT: readonly (readonly [GuideStatus, readonly string[]])[] 
 ]
 
 // --- Lines (D3) ---
+interface SettleRect {
+  left: number
+  top: number
+  right: number
+  bottom: number
+}
+interface SettleElement {
+  width: number
+  parentElement: SettleElement | null
+  getBoundingClientRect(): SettleRect
+}
+interface SettleWindow {
+  innerWidth: number
+  innerHeight: number
+  document: {
+    querySelector(sel: string): unknown
+    querySelectorAll(sel: string): Iterable<SettleElement>
+  }
+  getComputedStyle(el: SettleElement): { overflowX: string; overflowY: string }
+}
+
 interface SheetCanvas {
   width: number
   height: number
@@ -620,6 +696,8 @@ function readCanvasPixel(canvas: Locator, fx: number, fy: number): Promise<numbe
     ) => {
       const g = c.getContext('2d')
       if (!g) throw new Error('canvas is not 2d')
+      if (c.width === 0 || c.height === 0)
+        throw new Error('page canvas is released: show the page first')
       return Array.from(
         g.getImageData(Math.floor(c.width * x), Math.floor(c.height * y), 1, 1).data,
       )

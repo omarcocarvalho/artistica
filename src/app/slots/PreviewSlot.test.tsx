@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   select: vi.fn(),
   selectedId: null as string | null,
   studyTiles: [] as unknown[],
+  scrollAxes: [] as unknown[],
   provider: { name: 'app study provider' },
   lines: undefined as LineSettings | undefined,
 }))
@@ -23,8 +24,10 @@ vi.mock('../../features/render', () => ({
     getName: (id: ImageId) => string
     onSelect: (id: ImageId) => void
     studyTiles?: unknown
+    scrollAxis?: unknown
   }) => {
     h.studyTiles.push(p.studyTiles)
+    h.scrollAxes.push(p.scrollAxis)
     return (
       <button
         type="button"
@@ -75,6 +78,7 @@ beforeEach(() => {
   h.selectedId = null
   h.select.mockClear()
   h.studyTiles = []
+  h.scrollAxes = []
   h.lines = undefined
   useAppUi.setState({ editingId: null })
   usePages.setState({
@@ -127,6 +131,18 @@ describe('PreviewSlot', () => {
     expect(h.studyTiles).toHaveLength(2)
     for (const p of h.studyTiles) expect(p).toBe(h.provider)
   })
+  it.each([
+    [true, 'y'],
+    [false, 'x'],
+  ] as const)(
+    'tells every page the scroll axis (desktop %s: %s), so it can tell when it is near the view (M5-R21)',
+    (desktop, axis) => {
+      stubDesktop(desktop)
+      render(<PreviewSlot />)
+      expect(h.scrollAxes).not.toHaveLength(0)
+      for (const a of h.scrollAxes) expect(a).toBe(axis)
+    },
+  )
   it('names the version of study tiles in the text alternative', () => {
     act(() => {
       usePages.setState({

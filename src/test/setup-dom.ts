@@ -22,3 +22,6 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   }
   globalThis.ResizeObserver = ResizeObserverStub
 }
+
+// happy-dom's IntersectionObserver never reports, so every observed page would stay undecided.
+Reflect.deleteProperty(globalThis, 'IntersectionObserver')

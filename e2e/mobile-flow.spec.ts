@@ -230,6 +230,7 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line and guide on
       .filter({ hasText: EVERY_LINE_TYPE })
       .count()
     for (const tile of await app.pageFigures.getByRole('button', { name: /, Values$/ }).all()) {
+      await app.showTile(tile)
       const box = await tile.boundingBox()
       if (!box) throw new Error('tile not laid out')
       const points = pointsClearOfLines(box.width, box.height, PHOTO.w > PHOTO.h)
@@ -238,6 +239,7 @@ test('M3 @slow 22 x 24 MP photos x 3 study versions with every line and guide on
       valuesOnRamp.push(Math.round((100 * off.filter((d) => d <= 3).length) / off.length))
     }
     previewPages = await app.pageCanvases.count()
+    await app.showPage(0)
     await page.waitForTimeout(2000)
     const cdp = await page.context().newCDPSession(page)
     await cdp.send('HeapProfiler.collectGarbage')
@@ -738,6 +740,8 @@ async function guideColourShare(tile: Locator): Promise<number> {
     ) => {
       const ctx = c.getContext('2d')
       if (!ctx) throw new Error('canvas is not 2d')
+      if (c.width === 0 || c.height === 0)
+        throw new Error('page canvas is released: show the page first')
       const x = Math.ceil(c.width * fx)
       const y = Math.ceil(c.height * fy)
       const w = Math.floor(c.width * fw) - 1

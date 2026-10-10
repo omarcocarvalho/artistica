@@ -879,6 +879,8 @@ test.describe('lines on desktop (all browsers)', () => {
         const w = globalThis as unknown as TimerWindow
         const g = c.getContext('2d')
         if (!g) throw new Error('canvas is not 2d')
+        if (c.width === 0 || c.height === 0)
+          throw new Error('page canvas is released: show the page first')
         const t = { start: 0, end: 0 }
         w.__lineTimer = t
         w.document.addEventListener(
