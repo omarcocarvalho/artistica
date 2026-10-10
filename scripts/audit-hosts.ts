@@ -13,6 +13,7 @@ export const ALLOWED_LINKS: readonly string[] = [
   // XML namespaces, JSON-LD and JSON Schema identifiers: names, never fetched.
   'www.w3.org/2000/svg',
   'www.w3.org/1999/xlink',
+  'www.w3.org/1999/xhtml',
   'www.w3.org/1998/Math/MathML',
   'www.w3.org/XML/1998/namespace',
   'www.sitemaps.org/schemas/sitemap/0.9',

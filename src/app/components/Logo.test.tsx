@@ -194,10 +194,10 @@ describe('Logo', () => {
     const { container } = render(<Logo />)
     const ours = shapes(container.innerHTML)
     expect(ours.length).toBeGreaterThanOrEqual(5)
-    const landing = read('../../../index.html')
+    const landing = read('../../../landing/page.html')
     const header = landing.slice(landing.indexOf('<header'), landing.indexOf('</header>'))
-    expect(svgOf(header).classList.contains('logo-mark'), 'index.html logo-mark').toBe(true)
-    expect(shapes(header), 'index.html').toEqual(ours)
+    expect(svgOf(header).classList.contains('logo-mark'), 'landing/page.html logo-mark').toBe(true)
+    expect(shapes(header), 'landing/page.html').toEqual(ours)
     expect(shapes(read('../../../public/favicon.svg')), 'favicon.svg').toEqual(ours)
     expect(shapes(read('../../../scripts/og-image.html')), 'og-image.html').toEqual(ours)
     expect(shapes(read('../../../scripts/apple-touch-icon.html')), 'apple-touch-icon.html').toEqual(
