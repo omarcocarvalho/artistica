@@ -355,6 +355,12 @@ describe('ArrangeToolbar on the phone (B5)', () => {
       /, page 2 of 2$/,
     )
     expect(useArrangeUi.getState().focusId).toBeNull()
+    await user.click(within(sheet).getByRole('button', { name: 'Done' }))
+    arranged('a#0')
+    await user.click(screen.getByRole('button', { name: 'Photo options' }))
+    expect(screen.getByRole('dialog', { name: 'a.jpg' })).toHaveAccessibleDescription(
+      /, page 1 of 2$/,
+    )
   })
 
   it('the sheet closes when its photo goes away', async () => {
@@ -366,6 +372,21 @@ describe('ArrangeToolbar on the phone (B5)', () => {
     act(() => {
       useImages.setState({ images: [loaded('a')] })
     })
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('a sheet closed because its photo went away stays closed when the photo comes back', async () => {
+    show([loaded('a'), loaded('b')])
+    const user = phone()
+    arranged('b#0')
+    await user.click(screen.getByRole('button', { name: 'Photo options' }))
+    act(() => {
+      useImages.setState({ images: [loaded('a')] })
+    })
+    act(() => {
+      useImages.setState({ images: [loaded('a'), loaded('b')] })
+    })
+    expect(screen.getByRole('button', { name: 'Photo options' })).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 

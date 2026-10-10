@@ -146,12 +146,13 @@ export function ArrangeToolbar({ variant = 'desktop' }: { readonly variant?: Var
   const images = useImages((s) => s.images)
   const { manual, blocks } = useArrangeView()
   const [confirming, setConfirming] = useState(false)
-  const [options, setOptions] = useState(false)
+  const [optionsFor, setOptionsFor] = useState<string | null>(null)
   const names = useMemo(() => new Map(images.map((i) => [i.id, i.name])), [images])
   const block = mode ? blocks.find((b) => b.id === selected) : undefined
   const imageName = (b: ArrangeBlock) => names.get(b.imageId) ?? ''
   const pageCount = manual?.pageCount ?? 0
   const phone = variant === 'phone'
+  if (optionsFor !== null && optionsFor !== block?.id) setOptionsFor(null)
 
   const toggle = (
     <Button
@@ -224,7 +225,7 @@ export function ArrangeToolbar({ variant = 'desktop' }: { readonly variant?: Var
 
   const closeOptions = (open: boolean) => {
     if (open) return
-    setOptions(false)
+    setOptionsFor(null)
     if (block) revealBlock(block.id)
   }
   const unitLabel = t(`common:units.${unit}`)
@@ -259,7 +260,7 @@ export function ArrangeToolbar({ variant = 'desktop' }: { readonly variant?: Var
             icon="more"
             size="lg"
             onClick={() => {
-              setOptions(true)
+              setOptionsFor(block.id)
             }}
           >
             {t('arrange.photoOptions')}
@@ -269,7 +270,7 @@ export function ArrangeToolbar({ variant = 'desktop' }: { readonly variant?: Var
       {confirm}
       {block && (
         <BottomSheet
-          open={options}
+          open={optionsFor === block.id}
           onOpenChange={closeOptions}
           title={imageName(block)}
           description={t('arrange.sheetSummary', {
