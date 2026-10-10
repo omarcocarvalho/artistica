@@ -13,9 +13,9 @@ Clickable HTML mockups for every screen in spec §8 "D — Design". Open `index.
 | `mockup.css` | Shared component styles, plus the millimetre-accurate print preview and placeholder art. |
 | `mockup.js` | Small vanilla interactions: theme, tabs, step flow, dialogs/sheets, sliders, toggles, hue ramp, units, the bleed/gutter rule, and fake export and model-download progress. |
 | `index.html` | Gallery of all screens and the palette. |
-| `landing.html` | Public landing page (`/`): hero, how it works, features, privacy, FAQ. |
+| `landing.html` | Public landing page (`/`): hero, how it works, features, privacy, FAQ. The footer lists the seven languages as links, the current one marked. |
 | `workspace.html` | Desktop workspace: images panel · live page preview · settings tabs. |
-| `mobile-flow.html` | Phone flow (390 × 844) in a device frame: Images → Page → Studies → Preview → Export, plus the edit bottom sheet. Preview has the Arrange toolbar under the pages; two more phones show Arrange mode (44 px handles) and the selected photo's sheet (Move to page, Swap with…, Width, Position). Export is inline in its step. |
+| `mobile-flow.html` | Phone flow (390 × 844) in a device frame, with the language globe in its top bar: Images → Page → Studies → Preview → Export, plus the edit bottom sheet. Preview has the Arrange toolbar under the pages; two more phones show Arrange mode (44 px handles) and the selected photo's sheet (Move to page, Swap with…, Width, Position). Export is inline in its step. |
 | `image-edit.html` | Per-image edit dialog: crop and aspect (drag, arrow keys, or the Position and Size buttons under the crop), rotate, flip, copies, Auto/Fixed size, DPI meter and low-DPI warning. |
 | `page-setup.html` | Page tab with bleed on: guide legend, shortened crop marks, and the "gutter raised" note. |
 | `studies.html` | Studies tab: versions, blur, values 2–20, single-hue picker, generated ramp, apply to all; study groups on the page. |
@@ -26,6 +26,8 @@ Clickable HTML mockups for every screen in spec §8 "D — Design". Open `index.
 | `presets.html` | Presets: the top-bar button; the dialog empty and with three presets; saving (no name, a taken name, a full list); renaming; the apply and delete confirmations; Export all and Import… with every result and error; the phone bottom sheet. |
 | `arrange.html` | Arrange mode: the preview toolbar off and on (Undo, Re-run auto layout, and Move to page, Swap with…, Width and Position for the selected photo); a keyboard-driven desk; drag ghosts (valid, invalid), a swap target, a keyboard pick-up, a fixed-size photo, the re-run confirmation, the "arranged automatically again" notices and what a screen reader hears. |
 | `logo.html` | Three logo directions on the sketchbook concept, recommended one first, at 512, 180, 32 and 16 px, in light, dark, forced colours and one colour. |
+| `language.html` | The language select in the app top bar: globe and the language's own name on desktop, the globe alone (44 px) on phones, the open list with each name in its own `lang`, a failed load, what a screen reader hears, and the bar in Japanese and Italian (the longest labels). |
+| `type-cjk.html` | One specimen per CJK language (ja, ko, zh-CN) at desktop and phone size: heading, body, buttons, chips, a segmented control and the phone step labels, each language with its own system font list; and the line-breaking rules (strict for Japanese and Chinese, `keep-all` for Korean). |
 
 ## Visual concept: "a sketchbook on a warm studio desk"
 
@@ -76,9 +78,10 @@ The focus ring is 3 px with a 2 px offset in ultramarine (periwinkle in dark), o
 
 These are the intended fonts. They are self-hosted in the real app; the mockups fall back to system fonts.
 
-- **UI:** *Atkinson Hyperlegible Next*. It is very legible and covers a wide range of glyphs. Fallbacks: `system-ui`, then Hiragino Sans, PingFang SC, Apple SD Gothic Neo and Noto Sans CJK for ja/ko/zh-CN.
+- **UI:** *Atkinson Hyperlegible Next*. It is very legible and covers a wide range of glyphs. Fallback: `system-ui`.
+- **CJK:** system fonts, nothing downloaded. Each of ja, ko and zh-CN has its own font list right after the Latin family (a `:lang()` block), so Han characters take that language's regional shapes: Hiragino Sans and Yu Gothic for Japanese, Apple SD Gothic Neo and Malgun Gothic for Korean, PingFang SC and Microsoft YaHei for Chinese, then Noto. Headings and hand-written accents use the same sans for CJK characters; no bold or italic is synthesised. Japanese and Chinese break lines with `line-break: strict`, Korean with `word-break: keep-all`; controls allow `overflow-wrap: anywhere`. See `type-cjk.html`.
 - **Display:** *Fraunces*, a soft, slightly "wonky" serif with an art-school feel. Used for headings only.
-- **Hand:** *Caveat*. Decorative notes only (tip!, squint!). **Never essential text.** It has no CJK glyphs, so in ja/ko/zh-CN it will fall back to the UI font.
+- **Hand:** *Caveat*. Decorative notes only (tip!, squint!). **Never essential text.** It has no CJK glyphs, so in ja/ko/zh-CN the CJK characters use that language's sans.
 - **Mono:** used for numbers and dimensions (tabular figures), e.g. `210 × 297 mm`, `135 DPI`.
 - **Scale:** 11 / 12 / 14 / 16 / 18 / 22 / 28 / 36 / 48 px, with a fluid display size. Dense panels use 14 px. Inputs on phones use 16 px so iOS doesn't zoom. Line height is 1.5–1.65 to give CJK room.
 
@@ -135,8 +138,8 @@ These are the intended fonts. They are self-hosted in the real app; the mockups 
 1. **Where do Lines live on phones?** The spec's phone flow has five steps (Images → Page → Studies → Preview → Export) and no Lines step. The mockup puts Lines inside the Studies step as a collapsible section. Alternative: a sixth "Lines" step.
 2. **Do crop marks and bleed sit inside the safe area?** The mockup keeps all printed content inside it: images, bleed and marks. This costs about 5 mm of image space per edge. The other option is to let marks run into the safe area.
 3. **Default state of crop marks and bleed.** The spec gives no on/off defaults. The mockup assumes crop marks **on** and bleed **off**.
-4. **Language picker placement.** Only English ships until M6. The mockup shows a language select in the app top bar and the landing footer. Should it be hidden until other languages exist?
-5. **Brand fonts.** Is the Atkinson Hyperlegible + Fraunces + Caveat trio OK to self-host? These are OFL licences, roughly 150–250 KB of WOFF2 with subsetting. CJK uses system fonts.
+4. **Language picker placement.** Answered (review round 1, D4: hidden until M6; M6 plan, M6-R15 and R21): a globe select in the app top bar at every width (`language.html`), and seven language links in the landing footer.
+5. **Brand fonts.** Answered (review round 1, D5: the Latin trio is self-hosted; M6 plan, M6-R17): CJK uses system fonts, with one font list per language (`type-cjk.html`).
 6. **Model sizes in the copy.** The mockup says "4 MB" (face) and "9 MB" (pose) as placeholders. Real numbers come from the chosen MediaPipe models.
 7. **Selection model.** Studies and Lines edit the image selected in the left list. Should clicking a tile on the page preview also select it? The mockup assumes yes (preview-click is visual only here).
 8. **"Apply to all" scope.** Should it also include Lines when pressed in Studies, or stay separate per tab (as mocked)?
