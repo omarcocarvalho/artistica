@@ -1,6 +1,7 @@
 import { Tabs as RadixTabs } from 'radix-ui'
 import type { ReactNode } from 'react'
 import { cx } from './cx'
+import { leaveOnShiftTab } from './roving'
 
 export interface TabItem {
   id: string
@@ -27,7 +28,7 @@ export function Tabs({ label, items, value, onValueChange, className }: TabsProp
       onValueChange={onValueChange}
       className={cx('ds-tabs-root', className)}
     >
-      <RadixTabs.List aria-label={label} className="ds-tabs">
+      <RadixTabs.List aria-label={label} className="ds-tabs" onKeyDown={leaveOnShiftTab}>
         {items.map((item) => (
           <RadixTabs.Trigger key={item.id} value={item.id} className="ds-tab">
             {item.label}

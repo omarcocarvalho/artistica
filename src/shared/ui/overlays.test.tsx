@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -249,6 +249,21 @@ describe('Tabs', () => {
     await userEvent.click(screen.getByRole('tab', { name: /Studies/ }))
     expect(screen.getByText('Studies panel')).toBeVisible()
     expect(screen.queryByText('Page panel')).toBeNull()
+  })
+
+  it('leaves the Tab order on Shift+Tab before the browser moves the focus, so Firefox can tab back out', () => {
+    render(<Harness />)
+    const list = screen.getByRole('tablist', { name: 'Settings' })
+    const tab = screen.getByRole('tab', { name: 'Page' })
+    tab.focus()
+    let duringEvent: string | null = null
+    const read = () => {
+      duringEvent = list.getAttribute('tabindex')
+    }
+    document.addEventListener('keydown', read)
+    fireEvent.keyDown(tab, { key: 'Tab', shiftKey: true })
+    document.removeEventListener('keydown', read)
+    expect(duringEvent).toBe('-1')
   })
 
   it('moves between tabs with the arrow keys', async () => {
