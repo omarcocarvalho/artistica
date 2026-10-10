@@ -123,6 +123,7 @@
     color: var(--color-ink-muted);
     display: inline-flex;
     align-items: center;
+    overflow-wrap: anywhere;
     gap: var(--space-1-5);
     border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   }

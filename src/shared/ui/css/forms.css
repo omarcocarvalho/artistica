@@ -147,6 +147,7 @@
     font-weight: var(--weight-semibold);
     color: var(--color-ink-muted);
     cursor: pointer;
+    overflow-wrap: anywhere;
     text-align: center;
     line-height: 1.15;
   }

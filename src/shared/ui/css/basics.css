@@ -19,6 +19,7 @@
     line-height: 1.2;
     text-decoration: none;
     cursor: pointer;
+    overflow-wrap: anywhere;
     white-space: nowrap;
     transition:
       transform var(--duration-fast) var(--ease-out),
@@ -164,6 +165,7 @@
     border-radius: var(--radius-sketch-sm);
     background: var(--color-surface-raised);
     font-size: var(--text-sm);
+    overflow-wrap: anywhere;
     font-weight: var(--weight-semibold);
     cursor: pointer;
   }
