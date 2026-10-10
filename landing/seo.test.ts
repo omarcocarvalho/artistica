@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import { readFileSync } from 'node:fs'
+import { inflateSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
 
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
@@ -15,6 +16,40 @@ function jsonLd(): Record<string, unknown>[] {
 }
 const meta = (attr: 'name' | 'property', key: string) =>
   new RegExp(`<meta[^>]*${attr}="${key}"[^>]*content="([^"]*)"`).exec(html)?.[1]
+
+/** The pixels of an 8-bit RGB PNG (colour type 2), as `#rrggbb` per (x, y). */
+function rgbPixels(png: Buffer): (x: number, y: number) => string {
+  const w = png.readUInt32BE(16)
+  const h = png.readUInt32BE(20)
+  expect([png[24], png[25]]).toEqual([8, 2])
+  const idat: Buffer[] = []
+  for (let o = 8; o < png.length;) {
+    const len = png.readUInt32BE(o)
+    if (png.toString('ascii', o + 4, o + 8) === 'IDAT') idat.push(png.subarray(o + 8, o + 8 + len))
+    o += 12 + len
+  }
+  const raw = inflateSync(Buffer.concat(idat))
+  const bpp = 3
+  const stride = w * bpp
+  const out = Buffer.alloc(h * stride)
+  for (let y = 0; y < h; y++) {
+    const filter = raw[y * (stride + 1)]
+    for (let x = 0; x < stride; x++) {
+      const at = (i: number) => out[i] ?? 0
+      const a = x >= bpp ? at(y * stride + x - bpp) : 0
+      const b = y > 0 ? at((y - 1) * stride + x) : 0
+      const c = x >= bpp && y > 0 ? at((y - 1) * stride + x - bpp) : 0
+      const pa = Math.abs(b - c)
+      const pb = Math.abs(a - c)
+      const pc = Math.abs(a + b - 2 * c)
+      const paeth = pa <= pb && pa <= pc ? a : pb <= pc ? b : c
+      const predictor = [0, a, b, (a + b) >> 1, paeth][filter ?? 0] ?? 0
+      out[y * stride + x] = ((raw[y * (stride + 1) + 1 + x] ?? 0) + predictor) & 255
+    }
+  }
+  return (x, y) =>
+    `#${[...out.subarray(y * stride + x * bpp, y * stride + x * bpp + bpp)].map((v) => v.toString(16).padStart(2, '0')).join('')}`
+}
 
 describe('landing SEO', () => {
   it('has a title and description of sensible length', () => {
@@ -102,6 +137,16 @@ describe('landing SEO', () => {
     // Colour type 2 is RGB without alpha: iOS fills transparent pixels with black.
     expect(png[25]).toBe(2)
     expect(png.length).toBeLessThan(30_000)
+  })
+  it('apple-touch-icon.png shows the mark on the light canvas: white sheet, terracotta tile', () => {
+    const tokens = read('src/shared/theme/tokens.css')
+    const light = (name: string) => new RegExp(`${name}: (#[0-9a-f]{6});`).exec(tokens)?.[1]
+    const px = rgbPixels(readFileSync(new URL('../public/apple-touch-icon.png', import.meta.url)))
+    // The 32-unit mark is drawn at 132 px in the middle of the 180 px icon, turned -6°.
+    expect(px(0, 0)).toBe(light('--color-canvas'))
+    expect(px(179, 179)).toBe(light('--color-canvas'))
+    expect(px(114, 100)).toBe(light('--color-brand'))
+    expect(px(123, 111)).toBe(light('--color-paper'))
   })
   it('og-image.png is a 1200x630 PNG under 300 KB', () => {
     const png = readFileSync(new URL('../public/og-image.png', import.meta.url))
