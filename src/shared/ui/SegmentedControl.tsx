@@ -1,5 +1,5 @@
 import { RadioGroup } from 'radix-ui'
-import { useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { cx } from './cx'
 
 export interface SegmentedOption<T extends string> {
@@ -51,8 +51,8 @@ function keyTarget<T extends string>(
   focused: string | null,
 ): T | undefined {
   const enabled = options.filter((o) => !o.disabled).map((o) => o.value)
-  if (key === 'Home') return enabled[0]
-  if (key === 'End') return enabled.at(-1)
+  if (key === 'Home' || key === 'PageUp') return enabled[0]
+  if (key === 'End' || key === 'PageDown') return enabled.at(-1)
   const step = STEP[key]
   const from = enabled.findIndex((v) => v === focused)
   if (step === undefined || from < 0) return undefined
@@ -62,10 +62,11 @@ function keyTarget<T extends string>(
 
 /**
  * A radio group drawn as joined buttons (M5-R26). All four arrows move and select, wrapping,
- * with Left and Right swapped in right-to-left text; Home and End select the first and last
- * enabled option. Radix moves the focus and keeps the roving tabindex; the selection is made
- * here on key down, because Radix selects only an option that gains focus while the key is
- * still down, which a quick tap can miss.
+ * with Left and Right swapped in right-to-left text; Home and End (and Page Up and Page Down,
+ * which Radix also moves the focus on) select the first and last enabled option. Radix moves
+ * the focus and keeps the roving tabindex; the selection is made here on key down, because
+ * Radix selects only an option that gains focus while the key is still down, which a quick
+ * tap can miss. The direction is read from the closest `dir` ancestor on mount and on focus.
  */
 export function SegmentedControl<T extends string>({
   label,
@@ -78,6 +79,10 @@ export function SegmentedControl<T extends string>({
   className,
 }: SegmentedControlProps<T>) {
   const [dir, setDir] = useState<Direction | undefined>(undefined)
+  const root = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    if (root.current) setDir(inheritedDirection(root.current))
+  }, [])
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
@@ -87,6 +92,7 @@ export function SegmentedControl<T extends string>({
 
   return (
     <RadioGroup.Root
+      ref={root}
       aria-label={label}
       value={value}
       onValueChange={(v) => {

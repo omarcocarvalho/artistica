@@ -248,6 +248,19 @@ describe('SegmentedControl', () => {
     expect(onChange.mock.calls).toEqual([['d']])
   })
 
+  it('steps from the focused option when the value does not follow', async () => {
+    const onValueChange = vi.fn()
+    render(
+      <SegmentedControl label="Letters" value="a" onValueChange={onValueChange} options={abcd} />,
+    )
+    radio('A').focus()
+    await userEvent.keyboard('{ArrowDown}')
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+    expect(radio('B')).toHaveFocus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(onValueChange).toHaveBeenLastCalledWith('c')
+  })
+
   it('ignores arrow keys with a modifier', async () => {
     const onChange = vi.fn()
     render(<Controlled initial="a" onChange={onChange} />)
@@ -294,16 +307,43 @@ describe('SegmentedControl', () => {
     },
   )
 
-  it('takes the inherited direction, not a fixed left to right', () => {
+  it('draws in the inherited direction before it is focused', () => {
     render(
       <div dir="rtl">
         <Controlled />
       </div>,
     )
+    expect(screen.getByRole('radiogroup')).toHaveAttribute('dir', 'rtl')
+  })
+
+  it.each([
+    ['PageUp', 'B'],
+    ['PageDown', 'C'],
+  ])('{%s} selects the option it moves the focus to', async (key, expected) => {
+    const opts = abcd.map((o) =>
+      o.value === 'a' || o.value === 'd' ? { ...o, disabled: true } : o,
+    )
+    render(<Controlled initial={expected === 'B' ? 'c' : 'b'} opts={opts} />)
+    await press(expected === 'B' ? 'C' : 'B', key)
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+    expect(radio(expected)).toHaveFocus()
+    expect(checkedName()).toBe(expected)
+  })
+
+  it('follows a direction that changes after mount when it gains focus', async () => {
+    render(
+      <div data-testid="wrapper" dir="ltr">
+        <Controlled initial="b" />
+      </div>,
+    )
+    expect(screen.getByRole('radiogroup')).toHaveAttribute('dir', 'ltr')
+    screen.getByTestId('wrapper').setAttribute('dir', 'rtl')
     act(() => {
-      radio('A').focus()
+      radio('B').focus()
     })
     expect(screen.getByRole('radiogroup')).toHaveAttribute('dir', 'rtl')
+    await userEvent.keyboard('{ArrowLeft}')
+    expect(checkedName()).toBe('C')
   })
 })
 
