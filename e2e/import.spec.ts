@@ -305,7 +305,7 @@ test.describe('import (cancel)', () => {
   runOnly('chromium', 'firefox', 'webkit')
   test.use({ viewport: { width: 1280, height: 800 } })
 
-  /** Resolves when the route handler is first called; the handler never answers that request. */
+  /** A promise and its resolver: a route handler calls `reach()` and leaves the request unanswered. */
   function hold(): { reached: Promise<void>; reach: () => void } {
     let reach = (): void => undefined
     const reached = new Promise<void>((resolve) => {
@@ -342,6 +342,7 @@ test.describe('import (cancel)', () => {
     await expect.poll(() => failed, { timeout: 3_000 }).toEqual([`GET ${download}`])
     await expect(page.getByText('Stopped adding photos.', { exact: true })).toBeVisible()
     await expect(app.cancelImportsButton).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Upload', exact: true })).toBeFocused()
     await app.expectImages(2)
     await expect(page.getByRole('alert')).toHaveCount(0)
 
@@ -361,6 +362,7 @@ test.describe('import (cancel)', () => {
       .toEqual([`GET ${download}`, `GET ${probed}`, `HEAD ${probed}`])
     await expect(page.getByText('Stopped adding photos.', { exact: true })).toBeVisible()
     await expect(app.cancelImportsButton).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Upload', exact: true })).toBeFocused()
     await app.expectImages(2)
     await expect(app.imageRows.first()).toContainText('quadrants.jpg')
     await expect(app.imageRows.nth(1)).toContainText('transparent.png')
