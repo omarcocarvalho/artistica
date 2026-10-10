@@ -164,7 +164,7 @@ All tests install the strict network guard; chromium, firefox and webkit.
 
 ## Contract change requests
 
-**B2 (reconciliation), proposed by the implementer:**
+**B2 (reconciliation), proposed by the implementer.** Ruled (accepted) in the B2 review; the binding text is the overview's "Contract change requests → Ruled → B2".
 1. `ManualBlock` gains `shape?: BlockShape` (`{ aspect, tiles }` of the photo copy when the block was placed). Without it the engine cannot tell that a crop, rotation or study change altered a block, nor find the old box to refit into (M5-R14 row 3): `computeLayout` only sees the current items. `manualFromLayout`, `packAround` and refits fill it; the operations carry it unchanged. A block without one is treated as unchanged and is packed again if its current shape no longer fits.
 2. `ManualOutcome` lives in `types.ts` as the overview shows; the barrel also exports `ManualLayout`, `ManualBlock` and `BlockId` as types for B3.
 3. The automatic engine moves verbatim from `compute-layout.ts` to `auto-layout.ts` (`computeLayout` there is renamed `autoLayout`; `validateItems` and `orientedSize` are exported) so `manual-reconcile.ts` can use the search without an import cycle. `compute-layout.ts` holds `computeLayout(setup, items, manual?)` and re-exports the search helpers.

@@ -163,6 +163,20 @@ describe('reconcileManual (property)', () => {
     },
   )
 
+  it('settles: its own outcome, fed back, is kept unchanged', { timeout: 60_000 }, () => {
+    fc.assert(
+      fc.property(scenario, (s) => {
+        const { setup, items, start } = run(s)
+        const first = computeLayout(setup, items, start)
+        if (first.manual === undefined || first.manual.kind === 'dropped') return
+        const again = computeLayout(setup, items, first.manual.manual)
+        expect(again.manual).toStrictEqual({ kind: 'kept', manual: first.manual.manual })
+        expect(withoutManual(again)).toStrictEqual(withoutManual(first))
+      }),
+      { numRuns: 150 },
+    )
+  })
+
   it('is deterministic in any item order', { timeout: 60_000 }, () => {
     fc.assert(
       fc.property(scenario, fc.integer(), (s, seed) => {

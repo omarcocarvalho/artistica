@@ -182,6 +182,29 @@ describe('reconcileManual: a photo or copy added (M5-R14)', () => {
     expect(blockOf(out, 'p#0')).toMatchObject({ x: 137, y: 166, tileW: 100, turned: true })
   })
 
+  it('breaks an area tie by the long side: the longer photo is packed first', () => {
+    // A 52 mm strip is left below a: 40 × 40 and 80 × 20 (same area) both fit it, side by side.
+    // The square sorts first by key, so only the tie-break puts the long photo at the left.
+    const aspect = 190 / 225
+    const m = manualOf([shaped(block('a#0', 10, 10, 190), aspect)])
+    const square = item('n', 1, 1000, fixed(40))
+    const long = item('o', 4, 1000, fixed(80))
+    const out = packAround(m, [square, long], [item('a', aspect), square, long])
+    expect(blockOf(out, 'o#0')).toMatchObject({ page: 0, x: 10, y: 241, turned: false })
+    expect(blockOf(out, 'n#0')).toMatchObject({ page: 0, x: 96, y: 241 })
+  })
+
+  it('sizes several new photos by the auto search over them together, not each at its largest', () => {
+    const m = manualOf([shaped(block('a#0', 10, 10, 20), 1)])
+    const added = [item('n', 1), item('o', 1)]
+    const auto = computeLayout(A4_PORTRAIT, added)
+    const autoW = auto.pages.flatMap((p) => p.placements).map((pl) => pl.tiles[0]?.w ?? 0)
+    expect(Math.max(...autoW)).toBeLessThan(190 - 1)
+    const out = arranged(computeLayout(A4_PORTRAIT, [item('a', 1), ...added], m), 'adjusted')
+    for (const id of ['n#0', 'o#0'])
+      expect(blockOf(out, id).tileW).toBeLessThanOrEqual(Math.max(...autoW) + 1e-9)
+  })
+
   it('gives packAround the same answer in any order of the photos to pack', () => {
     const m = manualOf([shaped(block('a#0', 10, 10, 150), 1)])
     const toPack = [item('n', 1.5), item('o', 0.7), item('p', 1, 1000, fixed(30))]
@@ -237,6 +260,13 @@ describe('reconcileManual: a shape change (crop, rotation, study versions)', () 
     const m = manualOf([shaped(block('a#0', 20, 30, 40), 1)])
     const out = arranged(computeLayout(A4_PORTRAIT, [item('a', 2, 1000, fixed(30))], m), 'adjusted')
     expect(blockOf(out, 'a#0')).toMatchObject({ x: 20, y: 30, tileW: 30 })
+  })
+
+  it('refits a block whose aspect changed only slightly (a small crop)', () => {
+    const m = manualOf([shaped(block('a#0', 20, 30, 50), 1)])
+    const out = arranged(computeLayout(A4_PORTRAIT, [item('a', 0.995)], m), 'adjusted')
+    expect(blockOf(out, 'a#0')).toMatchObject({ x: 20, y: 30, turned: false })
+    expect(blockOf(out, 'a#0').tileW).toBeCloseTo(49.75, 9)
   })
 
   it('records the new shape of a refitted block', () => {
@@ -422,6 +452,16 @@ describe('reconcileManual: nothing left, or no room', () => {
     const items = [item('a', 1), item('n', 1, 1000, { kind: 'auto' }, 50)]
     const { rest, outcome } = split(computeLayout(A4_PORTRAIT, items, m))
     expect(outcome).toEqual({ kind: 'dropped', reason: 'no-longer-fits' })
+    expect(rest.pages).toEqual([])
+  })
+
+  it('drops it when the content box is narrower than 1 mm, even with every arranged photo gone', () => {
+    // Content box 0.8 × 87.8 mm (inset 99.6 + 5): the auto layout has no room, so new photos must not be packed into it.
+    const setup: PageSetup = { ...A4_PORTRAIT, safeAreaMm: 99.6 }
+    const m = manualOf([shaped(block('a#0', 10, 10, 50), 1)])
+    const { rest, outcome } = split(computeLayout(setup, [item('n', 1)], m))
+    expect(outcome).toEqual({ kind: 'dropped', reason: 'no-longer-fits' })
+    expect(rest).toEqual(computeLayout(setup, [item('n', 1)]))
     expect(rest.pages).toEqual([])
   })
 
