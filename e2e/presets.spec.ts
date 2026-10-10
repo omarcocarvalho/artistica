@@ -264,6 +264,25 @@ test.describe('desktop', () => {
     expect(await app.presetNames()).toEqual(['Letter values'])
     expect(guards[0]?.requestsSince(mark)).toEqual([])
   })
+
+  test('P-D6 two tabs: a preset saved in one tab shows in the other and survives a save there', async ({
+    context,
+  }) => {
+    const a = startApp(await context.newPage())
+    const b = startApp(await context.newPage())
+    await a.goto()
+    await b.goto()
+    await b.openPresets()
+    await a.openPresets()
+    await a.savePreset('From tab A')
+    await expect(b.presetAction('Apply', 'From tab A')).toBeVisible()
+    await b.savePreset('From tab B')
+    expect(await b.presetNames()).toEqual(['From tab A', 'From tab B'])
+    await expect(a.presetAction('Apply', 'From tab B')).toBeVisible()
+    await a.page.reload()
+    await a.openPresets()
+    expect(await a.presetNames()).toEqual(['From tab A', 'From tab B'])
+  })
 })
 
 test.describe('keyboard and axe', () => {

@@ -844,6 +844,29 @@ describe('cancelImports (owner Q-H5)', () => {
     expect(await busy).toBeNull()
   })
 
+  it('a photo handed a decode slot in the same tick as cancelImports() is never decoded', async () => {
+    const gates = [deferred<DecodedImage>(), deferred<DecodedImage>()]
+    let calls = 0
+    const decode = vi.fn(() => {
+      const gate = gates[calls++]
+      return gate ? gate.promise : Promise.resolve(decoded())
+    })
+    const { store } = setup({ decode })
+    const p = store.getState().addFiles([file('a.jpg'), file('b.jpg'), file('c.jpg')])
+    await vi.waitFor(() => {
+      expect(decode).toHaveBeenCalledTimes(2)
+    })
+    // a's decode slot passes to c, then a is added: cancel there, before c's turn resumes.
+    const unsubscribe = store.subscribe((s) => {
+      if (s.images.length === 1) store.getState().cancelImports()
+    })
+    gates[0]?.resolve(decoded())
+    gates[1]?.resolve(decoded())
+    expect(await p).toBeNull()
+    unsubscribe()
+    expect(decode).toHaveBeenCalledTimes(2)
+  })
+
   it('a finished download waiting for a decode slot drops its blob and download slot at once', async () => {
     const gate = deferred<DecodedImage>()
     const decode = vi.fn(() => gate.promise)

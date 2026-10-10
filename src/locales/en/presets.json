@@ -4,6 +4,7 @@
   "close": "Close",
   "empty": "Save your page setup, studies and lines under a name, then apply them in one go.",
   "listLabel": "Saved presets",
+  "storageFailed": "Not kept on this device: the browser’s storage is full or blocked. The change lasts until you reload or close the page.",
   "save": {
     "open": "Save current settings…",
     "name": "Preset name",

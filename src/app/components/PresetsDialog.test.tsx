@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useImages } from '../../features/images'
 import { makeLoadedImage } from '../../features/images/test-utils'
-import { useSettings } from '../../features/settings'
+import { DEFAULT_SETTINGS, SETTINGS_STORAGE_KEY, useSettings } from '../../features/settings'
 import { initI18n } from '../../shared/i18n'
 import type { ImageId } from '../../shared/model/image'
 import { DEFAULT_LINES } from '../../shared/model/lines'
@@ -647,6 +647,162 @@ describe('Import', () => {
       expect(within(dialog).getByRole('status')).toHaveTextContent('Imported 1 preset.')
     })
     expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
+const STORAGE_FAILED =
+  'Not kept on this device: the browser’s storage is full or blocked. The change lasts until you reload or close the page.'
+
+function failStorageWrites(): void {
+  const full = {
+    getItem: () => null,
+    setItem: () => {
+      throw new DOMException('full', 'QuotaExceededError')
+    },
+  }
+  vi.spyOn(window, 'localStorage', 'get').mockReturnValue(full as unknown as Storage)
+}
+
+async function expectStorageWarning(dialog: HTMLElement): Promise<void> {
+  const alert = await within(dialog).findByRole('alert')
+  await waitFor(() => {
+    expect(alert).toHaveTextContent(STORAGE_FAILED)
+  })
+  expect(within(dialog).getByRole('status')).toHaveTextContent('')
+}
+
+describe('a write the browser refuses', () => {
+  it('saving warns instead of announcing the save', async () => {
+    const { user, dialog } = await openDialog()
+    failStorageWrites()
+    await user.click(within(dialog).getByRole('button', { name: 'Save current settings…' }))
+    await user.type(within(dialog).getByRole('textbox', { name: 'Preset name' }), 'Mine{Enter}')
+    await expectStorageWarning(dialog)
+    expect(within(dialog).getByRole('button', { name: 'Save current settings…' })).toHaveFocus()
+  })
+
+  it('replacing warns instead of announcing the replace', async () => {
+    addPresets(makePreset('Mine'))
+    useSettings.getState().setPageSetup({ paper: 'A5' })
+    const { user, dialog } = await openDialog()
+    failStorageWrites()
+    await user.click(within(dialog).getByRole('button', { name: 'Save current settings…' }))
+    await user.type(within(dialog).getByRole('textbox', { name: 'Preset name' }), 'Mine{Enter}')
+    await user.click(
+      within(await within(dialog).findByRole('alert')).getByRole('button', { name: 'Replace it' }),
+    )
+    await expectStorageWarning(dialog)
+  })
+
+  it('renaming warns instead of announcing the rename', async () => {
+    addPresets(makePreset('One'))
+    const { user, dialog } = await openDialog()
+    failStorageWrites()
+    await user.click(within(dialog).getByRole('button', { name: 'Rename One' }))
+    const field = within(dialog).getByRole('textbox', { name: 'New name for One' })
+    await user.clear(field)
+    await user.type(field, 'Two{Enter}')
+    await expectStorageWarning(dialog)
+  })
+
+  it('deleting warns instead of announcing the delete', async () => {
+    addPresets(makePreset('One'), makePreset('Two'))
+    const { user, dialog } = await openDialog()
+    failStorageWrites()
+    await user.click(within(dialog).getByRole('button', { name: 'Delete One' }))
+    await user.click(
+      within(await screen.findByRole('dialog', { name: 'Delete “One”?' })).getByRole('button', {
+        name: 'Delete',
+      }),
+    )
+    await expectStorageWarning(dialog)
+  })
+
+  it('importing warns instead of announcing the import', async () => {
+    const { user, dialog } = await openDialog()
+    failStorageWrites()
+    const input = dialog.querySelector<HTMLInputElement>('input[type="file"]')
+    if (!input) throw new Error('no file input')
+    await user.upload(input, new File([buildPresetFile([makePreset('A')])], 'p.json'))
+    await expectStorageWarning(dialog)
+  })
+
+  it('the same refusal twice is announced twice', async () => {
+    addPresets(makePreset('One'), makePreset('Two'), makePreset('Three'))
+    const { user, dialog } = await openDialog()
+    failStorageWrites()
+    const remove = async (name: string) => {
+      await user.click(within(dialog).getByRole('button', { name: `Delete ${name}` }))
+      await user.click(
+        within(await screen.findByRole('dialog', { name: `Delete “${name}”?` })).getByRole(
+          'button',
+          { name: 'Delete' },
+        ),
+      )
+      await expectStorageWarning(dialog)
+      return within(dialog).getByRole('alert')
+    }
+    const first = await remove('One')
+    expect(await remove('Two')).not.toBe(first)
+  })
+})
+
+describe('presets saved in another tab', () => {
+  it('appear in the open list', async () => {
+    addPresets(makePreset('Mine'))
+    const { dialog } = await openDialog()
+    const newValue = JSON.stringify({
+      version: 5,
+      state: { ...DEFAULT_SETTINGS, presets: [makePreset('Mine'), makePreset('Theirs')] },
+    })
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: SETTINGS_STORAGE_KEY, newValue }))
+    })
+    expect(rowOf('Theirs')).toBeInTheDocument()
+    expect(within(dialog).getAllByRole('button', { name: /^Apply / })).toHaveLength(2)
+  })
+})
+
+describe('a name conflict', () => {
+  it('reached with the Save button moves focus to Replace it', async () => {
+    addPresets(makePreset('Mine'))
+    const { user, dialog } = await openDialog()
+    await user.click(within(dialog).getByRole('button', { name: 'Save current settings…' }))
+    await user.type(within(dialog).getByRole('textbox', { name: 'Preset name' }), 'mine')
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    const alert = await within(dialog).findByRole('alert')
+    expect(within(alert).getByRole('button', { name: 'Replace it' })).toHaveFocus()
+  })
+
+  it('reached with Enter keeps focus in the name field', async () => {
+    addPresets(makePreset('Mine'))
+    const { user, dialog } = await openDialog()
+    await user.click(within(dialog).getByRole('button', { name: 'Save current settings…' }))
+    const field = within(dialog).getByRole('textbox', { name: 'Preset name' })
+    await user.type(field, 'mine{Enter}')
+    await within(dialog).findByRole('alert')
+    expect(field).toHaveFocus()
+  })
+
+  it('opening the name field clears the last announcement, so none stays next to the conflict', async () => {
+    const { user, dialog } = await openDialog()
+    await user.click(within(dialog).getByRole('button', { name: 'Save current settings…' }))
+    await user.type(within(dialog).getByRole('textbox', { name: 'Preset name' }), 'Mine{Enter}')
+    expect(within(dialog).getByRole('status')).toHaveTextContent('Saved Mine.')
+    await user.click(within(dialog).getByRole('button', { name: 'Save current settings…' }))
+    expect(within(dialog).getByRole('status')).toHaveTextContent('')
+    await user.type(within(dialog).getByRole('textbox', { name: 'Preset name' }), 'Mine{Enter}')
+    await within(dialog).findByRole('alert')
+    expect(within(dialog).getByRole('status')).toHaveTextContent('')
+  })
+
+  it('opening a rename field clears the last announcement too', async () => {
+    addPresets(makePreset('One'))
+    const { user, dialog } = await openDialog()
+    await user.click(within(dialog).getByRole('button', { name: 'Apply One' }))
+    expect(within(dialog).getByRole('status')).toHaveTextContent('Applied One.')
+    await user.click(within(dialog).getByRole('button', { name: 'Rename One' }))
+    expect(within(dialog).getByRole('status')).toHaveTextContent('')
   })
 })
 
