@@ -15,6 +15,11 @@ import { tileRenderKey } from '../features/render/pixels/tile-plan'
 import { FIXTURE_FACE } from '../features/render/test-support/fixtures'
 import type { StudyVersion } from '../shared/model/study'
 
+const perfLog = vi.hoisted(() => [] as string[])
+vi.mock('./perf-marks', () => ({
+  mark: (name: string) => perfLog.push(`mark ${name}`),
+}))
+
 const img = (id: string): ImageDescriptor => ({
   id: id as ImageId,
   contentHash: `hash-${id}`,
@@ -282,6 +287,93 @@ describe('createPipeline', () => {
     pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
     await vi.advanceTimersByTimeAsync(80)
     expect(deps.layout).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('createPipeline performance marks (M5-R27)', () => {
+  function logged() {
+    perfLog.length = 0
+    const s = setup()
+    const layout = s.deps.layout
+    s.deps.layout = vi.fn((...a: Parameters<PipelineDeps['layout']>) => {
+      perfLog.push('layout')
+      return layout(...a)
+    })
+    const buildModels = s.deps.buildModels
+    s.deps.buildModels = vi.fn((...a: Parameters<PipelineDeps['buildModels']>) => {
+      perfLog.push('buildModels')
+      return buildModels(...a)
+    })
+    return s
+  }
+
+  it('marks layout:start before the layout call, layout:end after it, and models:end after the page models', async () => {
+    const { pipeline, resolvers } = logged()
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
+    await vi.advanceTimersByTimeAsync(80)
+    expect(perfLog).toEqual(['mark layout:start', 'layout'])
+    resolvers[0]?.(layoutOf(1))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(perfLog).toEqual([
+      'mark layout:start',
+      'layout',
+      'mark layout:end',
+      'buildModels',
+      'mark models:end',
+    ])
+  })
+
+  it('a memoised layout marks only models:end', async () => {
+    const { pipeline, resolvers, deps } = logged()
+    deps.buildItems = vi.fn(tileItems)
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [withStudy(img('a'), 40)])
+    await vi.advanceTimersByTimeAsync(80)
+    resolvers[0]?.(layoutOf(1))
+    await vi.advanceTimersByTimeAsync(0)
+    perfLog.length = 0
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [withStudy(img('a'), 41)])
+    await vi.advanceTimersByTimeAsync(80)
+    expect(perfLog).toEqual(['buildModels', 'mark models:end'])
+  })
+
+  it('a superseded layout marks no end; the current one does', async () => {
+    const { pipeline, resolvers } = logged()
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
+    await vi.advanceTimersByTimeAsync(80)
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('b')])
+    resolvers[0]?.(layoutOf(1))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(perfLog).toEqual(['mark layout:start', 'layout'])
+    await vi.advanceTimersByTimeAsync(80)
+    resolvers[1]?.(layoutOf(2))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(perfLog).toEqual([
+      'mark layout:start',
+      'layout',
+      'mark layout:start',
+      'layout',
+      'mark layout:end',
+      'buildModels',
+      'mark models:end',
+    ])
+  })
+
+  it('a failed layout marks no end', async () => {
+    const { pipeline, rejecters } = logged()
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
+    await vi.advanceTimersByTimeAsync(80)
+    rejecters[0]?.(new Error('boom'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(perfLog).toEqual(['mark layout:start', 'layout'])
+  })
+
+  it('with no images it marks the layout but builds no page models', async () => {
+    const { pipeline, resolvers } = logged()
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [])
+    await vi.advanceTimersByTimeAsync(80)
+    resolvers[0]?.(layoutOf(8))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(perfLog).toEqual(['mark layout:start', 'layout', 'mark layout:end'])
   })
 })
 

@@ -8,6 +8,7 @@ import { NO_GUIDES, type ImageGuides } from '../features/lines'
 import type { PageModel } from '../features/render'
 import type { ImageDescriptor } from '../shared/model/image'
 import type { PageSetup } from '../shared/model/page-setup'
+import { mark } from './perf-marks'
 
 export type GuidesOf = (img: ImageDescriptor) => ImageGuides
 const noGuides: GuidesOf = () => NO_GUIDES
@@ -62,11 +63,21 @@ export function createPipeline(deps: PipelineDeps, sink: PipelineSink): Pipeline
       // Even with no images the engine is asked (cheap), so "fits N per page" shows on an empty workspace (CR-B6).
       const items = deps.buildItems(images)
       const key = JSON.stringify([setup, items, manual])
-      const layout = memo?.key === key ? memo.layout : await deps.layout(setup, items, manual)
-      if (mine !== seq) return
+      let layout: LayoutResult
+      if (memo?.key === key) layout = memo.layout
+      else {
+        mark('layout:start')
+        layout = await deps.layout(setup, items, manual)
+        if (mine !== seq) return
+        mark('layout:end')
+      }
       memo = { key, layout }
       if (empty) sink.cleared(layout)
-      else sink.done(layout, deps.buildModels(layout, setup, images, guides))
+      else {
+        const pages = deps.buildModels(layout, setup, images, guides)
+        mark('models:end')
+        sink.done(layout, pages)
+      }
     } catch (error) {
       if (mine !== seq || isAbortError(error)) return
       if (empty) sink.cleared(null)

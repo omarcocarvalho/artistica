@@ -38,6 +38,8 @@ export interface PagePreviewProps {
   readonly studyTiles?: StudyTileProvider
   /** The axis the page scroller moves along: 'y' for the desktop column, 'x' for the phone carousel. */
   readonly scrollAxis?: ScrollAxis
+  /** Called with the page index each time the sheet canvas is drawn; identity changes do not redraw. */
+  readonly onDrawn?: (pageIndex: number) => void
 }
 
 const createDomCanvas = (w: number, h: number): HTMLCanvasElement => {
@@ -62,6 +64,7 @@ export function PagePreview({
   getName,
   studyTiles,
   scrollAxis = 'y',
+  onDrawn,
 }: PagePreviewProps) {
   const { t } = useTranslation(['preview', 'studies'])
   const captionId = useId()
@@ -73,8 +76,10 @@ export function PagePreview({
   const width = useElementWidth(sheetRef)
   const dpr = useDevicePixelRatio()
   const getSourceRef = useRef(getSource)
+  const onDrawnRef = useRef(onDrawn)
   useEffect(() => {
     getSourceRef.current = getSource
+    onDrawnRef.current = onDrawn
   })
   const scale = useMemo(() => previewScale(model.size, width, dpr), [model.size, width, dpr])
   const areas = useMemo(() => tileHitAreas(model), [model])
@@ -156,6 +161,7 @@ export function PagePreview({
         return rendered[i] ?? null
       },
     })
+    onDrawnRef.current?.(model.index)
   }, [model, scale, width, guides, cache, studyTiles, consumer, studyTick, near, undecided])
 
   useEffect(

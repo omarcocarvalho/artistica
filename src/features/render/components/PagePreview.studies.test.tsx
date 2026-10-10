@@ -452,6 +452,47 @@ describe('PagePreview near the view (M5-R21)', () => {
     expect(canvasOf().width).toBe(0)
   })
 
+  it('reports each sheet draw with its page index, right after drawPage, and none while undecided or far', () => {
+    const onDrawn = vi.fn()
+    const { io, f } = observed(third, { onDrawn })
+    expect(onDrawn).not.toHaveBeenCalled()
+    io.set(sheetOf(), true)
+    expect(onDrawn.mock.calls).toEqual([[2]])
+    expect(drawSpy).toHaveBeenCalledTimes(1)
+    expect(onDrawn.mock.invocationCallOrder[0]).toBeGreaterThan(
+      drawSpy.mock.invocationCallOrder[0] ?? Infinity,
+    )
+    act(() => {
+      for (const r of f.wanted()) f.resolve(r.key, image())
+    })
+    expect(onDrawn).toHaveBeenCalledTimes(drawSpy.mock.calls.length)
+    const before = onDrawn.mock.calls.length
+    io.set(sheetOf(), false)
+    expect(onDrawn).toHaveBeenCalledTimes(before)
+  })
+
+  it('reports no draw when the sheet has no 2D context', () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
+    const onDrawn = vi.fn()
+    const { io } = observed(third, { onDrawn })
+    io.set(sheetOf(), true)
+    expect(drawSpy).not.toHaveBeenCalled()
+    expect(onDrawn).not.toHaveBeenCalled()
+  })
+
+  it('a new onDrawn callback alone does not redraw the sheet', () => {
+    const { io, f, rerender } = observed(third, { onDrawn: vi.fn() })
+    io.set(sheetOf(), true)
+    const draws = drawSpy.mock.calls.length
+    const next = vi.fn()
+    rerender(<PagePreview {...props(f, third, { onDrawn: next })} />)
+    expect(drawSpy.mock.calls.length).toBe(draws)
+    act(() => {
+      for (const r of f.wanted()) f.resolve(r.key, image())
+    })
+    expect(next).toHaveBeenCalledWith(2)
+  })
+
   it('without IntersectionObserver every page counts as near', () => {
     vi.stubGlobal('IntersectionObserver', undefined)
     const f = fakeStudyTiles()

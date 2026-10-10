@@ -11,9 +11,12 @@ const h = vi.hoisted(() => ({
   selectedId: null as string | null,
   studyTiles: [] as unknown[],
   scrollAxes: [] as unknown[],
+  onDrawn: [] as ((page: number) => void)[],
+  mark: vi.fn(),
   provider: { name: 'app study provider' },
   lines: undefined as LineSettings | undefined,
 }))
+vi.mock('../perf-marks', () => ({ mark: h.mark }))
 vi.mock('../study-provider', () => ({
   appStudyProvider: h.provider,
   getPreviewSource: () => undefined,
@@ -25,9 +28,11 @@ vi.mock('../../features/render', () => ({
     onSelect: (id: ImageId) => void
     studyTiles?: unknown
     scrollAxis?: unknown
+    onDrawn?: (page: number) => void
   }) => {
     h.studyTiles.push(p.studyTiles)
     h.scrollAxes.push(p.scrollAxis)
+    if (p.onDrawn) h.onDrawn.push(p.onDrawn)
     return (
       <button
         type="button"
@@ -79,6 +84,8 @@ beforeEach(() => {
   h.select.mockClear()
   h.studyTiles = []
   h.scrollAxes = []
+  h.onDrawn = []
+  h.mark.mockClear()
   h.lines = undefined
   useAppUi.setState({ editingId: null })
   usePages.setState({
@@ -112,6 +119,13 @@ describe('PreviewSlot', () => {
     expect(screen.getByText('legend')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /Page 1 of 1/ }))
     expect(h.select).toHaveBeenCalledWith('a')
+  })
+  it('marks artistica:draw:end with the page index when a page reports a draw (M5-R27)', () => {
+    render(<PreviewSlot />)
+    expect(h.onDrawn).not.toHaveLength(0)
+    expect(h.mark).not.toHaveBeenCalled()
+    h.onDrawn.at(-1)?.(3)
+    expect(h.mark.mock.calls).toEqual([['draw:end', { page: 3 }]])
   })
   it('passes the one app study provider to every page', () => {
     act(() => {
