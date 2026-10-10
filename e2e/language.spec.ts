@@ -20,7 +20,7 @@ async function expectEnglish(page: Page): Promise<void> {
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
   await expect(page).toHaveTitle('Artistica app')
-  await expect(page.getByRole('button', { name: 'Export PDF' }).first()).toBeAttached()
+  await expect(page.getByRole('button', { name: /^Change theme/ })).toBeVisible()
 }
 
 async function savedLanguage(page: Page): Promise<unknown> {
