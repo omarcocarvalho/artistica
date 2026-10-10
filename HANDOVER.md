@@ -22,7 +22,7 @@ The last milestone adds translations.
 - **Everything runs in the browser.** Photos are never uploaded or persisted.
 - **Hosting:** GitHub Pages. The landing page is at `/artistica/` and the tool at `/artistica/app/`.
 - **Product spec:** [docs/spec.md](docs/spec.md). It is the source of truth.
-- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (released), M4 → `v0.4.0` (released), M5 → `v0.5.0` (signed off by the controller; release PR #164 being merged), M6 → `v1.0.0` (next).
+- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (released), M4 → `v0.4.0` (released), M5 → `v0.5.0` (released), M6 → `v1.0.0` (planned and approved under the owner's delegation; in progress).
 
 ## Current status
 
@@ -59,20 +59,26 @@ The last milestone adds translations.
 - **Exit criterion** (spec §3 met and measured): on master `5d4dd67` (CI run 38071760003) layout of 50 photos in the worker 47 ms (< 500), preview update for 20 photos 14–68 ms per setting kind (< 200), 100 × 12 MP layout 129 ms, initial app JS 229.0 KB (< 250), the spec's 20 × 12 MP case 1023 / 1128 / 1050 MB at import / preview / export (< 1500 / 1500 / 1700), and phone memory that doesn't grow with page count (+9 MB over 60 pages). The full table is in the ledger, "F" → "§3 evidence".
 - **Accessibility:** a WCAG 2.2 AA audit over every screen (C3, `e2e/a11y-audit.spec.ts`), single-pointer alternatives for every drag including the crop (C4), and a stricter axe helper that also gates reviewed `incomplete` results. VoiceOver is still to be run by a person (v1.0.0 checklist).
 - **No new dependency** (M5-R1).
-- **Release:** [#164](https://github.com/omarcocarvalho/artistica/pull/164) (`chore(master): release 0.5.0`) is being merged by the controller (close and reopen, green checks, squash merge), which creates `v0.5.0` and deploys it to Pages.
+- **Release:** [#164](https://github.com/omarcocarvalho/artistica/pull/164) (`chore(master): release 0.5.0`) merged as `2a6fa02` on 2026-10-11, after a close and reopen and green checks. The release run and the Pages deploy both succeeded: [`v0.5.0`](https://github.com/omarcocarvalho/artistica/releases/tag/v0.5.0). The deployed `.task` models are served as `application/octet-stream`, which closes the M4/M5 note about checking the Content-Type GitHub Pages sends.
+
+**M6 ("Translations & 1.0" → `v1.0.0`) is planned, approved under the owner's delegation, and in progress.** The owner's delegation of 2026-10-10 ("auto approve the changes and keep implementing, only waiting for the 1.0.0 sign off") covers M6: the controller approved the plan on 2026-10-11 and accepted every question's recommended default (Q1–Q17); the owner can override any of them at the v1.0.0 sign-off. Plan: [`2026-10-11-m6-overview.md`](docs/superpowers/plans/2026-10-11-m6-overview.md) and sub-plans A–E (i18n groundwork, translations, landing pages, design and CJK fit, screens and 1.0). The per-task record goes into `docs/superpowers/ledgers/m6.md`, created by the first M6 task to merge.
+
+- **What M6 builds:** six translations (pt-BR, es, it, ja, ko, zh-CN) of the app and the landing page; each language loaded on demand (English stays in the main chunk); language from the saved choice, a one-time `?lang` hint from a translated landing page, the browser, then English; numbers and units through `Intl`; a locale check in CI (keys, variables, plural categories, stale translations); a language menu in the top bar; translated landing pages at `/artistica/<code>/` with `hreflang`, a generated sitemap and a share image per language; per-language CJK font stacks (system fonts) and line breaking; a pseudo-locale with hard-coded-text and overflow probes; every screen captured, scanned and reviewed in all seven languages.
+- **Found while planning:** the landing page still says "Coming next: blur and value studies, composition lines" (`index.html:257-288`, fixed in C2); one shared CJK font stack gives Chinese text Japanese character shapes on Apple devices (fixed in D2); Portuguese, Spanish and Italian need a third plural form (`_many`) in CLDR; the app and landing links are relative and would break under `/<code>/`.
+- **Order:** wave 1 (nine tasks) → the English string freeze when D3 merges → six translations in parallel → screens and the controller's screen review → final review F → E6 (close-out docs with the `Release-As: 1.0.0` footer) → **ready for the owner's v1.0.0 sign-off**. The release PR merges only after the owner signs off.
 
 ## Branch map
 
 | Branch | Use |
 |---|---|
-| `master` | all M1–M5 work; base for new work |
+| `master` | all M1–M6 work; base for new work |
 | `release-please--branches--master--components--artistica` | bot-managed; release-please opens the next release PR here. Don't touch it; merge only after a milestone is signed off (M5: the controller, under the owner's delegation; v1.0.0: the owner) |
 
 ## Next steps (in order)
 
-1. **Release v0.5.0:** the controller merges release PR #164 (close and reopen it, wait for green checks, `gh pr merge 164 --squash`), then records the merge commit in the M5 ledger and runs the one deferred release step: `curl -sI` on a deployed `.task` model to record the Content-Type GitHub Pages sends.
-2. **Plan M6, "Translations & 1.0"** (spec §8): write `docs/superpowers/plans/` for M6 first; under the owner's delegation the controller approves it, then it is built like M5. Start from the M5 ledger's triage (items deferred to M6) and the "i18n (M6)" list below; lazy-load the locale resources (bundle headroom).
-3. **The v1.0.0 sign-off, the only owner gate left:** the owner runs the checklist in the M5 overview, ["Phone checklist for the v1.0.0 sign-off"](docs/superpowers/plans/2026-10-10-m5-overview.md) (iPhone items, the macOS Safari VoiceOver pass, WebKit offline, the M4 timings, the final logo), reviews every delegated default in the M5 ledger's "Questions", and signs off before the v1.0.0 release PR merges.
+1. **Build M6** from [`2026-10-11-m6-overview.md`](docs/superpowers/plans/2026-10-11-m6-overview.md), wave by wave, like M5 (one worktree, branch and PR per task, an independent review, squash merge). Questions raised during execution get their recommended default under the delegation and go into the M6 ledger's "Questions".
+2. **Bring M6 to the sign-off:** the screen review in all seven languages (E2), the final review F, then E6 with the `Release-As: 1.0.0` footer, so the release PR reads `chore(master): release 1.0.0` with green checks. The controller stops there.
+3. **The v1.0.0 sign-off, the only owner gate left:** the owner runs the [owner's v1.0.0 sign-off checklist](docs/superpowers/plans/2026-10-11-m6-overview.md) (it merges the M5 phone checklist, the VoiceOver pass, the logo choice, the M6 language checks and the review of every delegated default across M4–M6), and signs off. Then the controller merges the release PR, which creates `v1.0.0` and deploys it.
 
 ## Owner answers from M2 (2026-10-07)
 
@@ -104,6 +110,8 @@ The owner accepted every recommended default of the M4 plan (Q1–Q14 and the bu
 **Answered from M4 (2026-10-10):** Q17 (small faces in full-body photos may not be found), Q18 (no running progress announcement) and Q19 (only the result is announced after a Detail change), each with its recommended default, already built. Details in the M4 overview.
 
 **M5, accepted under the delegation:** every M5 question has a default that was built: the plan's Q1–Q12, the M1 questions 2–12 that were still open (Q-H2–Q-H12: inline phone export, a tooltip for the disabled Export reason, the file name as built, Cancel for pending imports, duplicates kept, a 100 MP limit on touch screens, the 5100 px cap kept, crop marks at the minimum gutter as built, drop wording, the compact dropzone, the default unit in spec §2.3), and Q13–Q25 raised during execution and the final review. They are listed in one place, the M5 ledger's ["Questions"](docs/superpowers/ledgers/m5.md) section. Each was accepted by the controller under the delegation; the owner may override any of them at the v1.0.0 sign-off. No M1 question is left open.
+
+**M6, accepted under the delegation:** Q1–Q17 of the [M6 overview](docs/superpowers/plans/2026-10-11-m6-overview.md) ("Questions for the owner"), each with the default the plan builds: the language menu in the top bar, the register per language, English at the root, system CJK fonts, translated Letter/Legal/Tabloid names, CLDR unit symbols, the `?lang` hint, no automatic Simplified Chinese for Traditional Chinese browsers, share images per language, a language-neutral PDF, CJK sans for headings and accents, no auto-scroll in 1.0, no in-app translation link, the many-photos warning still conditional, the generated changelog, key names as printed, endonyms. The owner may override any of them at the v1.0.0 sign-off.
 
 ## Key decisions & context
 
@@ -265,6 +273,6 @@ The M4 final review triaged every deferred item; the table is in the [M4 ledger]
 - Live site: https://omarcocarvalho.github.io/artistica/
 - Releases: https://github.com/omarcocarvalho/artistica/releases
 - Spec: [docs/spec.md](docs/spec.md)
-- Plans: [docs/superpowers/plans/](docs/superpowers/plans/) — M1 starts at `2026-10-03-m1-overview.md`, M2 at `2026-10-07-m2-overview.md`, M3 at `2026-10-07-m3-overview.md`, M4 at `2026-10-08-m4-overview.md`, M5 at `2026-10-10-m5-overview.md`
+- Plans: [docs/superpowers/plans/](docs/superpowers/plans/) — M1 starts at `2026-10-03-m1-overview.md`, M2 at `2026-10-07-m2-overview.md`, M3 at `2026-10-07-m3-overview.md`, M4 at `2026-10-08-m4-overview.md`, M5 at `2026-10-10-m5-overview.md`, M6 at `2026-10-11-m6-overview.md`
 - Execution ledgers (progress, rulings, deferred minors per task): [docs/superpowers/ledgers/](docs/superpowers/ledgers/)
 - Design mockups: [design/](design/) (open `design/index.html`)
