@@ -1,9 +1,10 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { useImages } from '../../images'
 import { makeLoadedImage } from '../../images/test-utils'
 import { initI18n } from '../../../shared/i18n'
+import { PT_BR, switchLanguage } from '../../../test/languages'
 import { DEFAULT_STUDY, type StudySettings } from '../../../shared/model/study'
 import type { ImageId } from '../../../shared/model/image'
 import { valueRamp } from '../ramp'
@@ -473,5 +474,29 @@ describe('StudiesPanel', () => {
       expect(document.activeElement).toBe(outside)
       outside.remove()
     })
+  })
+})
+
+describe('StudiesPanel in other languages', () => {
+  afterAll(async () => {
+    await switchLanguage('en')
+  })
+
+  it('formats the blur percentage the Spanish way', async () => {
+    await switchLanguage('es')
+    render(<StudiesPanel imageId={A} />)
+    expect(screen.getByRole('slider', { name: 'Amount' })).toHaveAttribute('aria-valuetext', '40 %')
+    expect(screen.getByText(/so 40 % looks alike/)).toBeVisible()
+  })
+
+  it('formats the hue in degrees and the blur hint the Portuguese way', async () => {
+    await switchLanguage('pt-BR', PT_BR)
+    seed({ a: { ...DEFAULT_STUDY, values: { count: 5, hue: 55, neutral: false } } })
+    render(<StudiesPanel imageId={A} />)
+    expect(screen.getByRole('slider', { name: 'Custom hue' })).toHaveAttribute(
+      'aria-valuetext',
+      '55 °',
+    )
+    expect(screen.getByText(/então 40% fica parecido/)).toBeVisible()
   })
 })

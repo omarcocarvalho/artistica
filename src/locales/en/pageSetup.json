@@ -12,7 +12,6 @@
     "unitMm": "mm",
     "unitIn": "inches"
   },
-  "units": { "mm": "mm", "in": "in" },
   "noRoom": "This page setup leaves no room for images. Reduce the safe area, gutter, bleed or crop marks, or choose bigger paper.",
   "orientation": {
     "label": "Orientation",
@@ -44,8 +43,8 @@
   },
   "suggestion": {
     "tip": "tip!",
-    "text_one": "{{paper}} fits {{count}} reference per page comfortably.",
-    "text_other": "{{paper}} fits {{count}} references per page comfortably."
+    "text_one": "{{paper}} fits {{count, number}} reference per page comfortably.",
+    "text_other": "{{paper}} fits {{count, number}} references per page comfortably."
   },
   "remembered": "Settings are remembered on this device."
 }

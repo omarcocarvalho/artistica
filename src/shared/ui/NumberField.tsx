@@ -1,6 +1,7 @@
 import { useId, useState, type KeyboardEvent } from 'react'
 import { cx } from './cx'
 import { parseDecimal } from './parse-decimal'
+import { formatLength, formatLengthValue, unitLabel } from '../i18n/format'
 import { mmToUnit, roundForUnit, unitToMm, type Mm, type Unit } from '../model/units'
 
 export interface NumberFieldProps {
@@ -8,8 +9,6 @@ export interface NumberFieldProps {
   /** The value in millimetres. The field shows it in `unit` and always emits millimetres. */
   valueMm: Mm
   unit: Unit
-  /** Text shown after the number, e.g. "mm" or "in" (comes from i18n). */
-  unitLabel: string
   onChangeMm: (mm: Mm) => void
   minMm?: Mm
   maxMm?: Mm
@@ -20,15 +19,12 @@ export interface NumberFieldProps {
   className?: string
 }
 
-function show(mm: Mm, unit: Unit): string {
-  return String(roundForUnit(mmToUnit(mm, unit), unit))
-}
+const show = (mm: Mm, unit: Unit): string => formatLengthValue(mm, unit)
 
 export function NumberField({
   label,
   valueMm,
   unit,
-  unitLabel,
   onChangeMm,
   minMm = 0,
   maxMm = Number.POSITIVE_INFINITY,
@@ -87,7 +83,7 @@ export function NumberField({
           aria-valuemax={
             Number.isFinite(maxMm) ? roundForUnit(mmToUnit(maxMm, unit), unit) : undefined
           }
-          aria-valuetext={`${show(valueMm, unit)} ${unitLabel}`}
+          aria-valuetext={formatLength(valueMm, unit)}
           aria-describedby={hint ? hintId : undefined}
           disabled={disabled}
           value={draft ?? show(valueMm, unit)}
@@ -98,7 +94,7 @@ export function NumberField({
           onKeyDown={onKeyDown}
         />
         <span className="ds-unit-input__unit" aria-hidden="true">
-          {unitLabel}
+          {unitLabel(unit)}
         </span>
       </div>
       {hint ? (

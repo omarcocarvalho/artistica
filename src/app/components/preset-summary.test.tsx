@@ -1,10 +1,11 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { initI18n } from '../../shared/i18n'
 import type { I18nT } from './preset-summary'
 import { DEFAULT_LINES, type LineSettings } from '../../shared/model/lines'
 import { DEFAULT_PAGE_SETUP, type PageSetup } from '../../shared/model/page-setup'
 import { presetFromSettings } from '../../shared/model/preset'
 import { DEFAULT_STUDY, type StudySettings } from '../../shared/model/study'
+import { PT_BR, switchLanguage } from '../../test/languages'
 import { presetSummary } from './preset-summary'
 
 let t: I18nT
@@ -74,5 +75,28 @@ describe('presetSummary', () => {
         'in',
       ),
     ).toBe('Custom 10 × 12 in · Auto · bleed 0.12 in · original')
+  })
+})
+
+describe('presetSummary in Portuguese (Brazil)', () => {
+  afterAll(async () => {
+    await switchLanguage('en')
+  })
+
+  it('formats the custom size, the bleed and the blur for the language', async () => {
+    const i18n = await switchLanguage('pt-BR', PT_BR)
+    const preset = presetFromSettings('P', {
+      pageSetup: {
+        ...DEFAULT_PAGE_SETUP,
+        paper: 'Custom',
+        customSize: { w: 1000.5, h: 1200 },
+        bleed: { enabled: true, mm: 3.5 },
+      },
+      study: { ...DEFAULT_STUDY, versions: ['blurred'], blurPct: 60 },
+      lines: DEFAULT_LINES,
+    })
+    expect(presetSummary(preset, 'mm', i18n.getFixedT('pt-BR', 'presets'))).toBe(
+      'Personalizado 1.000,5 × 1.200 mm · Auto · sangria 3,5 mm · desfocada 60%',
+    )
   })
 })

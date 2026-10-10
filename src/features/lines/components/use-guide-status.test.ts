@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DetectionStatus, GuideKind } from '../detect/store'
-import { formatMb, guideView } from './use-guide-status'
+import { guideView } from './use-guide-status'
 
 const LANDMARKS: readonly GuideKind[] = ['face', 'pose']
 
@@ -80,18 +80,5 @@ describe('guideView', () => {
         view: 'found',
       })
     })
-  })
-})
-
-describe('formatMb', () => {
-  it('gives decimal megabytes to one decimal', () => {
-    expect(formatMb(15_200_000)).toBe('15.2')
-    expect(formatMb(4_149_999)).toBe('4.1')
-    expect(formatMb(4_150_000)).toBe('4.2')
-    expect(formatMb(20_900_000)).toBe('20.9')
-    expect(formatMb(0)).toBe('0.0')
-    expect(formatMb(1_000_000)).toBe('1.0')
-    expect(formatMb(49_999)).toBe('0.0')
-    expect(formatMb(50_000)).toBe('0.1')
   })
 })

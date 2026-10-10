@@ -1,9 +1,10 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { useImages } from '../../images'
 import { makeLoadedImage } from '../../images/test-utils'
 import { initI18n } from '../../../shared/i18n'
+import { PT_BR, switchLanguage } from '../../../test/languages'
 import type { ImageId } from '../../../shared/model/image'
 import { DEFAULT_STUDY } from '../../../shared/model/study'
 import {
@@ -547,5 +548,34 @@ describe('LinesPanel', () => {
       setImporting(0)
       expect(document.activeElement).toBe(sw)
     })
+  })
+})
+
+describe('LinesPanel in other languages', () => {
+  afterAll(async () => {
+    await switchLanguage('en')
+  })
+
+  it('formats the thickness with a decimal comma', async () => {
+    await switchLanguage('pt-BR', PT_BR)
+    render(<LinesPanel imageId={A} />)
+    expect(screen.getByRole('slider', { name: 'Thickness' })).toHaveAttribute(
+      'aria-valuetext',
+      '0,35 mm',
+    )
+    expect(screen.getByText('0,1 mm')).toBeInTheDocument()
+  })
+
+  it('formats the opacity the Spanish way and names millimetres in Chinese', async () => {
+    await switchLanguage('es')
+    const { unmount } = render(<LinesPanel imageId={A} />)
+    expect(screen.getByText('100 %', { selector: 'span' })).toBeInTheDocument()
+    unmount()
+    await switchLanguage('zh-CN')
+    render(<LinesPanel imageId={A} />)
+    expect(screen.getByRole('slider', { name: 'Thickness' })).toHaveAttribute(
+      'aria-valuetext',
+      '0.35 毫米',
+    )
   })
 })

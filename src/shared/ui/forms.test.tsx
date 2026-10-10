@@ -498,7 +498,6 @@ describe('NumberField', () => {
         label="Safe area"
         valueMm={mm}
         unit={unit}
-        unitLabel={unit}
         minMm={3}
         maxMm={50}
         onChangeMm={(v) => {

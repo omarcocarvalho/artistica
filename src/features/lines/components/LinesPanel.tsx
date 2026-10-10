@@ -1,6 +1,7 @@
 import { useCallback, useId, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useImages } from '../../images'
+import { formatNumber, formatPercent, unitLabel } from '../../../shared/i18n/format'
 import type { ImageId } from '../../../shared/model/image'
 import {
   LINE_WIDTH_STEP_MM,
@@ -75,6 +76,12 @@ export function LinesPanel({ imageId, announceWait = true, headingLevel = 3 }: L
       useImages.getState().updateLines(id, p)
     }
     const range = t('grid.range', { min: MIN_GRID, max: MAX_GRID })
+    const thickness = (mm: number) =>
+      t('thickness.value', {
+        value: formatNumber(mm, { maxFractionDigits: 2 }),
+        unit: unitLabel('mm'),
+      })
+    const opacity = (pct: number) => t('opacity.value', { value: formatPercent(pct) })
 
     content = (
       <>
@@ -231,9 +238,9 @@ export function LinesPanel({ imageId, announceWait = true, headingLevel = 3 }: L
               if (mm < MIN_LINE_WIDTH_MM || mm > MAX_LINE_WIDTH_MM) return
               patch({ style: { widthMm: mm } })
             }}
-            formatValue={(mm) => t('thickness.value', { mm })}
-            minLabel={t('thickness.value', { mm: MIN_LINE_WIDTH_MM })}
-            maxLabel={t('thickness.value', { mm: MAX_LINE_WIDTH_MM })}
+            formatValue={thickness}
+            minLabel={thickness(MIN_LINE_WIDTH_MM)}
+            maxLabel={thickness(MAX_LINE_WIDTH_MM)}
           />
           <Slider
             label={t('opacity.label')}
@@ -246,9 +253,9 @@ export function LinesPanel({ imageId, announceWait = true, headingLevel = 3 }: L
               if (pct < MIN_LINE_OPACITY_PCT || pct > MAX_LINE_OPACITY_PCT) return
               patch({ style: { opacityPct: pct } })
             }}
-            formatValue={(pct) => t('opacity.value', { pct })}
-            minLabel={t('opacity.value', { pct: MIN_LINE_OPACITY_PCT })}
-            maxLabel={t('opacity.value', { pct: MAX_LINE_OPACITY_PCT })}
+            formatValue={opacity}
+            minLabel={opacity(MIN_LINE_OPACITY_PCT)}
+            maxLabel={opacity(MAX_LINE_OPACITY_PCT)}
           />
         </section>
 

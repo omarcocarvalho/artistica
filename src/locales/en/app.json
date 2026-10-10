@@ -63,7 +63,7 @@
     },
     "lines": {
       "title": "Lines",
-      "on": "{{count}} on"
+      "on": "{{count, number}} on"
     }
   },
   "import": {
@@ -76,14 +76,14 @@
     "updated": "Layout updated.",
     "pageCaption": "Page {{current}} of {{total}} · {{paper}} · {{orientation}}",
     "pageItems": "Page {{current}} contents",
-    "item": "{{name}}, {{w}} × {{h}} mm",
+    "item": "{{name}}, {{w}} × {{h}} {{unit}}",
     "customPaper": "Custom",
     "unnamedImage": "Image",
     "orientation": {
       "portrait": "portrait",
       "landscape": "landscape"
     },
-    "itemVersion": "{{name}}, {{version}}, {{w}} × {{h}} mm",
+    "itemVersion": "{{name}}, {{version}}, {{w}} × {{h}} {{unit}}",
     "itemLines": "{{item}}, lines: {{list}}"
   }
 }
