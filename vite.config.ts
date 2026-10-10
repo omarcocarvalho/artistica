@@ -3,20 +3,19 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { configDefaults, defineConfig } from 'vitest/config'
 import { aiAssets } from './scripts/vite-ai-assets.ts'
+import { landingPages } from './scripts/vite-landing.ts'
 import { serviceWorker } from './scripts/vite-sw.ts'
 
 // Served from https://omarcocarvalho.github.io/artistica/ (GitHub Pages project site).
 export default defineConfig({
   base: '/artistica/',
-  plugins: [react(), tailwindcss(), aiAssets(), serviceWorker()],
+  plugins: [react(), tailwindcss(), landingPages(), aiAssets(), serviceWorker()],
   // Workers are bundled as ES modules: new Worker(new URL('./x.worker.ts', import.meta.url), { type: 'module' }).
   worker: { format: 'es' },
   build: {
     rolldownOptions: {
-      input: {
-        landing: fileURLToPath(new URL('./index.html', import.meta.url)),
-        app: fileURLToPath(new URL('./app/index.html', import.meta.url)),
-      },
+      // The landing pages are added by landingPages().
+      input: { app: fileURLToPath(new URL('./app/index.html', import.meta.url)) },
     },
   },
   test: {

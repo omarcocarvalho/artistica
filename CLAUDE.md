@@ -38,8 +38,8 @@ Before opening a PR, run: `pnpm lint && pnpm format:check && pnpm typecheck && p
 ## Folder layout
 
 ```
-index.html        landing page entry (/) — static HTML, pre-rendered for SEO
-landing/          landing page scripts/content
+landing/          landing page: page.html template + locales/<code>.json, rendered per language
+                  (/ for en, /<code>/ otherwise) by scripts/vite-landing.ts; main.ts is behaviour only
 app/index.html    tool entry (/app/)
 src/
   app/            React shell, routing, layout, theme, i18n setup

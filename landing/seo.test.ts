@@ -1,10 +1,23 @@
 /// <reference types="node" />
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { inflateSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
+import {
+  landingLanguages,
+  renderLandingPage,
+  sitemapXml,
+  SITE_ORIGIN,
+  type LandingStrings,
+} from '../scripts/vite-landing.ts'
 
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
-const html = read('index.html')
+const langs = landingLanguages(readdirSync(new URL('./locales/', import.meta.url)))
+const html = renderLandingPage(
+  read('landing/page.html'),
+  JSON.parse(read('landing/locales/en.json')) as LandingStrings,
+  'en',
+  langs,
+)
 const ORIGIN = 'https://omarcocarvalho.github.io/artistica/'
 
 const squash = (t: string) => t.replace(/\s+/g, ' ').trim()
@@ -71,9 +84,9 @@ describe('landing SEO', () => {
     expect(meta('property', 'og:title')).toBeTruthy()
     expect(meta('property', 'og:description')).toBeTruthy()
   })
-  it('has exactly one h1 and links the CTA to ./app/', () => {
+  it('has exactly one h1 and links the CTA to /artistica/app/', () => {
     expect(html.match(/<h1[\s>]/g)).toHaveLength(1)
-    expect(html).toMatch(/href="\.\/app\/"/)
+    expect(html).toMatch(/href="\/artistica\/app\/"/)
   })
   it('has WebApplication and FAQPage JSON-LD that parse', () => {
     const types = jsonLd().map((j) => j['@type'])
@@ -106,12 +119,12 @@ describe('landing SEO', () => {
     expect(answers).toContain(credit)
   })
   it('sitemap and robots use absolute URLs under the project site', () => {
-    const sitemap = read('public/sitemap.xml')
+    const sitemap = sitemapXml(SITE_ORIGIN, langs)
     expect(sitemap).toContain(`<loc>${ORIGIN}</loc>`)
     expect(sitemap).toContain(`<loc>${ORIGIN}app/</loc>`)
     expect(read('public/robots.txt')).toContain(`Sitemap: ${ORIGIN}sitemap.xml`)
   })
-  it.each(['index.html', 'app/index.html'])(
+  it.each(['landing/page.html', 'app/index.html'])(
     '%s links the SVG favicon and the 180 px home-screen icon',
     (page) => {
       const doc = read(page)

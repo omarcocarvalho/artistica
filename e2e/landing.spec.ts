@@ -1,5 +1,32 @@
+import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { expectNoAxeViolations } from './support/axe.ts'
+import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
+
+interface Strings {
+  readonly [key: string]: string | Strings
+}
+const EN = JSON.parse(
+  readFileSync(new URL('../landing/locales/en.json', import.meta.url), 'utf8'),
+) as Strings
+const leaves = (node: Strings): string[] =>
+  Object.values(node).flatMap((v) => (typeof v === 'string' ? [v] : leaves(v)))
+const section = (key: string): Strings => {
+  const node = EN[key]
+  if (typeof node !== 'object') throw new Error(`no section ${key}`)
+  return node
+}
+
+let guard: NetworkGuard | undefined
+
+test.beforeEach(({ page }) => {
+  guard = guardNetwork(page)
+})
+
+test.afterEach(() => {
+  expect(guard?.violations() ?? []).toEqual([])
+  guard = undefined
+})
 
 test.describe('landing page', () => {
   test('has the SEO metadata', async ({ page }) => {
@@ -77,6 +104,46 @@ test.describe('landing page', () => {
     expect([body.readUInt32BE(16), body.readUInt32BE(20)]).toEqual([1200, 630])
   })
 
+  test('LND-1 the CTA opens /artistica/app/', async ({ page }) => {
+    await page.goto('./')
+    for (const name of ['Start a sheet', 'Open the app']) {
+      await expect(page.getByRole('link', { name, exact: true })).toHaveAttribute(
+        'href',
+        '/artistica/app/',
+      )
+    }
+    await page.getByRole('link', { name: 'Open the app' }).click()
+    await expect(page).toHaveURL(/\/artistica\/app\/$/)
+    await expect(page.getByRole('heading', { level: 1, name: 'Artistica' })).toBeAttached()
+  })
+
+  test('LND-2 serves the generated sitemap with alternates', async ({ request }) => {
+    const res = await request.get('sitemap.xml')
+    expect(res.ok()).toBe(true)
+    const xml = await res.text()
+    expect(xml).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"')
+    expect(xml).toContain(
+      '<xhtml:link rel="alternate" hreflang="x-default" href="https://omarcocarvalho.github.io/artistica/" />',
+    )
+    expect(xml).toContain(
+      '<xhtml:link rel="alternate" hreflang="en" href="https://omarcocarvalho.github.io/artistica/" />',
+    )
+  })
+
+  test('the footer lists the languages, the current one marked', async ({ page }) => {
+    await page.goto('./')
+    const nav = page.getByRole('navigation', { name: 'Language' })
+    const english = nav.getByRole('link', { name: 'English' })
+    await expect(english).toHaveAttribute('aria-current', 'page')
+    await expect(english).toHaveAttribute('hreflang', 'en')
+    await expect(english).toHaveAttribute('lang', 'en')
+    await expect(page.locator('link[rel="alternate"][hreflang="x-default"]')).toHaveAttribute(
+      'href',
+      'https://omarcocarvalho.github.io/artistica/',
+    )
+    await expect(page.locator('meta[property="og:locale"]')).toHaveAttribute('content', 'en_US')
+  })
+
   test('CTA opens the app', async ({ page }) => {
     await page.goto('./')
     await page.getByRole('link', { name: 'Start a sheet' }).click()
@@ -121,7 +188,22 @@ test.describe('landing page without JavaScript', () => {
     await expect(page.getByText('Will my prints be the right size?')).toBeVisible()
     await expect(page.getByRole('link', { name: 'Start a sheet' })).toHaveAttribute(
       'href',
-      './app/',
+      '/artistica/app/',
     )
+  })
+
+  test('LND-3 the page works with JavaScript off', async ({ page }) => {
+    await page.goto('./')
+    const body = (await page.locator('body').textContent()) ?? ''
+    const text = body.replace(/\s+/g, ' ')
+    const visible = [
+      ...leaves(section('hero')),
+      ...leaves(section('how')),
+      ...leaves(section('features')),
+      ...leaves(section('privacy')),
+      ...leaves(section('faq')),
+    ]
+    expect(visible.filter((s) => !text.includes(s))).toEqual([])
+    await expect(page.getByRole('button', { name: 'Change theme: Auto' })).toHaveText('Auto')
   })
 })
