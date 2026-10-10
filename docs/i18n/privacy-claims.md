@@ -6,7 +6,7 @@ A line `` - `file` › text `` names a backing test (or CI step) and the file it
 
 ## Landing page claims
 
-The landing page's privacy box and its privacy-related FAQ answers, as they read for 1.0. The keys are proposed for `landing/locales/en.json`; the landing copy task fixes the final keys and wording and keeps this file in step with them.
+The landing page's privacy box (claims 1 to 5, in this order), the hero's privacy line (claim 6) and the privacy-related FAQ answers (claims 7 to 9). Each is one key under `privacy.claims` in `landing/locales/en.json`, and `landing/page.html` takes every privacy sentence from these keys. `landing/seo.test.ts` fails if a claim key is missing here or added there, if the quoted text differs from the English value, or if a claim names no backing test.
 
 ### 1. `privacy.claims.inBrowser`: "Everything runs in your browser. Nothing is uploaded."
 

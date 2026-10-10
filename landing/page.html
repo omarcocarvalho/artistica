@@ -83,7 +83,7 @@
             "name": "{{t:faq.uploaded.q}}",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "{{t:faq.uploaded.a}}"
+              "text": "{{t:privacy.claims.faqUploaded}}"
             }
           },
           {
@@ -91,7 +91,15 @@
             "name": "{{t:faq.guides.q}}",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "{{t:faq.guides.a}}"
+              "text": "{{t:privacy.claims.faqGuides}}"
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "{{t:faq.offline.q}}",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "{{t:privacy.claims.faqOffline}}"
             }
           },
           {
@@ -196,7 +204,9 @@
               >{{t:hero.seeHow}}</a
             >
           </p>
-          <p class="text-ink-muted mt-4 text-sm">{{t:hero.points}}</p>
+          <p class="text-ink-muted mt-4 text-sm">
+            {{t:privacy.claims.heroNeverLeave}} · {{t:hero.points}}
+          </p>
         </div>
         <div aria-hidden="true" class="border-line bg-surface relative h-72 rounded-lg border">
           <div class="absolute top-8 left-[8%] h-56 w-40 -rotate-[5deg] bg-white p-2 shadow-lg">
@@ -253,6 +263,22 @@
             <p class="text-ink-muted text-sm">{{t:features.marks.body}}</p>
           </li>
           <li>
+            <h3 class="font-display text-xl">{{t:features.studies.title}}</h3>
+            <p class="text-ink-muted text-sm">{{t:features.studies.body}}</p>
+          </li>
+          <li>
+            <h3 class="font-display text-xl">{{t:features.lines.title}}</h3>
+            <p class="text-ink-muted text-sm">{{t:features.lines.body}}</p>
+          </li>
+          <li>
+            <h3 class="font-display text-xl">{{t:features.guides.title}}</h3>
+            <p class="text-ink-muted text-sm">{{t:features.guides.body}}</p>
+          </li>
+          <li>
+            <h3 class="font-display text-xl">{{t:features.presets.title}}</h3>
+            <p class="text-ink-muted text-sm">{{t:features.presets.body}}</p>
+          </li>
+          <li>
             <h3 class="font-display text-xl">{{t:features.edit.title}}</h3>
             <p class="text-ink-muted text-sm">{{t:features.edit.body}}</p>
           </li>
@@ -261,20 +287,17 @@
             <p class="text-ink-muted text-sm">{{t:features.phone.body}}</p>
           </li>
         </ul>
-        <p class="text-ink-muted mt-6 text-sm">
-          <span class="font-hand text-accent text-xl">{{t:features.nextLabel}}</span>
-          {{t:features.next}}
-        </p>
       </section>
 
       <section id="privacy" class="mx-auto max-w-3xl px-4 pb-12 sm:px-8">
         <div class="border-line bg-surface rounded-lg border-2 border-dashed p-6">
           <h2 class="font-display text-2xl">{{t:privacy.title}}</h2>
           <ul class="text-ink-muted mt-3 list-disc pl-5">
-            <li>{{t:privacy.claims.1}}</li>
-            <li>{{t:privacy.claims.2}}</li>
-            <li>{{t:privacy.claims.3}}</li>
-            <li>{{t:privacy.claims.4}}</li>
+            <li>{{t:privacy.claims.inBrowser}}</li>
+            <li>{{t:privacy.claims.notSaved}}</li>
+            <li>{{t:privacy.claims.settingsOnly}}</li>
+            <li>{{t:privacy.claims.models}}</li>
+            <li>{{t:privacy.claims.noTracking}}</li>
           </ul>
         </div>
       </section>
@@ -299,11 +322,15 @@
         </details>
         <details class="border-line border-b py-3">
           <summary class="min-h-11 cursor-pointer font-semibold">{{t:faq.uploaded.q}}</summary>
-          <p class="text-ink-muted mt-1">{{t:faq.uploaded.a}}</p>
+          <p class="text-ink-muted mt-1">{{t:privacy.claims.faqUploaded}}</p>
         </details>
         <details class="border-line border-b py-3">
           <summary class="min-h-11 cursor-pointer font-semibold">{{t:faq.guides.q}}</summary>
-          <p class="text-ink-muted mt-1">{{t:faq.guides.a}}</p>
+          <p class="text-ink-muted mt-1">{{t:privacy.claims.faqGuides}}</p>
+        </details>
+        <details class="border-line border-b py-3">
+          <summary class="min-h-11 cursor-pointer font-semibold">{{t:faq.offline.q}}</summary>
+          <p class="text-ink-muted mt-1">{{t:privacy.claims.faqOffline}}</p>
         </details>
         <details class="border-line border-b py-3">
           <summary class="min-h-11 cursor-pointer font-semibold">{{t:faq.phone.q}}</summary>

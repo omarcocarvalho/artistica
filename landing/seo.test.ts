@@ -106,7 +106,8 @@ describe('landing SEO', () => {
     expect(faq.mainEntity.map((e) => ({ q: e.name, a: e.acceptedAnswer.text }))).toEqual(visible)
   })
   it('credits the MediaPipe models in the FAQ, visibly and in the JSON-LD (owner Q14)', () => {
-    const credit = "Face and pose guides use Google's MediaPipe models, running on your device."
+    const credit =
+      "Face and pose guides use Google's MediaPipe models, downloaded from this site and run on your device."
     const faq = jsonLd().find((j) => j['@type'] === 'FAQPage') as {
       mainEntity: { acceptedAnswer: { text: string } }[]
     }
@@ -167,5 +168,119 @@ describe('landing SEO', () => {
     expect(png.readUInt32BE(16)).toBe(1200)
     expect(png.readUInt32BE(20)).toBe(630)
     expect(png.length).toBeLessThan(300_000)
+  })
+})
+
+const EN = JSON.parse(read('landing/locales/en.json')) as LandingStrings
+const CLAIMS = (EN.privacy as { claims: Record<string, string> }).claims
+const text = (fragment: string) =>
+  squash(
+    fragment
+      .replace(/<(script|style)[\s\S]*?<\/\1>/g, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&#39;/g, "'"),
+  )
+const sectionText = (id: string) =>
+  text(new RegExp(`<section id="${id}"[\\s\\S]*?</section>`).exec(html)?.[0] ?? '')
+
+interface DocClaim {
+  readonly key: string
+  readonly text: string
+  readonly refs: readonly { file: string; title: string }[]
+}
+function landingDocClaims(): DocClaim[] {
+  const landing =
+    read('docs/i18n/privacy-claims.md').split('## Landing page claims')[1]?.split('\n## ')[0] ?? ''
+  return landing
+    .split('\n### ')
+    .slice(1)
+    .map((block) => {
+      const [heading = '', ...rest] = block.split('\n')
+      const m = /^\d+\. `privacy\.claims\.(\w+)`: "(.+)"$/.exec(heading)
+      return {
+        key: m?.[1] ?? `unparsed: ${heading}`,
+        text: m?.[2] ?? '',
+        refs: rest
+          .map((l) => /^- `([^`]+)` › (.+)$/.exec(l))
+          .filter((r): r is RegExpExecArray => r !== null)
+          .map((r) => ({ file: r[1] ?? '', title: r[2] ?? '' })),
+      }
+    })
+}
+
+describe('landing copy for 1.0', () => {
+  it('announces nothing as coming next', () => {
+    expect(text(html)).not.toMatch(/coming next/i)
+  })
+
+  it('the features list names studies, composition lines, guides, presets and arranging by hand', () => {
+    const features = sectionText('features')
+    for (const term of [
+      /\bblur\b/i,
+      /\bvalue study\b|\bvalue studies\b/i,
+      /\bcomposition lines\b/i,
+      /\bguides from the photo\b/i,
+      /\bedge outline\b/i,
+      /\bface\b/i,
+      /\bpose\b/i,
+      /\bpresets?\b/i,
+      /\barrange\b.*\bby hand\b/i,
+    ])
+      expect(features).toMatch(term)
+    const items = html
+      .split('<section id="features"')[1]
+      ?.split('</section>')[0]
+      ?.match(/<li[\s>]/g)
+    expect(items?.length).toBeGreaterThanOrEqual(6)
+    expect(items?.length).toBeLessThanOrEqual(8)
+  })
+
+  it('the meta description and WebApplication.description mention studies and lines', () => {
+    const app = jsonLd().find((j) => j['@type'] === 'WebApplication') as { description: string }
+    for (const description of [meta('name', 'description') ?? '', app.description]) {
+      expect(description).toMatch(/\bstud(y|ies)\b/i)
+      expect(description).toMatch(/\blines\b/i)
+    }
+  })
+
+  it('every privacy claim is listed in docs/i18n/privacy-claims.md with its text and a backing test that exists', () => {
+    const doc = landingDocClaims()
+    expect(doc.map((c) => c.key).sort()).toEqual(Object.keys(CLAIMS).sort())
+    for (const claim of doc) {
+      expect(claim.text, claim.key).toBe(CLAIMS[claim.key])
+      expect(claim.refs.length, claim.key).toBeGreaterThan(0)
+      for (const { file, title } of claim.refs)
+        expect(read(file), `${file} › ${title}`).toContain(title)
+    }
+  })
+
+  it('every privacy claim is on the page, and the privacy box and its FAQ answers say nothing else', () => {
+    const page = text(html)
+    for (const [key, claim] of Object.entries(CLAIMS)) expect(page, key).toContain(claim)
+    const box = [
+      ...(/<section id="privacy"[\s\S]*?<\/section>/.exec(html)?.[0] ?? '').matchAll(
+        /<li>([\s\S]*?)<\/li>/g,
+      ),
+    ].map((m) => text(m[1] ?? ''))
+    expect(box).toEqual([
+      CLAIMS.inBrowser,
+      CLAIMS.notSaved,
+      CLAIMS.settingsOnly,
+      CLAIMS.models,
+      CLAIMS.noTracking,
+    ])
+    const faq = jsonLd().find((j) => j['@type'] === 'FAQPage') as {
+      mainEntity: { name: string; acceptedAnswer: { text: string } }[]
+    }
+    const answer = (q: string) => faq.mainEntity.find((e) => e.name === q)?.acceptedAnswer.text
+    expect(answer('Are my photos uploaded anywhere?')).toBe(CLAIMS.faqUploaded)
+    expect(answer('What finds the face and pose guides?')).toBe(CLAIMS.faqGuides)
+    expect(answer('Can I use it offline?')).toBe(CLAIMS.faqOffline)
+  })
+
+  it('keeps the body text under 550 words', () => {
+    const body = text(/<body[\s\S]*<\/body>/.exec(html)?.[0] ?? '')
+    expect(body.split(' ').filter((w) => /\p{L}|\d/u.test(w)).length).toBeLessThan(550)
   })
 })
