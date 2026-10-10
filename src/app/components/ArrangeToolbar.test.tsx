@@ -144,6 +144,19 @@ describe('ArrangeToolbar: Arrange, Undo, Re-run', () => {
     expect(said()).toBe('Photos arranged automatically.')
   })
 
+  it('with an arrangement and no undo step left, Undo is off and Re-run is on', async () => {
+    show([loaded('a'), loaded('b')])
+    const user = setup()
+    act(() => {
+      useArrange.setState({ manual: shownManual(), undo: [] })
+    })
+    expect(screen.getByRole('button', { name: 'Undo' })).toHaveAttribute('aria-disabled', 'true')
+    const rerun = screen.getByRole('button', { name: 'Re-run auto layout' })
+    expect(rerun).not.toHaveAttribute('aria-disabled')
+    await user.click(rerun)
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
   it('after Re-run is confirmed, focus returns to Re-run, still focusable (WCAG 2.4.3)', async () => {
     show([loaded('a'), loaded('b')])
     const user = setup()

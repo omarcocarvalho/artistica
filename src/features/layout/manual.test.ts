@@ -130,6 +130,13 @@ describe('manualFromLayout and layoutFromManual', () => {
     expect(byId.get('both' as ImageId)?.warnings).toEqual(['low-dpi', 'scaled-to-fit'])
   })
 
+  it('counts the gutter between the tiles of a fixed-size photo when it flags scaled-to-fit', () => {
+    // Two square tiles fit at most 135.5 mm wide with the 6 mm gutter, 138.5 mm without it.
+    const items = [item('pair', 1, 1000, { kind: 'fixed', axis: 'width', mm: 137 }, 2)]
+    const out = layoutFromManual(manualOf([block('pair#0', 10, 10, 135.5)]), items, A4_PORTRAIT)
+    expect(out.pages[0]?.placements[0]?.warnings).toEqual(['scaled-to-fit'])
+  })
+
   it('sorts placements as the engine does, whatever order the blocks come in', () => {
     const items = [item('a', 1), item('b', 1), item('c', 1)]
     const manual = manualOf([
