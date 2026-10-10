@@ -19,24 +19,24 @@
     "heading": "Blur",
     "accent": "squint!",
     "amount": "Amount",
-    "valueText": "{{pct}}%",
+    "valueText": "{{value}}",
     "min": "1%",
     "max": "100%",
-    "hint": "Scales with image size, so {{pct}}% looks alike on every photo.",
+    "hint": "Scales with image size, so {{value}} looks alike on every photo.",
     "usedBy": "Used by Blurred and Blur + Values."
   },
   "values": {
     "heading": "Values",
     "count": "Number of values",
-    "countText_one": "{{count}} value",
-    "countText_other": "{{count}} values",
+    "countText_one": "{{count, number}} value",
+    "countText_other": "{{count, number}} values",
     "min": "2 · notan",
     "max": "20",
     "hue": "Hue",
     "customHue": "Custom hue",
-    "hueText": "{{deg}}°",
+    "hueText": "{{value}}",
     "ramp": "Value ramp",
-    "rampLabel": "{{count}} values, from darkest to lightest tint",
+    "rampLabel": "{{count, number}} values, from darkest to lightest tint",
     "darkest": "Darkest",
     "lightest": "Lightest tint",
     "hint": "Blur + Values blurs first, then splits into values.",
@@ -55,9 +55,9 @@
   "applyAll": {
     "button": "Apply to all images",
     "hint_one": "Add another photo to copy these settings to it.",
-    "hint_other": "Copies these study settings to all {{count}} images.",
-    "done_one": "Study settings copied to {{count}} image.",
-    "done_other": "Study settings copied to {{count}} images.",
+    "hint_other": "Copies these study settings to all {{count, number}} images.",
+    "done_one": "Study settings copied to {{count, number}} image.",
+    "done_other": "Study settings copied to {{count, number}} images.",
     "nothingChanged": "All images already use these study settings."
   }
 }

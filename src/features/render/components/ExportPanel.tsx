@@ -9,7 +9,7 @@ import {
   type Ref,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { mmToUnit, roundForUnit } from '../../../shared/model/units'
+import { formatLength } from '../../../shared/i18n/format'
 import { Button, Callout, Icon, ProgressBar, buttonClasses } from '../../../shared/ui'
 import { useSettings } from '../../settings'
 import { EXPORT_ERROR_KEYS, isAbortError, toExportError } from '../export/errors'
@@ -131,9 +131,7 @@ export function ExportPanel({
   const summary = exportSummary(pages, paperLabel)
   const steps = pageSteps(state, pages.length)
   const bleedText =
-    summary.bleedMm === null
-      ? t('summary.off')
-      : t('summary.length', { value: roundForUnit(mmToUnit(summary.bleedMm, unit), unit), unit })
+    summary.bleedMm === null ? t('summary.off') : formatLength(summary.bleedMm, unit)
 
   return (
     <>

@@ -2,7 +2,8 @@ import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, ProgressBar } from '../../../shared/ui'
 import type { AiModel } from '../detect/store'
-import { formatMb, type GuideView } from './use-guide-status'
+import { formatMegabytes, formatMegabytesNumber } from '../../../shared/i18n/format'
+import type { GuideView } from './use-guide-status'
 
 export interface DownloadBoxProps {
   readonly model: AiModel
@@ -19,8 +20,13 @@ export function DownloadBox({ model, state, onDownload, disabled, describedBy }:
 
   if (state.view === 'downloading') {
     const { loaded, total } = state
-    const mb =
-      total > 0 ? { loaded: formatMb(Math.min(loaded, total)), total: formatMb(total) } : undefined
+    const done = Math.min(loaded, total)
+    const shown =
+      total > 0 ? { loaded: formatMegabytesNumber(done), total: formatMegabytes(total) } : undefined
+    const spoken =
+      total > 0
+        ? { loaded: formatMegabytesNumber(done), total: formatMegabytesNumber(total) }
+        : undefined
     // The bar speaks the amount in words; the visible "MB" line repeats it, so it is hidden from
     // screen readers. Neither is a live region: no continuous announcement (owner Q18, default).
     return (
@@ -29,11 +35,11 @@ export function DownloadBox({ model, state, onDownload, disabled, describedBy }:
         <ProgressBar
           value={total > 0 ? loaded / total : null}
           label={t(`guides.${model}.progressLabel`)}
-          valueText={mb && t('guides.progressSpoken', mb)}
+          valueText={spoken && t('guides.progressSpoken', spoken)}
         />
-        {mb && (
+        {shown && (
           <p className="ds-field-hint tabular-nums" aria-hidden="true">
-            {t('guides.progress', mb)}
+            {t('guides.progress', shown)}
           </p>
         )}
       </div>
@@ -43,7 +49,7 @@ export function DownloadBox({ model, state, onDownload, disabled, describedBy }:
   return (
     <div className="lines-ai-box">
       <p id={sizeId} className="text-sm">
-        <strong>{t('guides.size', { mb: formatMb(state.bytes) })}</strong>
+        <strong>{t('guides.size', { size: formatMegabytes(state.bytes) })}</strong>
       </p>
       <p className="ds-field-hint">{t(`guides.${model}.why`)}</p>
       <div>

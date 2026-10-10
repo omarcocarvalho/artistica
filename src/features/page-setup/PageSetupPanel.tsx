@@ -2,7 +2,8 @@ import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MIN_SAFE_AREA_MM, paperSizeMm } from '../../shared/model/page-setup'
 import { CUSTOM_PAPER_LIMITS, PAPER_IDS, type PaperId } from '../../shared/model/paper'
-import { mmToUnit, roundForUnit, type Unit } from '../../shared/model/units'
+import { formatLength, formatLengthNumber, unitLabel } from '../../shared/i18n/format'
+import type { Unit } from '../../shared/model/units'
 import { Callout, NumberField, SegmentedControl, Select, Switch } from '../../shared/ui'
 import { useSettings, type PageSetupPatch } from '../settings'
 import {
@@ -12,7 +13,6 @@ import {
   NOTE_KEYS,
   SAFE_AREA_MAX_MM,
   clampMm,
-  formatLength,
   normalizeCustomSize,
   stepMmFor,
 } from './page-setup-logic'
@@ -42,9 +42,9 @@ export function PageSetupPanel({
 
   const size = paperSizeMm(pageSetup)
   const dims = t('paper.dims', {
-    w: roundForUnit(mmToUnit(size.w, unit), unit),
-    h: roundForUnit(mmToUnit(size.h, unit), unit),
-    unit,
+    w: formatLengthNumber(size.w, unit),
+    h: formatLengthNumber(size.h, unit),
+    unit: unitLabel(unit),
   })
   const paperLabel =
     pageSetup.paper === 'Custom' ? t('paper.custom').replace('…', '') : pageSetup.paper
@@ -53,7 +53,7 @@ export function PageSetupPanel({
     value: id,
     label: id === 'Custom' ? t('paper.custom') : id,
   }))
-  const lengthField = { unit, unitLabel: t(`units.${unit}`), stepMm: stepMmFor(unit) } as const
+  const lengthField = { unit, stepMm: stepMmFor(unit) } as const
   const customLimits = { minMm: CUSTOM_PAPER_LIMITS.minMm, maxMm: CUSTOM_PAPER_LIMITS.maxMm }
 
   return (

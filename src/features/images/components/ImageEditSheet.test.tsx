@@ -1,7 +1,9 @@
-import { fireEvent, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { I18nextProvider } from 'react-i18next'
+import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import type { ImageId } from '../../../shared/model/image'
+import { PT_BR, switchLanguage } from '../../../test/languages'
 import { useSettings } from '../../settings'
 import { useImages } from '../store'
 import { makeLoadedImage, renderWithProviders } from '../test-utils'
@@ -176,5 +178,37 @@ describe('ImageEditSheet', () => {
     renderWithProviders(<ImageEditSheet imageId={ID} />)
     fireEvent.keyDown(screen.getByRole('group', { name: 'Crop area' }), { key: 'ArrowRight' })
     expect(edits()?.crop?.x).toBe(102)
+  })
+})
+
+describe('ImageEditSheet in Portuguese (Brazil)', () => {
+  afterAll(async () => {
+    await switchLanguage('en')
+  })
+
+  async function renderInPortuguese() {
+    const i18n = await switchLanguage('pt-BR', PT_BR)
+    return render(
+      <I18nextProvider i18n={i18n}>
+        <ImageEditSheet imageId={ID} />
+      </I18nextProvider>,
+    )
+  }
+
+  it('formats the follows-value, the sharp size and the field for the language', async () => {
+    useSettings.getState().setUnit('in')
+    load({ edits: { size: { kind: 'fixed', axis: 'width', mm: 90 } } })
+    await renderInPortuguese()
+    expect(
+      screen.getByText('A altura acompanha: 4,72 pol. (mantém a proporção)'),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/Nítida até 1,6 × 2,13 pol\./)).toBeInTheDocument()
+    expect(screen.getByRole('spinbutton', { name: /Width/ })).toHaveValue('3,54')
+  })
+
+  it('formats the auto hint in millimetres', async () => {
+    load()
+    await renderInPortuguese()
+    expect(screen.getByText(/entre 60 mm e o limite/)).toBeInTheDocument()
   })
 })

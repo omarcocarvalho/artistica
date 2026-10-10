@@ -1,7 +1,9 @@
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initI18n } from '../../../shared/i18n'
+import { PT_BR, switchLanguage } from '../../../test/languages'
+import { useSettings } from '../../settings'
 import { exportPdf } from '../export/export-pdf'
 import type { ExportOptions } from '../export/run-export'
 import { drawTile, id, pageModel } from '../test-support/fixtures'
@@ -141,5 +143,23 @@ describe('ExportPanel (inline)', () => {
       await userEvent.setup().click(create)
       expect(mockedExport).toHaveBeenCalledTimes(1)
     })
+  })
+})
+
+describe('ExportPanel in other languages', () => {
+  afterAll(async () => {
+    await switchLanguage('en')
+  })
+
+  it('shows the bleed with the language decimal separator and unit symbol', async () => {
+    useSettings.getState().setUnit('mm')
+    const bled = [pageModel([drawTile({ bleedMm: 3.5 })])]
+    await switchLanguage('pt-BR', PT_BR)
+    const view = render(<ExportPanel {...base} pages={bled} />)
+    expect(screen.getByText('3,5 mm')).toBeInTheDocument()
+    view.unmount()
+    await switchLanguage('zh-CN')
+    render(<ExportPanel {...base} pages={bled} />)
+    expect(screen.getByText('3.5毫米')).toBeInTheDocument()
   })
 })

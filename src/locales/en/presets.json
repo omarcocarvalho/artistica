@@ -35,7 +35,7 @@
   "apply": {
     "confirmTitle": "Apply “{{name}}”?",
     "confirmBody_one": "It sets the page setup and the studies and lines of your photo.",
-    "confirmBody_other": "It sets the page setup and the studies and lines of all {{count}} photos.",
+    "confirmBody_other": "It sets the page setup and the studies and lines of all {{count, number}} photos.",
     "confirm": "Apply",
     "cancel": "Cancel",
     "applied": "Applied {{name}}.",
@@ -53,18 +53,18 @@
   "import": {
     "button": "Import…",
     "file": "Presets file",
-    "imported_one": "Imported {{count}} preset.",
-    "imported_other": "Imported {{count}} presets.",
-    "renamed_one": "{{count}} was renamed: {{list}}.",
-    "renamed_other": "{{count}} were renamed: {{list}}.",
+    "imported_one": "Imported {{count, number}} preset.",
+    "imported_other": "Imported {{count, number}} presets.",
+    "renamed_one": "{{count, number}} was renamed: {{list}}.",
+    "renamed_other": "{{count, number}} were renamed: {{list}}.",
     "renamedPair": "{{from}} → {{to}}",
     "listSeparator": ", ",
-    "skipped_one": "{{count}} was skipped: it wasn't valid.",
-    "skipped_other": "{{count}} were skipped: they weren't valid.",
-    "full_one": "{{count}} wasn't added: this device keeps at most {{max}} presets.",
-    "full_other": "{{count}} weren't added: this device keeps at most {{max}} presets.",
-    "adjusted_one": "{{count}} preset had a value out of range, which was adjusted.",
-    "adjusted_other": "{{count}} presets had values out of range, which were adjusted.",
+    "skipped_one": "{{count, number}} was skipped: it wasn't valid.",
+    "skipped_other": "{{count, number}} were skipped: they weren't valid.",
+    "full_one": "{{count, number}} wasn't added: this device keeps at most {{max}} presets.",
+    "full_other": "{{count, number}} weren't added: this device keeps at most {{max}} presets.",
+    "adjusted_one": "{{count, number}} preset had a value out of range, which was adjusted.",
+    "adjusted_other": "{{count, number}} presets had values out of range, which were adjusted.",
     "error": {
       "tooLarge": "This file is too large to be a presets file.",
       "notPresets": "This file isn't a presets file from Artistica.",
@@ -84,9 +84,9 @@
     "bleed": "bleed {{size}}",
     "version": {
       "original": "original",
-      "blurred": "blurred {{pct}}%",
-      "values": "values {{count}}",
-      "blurValues": "blurred values {{count}}"
+      "blurred": "blurred {{value}}",
+      "values": "values {{count, number}}",
+      "blurValues": "blurred values {{count, number}}"
     },
     "line": {
       "grid": "grid",

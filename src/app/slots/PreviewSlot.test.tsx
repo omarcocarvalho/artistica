@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initI18n } from '../../shared/i18n'
+import { switchLanguage } from '../../test/languages'
 import type { ImageId } from '../../shared/model/image'
 import { DEFAULT_LINES, type LineSettings } from '../../shared/model/lines'
 import type { SheetRegistry } from '../../features/render'
@@ -566,5 +567,19 @@ describe('PreviewToolbar in Arrange mode (B4)', () => {
     await userEvent.click(toggle)
     expect(useArrange.getState().mode).toBe(true)
     expect(screen.queryByRole('button', { name: 'Edit selected image' })).toBeNull()
+  })
+})
+
+describe('PreviewSlot in other languages', () => {
+  afterAll(async () => {
+    await switchLanguage('en')
+  })
+
+  it("describes each tile's size with the language's unit symbol", async () => {
+    await switchLanguage('zh-CN')
+    render(<PreviewSlot />)
+    expect(screen.getByRole('list', { name: 'Page 1 contents' })).toHaveTextContent(
+      'anna.jpg, 100 × 60 毫米',
+    )
   })
 })

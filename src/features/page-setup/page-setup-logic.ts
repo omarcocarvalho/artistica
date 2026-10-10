@@ -1,6 +1,6 @@
 import type { PageSetupNote } from '../../shared/model/page-setup'
 import { CUSTOM_PAPER_LIMITS, type SizeMm } from '../../shared/model/paper'
-import { MM_PER_INCH, mmToUnit, roundForUnit, type Mm, type Unit } from '../../shared/model/units'
+import { MM_PER_INCH, type Mm, type Unit } from '../../shared/model/units'
 
 /** Field limits the contract does not define (UI-only, generous). */
 export const SAFE_AREA_MAX_MM = 30
@@ -25,11 +25,6 @@ export function normalizeCustomSize(size: SizeMm): SizeMm {
   const w = clampMm(size.w, minMm, maxMm)
   const h = clampMm(size.h, minMm, maxMm)
   return w <= h ? { w, h } : { w: h, h: w }
-}
-
-/** "5 mm", "0.2 in". Display only; never feed the result back into the store. */
-export function formatLength(mm: Mm, unit: Unit): string {
-  return `${String(roundForUnit(mmToUnit(mm, unit), unit))} ${unit}`
 }
 
 export const NOTE_KEYS: Readonly<Record<PageSetupNote, string>> = {

@@ -1,7 +1,9 @@
-import { screen, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { I18nextProvider } from 'react-i18next'
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ImageId } from '../../../shared/model/image'
+import { PT_BR, switchLanguage } from '../../../test/languages'
 import { useSettings } from '../../settings'
 import { useImages } from '../store'
 import { makeLoadedImage, renderWithProviders } from '../test-utils'
@@ -260,5 +262,23 @@ describe('ImageList', () => {
         expect(screen.getByRole('button', { name: 'Upload' })).toHaveFocus()
       })
     })
+  })
+})
+
+describe('ImageList in Portuguese (Brazil)', () => {
+  afterAll(async () => {
+    await switchLanguage('en')
+  })
+
+  it('shows a fixed size with a decimal comma and the language unit symbol', async () => {
+    const i18n = await switchLanguage('pt-BR', PT_BR)
+    load(makeLoadedImage({ edits: { size: { kind: 'fixed', axis: 'width', mm: 112 } } }))
+    useSettings.getState().setUnit('in')
+    render(
+      <I18nextProvider i18n={i18n}>
+        <ImageList onEdit={() => undefined} />
+      </I18nextProvider>,
+    )
+    expect(screen.getByText('Fixo 4,41 pol.')).toBeInTheDocument()
   })
 })
