@@ -1,5 +1,5 @@
 import { Dialog as RadixDialog } from 'radix-ui'
-import type { ReactNode } from 'react'
+import type { FocusEvent, ReactNode } from 'react'
 import { Icon } from './Icon'
 import { useReturnFocus } from './use-return-focus'
 
@@ -20,6 +20,12 @@ export interface ModalSurfaceProps {
   onClosed?: () => void
   /** Called before Esc closes the overlay; `event.preventDefault()` keeps it open. */
   onEscapeKeyDown?: (event: KeyboardEvent) => void
+}
+
+/** WebKit on touch screens leaves a focused text field where it is, even under the overlay's edge. */
+function revealField(event: FocusEvent<HTMLElement>): void {
+  if (event.target.matches('input, textarea, select'))
+    event.target.scrollIntoView({ block: 'nearest', inline: 'nearest' })
 }
 
 export interface SurfaceLayout {
@@ -73,7 +79,11 @@ export function ModalSurface({
               {description}
             </RadixDialog.Description>
           ) : null}
-          {children === undefined ? null : <div className={layout.body}>{children}</div>}
+          {children === undefined ? null : (
+            <div className={layout.body} onFocus={revealField}>
+              {children}
+            </div>
+          )}
           {footer ? <div className="ds-dialog__foot">{footer}</div> : null}
         </RadixDialog.Content>
       </RadixDialog.Portal>

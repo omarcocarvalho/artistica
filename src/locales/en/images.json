@@ -80,6 +80,19 @@
       "help": "Arrow keys move the crop area. Shift plus arrow keys resize it.",
       "status": "Crop {{w}} × {{h}} px at {{x}}, {{y}}",
       "annotation": "drag corners",
+      "controls": "Crop position and size",
+      "position": "Position",
+      "size": "Size",
+      "step": {
+        "left": "Move left",
+        "up": "Move up",
+        "down": "Move down",
+        "right": "Move right",
+        "narrower": "Narrower",
+        "wider": "Wider",
+        "shorter": "Shorter",
+        "taller": "Taller"
+      },
       "shape": "Crop shape",
       "reset": "Reset crop"
     },

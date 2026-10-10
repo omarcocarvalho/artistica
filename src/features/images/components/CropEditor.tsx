@@ -9,7 +9,9 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CropRect } from '../../../shared/model/image'
-import { HANDLES, arrowDelta, keyboardStep, moveCrop, resizeCrop, type Handle } from '../crop'
+import { IconButton, type IconName } from '../../../shared/ui'
+import { HANDLES, moveCrop, resizeCrop, type Handle } from '../crop'
+import { cropStepForKey, stepCrop, type CropStep } from '../crop-step'
 import {
   displaySize,
   mapDeltaToSource,
@@ -35,6 +37,19 @@ export interface CropEditorProps {
   onChange: (crop: CropRect) => void
 }
 
+const POSITION_STEPS: readonly { step: CropStep; icon: IconName }[] = [
+  { step: 'left', icon: 'chevronLeft' },
+  { step: 'up', icon: 'chevronUp' },
+  { step: 'down', icon: 'chevronDown' },
+  { step: 'right', icon: 'chevronRight' },
+]
+const SIZE_STEPS: readonly { step: CropStep; icon: IconName }[] = [
+  { step: 'narrower', icon: 'narrower' },
+  { step: 'wider', icon: 'wider' },
+  { step: 'shorter', icon: 'shorter' },
+  { step: 'taller', icon: 'taller' },
+]
+
 type Drag =
   | { kind: 'move'; id: number; start: CropRect; x0: number; y0: number }
   | { kind: 'resize'; id: number; start: CropRect; x0: number; y0: number; handle: Handle }
@@ -54,6 +69,8 @@ export function CropEditor({ bitmap, pxW, pxH, crop, ratio, view, onChange }: Cr
   const { t } = useTranslation('images')
   const helpId = useId()
   const readoutId = useId()
+  const positionId = useId()
+  const sizeId = useId()
   const wrap = useRef<HTMLDivElement>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const drag = useRef<Drag | null>(null)
@@ -162,17 +179,37 @@ export function CropEditor({ bitmap, pxW, pxH, crop, ratio, view, onChange }: Cr
     setDraft(null)
   }
 
-  const onKeyDown = (e: KeyboardEvent<HTMLElement>): void => {
-    const step = keyboardStep(pxW, pxH)
-    const d = arrowDelta(e.key, step)
-    if (!d || e.altKey || e.ctrlKey || e.metaKey) return
-    e.preventDefault()
-    const delta = mapDeltaToSource({ x: d.dx, y: d.dy }, view)
-    const next = e.shiftKey
-      ? resizeCrop(crop, mapHandleToSource('se', view), delta.x, delta.y, pxW, pxH, ratio)
-      : moveCrop(crop, delta.x, delta.y, pxW, pxH)
-    onChange(next)
+  const commitStep = (step: CropStep): void => {
+    onChange(stepCrop(crop, step, { pxW, pxH, ratio, view }))
   }
+
+  const onKeyDown = (e: KeyboardEvent<HTMLElement>): void => {
+    const step = cropStepForKey(e.key, e.shiftKey)
+    if (!step || e.altKey || e.ctrlKey || e.metaKey) return
+    e.preventDefault()
+    commitStep(step)
+  }
+
+  const stepGroup = (labelId: string, label: string, steps: typeof POSITION_STEPS) => (
+    <div className="flex flex-col gap-1">
+      <span id={labelId} className="text-ink text-sm font-semibold">
+        {label}
+      </span>
+      <div role="group" aria-labelledby={labelId} className="flex gap-1">
+        {steps.map(({ step, icon }) => (
+          <IconButton
+            key={step}
+            icon={icon}
+            label={t(`editSheet.crop.step.${step}`)}
+            variant="neutral"
+            onClick={() => {
+              commitStep(step)
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  )
 
   return (
     <div className="flex w-full flex-col items-center">
@@ -241,6 +278,14 @@ export function CropEditor({ bitmap, pxW, pxH, crop, ratio, view, onChange }: Cr
       >
         {readout}
       </p>
+      <div
+        role="group"
+        aria-label={t('editSheet.crop.controls')}
+        className="mt-3 flex flex-wrap justify-center gap-x-6 gap-y-2"
+      >
+        {stepGroup(positionId, t('editSheet.crop.position'), POSITION_STEPS)}
+        {stepGroup(sizeId, t('editSheet.crop.size'), SIZE_STEPS)}
+      </div>
     </div>
   )
 }

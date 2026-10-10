@@ -37,6 +37,10 @@ export const PATHS = {
   chevronRight: ['M9 6l6 6-6 6'],
   chevronUp: ['M6 15l6-6 6 6'],
   chevronDown: ['M6 9l6 6 6-6'],
+  narrower: ['M3 5v14M21 5v14', 'M5 12h5M14 12h5', 'M7 9l3 3-3 3', 'M17 9l-3 3 3 3'],
+  wider: ['M3 5v14M21 5v14', 'M7 12h10', 'M10 9l-3 3 3 3', 'M14 9l3 3-3 3'],
+  shorter: ['M5 3h14M5 21h14', 'M12 5v5M12 14v5', 'M9 7l3 3 3-3', 'M9 17l3-3 3 3'],
+  taller: ['M5 3h14M5 21h14', 'M12 7v10', 'M9 10l3-3 3 3', 'M9 14l3 3 3-3'],
   move: [
     'M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3',
   ],
