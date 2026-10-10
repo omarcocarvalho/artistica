@@ -1,0 +1,23 @@
+{
+  "pt-BR": {
+    "app:count_one": "cbd8dcfe",
+    "app:count_other": "4a5ae197",
+    "app:farewell": "41cacdf5",
+    "app:forImage": "f47c5aa7",
+    "app:help": "dbb1780b",
+    "app:title": "00000000",
+    "common:actions.cancel": "19766ed6",
+    "common:actions.ok": "565339bc"
+  },
+  "ja": {
+    "app:count_one": "cbd8dcfe",
+    "app:count_other": "4a5ae197",
+    "app:farewell": "41cacdf5",
+    "app:forImage": "f47c5aa7",
+    "app:greeting": "652b7c01",
+    "app:help": "dbb1780b",
+    "app:title": "98bce32f",
+    "common:actions.cancel": "19766ed6",
+    "common:actions.ok": "565339bc"
+  }
+}
