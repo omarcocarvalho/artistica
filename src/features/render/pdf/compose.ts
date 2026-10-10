@@ -95,7 +95,7 @@ function tileLineOperators(
   ]
   if (extGState) ops.push(setGraphicsState(extGState))
   for (const s of tl.strokes) {
-    ops.push(setDashPattern(s.dashMm.map(pt), 0))
+    ops.push(setDashPattern(s.dashMm.map(pt), pt(s.dashPhaseMm ?? 0)))
     for (const c of s.cmds)
       ops.push(
         c.op === 'M'

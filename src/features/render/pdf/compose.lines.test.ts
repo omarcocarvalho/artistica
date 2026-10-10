@@ -268,6 +268,23 @@ describe('composePdf lines (M3-R6–R8)', () => {
     expect(dashed?.dashPt).toEqual(centreDashMm(1.5, Math.min(trim.w, trim.h)).map(pt))
   })
 
+  it('writes the dash phase from the page model into the d operator, and 0 when it is absent', async () => {
+    const small = { x: 20, y: 30, w: 12, h: 8 }
+    const tl = linesFor({ thirds: true, centre: true, style: { ...BLUE, widthMm: 2 } }, small)
+    const phase = tl.strokes[1]?.dashPhaseMm
+    expect(phase).toBeCloseTo(1.5, 9)
+    const pages = [pageModel([drawTile({ trim: small })], { lines: [tl] })]
+    const [solid, dashed, ...rest] = await strokesOfPage(pages)
+    expect(rest).toEqual([])
+    expect(solid?.dashPhasePt).toBe(0)
+    expect(dashed?.dashPt).toEqual(tl.strokes[1]?.dashMm.map(pt))
+    expect(dashed?.dashPhasePt).toBe(pt(phase ?? NaN))
+    const report = await inspectPdf(await composePdf(pages, encodedFor(pages)))
+    expect(at(report.pages, 0).content).toContain(
+      `[${(tl.strokes[1]?.dashMm ?? []).map(pt).join(' ')}] ${String(pt(phase ?? NaN))} d`,
+    )
+  })
+
   it('round-trips the page-model geometry within 0.001 mm, curves as c', async () => {
     const tl = linesFor(EVERY_TYPE, trim, 0, true)
     const pages = [pageModel([drawTile({ trim })], { lines: [tl] })]

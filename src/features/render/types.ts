@@ -49,8 +49,10 @@ export interface PageModel {
 }
 
 export interface LineStroke {
-  /** [] = solid; otherwise [dash, gap] in mm, phase 0. */
+  /** [] = solid; otherwise [dash, gap] in mm. */
   readonly dashMm: readonly Mm[]
+  /** How far into the dash pattern each subpath starts; absent = 0. */
+  readonly dashPhaseMm?: Mm
   /** Page mm. */
   readonly cmds: readonly PathCmd[]
 }

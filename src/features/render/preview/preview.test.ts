@@ -504,6 +504,21 @@ describe('drawPage composition lines', () => {
     ])
   })
 
+  it('offsets each stroke’s dash by its phase × k, as the PDF writes it, and 0 when the model has none', () => {
+    const small = { x: 20, y: 30, w: 12, h: 8 }
+    const tl = linesOf(
+      patchLines(DEFAULT_LINES, { thirds: true, centre: true, style: { widthMm: 2 } }),
+      small,
+    )
+    const phase = tl.strokes[1]?.dashPhaseMm
+    expect(phase).toBeCloseTo(1.5, 9)
+    const { strokes, calls } = draw(withLines([linesOf(), tl]))
+    expect(strokes.slice(0, 4).map((s) => s.dashOffset)).toEqual([0, 0, 0, (phase ?? NaN) * k])
+    expect(strokes[3]?.dash).toEqual(tl.strokes[1]?.dashMm.map((d) => d * k))
+    expect(blocksOf(calls)[1]).toEqual(blockFor(tl))
+    expect(strokes[4]?.dashOffset).toBe(0)
+  })
+
   it('sets the stroke state explicitly, whatever the context held before', () => {
     const rec = recordingCtx()
     Object.assign(rec.ctx, {
