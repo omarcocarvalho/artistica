@@ -59,6 +59,8 @@ export interface SettingsState extends SettingsData {
   deletePreset(name: string): void
   /** Appends sanitised presets under unique names, up to MAX_PRESETS, in one write. */
   addImportedPresets(list: readonly Preset[]): ImportedPresetsResult
+  /** Whether the latest storage write failed (storage full or blocked). A preset action that writes nothing reports false. */
+  lastWriteFailed(): boolean
   reset(): void
 }
 
@@ -94,9 +96,10 @@ function mergePageSetup(base: PageSetup, patch: PageSetupPatch): PageSetup {
 
 /**
  * Wrap a storage so that it can never throw: blocked site data, quota errors and private windows
- * must cost us persistence, not the app. Reads that fail look like "nothing saved".
+ * must cost us persistence, not the app. Reads that fail look like "nothing saved"; `setItem`
+ * returns false when the value was not stored.
  */
-export function safeStorage(inner: () => StateStorage): StateStorage {
+export function safeStorage(inner: () => StateStorage): StateStorage<boolean | undefined> {
   const guard = <T>(fn: (storage: StateStorage) => T, fallback: T): T => {
     try {
       return fn(inner())
@@ -106,11 +109,11 @@ export function safeStorage(inner: () => StateStorage): StateStorage {
   }
   return {
     getItem: (key) => guard((s) => s.getItem(key) as string | null, null),
-    setItem: (key, value) => {
+    setItem: (key, value) =>
       guard((s) => {
         s.setItem(key, value)
-      }, undefined)
-    },
+        return true
+      }, false),
     removeItem: (key) => {
       guard((s) => {
         s.removeItem(key)
@@ -140,15 +143,49 @@ export function initialUnitFromNavigator(
   }
 }
 
+const presetListsEqual = (a: readonly Preset[], b: readonly Preset[]): boolean =>
+  a.length === b.length &&
+  a.every((p, i) => {
+    const q = b[i]
+    return q !== undefined && presetEqual(p, q)
+  })
+
+/** The presets of a settings envelope written by this version, or null for anything else. */
+function presetsOfEnvelope(json: string): readonly Preset[] | null {
+  let envelope: unknown
+  try {
+    envelope = JSON.parse(json)
+  } catch {
+    return null
+  }
+  if (typeof envelope !== 'object' || envelope === null) return null
+  const { version, state } = envelope as { version?: unknown; state?: unknown }
+  if (version !== SETTINGS_VERSION || typeof state !== 'object' || state === null) return null
+  return parseSettings(state).presets
+}
+
 /**
  * Exported for tests; the app uses `useSettings`. `initialUnit` applies only when nothing valid
  * is saved (and after `reset()`); tests leave it at `'mm'` so jsdom's `en-US` does not leak in.
+ * `events` receives the `storage` events of other tabs: their presets are adopted, so a save here
+ * never drops a preset saved there. Other settings stay this tab's own.
  */
 export function createSettingsStore(
   storage: StateStorage = browserStorage,
   initialUnit: Unit = DEFAULT_SETTINGS.unit,
+  events: EventTarget | null = null,
 ) {
-  return create<SettingsState>()(
+  let writeFailed = false
+  let adopting = false
+  const tracked: StateStorage = {
+    getItem: (key) => storage.getItem(key),
+    setItem: (key, value) => {
+      if (adopting) return
+      writeFailed = storage.setItem(key, value) === false
+    },
+    removeItem: (key) => storage.removeItem(key),
+  }
+  const store = create<SettingsState>()(
     persist(
       (set, get) => ({
         ...DEFAULT_SETTINGS,
@@ -185,6 +222,7 @@ export function createSettingsStore(
           if (!linesEqual(next, get().lineDefaults)) set({ lineDefaults: next })
         },
         savePreset: (preset, opts) => {
+          writeFailed = false
           const name = typeof preset.name === 'string' ? presetName(preset.name) : null
           const clean = name === null ? null : sanitizePreset({ ...preset, name })
           if (clean === null) return 'bad-name'
@@ -203,6 +241,7 @@ export function createSettingsStore(
           return 'replaced'
         },
         renamePreset: (from, to) => {
+          writeFailed = false
           const { presets } = get()
           const at = presets.findIndex((p) => sameName(p.name, from))
           const current = presets[at]
@@ -216,11 +255,13 @@ export function createSettingsStore(
           return 'renamed'
         },
         deletePreset: (name) => {
+          writeFailed = false
           const { presets } = get()
           const next = presets.filter((p) => !sameName(p.name, name))
           if (next.length !== presets.length) set({ presets: next })
         },
         addImportedPresets: (list) => {
+          writeFailed = false
           const next = [...get().presets]
           const renamed: [string, string][] = []
           let added = 0
@@ -243,6 +284,7 @@ export function createSettingsStore(
           if (added > 0) set({ presets: next })
           return { added, renamed, skippedFull }
         },
+        lastWriteFailed: () => writeFailed,
         reset: () => {
           set({ ...DEFAULT_SETTINGS, unit: initialUnit, pageSetupNotes: [] })
         },
@@ -250,7 +292,7 @@ export function createSettingsStore(
       {
         name: SETTINGS_STORAGE_KEY,
         version: SETTINGS_VERSION,
-        storage: createJSONStorage(() => storage),
+        storage: createJSONStorage(() => tracked),
         partialize: ({
           pageSetup,
           unit,
@@ -281,6 +323,24 @@ export function createSettingsStore(
       },
     ),
   )
+  events?.addEventListener('storage', (event) => {
+    const { key, newValue } = event as Partial<Pick<StorageEvent, 'key' | 'newValue'>>
+    if (key !== SETTINGS_STORAGE_KEY || typeof newValue !== 'string') return
+    const presets = presetsOfEnvelope(newValue)
+    if (presets === null || presetListsEqual(presets, store.getState().presets)) return
+    // Storage already holds the other tab's envelope; writing ours back would overwrite its other settings.
+    adopting = true
+    try {
+      store.setState({ presets })
+    } finally {
+      adopting = false
+    }
+  })
+  return store
 }
 
-export const useSettings = createSettingsStore(browserStorage, initialUnitFromNavigator())
+export const useSettings = createSettingsStore(
+  browserStorage,
+  initialUnitFromNavigator(),
+  typeof window === 'undefined' ? null : window,
+)

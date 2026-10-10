@@ -53,9 +53,12 @@ type Confirm =
 
 type Report =
   | { readonly kind: 'status'; readonly title?: string; readonly text: string }
-  | { readonly kind: 'error'; readonly text: string; readonly seq: number }
+  | { readonly kind: 'error' | 'warning'; readonly text: string; readonly seq: number }
 
-type FocusTarget = { readonly kind: 'save' } | { readonly kind: 'rename'; readonly name: string }
+type FocusTarget =
+  | { readonly kind: 'save' }
+  | { readonly kind: 'replace' }
+  | { readonly kind: 'rename'; readonly name: string }
 
 type NameProblem = 'empty' | 'too-long' | null
 
@@ -199,6 +202,7 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
   const deletedIndex = useRef(0)
   const saveOpenRef = useRef<HTMLButtonElement>(null)
   const nameRef = useRef<HTMLInputElement>(null)
+  const replaceRef = useRef<HTMLButtonElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const renameButtons = useRef(new Map<string, HTMLButtonElement>())
@@ -209,12 +213,22 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
     if (target === null) return
     focusAfter.current = null
     if (target.kind === 'save') saveOpenRef.current?.focus()
+    else if (target.kind === 'replace') replaceRef.current?.focus()
     else renameButtons.current.get(target.name)?.focus()
   })
 
   const full = presets.length >= MAX_PRESETS
   const say = (text: string, title?: string) => {
     setReport({ kind: 'status', text, ...(title === undefined ? {} : { title }) })
+  }
+  const alertOf = (kind: 'error' | 'warning', text: string) => {
+    errorSeq.current += 1
+    setReport({ kind, text, seq: errorSeq.current })
+  }
+  /** Says `text`, unless the browser refused to store the change just made. */
+  const sayStored = (text: string, title?: string) => {
+    if (useSettings.getState().lastWriteFailed()) alertOf('warning', t('storageFailed'))
+    else say(text, title)
   }
 
   const stopEditing = () => {
@@ -229,14 +243,16 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
       .getState()
       .savePreset(presetFromCurrent(editing.value), replace ? { replace } : undefined)
     if (result === 'exists') {
+      // The Save and Cancel buttons give way to the conflict's own actions.
+      if (document.activeElement !== nameRef.current) focusAfter.current = { kind: 'replace' }
       setEditing({ ...editing, conflict: true })
       return
     }
     focusAfter.current = { kind: 'save' }
     setEditing(NONE)
     const name = presetName(editing.value) ?? editing.value
-    if (result === 'saved') say(t('save.saved', { name }))
-    if (result === 'replaced') say(t('save.replaced', { name }))
+    if (result === 'saved') sayStored(t('save.saved', { name }))
+    if (result === 'replaced') sayStored(t('save.replaced', { name }))
   }
 
   const submitRename = () => {
@@ -249,7 +265,7 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
     const to = result === 'renamed' ? (presetName(editing.value) ?? editing.from) : editing.from
     focusAfter.current = { kind: 'rename', name: to }
     setEditing(NONE)
-    if (to !== editing.from) say(t('rename.renamed', { from: editing.from, to }))
+    if (to !== editing.from) sayStored(t('rename.renamed', { from: editing.from, to }))
   }
 
   const doApply = (preset: Preset) => {
@@ -268,7 +284,7 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
       useSettings.getState().deletePreset(name)
       setConfirm((c) => (c === null ? null : { ...c, open: false }))
     })
-    say(t('delete.deleted', { name }))
+    sayStored(t('delete.deleted', { name }))
   }
 
   const afterDeleteFocus = (): HTMLElement | null =>
@@ -283,8 +299,7 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
     if (file === undefined) return
     const result = await readPresetFile(file)
     if (!result.ok) {
-      errorSeq.current += 1
-      setReport({ kind: 'error', text: t(ERROR_KEYS[result.error]), seq: errorSeq.current })
+      alertOf('error', t(ERROR_KEYS[result.error]))
       return
     }
     const { added, renamed, skippedFull } = useSettings
@@ -303,7 +318,7 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
       skippedFull > 0 ? t('import.full', { count: skippedFull, max: MAX_PRESETS }) : null,
       result.adjusted > 0 ? t('import.adjusted', { count: result.adjusted }) : null,
     ].filter((line): line is string => line !== null)
-    say(details.join(' '), t('import.imported', { count: added }))
+    sayStored(details.join(' '), t('import.imported', { count: added }))
   }
 
   const exportAll = () => {
@@ -331,6 +346,7 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
         conflictActions={
           <>
             <Button
+              ref={replaceRef}
               variant="primary"
               onClick={() => {
                 submitSave(true)
@@ -359,7 +375,9 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
           aria-disabled={full || undefined}
           aria-describedby={full ? fullId : undefined}
           onClick={() => {
-            if (!full) setEditing({ kind: 'save', value: '', conflict: false })
+            if (full) return
+            setReport(null)
+            setEditing({ kind: 'save', value: '', conflict: false })
           }}
         >
           {t('save.open')}
@@ -476,6 +494,7 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
                           }}
                           aria-label={t('row.renameLabel', { name: preset.name })}
                           onClick={() => {
+                            setReport(null)
                             setEditing({
                               kind: 'rename',
                               from: preset.name,
@@ -521,6 +540,11 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
           </div>
           {report?.kind === 'error' ? (
             <Callout key={report.seq} className="mt-4" tone="danger" live>
+              {report.text}
+            </Callout>
+          ) : null}
+          {report?.kind === 'warning' ? (
+            <Callout key={report.seq} className="mt-4" tone="warning" live role="alert">
               {report.text}
             </Callout>
           ) : null}

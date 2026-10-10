@@ -1062,4 +1062,181 @@ describe('presets (schema v5)', () => {
     store.getState().reset()
     expect(store.getState().presets).toEqual([])
   })
+
+  describe('presets saved in another tab', () => {
+    const envelope = (presets: readonly Preset[], over: Record<string, unknown> = {}) =>
+      JSON.stringify({
+        version: SETTINGS_VERSION,
+        state: { ...DEFAULT_SETTINGS, presets, ...over },
+      })
+    const storageEvent = (key: string | null, newValue: string | null) =>
+      Object.assign(new Event('storage'), { key, newValue })
+
+    it('adopts the presets of a write from another tab without writing storage, so a later save keeps them', () => {
+      const events = new EventTarget()
+      const storage = countingStorage()
+      const store = createSettingsStore(storage, 'mm', events)
+      store.getState().savePreset(make('Mine'))
+      const writes = storage.writes()
+      events.dispatchEvent(
+        storageEvent(SETTINGS_STORAGE_KEY, envelope([make('Mine'), make('Theirs')])),
+      )
+      expect(names(store)).toEqual(['Mine', 'Theirs'])
+      expect(storage.writes()).toBe(writes)
+      store.getState().savePreset(make('Third'))
+      expect((saved(storage).state.presets as Preset[]).map((p) => p.name)).toEqual([
+        'Mine',
+        'Theirs',
+        'Third',
+      ])
+    })
+
+    it('adopts only the presets: the other settings of this tab stay', () => {
+      const events = new EventTarget()
+      const store = createSettingsStore(memoryStorage(), 'mm', events)
+      events.dispatchEvent(
+        storageEvent(
+          SETTINGS_STORAGE_KEY,
+          envelope([make('Theirs')], { theme: 'dark', unit: 'in' }),
+        ),
+      )
+      expect(names(store)).toEqual(['Theirs'])
+      expect(store.getState().theme).toBe('auto')
+      expect(store.getState().unit).toBe('mm')
+    })
+
+    it('sanitises the adopted presets as a load does', () => {
+      const events = new EventTarget()
+      const store = createSettingsStore(memoryStorage(), 'mm', events)
+      const raw = { ...make('A'), imageId: 'x', study: { ...study, blurPct: 900 } }
+      events.dispatchEvent(storageEvent(SETTINGS_STORAGE_KEY, envelope([raw, make('a')])))
+      expect(names(store)).toEqual(['A'])
+      expect(store.getState().presets[0]?.study.blurPct).toBe(100)
+      expect(store.getState().presets[0]).not.toHaveProperty('imageId')
+    })
+
+    it.each([
+      ['a rename', [make('Mine'), make('Renamed')]],
+      ['a replace', [make('Mine'), make('Theirs', { blurPct: 60 })]],
+      ['a reorder', [make('Theirs'), make('Mine')]],
+    ])('adopts a list of the same length that differs by %s', (_label, theirs) => {
+      const events = new EventTarget()
+      const store = createSettingsStore(memoryStorage(), 'mm', events)
+      store.getState().savePreset(make('Mine'))
+      store.getState().savePreset(make('Theirs'))
+      events.dispatchEvent(storageEvent(SETTINGS_STORAGE_KEY, envelope(theirs)))
+      expect(store.getState().presets).toEqual(theirs)
+    })
+
+    it('an equal list changes nothing', () => {
+      const events = new EventTarget()
+      const store = createSettingsStore(memoryStorage(), 'mm', events)
+      store.getState().savePreset(make('A'))
+      const listened: unknown[] = []
+      store.subscribe((s) => listened.push(s))
+      events.dispatchEvent(storageEvent(SETTINGS_STORAGE_KEY, envelope([make('A')])))
+      expect(listened).toEqual([])
+    })
+
+    it.each([
+      ['another key', 'other', envelope([])],
+      ['a cleared storage', null, null],
+      ['a removed value', SETTINGS_STORAGE_KEY, null],
+      ['unreadable JSON', SETTINGS_STORAGE_KEY, '{oops'],
+      ['an envelope that is not an object', SETTINGS_STORAGE_KEY, '[1]'],
+      ['an envelope without a state', SETTINGS_STORAGE_KEY, JSON.stringify({ version: 5 })],
+      [
+        'an older version, which does not know presets',
+        SETTINGS_STORAGE_KEY,
+        JSON.stringify({ version: 4, state: { ...DEFAULT_SETTINGS, presets: [] } }),
+      ],
+      [
+        'a newer version',
+        SETTINGS_STORAGE_KEY,
+        JSON.stringify({ version: 6, state: { ...DEFAULT_SETTINGS, presets: [] } }),
+      ],
+    ])('ignores %s', (_label, key, newValue) => {
+      const events = new EventTarget()
+      const store = createSettingsStore(memoryStorage(), 'mm', events)
+      store.getState().savePreset(make('Mine'))
+      events.dispatchEvent(storageEvent(key, newValue))
+      expect(names(store)).toEqual(['Mine'])
+    })
+  })
+
+  describe('a failed storage write', () => {
+    type Store = ReturnType<typeof createSettingsStore>
+    const failing = (): StateStorage => ({
+      getItem: () => null,
+      setItem: () => {
+        throw new Error('QuotaExceededError')
+      },
+      removeItem: () => undefined,
+    })
+
+    it('safeStorage reports whether a write was stored', () => {
+      expect(safeStorage(() => failing()).setItem('k', 'v')).toBe(false)
+      expect(safeStorage(() => memoryStorage()).setItem('k', 'v')).toBe(true)
+    })
+
+    it.each([
+      ['savePreset', (s: Store) => s.getState().savePreset(make('B'))],
+      [
+        'savePreset with replace',
+        (s: Store) => s.getState().savePreset(make('A', { blurPct: 60 }), { replace: true }),
+      ],
+      ['renamePreset', (s: Store) => s.getState().renamePreset('A', 'Z')],
+      [
+        'deletePreset',
+        (s: Store) => {
+          s.getState().deletePreset('A')
+        },
+      ],
+      ['addImportedPresets', (s: Store) => s.getState().addImportedPresets([make('C')])],
+    ])('%s reports it through lastWriteFailed', (_label, act) => {
+      let fail = false
+      const inner = memoryStorage()
+      const storage = safeStorage(() => (fail ? failing() : inner))
+      const store = createSettingsStore(storage)
+      store.getState().savePreset(make('A'))
+      expect(store.getState().lastWriteFailed()).toBe(false)
+      fail = true
+      act(store)
+      expect(store.getState().lastWriteFailed()).toBe(true)
+    })
+
+    it.each([
+      ['savePreset to a taken name', (s: Store) => s.getState().savePreset(make('a'))],
+      ['an equal replace', (s: Store) => s.getState().savePreset(make('A'), { replace: true })],
+      ['renamePreset of a missing name', (s: Store) => s.getState().renamePreset('Z', 'Y')],
+      [
+        'deletePreset of a missing name',
+        (s: Store) => {
+          s.getState().deletePreset('Z')
+        },
+      ],
+      ['addImportedPresets of nothing', (s: Store) => s.getState().addImportedPresets([])],
+    ])('%s writes nothing and reports no failure', (_label, act) => {
+      let fail = false
+      const storage = safeStorage(() => (fail ? failing() : memoryStorage()))
+      const store = createSettingsStore(storage)
+      store.getState().savePreset(make('A'))
+      fail = true
+      store.getState().savePreset(make('B'))
+      expect(store.getState().lastWriteFailed()).toBe(true)
+      act(store)
+      expect(store.getState().lastWriteFailed()).toBe(false)
+    })
+
+    it('a write that succeeds again clears the failure', () => {
+      let fail = true
+      const storage = safeStorage(() => (fail ? failing() : memoryStorage()))
+      const store = createSettingsStore(storage)
+      store.getState().savePreset(make('A'))
+      expect(store.getState().lastWriteFailed()).toBe(true)
+      fail = false
+      store.getState().savePreset(make('B'))
+      expect(store.getState().lastWriteFailed()).toBe(false)
+    })
+  })
 })
