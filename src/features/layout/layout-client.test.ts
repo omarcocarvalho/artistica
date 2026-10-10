@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_PAGE_SETUP } from '../../shared/model/page-setup'
 import { createLayoutClient, isAbortError, type LayoutEngine } from './layout-client'
+import type { ManualLayout } from './manual'
 import { item } from './test-support/fixtures'
 import type { LayoutItemInput, LayoutResult } from './types'
 
@@ -15,13 +16,14 @@ const result = (n: number): LayoutResult => ({
 function fakeEngine() {
   const calls: {
     items: readonly LayoutItemInput[]
+    manual: ManualLayout | null | undefined
     resolve: (r: LayoutResult) => void
     reject: (e: unknown) => void
   }[] = []
   const engine: LayoutEngine = {
-    computeLayout: (_setup, items) =>
+    computeLayout: (_setup, items, manual) =>
       new Promise((resolve, reject) => {
-        calls.push({ items, resolve, reject })
+        calls.push({ items, manual, resolve, reject })
       }),
   }
   return { engine, calls }
@@ -29,6 +31,14 @@ function fakeEngine() {
 
 const flush = () => new Promise<void>((r) => setTimeout(r, 0))
 const items = (id: string) => [item(id, 1)]
+const manualFor = (id: string): ManualLayout => ({
+  orientation: 'portrait',
+  pageSize: { w: 210, h: 297 },
+  content: { x: 10, y: 10, w: 190, h: 277 },
+  gutter: 6,
+  pageCount: 1,
+  blocks: [{ blockId: `${id}#0`, page: 0, x: 10, y: 10, tileW: 50, turned: false }],
+})
 
 describe('createLayoutClient', () => {
   it('resolves a single call with the engine result', async () => {
@@ -37,6 +47,36 @@ describe('createLayoutClient', () => {
     const p = layout(DEFAULT_PAGE_SETUP, items('a'))
     calls[0]?.resolve(result(1))
     await expect(p).resolves.toEqual(result(1))
+  })
+
+  it('passes the manual layout to the engine, and none when it is not given', async () => {
+    const { engine, calls } = fakeEngine()
+    const layout = createLayoutClient(() => engine)
+    const manual = manualFor('a')
+    const p1 = layout(DEFAULT_PAGE_SETUP, items('a'), manual)
+    expect(calls[0]?.manual).toBe(manual)
+    calls[0]?.resolve(result(1))
+    await p1
+    const p2 = layout(DEFAULT_PAGE_SETUP, items('a'))
+    await flush()
+    expect(calls[1]?.manual).toBeUndefined()
+    calls[1]?.resolve(result(2))
+    await p2
+  })
+
+  it('runs the newest call with its own manual layout when an arranged call is superseded', async () => {
+    const { engine, calls } = fakeEngine()
+    const layout = createLayoutClient(() => engine)
+    const a = layout(DEFAULT_PAGE_SETUP, items('a'), manualFor('a'))
+    const b = layout(DEFAULT_PAGE_SETUP, items('b'), manualFor('b'))
+    const c = layout(DEFAULT_PAGE_SETUP, items('c'), manualFor('c'))
+    await expect(a).rejects.toSatisfy(isAbortError)
+    await expect(b).rejects.toSatisfy(isAbortError)
+    calls[0]?.resolve(result(1))
+    await flush()
+    expect(calls.map((x) => x.manual?.blocks[0]?.blockId)).toEqual(['a#0', 'c#0'])
+    calls[1]?.resolve(result(3))
+    await expect(c).resolves.toEqual(result(3))
   })
 
   it('creates the engine lazily, once', async () => {

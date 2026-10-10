@@ -1,6 +1,7 @@
 import type { ImageId, SizeMode } from '../../shared/model/image'
 import type { SizeMm } from '../../shared/model/paper'
 import type { Mm } from '../../shared/model/units'
+import type { ManualLayout } from './manual'
 
 /** One layout unit: one copy of an image, with one tile per selected study version. */
 export interface LayoutItemInput {
@@ -31,4 +32,9 @@ export interface LayoutResult {
   readonly pageSize: SizeMm // oriented
   readonly pages: readonly { readonly placements: readonly Placement[] }[]
   readonly suggestedPerPage: number // "this paper fits N references comfortably per page"
+  readonly manual?: ManualOutcome // only when a manual layout was given (M5-R14)
 }
+/** What became of a manual layout in one run. `adjusted`: blocks added, dropped, refitted or packed again. */
+export type ManualOutcome =
+  | { readonly kind: 'kept' | 'adjusted'; readonly manual: ManualLayout }
+  | { readonly kind: 'dropped'; readonly reason: 'paper' | 'no-longer-fits' | 'empty' }

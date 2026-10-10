@@ -4,6 +4,7 @@ import { computeLayout } from './compute-layout'
 import { expectLayoutInvariants, TOL } from './test-support/invariants'
 import { nth } from './nth'
 import { item, realisticItems } from './test-support/fixtures'
+import { GOLDEN_CASES } from './test-support/golden-cases'
 import type { LayoutResult, RectMm } from './types'
 
 const A4: PageSetup = DEFAULT_PAGE_SETUP // content box {x:10, y:10, w:190, h:277}, gutter 6
@@ -268,4 +269,16 @@ describe('study groups (owner Q15)', () => {
       expect(gap).toBeCloseTo(g, 9)
     }
   })
+})
+
+describe('computeLayout: no manual layout is the automatic engine (M5-R8)', () => {
+  it.each(GOLDEN_CASES)(
+    'gives the same result with null or no manual layout (%s)',
+    (_, setup, items) => {
+      const auto = computeLayout(setup, items)
+      expect('manual' in auto).toBe(false)
+      expect(computeLayout(setup, items, null)).toStrictEqual(auto)
+      expect(computeLayout(setup, items, undefined)).toStrictEqual(auto)
+    },
+  )
 })

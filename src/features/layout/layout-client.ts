@@ -1,11 +1,16 @@
 import { wrap } from 'comlink'
 import type { PageSetup } from '../../shared/model/page-setup'
+import type { ManualLayout } from './manual'
 import type { LayoutWorkerApi } from './worker-api'
 import type { LayoutItemInput, LayoutResult } from './types'
 
 /** Anything that computes a layout asynchronously: the Comlink-wrapped worker, or a fake in tests. */
 export interface LayoutEngine {
-  computeLayout(setup: PageSetup, items: readonly LayoutItemInput[]): Promise<LayoutResult>
+  computeLayout(
+    setup: PageSetup,
+    items: readonly LayoutItemInput[],
+    manual?: ManualLayout | null,
+  ): Promise<LayoutResult>
   /** True once the engine (e.g. its worker) has died; the client then creates a fresh one. */
   isDead?(): boolean
 }
@@ -13,6 +18,7 @@ export interface LayoutEngine {
 export type LayoutFn = (
   setup: PageSetup,
   items: readonly LayoutItemInput[],
+  manual?: ManualLayout | null,
 ) => Promise<LayoutResult>
 
 export function abortError(): DOMException {
@@ -33,6 +39,7 @@ export function isAbortError(error: unknown): boolean {
 interface Job {
   readonly setup: PageSetup
   readonly items: readonly LayoutItemInput[]
+  readonly manual: ManualLayout | null | undefined
   readonly resolve: (r: LayoutResult) => void
   readonly reject: (e: unknown) => void
   settled: boolean
@@ -63,7 +70,7 @@ export function createLayoutClient(createEngine: () => LayoutEngine): LayoutFn {
     new Promise<LayoutResult>((resolve) => {
       if (engine?.isDead?.() === true) engine = null
       engine ??= createEngine()
-      resolve(engine.computeLayout(job.setup, job.items))
+      resolve(engine.computeLayout(job.setup, job.items, job.manual))
     })
       .then(
         (result) => {
@@ -85,9 +92,9 @@ export function createLayoutClient(createEngine: () => LayoutEngine): LayoutFn {
       })
   }
 
-  return (setup, items) =>
+  return (setup, items, manual) =>
     new Promise<LayoutResult>((resolve, reject) => {
-      const job: Job = { setup, items, resolve, reject, settled: false }
+      const job: Job = { setup, items, manual, resolve, reject, settled: false }
       for (const old of [running, waiting]) {
         if (old !== null) {
           settle(old, () => {
@@ -119,7 +126,8 @@ function spawnWorkerEngine(): LayoutEngine {
   worker.addEventListener('error', die('Layout worker failed'))
   worker.addEventListener('messageerror', die('Layout worker sent an unreadable message'))
   return {
-    computeLayout: (setup, items) => Promise.race([remote.computeLayout(setup, items), failure]),
+    computeLayout: (setup, items, manual) =>
+      Promise.race([remote.computeLayout(setup, items, manual), failure]),
     isDead: () => dead,
   }
 }
