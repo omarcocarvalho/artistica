@@ -38,6 +38,9 @@ function untabbable(browserName: string): string {
   return browserName === 'webkit' ? 'input[type="color"]' : ''
 }
 
+// CI's Linux Firefox has no WebGL (C1-R1). Turned off here too, so a local run takes CI's path.
+test.use({ launchOptions: { firefoxUserPrefs: { 'webgl.disabled': true } } })
+
 let guard: NetworkGuard | undefined
 
 function startApp(page: Page): AppPage {
@@ -62,7 +65,7 @@ async function loaded(page: Page, { preview = true } = {}): Promise<AppPage> {
 type Check = (label: string) => Promise<void>
 
 /** Every desktop screen and state, calling `check` in each. */
-async function desktopTour(page: Page, check: Check): Promise<void> {
+async function desktopTour(page: Page, check: Check, browserName: string): Promise<void> {
   const app = startApp(page)
   await app.goto()
   await check('empty workspace')
@@ -111,10 +114,14 @@ async function desktopTour(page: Page, check: Check): Promise<void> {
   await app.setAllLineSwitches(true)
   await app.setGuide('face', true)
   await app.setGuide('pose', true)
-  await expect(
-    app.guideGroup('face').getByRole('button', { name: 'Download & turn on' }),
-  ).toBeVisible()
-  await check('Lines tab: every line on, face and pose waiting for their download')
+  const withoutWebGl = browserName === 'firefox'
+  for (const kind of ['face', 'pose'] as const)
+    expect(await app.expectGuideSettled(kind), kind).toBe(withoutWebGl ? 'unsupported' : 'box')
+  await check(
+    withoutWebGl
+      ? 'Lines tab: every line on, face and pose with the no-WebGL note'
+      : 'Lines tab: every line on, face and pose waiting for their download',
+  )
   await app.setGuide('face', false)
   await app.setGuide('pose', false)
   await app.setAllLineSwitches(false)
@@ -226,12 +233,17 @@ test.describe('every screen and state is axe-clean (desktop)', () => {
   for (const scheme of THEMES) {
     test(`4.1.2, 1.4.3, 1.4.11 and the rest of axe: the desktop tour (${scheme})`, async ({
       page,
+      browserName,
     }) => {
       test.setTimeout(300_000)
       await page.emulateMedia({ colorScheme: scheme })
-      await desktopTour(page, async () => {
-        await expectNoAxeViolations(page)
-      })
+      await desktopTour(
+        page,
+        async () => {
+          await expectNoAxeViolations(page)
+        },
+        browserName,
+      )
     })
   }
 })
@@ -260,10 +272,14 @@ test.describe('2.5.8 target size', () => {
     test.setTimeout(180_000)
     await page.setViewportSize({ width: 1280, height: 900 })
     const found: string[] = []
-    await desktopTour(page, async (label) => {
-      for (const t of await smallTargets(page, DESKTOP_MIN_TARGET_PX, true))
-        found.push(`${label}: ${t}`)
-    })
+    await desktopTour(
+      page,
+      async (label) => {
+        for (const t of await smallTargets(page, DESKTOP_MIN_TARGET_PX, true))
+          found.push(`${label}: ${t}`)
+      },
+      browserName,
+    )
     expect(found, browserName).toEqual([])
   })
 
