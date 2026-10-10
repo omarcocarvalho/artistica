@@ -165,9 +165,9 @@
     border-radius: var(--radius-sketch-sm);
     background: var(--color-surface-raised);
     font-size: var(--text-sm);
-    overflow-wrap: anywhere;
     font-weight: var(--weight-semibold);
     cursor: pointer;
+    overflow-wrap: anywhere;
   }
   .ds-chip[aria-pressed='true'] {
     background: var(--color-accent-soft);
