@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.5.0](https://github.com/omarcocarvalho/artistica/compare/v0.4.0...v0.5.0) (2026-10-10)
+
+
+### Features
+
+* **app:** add the Presets dialog with JSON export and import ([#174](https://github.com/omarcocarvalho/artistica/issues/174)) ([0afa530](https://github.com/omarcocarvalho/artistica/commit/0afa53001c61b1d8490de6b6e046a82349700327))
+* **app:** arrange photos on the phone ([#178](https://github.com/omarcocarvalho/artistica/issues/178)) ([bb0d357](https://github.com/omarcocarvalho/artistica/commit/bb0d357bad8345078e09bbe9cd7d03b366fab941))
+* **app:** export inline on the phone and show why Export is off ([#170](https://github.com/omarcocarvalho/artistica/issues/170)) ([06bbde1](https://github.com/omarcocarvalho/artistica/commit/06bbde199ffa0b9a80e2829802a46548771fe366))
+* **app:** replace the placeholder logo ([#169](https://github.com/omarcocarvalho/artistica/issues/169)) ([be98972](https://github.com/omarcocarvalho/artistica/commit/be989721249d4781fa19d4d5fe6b4e1686860108))
+* **layout:** keep manual edits through photo and setting changes ([#167](https://github.com/omarcocarvalho/artistica/issues/167)) ([a5a926e](https://github.com/omarcocarvalho/artistica/commit/a5a926ee2d7a135b12ccfddca722feadfcf6000e))
+* **render:** drag, swap and resize photos on the page ([#176](https://github.com/omarcocarvalho/artistica/issues/176)) ([0c6607e](https://github.com/omarcocarvalho/artistica/commit/0c6607ee5af11f4f355897ac974fe0da963c922b))
+* **settings:** add the preset model and file format ([#155](https://github.com/omarcocarvalho/artistica/issues/155)) ([3d2b787](https://github.com/omarcocarvalho/artistica/commit/3d2b787a333fb1ccbc4b0a98c27f52adab52b286))
+* **settings:** keep named presets on this device (schema v5) ([#166](https://github.com/omarcocarvalho/artistica/issues/166)) ([66b5730](https://github.com/omarcocarvalho/artistica/commit/66b573084d444eae105b2824c1507127b8c97c15))
+
+
+### Bug Fixes
+
+* **app:** announce layout updates only when slow, and label image details ([#159](https://github.com/omarcocarvalho/artistica/issues/159)) ([fb54e4c](https://github.com/omarcocarvalho/artistica/commit/fb54e4c04af0b3246c990e87a42a20608aa94906))
+* **images:** bound waiting downloads and let imports be cancelled ([#161](https://github.com/omarcocarvalho/artistica/issues/161)) ([bed4bf1](https://github.com/omarcocarvalho/artistica/commit/bed4bf1b2dec4f9cd57044fb302ecb1dd9cd0851))
+* **images:** move and resize the crop without dragging ([#182](https://github.com/omarcocarvalho/artistica/issues/182)) ([36f0ed3](https://github.com/omarcocarvalho/artistica/commit/36f0ed3e3620ac6e1e835ccafa18a3f5e394a74e))
+* **lines:** scale the centre-line dash with the tile ([#154](https://github.com/omarcocarvalho/artistica/issues/154)) ([10d59f9](https://github.com/omarcocarvalho/artistica/commit/10d59f9101760fe059630b5afc4f97f0801e5155))
+* **preview:** end the arrangement on full undo and keep focus on Undo and Re-run ([#185](https://github.com/omarcocarvalho/artistica/issues/185)) ([1778152](https://github.com/omarcocarvalho/artistica/commit/17781526f6112cdc2c8ad0162f8a505c8c0dc1ed))
+* **preview:** keep focus where it was moved before a closed sheet returns it ([#187](https://github.com/omarcocarvalho/artistica/issues/187)) ([1a330f6](https://github.com/omarcocarvalho/artistica/commit/1a330f69bd4f500a23f4657ac93a34dd0a43a14e))
+* **preview:** keep the arrange selection when tabbing back and move photos between pages by keyboard ([#180](https://github.com/omarcocarvalho/artistica/issues/180)) ([c72c244](https://github.com/omarcocarvalho/artistica/commit/c72c24443a4178bb1cd310954429e6d927214d2f))
+* **settings:** keep presets saved in another tab and report failed saves ([#184](https://github.com/omarcocarvalho/artistica/issues/184)) ([5d4dd67](https://github.com/omarcocarvalho/artistica/commit/5d4dd67a737ccf62a58958d97e1ea8ebd6db6ab6))
+* **ui:** move segmented controls with all four arrows, Home and End ([#158](https://github.com/omarcocarvalho/artistica/issues/158)) ([c2ca3d0](https://github.com/omarcocarvalho/artistica/commit/c2ca3d0c87812a2bc1ba88a06e18b7f3766287af))
+
+
+### Performance Improvements
+
+* **app:** update the preview within 200 ms of a setting change ([#177](https://github.com/omarcocarvalho/artistica/issues/177)) ([944e126](https://github.com/omarcocarvalho/artistica/commit/944e12638263ac69e63424e0f4cdddab049dd8a6))
+* **render:** render study tiles only for pages near the view ([#168](https://github.com/omarcocarvalho/artistica/issues/168)) ([22b807c](https://github.com/omarcocarvalho/artistica/commit/22b807cc2859319b0acea689bb91b64b51bbc3b7))
+
 ## [0.4.0](https://github.com/omarcocarvalho/artistica/compare/v0.3.0...v0.4.0) (2026-10-09)
 
 
