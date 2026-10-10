@@ -66,8 +66,36 @@ describe('ImageList', () => {
       makeLoadedImage({ name: 'sharp.jpg', pxW: 4000, pxH: 3000 }),
     )
     renderWithProviders(<ImageList onEdit={() => undefined} />)
-    expect(screen.getAllByText(/DPI/)).toHaveLength(1)
+    expect(screen.getAllByText(/^\d+ DPI$/)).toHaveLength(1)
     expect(screen.getByText('203 DPI')).toBeInTheDocument()
+  })
+
+  it('reads each detail once: the short text is hidden and a spoken expansion follows it', () => {
+    load(makeLoadedImage({ name: 'old.gif', pxW: 480, pxH: 640, edits: { copies: 3 } }))
+    renderWithProviders(<ImageList onEdit={() => undefined} />)
+    const list = screen.getByRole('list', { name: 'Loaded images' })
+    for (const [short, spoken] of [
+      ['480 × 640', '480 by 640 pixels'],
+      ['×3', '3 copies'],
+      ['203 DPI', 'Low resolution: 203 DPI'],
+    ] as const) {
+      expect(within(list).getByText(short)).toHaveAttribute('aria-hidden', 'true')
+      const expansion = within(list).getByText(spoken)
+      expect(expansion).toHaveClass('sr-only')
+      expect(expansion.closest('[aria-hidden="true"]')).toBeNull()
+    }
+    expect(screen.getByRole('listitem')).toHaveTextContent(
+      /480 by 640 pixels.*3 copies.*Low resolution: 203 DPI/,
+    )
+  })
+
+  it('puts aria-label only on elements with a role that takes a name', () => {
+    load(makeLoadedImage({ name: 'old.gif', pxW: 480, pxH: 640, edits: { copies: 3 } }))
+    renderWithProviders(<ImageList onEdit={() => undefined} />)
+    const named = screen
+      .getByRole('list', { name: 'Loaded images' })
+      .querySelectorAll('[aria-label]')
+    for (const el of named) expect(el.tagName).toBe('BUTTON')
   })
 
   it('selects on click and marks the selected row', async () => {

@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { printedPixelSize, type ImageId } from '../../../shared/model/image'
 import { mmToUnit, roundForUnit, type Unit } from '../../../shared/model/units'
-import { Badge, Button, Dialog, IconButton } from '../../../shared/ui'
+import { Badge, Button, Dialog, IconButton, VisuallyHidden } from '../../../shared/ui'
 import { useSettings } from '../../settings'
 import { dpiInfo } from '../dpi'
 import { removalFocusTarget, rowAction, uploadButton } from '../focus-after-removal'
@@ -65,26 +65,28 @@ function Row({
           {image.name}
         </button>
         <div className="text-ink-muted flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm">
-          <span
-            className="font-mono tabular-nums"
-            aria-label={t('list.pixelsLabel', { w: image.originalPxW, h: image.originalPxH })}
-          >
+          <span className="font-mono tabular-nums" aria-hidden="true">
             {t('list.pixels', { w: image.originalPxW, h: image.originalPxH })}
           </span>
+          <VisuallyHidden>
+            {t('list.pixelsLabel', { w: image.originalPxW, h: image.originalPxH })}
+          </VisuallyHidden>
           <span aria-hidden="true">{t('list.separator')}</span>
           <span>{sizeLabel}</span>
           {image.edits.copies > 1 && (
             <Badge tone="accent">
-              <span aria-label={t('list.copiesLabel', { count: image.edits.copies })}>
-                {t('list.copies', { count: image.edits.copies })}
-              </span>
+              <span aria-hidden="true">{t('list.copies', { count: image.edits.copies })}</span>
+              <VisuallyHidden>
+                {t('list.copiesLabel', { count: image.edits.copies })}
+              </VisuallyHidden>
             </Badge>
           )}
           {info.low && (
             <Badge tone="warning">
-              <span aria-label={t('list.lowDpiLabel', { dpi: Math.round(info.dpi) })}>
-                {t('list.dpi', { dpi: Math.round(info.dpi) })}
-              </span>
+              <span aria-hidden="true">{t('list.dpi', { dpi: Math.round(info.dpi) })}</span>
+              <VisuallyHidden>
+                {t('list.lowDpiLabel', { dpi: Math.round(info.dpi) })}
+              </VisuallyHidden>
             </Badge>
           )}
         </div>

@@ -138,8 +138,15 @@
     right: 6px;
     bottom: -2px;
     height: 6px;
-    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 8' preserveAspectRatio='none'><path d='M2 5 C 25 1, 50 7, 75 3 S 95 4, 98 4' fill='none' stroke='%23b0432a' stroke-width='3.2' stroke-linecap='round'/></svg>")
+    background: var(--color-accent);
+    mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 8' preserveAspectRatio='none'><path d='M2 5 C 25 1, 50 7, 75 3 S 95 4, 98 4' fill='none' stroke='black' stroke-width='3.2' stroke-linecap='round'/></svg>")
       center / 100% 100% no-repeat;
+  }
+  @media (forced-colors: active) {
+    .ds-tab[aria-selected='true']::after {
+      forced-color-adjust: none;
+      background: Highlight;
+    }
   }
   .ds-tab__badge {
     font-size: var(--text-2xs);

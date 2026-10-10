@@ -57,7 +57,7 @@ vi.mock('../../features/images', () => {
 
 import { usePages } from '../pages-store'
 import { useAppUi } from '../state/useAppUi'
-import { PreviewSlot, PreviewToolbar } from './PreviewSlot'
+import { PreviewSlot, PreviewToolbar, UPDATING_ANNOUNCE_DELAY_MS } from './PreviewSlot'
 
 const layout = (pages: number) =>
   ({
@@ -228,20 +228,9 @@ describe('PreviewSlot', () => {
       screen.getByText(/This page setup leaves no room for images\./).closest('[role="status"]'),
     ).not.toBeNull()
   })
-  it('keeps the "Updating layout…" live region mounted and only changes its text', () => {
+  it('keeps the status live region mounted and empty while idle', () => {
     render(<PreviewSlot />)
-    const region = screen.getByRole('status')
-    expect(region).toBeEmptyDOMElement()
-    act(() => {
-      usePages.setState({ status: 'computing' })
-    })
-    expect(screen.getByRole('status')).toBe(region)
-    expect(region).toHaveTextContent('Updating layout…')
-    act(() => {
-      usePages.setState({ status: 'idle' })
-    })
-    expect(screen.getByRole('status')).toBe(region)
-    expect(region).toBeEmptyDOMElement()
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
   it('shows a persistent error callout while the layout has failed', () => {
     act(() => {
@@ -255,6 +244,94 @@ describe('PreviewSlot', () => {
       usePages.setState({ status: 'idle', layout: layout(1) })
     })
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
+describe('PreviewSlot status region (M5-R24)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+  const setStatus = (status: 'idle' | 'computing' | 'error') => {
+    act(() => {
+      usePages.setState({ status })
+    })
+  }
+  const wait = (ms: number) => {
+    act(() => {
+      vi.advanceTimersByTime(ms)
+    })
+  }
+
+  it('waits 500 ms', () => {
+    expect(UPDATING_ANNOUNCE_DELAY_MS).toBe(500)
+  })
+
+  it('says nothing for a layout that ends sooner, though the region is busy at once', () => {
+    const { container } = render(<PreviewSlot />)
+    const region = screen.getByRole('status')
+    setStatus('computing')
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull()
+    expect(region).toBeEmptyDOMElement()
+    wait(UPDATING_ANNOUNCE_DELAY_MS - 1)
+    expect(region).toBeEmptyDOMElement()
+    setStatus('idle')
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull()
+    expect(region).toBeEmptyDOMElement()
+    wait(5000)
+    expect(region).toBeEmptyDOMElement()
+  })
+
+  it('says "Updating layout…" once the layout has computed for the delay, then "Layout updated." in the same region', () => {
+    render(<PreviewSlot />)
+    const region = screen.getByRole('status')
+    setStatus('computing')
+    wait(UPDATING_ANNOUNCE_DELAY_MS)
+    expect(screen.getByRole('status')).toBe(region)
+    expect(region).toHaveTextContent(/^Updating layout…$/)
+    setStatus('idle')
+    expect(screen.getByRole('status')).toBe(region)
+    expect(region).toHaveTextContent(/^Layout updated\.$/)
+  })
+
+  it('clears "Layout updated." when the next layout starts, and stays silent if that one is fast', () => {
+    render(<PreviewSlot />)
+    const region = screen.getByRole('status')
+    setStatus('computing')
+    wait(UPDATING_ANNOUNCE_DELAY_MS)
+    setStatus('idle')
+    setStatus('computing')
+    expect(region).toBeEmptyDOMElement()
+    wait(100)
+    setStatus('idle')
+    expect(region).toBeEmptyDOMElement()
+  })
+
+  it('times each layout from its own start', () => {
+    render(<PreviewSlot />)
+    const region = screen.getByRole('status')
+    setStatus('computing')
+    wait(400)
+    setStatus('idle')
+    setStatus('computing')
+    wait(400)
+    expect(region).toBeEmptyDOMElement()
+    wait(100)
+    expect(region).toHaveTextContent('Updating layout…')
+  })
+
+  it('does not say "Layout updated." when the slow layout failed', () => {
+    render(<PreviewSlot />)
+    const region = screen.getByRole('status')
+    setStatus('computing')
+    wait(UPDATING_ANNOUNCE_DELAY_MS)
+    act(() => {
+      usePages.setState({ status: 'error', layout: null, pages: [] })
+    })
+    expect(region).toBeEmptyDOMElement()
+    expect(screen.getByRole('alert')).toBeInTheDocument()
   })
 })
 

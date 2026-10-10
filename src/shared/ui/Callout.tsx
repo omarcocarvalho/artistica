@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode } from 'react'
+import { useEffect, useState, type HTMLAttributes, type ReactNode } from 'react'
 import { cx } from './cx'
 import { Icon, type IconName } from './Icon'
 
@@ -34,6 +34,12 @@ export function Callout({
   ...rest
 }: CalloutProps) {
   const role = live ? (tone === 'danger' ? 'alert' : 'status') : undefined
+  const [mounted, setMounted] = useState(!live)
+  useEffect(() => {
+    // A second commit, so the live region is in the page before its message.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true)
+  }, [])
   return (
     <div
       role={role}
@@ -42,8 +48,8 @@ export function Callout({
     >
       <Icon name={ICONS[tone]} />
       <div className="ds-note__body">
-        {title ? <strong>{title}</strong> : null}
-        {children}
+        {mounted && title ? <strong>{title}</strong> : null}
+        {mounted ? children : null}
         {actions ? <div className="ds-note__actions">{actions}</div> : null}
       </div>
     </div>

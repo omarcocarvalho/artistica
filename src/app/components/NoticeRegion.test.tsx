@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { act } from 'react'
+import { act, useLayoutEffect, useRef } from 'react'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { initI18n } from '../../shared/i18n'
 import { useNotices } from '../state/useNotices'
@@ -30,6 +30,28 @@ describe('NoticeRegion', () => {
     })
     await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(screen.queryByText('Nope')).not.toBeInTheDocument()
+  })
+  it('mounts an error toast with its alert empty, then inserts the message (M1 #70)', () => {
+    const seen: string[] = []
+    function Probe() {
+      const ref = useRef<HTMLDivElement>(null)
+      const count = useNotices((s) => s.notices.length)
+      useLayoutEffect(() => {
+        if (count === 0) return
+        seen.push(ref.current?.querySelector('[role="alert"]')?.textContent ?? 'none')
+      }, [count])
+      return (
+        <div ref={ref}>
+          <NoticeRegion />
+        </div>
+      )
+    }
+    render(<Probe />)
+    act(() => {
+      useNotices.getState().notify('error', 'Could not read old.heic')
+    })
+    expect(seen[0]).toBe('')
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not read old.heic')
   })
   it('keeps the status live region mounted and only changes its content', () => {
     render(<NoticeRegion />)
