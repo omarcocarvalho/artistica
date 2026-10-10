@@ -59,6 +59,38 @@ describe('Dialog', () => {
     expect(onOpenChange).toHaveBeenLastCalledWith(false)
   })
 
+  it('lets onEscapeKeyDown keep it open', async () => {
+    const onOpenChange = vi.fn()
+    const onEscapeKeyDown = vi.fn((event: KeyboardEvent) => {
+      event.preventDefault()
+    })
+    render(
+      <Dialog
+        open
+        onOpenChange={onOpenChange}
+        onEscapeKeyDown={onEscapeKeyDown}
+        title="T"
+        closeLabel="Close"
+      >
+        x
+      </Dialog>,
+    )
+    await userEvent.keyboard('{Escape}')
+    expect(onEscapeKeyDown).toHaveBeenCalledTimes(1)
+    expect(onOpenChange).not.toHaveBeenCalled()
+    expect(screen.getByRole('dialog', { name: 'T' })).toBeInTheDocument()
+  })
+
+  it('has no body when it has no children', () => {
+    render(
+      <Dialog open onOpenChange={() => undefined} title="Delete it?" closeLabel="Close">
+        {undefined}
+      </Dialog>,
+    )
+    const dialog = screen.getByRole('dialog', { name: 'Delete it?' })
+    expect(dialog.querySelector('.ds-dialog__body')).toBeNull()
+  })
+
   it('renders nothing while closed', () => {
     render(
       <Dialog open={false} onOpenChange={() => undefined} title="T" closeLabel="Close">
