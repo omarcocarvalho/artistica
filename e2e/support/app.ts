@@ -41,6 +41,19 @@ export class AppPage {
   get fileInput(): Locator {
     return this.page.locator('input[type="file"]').first()
   }
+  /** "Adding N photo(s)…" beside the import progress bar. */
+  importing(count: number): Locator {
+    return this.page.getByText(
+      count === 1 ? 'Adding 1 photo…' : `Adding ${String(count)} photos…`,
+      {
+        exact: true,
+      },
+    )
+  }
+  /** The dropzone's "Cancel" beside the progress (accessible name "Cancel adding photos"). */
+  get cancelImportsButton(): Locator {
+    return this.page.getByRole('button', { name: 'Cancel adding photos', exact: true })
+  }
 
   // Image list (ImageList: ul "Loaded images")
   get imageList(): Locator {

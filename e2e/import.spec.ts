@@ -301,6 +301,73 @@ test.describe('import (all browsers)', () => {
   })
 })
 
+test.describe('import (cancel)', () => {
+  runOnly('chromium', 'firefox', 'webkit')
+  test.use({ viewport: { width: 1280, height: 800 } })
+
+  /** Resolves when the route handler is first called; the handler never answers that request. */
+  function hold(): { reached: Promise<void>; reach: () => void } {
+    let reach = (): void => undefined
+    const reached = new Promise<void>((resolve) => {
+      reach = resolve
+    })
+    return { reached, reach }
+  }
+
+  // Both links are same-origin files of the preview server, so the strict guard needs no exception.
+  // The 3 s limits sit well below FETCH_TIMEOUT_MS (30 s) and PROBE_TIMEOUT_MS (8 s): only Cancel
+  // can abort the held request that soon.
+  test('I-C1 Cancel ends a pending link import, download or CORS probe, and the added photos stay', async ({
+    page,
+  }) => {
+    const app = startApp(page)
+    await app.goto()
+    await app.upload([FIXTURES.quadrantsJpg, FIXTURES.transparentPng])
+    await app.expectImages(2)
+    const failed: string[] = []
+    page.on('requestfailed', (r) => {
+      failed.push(`${r.method()} ${r.url()}`)
+    })
+
+    const download = new URL('../apple-touch-icon.png', page.url()).href
+    const held = hold()
+    await page.route(download, () => {
+      held.reach()
+    })
+    await app.submitLink(download)
+    await held.reached
+    await expect(app.importing(1)).toBeVisible()
+    expect(failed).toEqual([])
+    await app.cancelImportsButton.click()
+    await expect.poll(() => failed, { timeout: 3_000 }).toEqual([`GET ${download}`])
+    await expect(page.getByText('Stopped adding photos.', { exact: true })).toBeVisible()
+    await expect(app.cancelImportsButton).toHaveCount(0)
+    await app.expectImages(2)
+    await expect(page.getByRole('alert')).toHaveCount(0)
+
+    const probed = new URL('../og-image.png', page.url()).href
+    const probe = hold()
+    await page.route(probed, (route) => {
+      if (route.request().method() === 'HEAD') probe.reach()
+      else return route.abort('failed')
+    })
+    await app.submitLink(probed)
+    await probe.reached
+    await expect(app.importing(1)).toBeVisible()
+    expect(failed).toEqual([`GET ${download}`, `GET ${probed}`])
+    await app.cancelImportsButton.click()
+    await expect
+      .poll(() => failed, { timeout: 3_000 })
+      .toEqual([`GET ${download}`, `GET ${probed}`, `HEAD ${probed}`])
+    await expect(page.getByText('Stopped adding photos.', { exact: true })).toBeVisible()
+    await expect(app.cancelImportsButton).toHaveCount(0)
+    await app.expectImages(2)
+    await expect(app.imageRows.first()).toContainText('quadrants.jpg')
+    await expect(app.imageRows.nth(1)).toContainText('transparent.png')
+    await expect(page.getByRole('alert')).toHaveCount(0)
+  })
+})
+
 test.describe('import (paste)', () => {
   runOnly('chromium', 'firefox', 'webkit')
   test.use({ viewport: { width: 1280, height: 800 } })
