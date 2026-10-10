@@ -4,6 +4,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { initI18n } from '../../shared/i18n'
 import type { ImageId } from '../../shared/model/image'
 import { DEFAULT_LINES, type LineSettings } from '../../shared/model/lines'
+import type { SheetRegistry } from '../../features/render'
 import { stubDesktop } from '../test-utils'
 
 const h = vi.hoisted(() => ({
@@ -18,6 +19,10 @@ const h = vi.hoisted(() => ({
   arranges: [] as unknown[],
   view: { manual: null as object | null, blocks: [] as { id: string }[] },
   undo: vi.fn(),
+  registry: {
+    register: () => () => undefined,
+    at: () => ({ page: 1, box: {} as DOMRect }),
+  },
 }))
 vi.mock('../arrange-controller', () => ({
   useArrangeView: () => h.view,
@@ -63,7 +68,7 @@ vi.mock('../../features/render', () => ({
   },
   GuidesToggle: () => null,
   GuidesLegend: () => <p>legend</p>,
-  createSheetRegistry: () => ({ register: () => () => undefined, at: () => null }),
+  createSheetRegistry: () => h.registry,
 }))
 vi.mock('../../features/images', () => {
   const state = {
@@ -267,6 +272,12 @@ describe('PreviewSlot', () => {
       'anna.jpg, 60 × 40 mm, lines: Rule of thirds and Face construction',
     )
   })
+  it("holds each page's text list inside its page, so the phone carousel clips it", () => {
+    render(<PreviewSlot />)
+    const list = screen.getByRole('list', { name: /Page 1/ })
+    expect(list).toHaveClass('sr-only')
+    expect(list.parentElement).toHaveClass('relative')
+  })
   it('renders no figure or caption of its own (PagePreview owns them)', () => {
     const { container } = render(<PreviewSlot />)
     expect(container.querySelector('figure')).toBeNull()
@@ -437,11 +448,22 @@ describe('PreviewSlot in Arrange mode (B4)', () => {
     })
   })
 
-  it('leaves the phone to its own Arrange step', () => {
+  it('gives the phone the blocks too, but no drop target on another page (M5-R13)', () => {
     stubDesktop(false)
     arranged()
     render(<PreviewSlot />)
-    expect(lastArrange()).toBeUndefined()
+    const props = lastArrange() as { blocks: unknown; sheets: SheetRegistry } | undefined
+    expect(props?.blocks).toEqual([{ id: 'a#0' }])
+    const sheet = document.createElement('div')
+    props?.sheets.register(1, sheet)
+    expect(props?.sheets.at(10, 10)).toBeNull()
+  })
+
+  it('lets a desktop drag find another page under the pointer', () => {
+    arranged()
+    render(<PreviewSlot />)
+    const props = lastArrange() as { sheets: SheetRegistry } | undefined
+    expect(props?.sheets.at(10, 10)).toMatchObject({ page: 1 })
   })
 
   it('drops a selection or pick-up whose block is gone (ruling B1-3)', () => {

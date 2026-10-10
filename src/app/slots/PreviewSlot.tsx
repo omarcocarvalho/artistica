@@ -7,6 +7,7 @@ import {
   PagePreview,
   type ArrangeIntent,
   type ArrangeProps,
+  type SheetRegistry,
 } from '../../features/render'
 import { useImages } from '../../features/images'
 import { useSettings } from '../../features/settings'
@@ -44,11 +45,18 @@ const focused = (id: string) => {
   useArrangeUi.getState().focused(id)
 }
 
-function useArrangeProps(enabled: boolean): ArrangeProps | undefined {
+/** The phone carousel shows one page at a time, so a drag stays on its page (M5-R13: Move to page). */
+const OWN_PAGE_ONLY: SheetRegistry = {
+  register: () => () => undefined,
+  at: () => null,
+}
+
+function useArrangeProps(enabled: boolean, crossPage: boolean): ArrangeProps | undefined {
   const selected = useArrange((s) => s.selected)
   const pickedUp = useArrangeUi((s) => s.pickedUp)
   const focusId = useArrangeUi((s) => s.focusId)
-  const [sheets] = useState(createSheetRegistry)
+  const [registry] = useState(createSheetRegistry)
+  const sheets = crossPage ? registry : OWN_PAGE_ONLY
   const { manual, blocks } = useArrangeView()
   if (!enabled || manual === null) return undefined
   const present = (id: string | null) => (blocks.some((b) => b.id === id) ? id : null)
@@ -86,7 +94,7 @@ export function PreviewSlot() {
   const showGuides = useAppUi((s) => s.showGuides)
   const isDesktop = useIsDesktop()
   const arrangeMode = useArrange((s) => s.mode)
-  const arrange = useArrangeProps(arrangeMode && isDesktop)
+  const arrange = useArrangeProps(arrangeMode, isDesktop)
   const computing = status === 'computing'
   const slow = useDelayedFlag(computing, UPDATING_ANNOUNCE_DELAY_MS)
   const [wasComputing, setWasComputing] = useState(computing)
@@ -157,7 +165,7 @@ export function PreviewSlot() {
         )}
         {showGuides && pages.length > 0 && <GuidesLegend />}
         {pages.map((model, i) => (
-          <div key={model.index} className="w-full max-w-3xl shrink-0 snap-center">
+          <div key={model.index} className="relative w-full max-w-3xl shrink-0 snap-center">
             <PagePreview
               model={model}
               getSource={getPreviewSource}

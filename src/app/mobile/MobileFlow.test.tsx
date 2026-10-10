@@ -13,8 +13,19 @@ import { useAppUi } from '../state/useAppUi'
 
 const imageCount = vi.hoisted(() => ({ value: 0 }))
 vi.mock('../state/hasImages', () => ({ useImageCount: () => imageCount.value }))
-const provider = vi.hoisted(() => ({ pause: vi.fn(), resume: vi.fn() }))
-vi.mock('../study-provider', () => ({ appStudyProvider: provider }))
+const provider = vi.hoisted(() => ({
+  pause: vi.fn(),
+  resume: vi.fn(),
+  get: () => null,
+  want: () => undefined,
+  subscribe: () => () => undefined,
+  pending: () => 0,
+  release: () => undefined,
+}))
+vi.mock('../study-provider', () => ({
+  appStudyProvider: provider,
+  getPreviewSource: () => undefined,
+}))
 vi.mock('../../features/render/export/export-pdf', () => ({ exportPdf: vi.fn() }))
 
 import { MobileFlow } from './MobileFlow'
@@ -81,6 +92,27 @@ describe('MobileFlow', () => {
     rerender(<MobileFlow />)
     expect(screen.getByRole('radiogroup', { name: 'Image' })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Print these versions' })).toBeInTheDocument()
+  })
+  it('preview step: the Arrange toolbar sits under the pages (B5)', () => {
+    imageCount.value = 1
+    useImages.setState({ images: [makeLoadedImage({ id: 'a' as ImageId, name: 'a.jpg' })] })
+    usePages.setState({ layout: null })
+    useAppUi.getState().setStep('preview')
+    const { container } = render(<MobileFlow />)
+    const bar = screen.getByRole('group', { name: 'Arrange photos' })
+    expect(within(bar).getByRole('button', { name: 'Arrange' })).toHaveClass('ds-btn--lg')
+    expect(within(bar).getByRole('button', { name: 'Undo' })).toBeInTheDocument()
+    expect(within(bar).getByRole('button', { name: 'Re-run auto layout' })).toBeInTheDocument()
+    const sheet = container.querySelector('canvas')
+    expect(sheet).not.toBeNull()
+    expect(
+      (sheet as Node).compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+  it('preview step: no Arrange toolbar without photos', () => {
+    useAppUi.getState().setStep('preview')
+    render(<MobileFlow />)
+    expect(screen.queryByRole('group', { name: 'Arrange photos' })).toBeNull()
   })
   it('page step: the page setup only, with no settings tabs', () => {
     useAppUi.getState().setStep('page')
