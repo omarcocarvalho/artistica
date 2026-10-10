@@ -101,6 +101,16 @@ describe('timeoutMissing', () => {
         job('    runs-on: ubuntu-latest', '      - run: pnpm test', '        timeout-minutes: 5'),
       ),
     ).toBe('no job-level timeout-minutes')
+    expect(
+      timeoutMissing(
+        job(
+          '    runs-on: ubuntu-latest',
+          '      - uses: actions/checkout@v7',
+          '      - name: Deploy',
+          '        uses: actions/deploy-pages@v5',
+        ),
+      ),
+    ).toBe('no job-level timeout-minutes')
     for (const value of [
       '0',
       String(MAX_TIMEOUT_MINUTES + 1),
