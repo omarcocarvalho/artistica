@@ -62,8 +62,9 @@ export interface StepLevel<C> {
 
 /**
  * Step-down levels kept between renders of one tile: the halvings depend on the source and crop
- * only, so a render at another size reuses them. After each render the slot holds the deepest
- * level that render used and the one above it; the slot's owner releases what is left.
+ * only, so a render at another size reuses them. After each render the slot holds, shallowest
+ * first, the deepest exact halving that render made or used and the one above it; the slot's owner
+ * releases what is left.
  */
 export interface StepLevelSlot<C> {
   levels: readonly StepLevel<C>[]
@@ -110,7 +111,7 @@ export function renderTile<C extends TileCanvas & CanvasImageSource>(
   try {
     // 1. Step-down resample in source orientation.
     const steps = downscaleSteps(plan.src.w, plan.src.h, plan.scaledW, plan.scaledH)
-    const exact = slot ? exactHalvings(plan.src, steps) : 0
+    const exact = exactHalvings(plan.src, steps)
     const valid = (slot?.levels ?? []).filter(
       (l) => l.source === source && sameRect(l.src, plan.src),
     )
@@ -133,9 +134,7 @@ export function renderTile<C extends TileCanvas & CanvasImageSource>(
       rect = { x: 0, y: 0, w: step.w, h: step.h }
       made.push({ source, src: plan.src, depth: i + 1, canvas: tmp })
     }
-    const next = [...valid, ...made]
-      .filter((l) => l.depth === exact || l.depth === exact - 1)
-      .sort((x, y) => x.depth - y.depth)
+    const next = [...valid, ...made].filter((l) => l.depth === exact || l.depth === exact - 1)
 
     // 2. Final draw: white background (JPEG has no alpha), then the oriented image inside the bleed ring.
     out = createCanvas(plan.canvasW, plan.canvasH)

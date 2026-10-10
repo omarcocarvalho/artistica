@@ -344,6 +344,8 @@ describe('PagePreview in Arrange mode', () => {
     expect(drawSpy.mock.calls.length).toBe(draws)
     expect(arrange.onCommit).not.toHaveBeenCalled()
     vi.restoreAllMocks()
+  })
+})
 
 describe('PagePreview keeps the step-down of each photo between redraws', () => {
   const bitmap = { width: 3000, height: 2000, close: vi.fn() } as unknown as ImageBitmap
@@ -393,6 +395,20 @@ describe('PagePreview keeps the step-down of each photo between redraws', () => 
     expect(renderSpy).toHaveBeenCalledTimes(2)
     expect(slots()[1]).toBe(slots()[0])
     expect(fromBitmap(drawImage)).toBe(1)
+  })
+
+  it('two copies of one photo with different crops each keep their own step-down', () => {
+    const lower = (w: number) =>
+      drawTile({
+        imageId: id('a'),
+        trim: { x: 20, y: 80, w, h: w / 2 },
+        crop: { x: 0, y: 500, w: 2000, h: 1000 },
+      })
+    const { drawImage, show } = mount(pageModel([tileOf('a', 100), lower(100)]))
+    expect(fromBitmap(drawImage)).toBe(2)
+    show(pageModel([tileOf('a', 96), lower(96)]))
+    expect(renderSpy).toHaveBeenCalledTimes(4)
+    expect(fromBitmap(drawImage)).toBe(2)
   })
 
   it('releases the kept step-down of a photo that leaves the page, and the rest on unmount', () => {

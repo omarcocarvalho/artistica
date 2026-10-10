@@ -350,6 +350,17 @@ describe('createPipeline timing: a single change runs at once, a burst waits for
     expect(deps.layout).toHaveBeenCalledTimes(4)
   })
 
+  it('a change after dispose runs at once, even within the debounce of the change before it', async () => {
+    const { pipeline, deps } = setup()
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])
+    await vi.advanceTimersByTimeAsync(30)
+    pipeline.dispose()
+    pipeline.schedule(DEFAULT_PAGE_SETUP, [img('b')])
+    await vi.advanceTimersByTimeAsync(0)
+    expect(deps.layout).toHaveBeenCalledTimes(2)
+    expect(deps.buildItems).toHaveBeenLastCalledWith([img('b')])
+  })
+
   it('a memoised change superseded in the same task never reaches the sink', async () => {
     const { pipeline, sink, resolvers } = setup()
     pipeline.schedule(DEFAULT_PAGE_SETUP, [img('a')])

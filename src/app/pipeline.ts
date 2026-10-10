@@ -48,7 +48,8 @@ export interface Pipeline {
 
 /**
  * A change that follows a quiet `delayMs` runs at once; a change within `delayMs` of the previous one
- * waits until the changes stop for `delayMs`. Changes in the same task run once, with the last input.
+ * waits until the changes stop for `delayMs`. The run at once starts in a microtask, so changes
+ * scheduled before it starts run once, with the last input.
  */
 export function createPipeline(deps: PipelineDeps, sink: PipelineSink): Pipeline {
   let timer: ReturnType<typeof setTimeout> | undefined

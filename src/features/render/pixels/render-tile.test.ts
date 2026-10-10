@@ -289,6 +289,16 @@ describe('renderTile', () => {
       expect(fromMoved[0]?.draws[0]?.args.slice(0, 4)).toEqual([1, 0, 2999, 1500])
     })
 
+    it('levels of the same source with a crop moved down are not used', () => {
+      const slot = emptySlot()
+      renderTile(source, at(60), fakeFactory(), null, slot)
+      const moved = { ...at(58), src: { x: 0, y: 1, w: 3000, h: 1500 } }
+      const made: FakeCanvas[] = []
+      renderTile(source, moved, fakeFactory(made), null, slot)
+      expect(made[0]?.draws[0]?.source).toBe(source)
+      expect(made[0]?.draws[0]?.args.slice(0, 4)).toEqual([0, 1, 3000, 1500])
+    })
+
     it('never keeps a step that the output size shaped', () => {
       const slot = emptySlot()
       const clamped = { ...at(60), src: { x: 0, y: 0, w: 1000, h: 100 }, scaledW: 200, scaledH: 80 }
