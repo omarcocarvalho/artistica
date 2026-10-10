@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useImages } from '../../features/images'
 import type { ArrangeBlock } from '../../features/render'
 import { useSettings } from '../../features/settings'
-import { mmToUnit, roundForUnit } from '../../shared/model/units'
+import { formatLengthNumber, unitLabel } from '../../shared/i18n/format'
 import {
   BottomSheet,
   Button,
@@ -92,7 +92,6 @@ function SelectedControls({ block, blocks, pageCount, imageName, variant }: Sele
         label={t('arrange.width')}
         valueMm={block.tileW}
         unit={unit}
-        unitLabel={t(`common:units.${unit}`)}
         disabled={block.fixed}
         hint={block.fixed ? t('arrange.fixedHint') : undefined}
         className={phone ? undefined : 'w-32'}
@@ -238,8 +237,7 @@ export function ArrangeToolbar({ variant = 'desktop' }: { readonly variant?: Var
   const closeOptions = (open: boolean) => {
     if (!open) setOptionsFor(null)
   }
-  const unitLabel = t(`common:units.${unit}`)
-  const fmt = (mm: number) => roundForUnit(mmToUnit(mm, unit), unit)
+  const fmt = (mm: number) => formatLengthNumber(mm, unit)
 
   return (
     <>
@@ -288,7 +286,7 @@ export function ArrangeToolbar({ variant = 'desktop' }: { readonly variant?: Var
           description={t('arrange.sheetSummary', {
             w: fmt(block.rect.w),
             h: fmt(block.rect.h),
-            unit: unitLabel,
+            unit: unitLabel(unit),
             page: block.page + 1,
             total: pageCount,
           })}

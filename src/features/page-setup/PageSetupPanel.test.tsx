@@ -1,8 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { initI18n } from '../../shared/i18n'
 import { DEFAULT_PAGE_SETUP } from '../../shared/model/page-setup'
+import { PT_BR, switchLanguage } from '../../test/languages'
 import { useSettings } from '../settings'
 import { PageSetupPanel } from './PageSetupPanel'
 
@@ -159,5 +160,29 @@ describe('PageSetupPanel', () => {
   it('has no language control (D4)', () => {
     render(<PageSetupPanel />)
     expect(screen.queryByLabelText(/language/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('PageSetupPanel in Portuguese (Brazil)', () => {
+  beforeAll(async () => {
+    await switchLanguage('pt-BR', PT_BR)
+  })
+  afterAll(async () => {
+    await switchLanguage('en')
+  })
+
+  it('shows the paper size with grouping and a decimal comma, and the field without grouping', () => {
+    useSettings.getState().setPageSetup({ paper: 'Custom', customSize: { w: 1000.5, h: 1200 } })
+    render(<PageSetupPanel />)
+    expect(screen.getByText('1.000,5 × 1.200 mm')).toBeInTheDocument()
+    expect(screen.getByLabelText('Largura')).toHaveValue('1000,5')
+    expect(screen.getByText(/Mín\. 3 mm\./)).toBeInTheDocument()
+  })
+
+  it('names inches with the language symbol', () => {
+    useSettings.getState().setUnit('in')
+    useSettings.getState().setPageSetup({ paper: 'Letter' })
+    render(<PageSetupPanel />)
+    expect(screen.getByText('8,5 × 11 pol.')).toBeInTheDocument()
   })
 })

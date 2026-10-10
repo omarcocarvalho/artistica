@@ -21,7 +21,8 @@ import {
 import type { ArrangeBlock, ArrangeIntent, ArrangePreview } from '../features/render'
 import { useSettings } from '../features/settings'
 import type { ImageId } from '../shared/model/image'
-import { mmToUnit, roundForUnit, type Mm, type Unit } from '../shared/model/units'
+import { formatLengthNumber as fmt, unitLabel } from '../shared/i18n/format'
+import type { Mm, Unit } from '../shared/model/units'
 import { useArrange } from './arrange-store'
 import { useArrangeUi } from './arrange-ui'
 import { usePages } from './pages-store'
@@ -51,8 +52,6 @@ export function shownManual(
   return manualFromLayout(layout, items, useSettings.getState().pageSetup)
 }
 
-const fmt = (mm: Mm, unit: Unit): number => roundForUnit(mmToUnit(mm, unit), unit)
-
 function nameOf(imageId: ImageId): string {
   return (
     useImages.getState().images.find((i) => i.id === imageId)?.name ??
@@ -72,7 +71,7 @@ export function arrangeBlocks(
 ): ArrangeBlock[] {
   if (manual === null) return []
   const byBlock = new Map(items.map((it) => [blockIdOf(it), it]))
-  const unitLabel = i18n.t(`common:units.${unit}`)
+  const symbol = unitLabel(unit)
   const out: ArrangeBlock[] = []
   for (const b of manual.blocks) {
     const item = byBlock.get(b.blockId)
@@ -89,7 +88,7 @@ export function arrangeBlocks(
         name: name(item.imageId),
         w: fmt(rect.w, unit),
         h: fmt(rect.h, unit),
-        unit: unitLabel,
+        unit: symbol,
         page: b.page + 1,
       }),
     })
@@ -175,13 +174,12 @@ export function announcePlaced(id: BlockId): void {
   const p = m && placed(m, id, items)
   if (!p) return
   const unit = useSettings.getState().unit
-  const unitLabel = i18n.t(`common:units.${unit}`)
   useArrangeUi.getState().announce(
     i18n.t('preview:arrange.placed', {
       name: nameOf(p.item.imageId),
       w: fmt(p.rect.w, unit),
       h: fmt(p.rect.h, unit),
-      unit: unitLabel,
+      unit: unitLabel(unit),
       page: p.block.page + 1,
       x: fmt(p.rect.x, unit),
       y: fmt(p.rect.y, unit),

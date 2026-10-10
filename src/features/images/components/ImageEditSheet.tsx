@@ -7,7 +7,7 @@ import {
   type ImageId,
 } from '../../../shared/model/image'
 import { MIN_COMFORT_SHORT_SIDE_MM } from '../../../shared/model/page-setup'
-import { mmToUnit, roundForUnit, type Unit } from '../../../shared/model/units'
+import { formatLength, formatLengthNumber, unitLabel } from '../../../shared/i18n/format'
 import { Button, Callout, IconButton, NumberField, SegmentedControl } from '../../../shared/ui'
 import { useSettings } from '../../settings'
 import { fullCrop } from '../crop'
@@ -41,9 +41,6 @@ const ASPECTS: readonly { value: CropAspect; key: string; portraitKey?: string }
   { value: '3:2', key: 'ratio32', portraitKey: 'ratio23' },
   { value: '16:9', key: 'ratio169', portraitKey: 'ratio916' },
 ]
-
-const fmt = (mm: number, unit: Unit): string =>
-  `${String(roundForUnit(mmToUnit(mm, unit), unit))} ${unit}`
 
 export function ImageEditSheet({ imageId }: ImageEditSheetProps) {
   const { t } = useTranslation('images')
@@ -222,7 +219,9 @@ export function ImageEditSheet({ imageId }: ImageEditSheetProps) {
             />
             {!fixed && (
               <span className="text-ink-muted text-sm">
-                {t('editSheet.size.autoHint', { mm: MIN_COMFORT_SHORT_SIDE_MM })}
+                {t('editSheet.size.autoHint', {
+                  size: formatLength(MIN_COMFORT_SHORT_SIDE_MM, 'mm'),
+                })}
               </span>
             )}
           </div>
@@ -251,7 +250,6 @@ export function ImageEditSheet({ imageId }: ImageEditSheetProps) {
                       commit(setFixedMm(e, d, mm))
                     }}
                     unit={unit}
-                    unitLabel={t(`common:units.${unit}`)}
                     minMm={MIN_FIXED_MM}
                     maxMm={MAX_FIXED_MM}
                     stepMm={1}
@@ -260,8 +258,8 @@ export function ImageEditSheet({ imageId }: ImageEditSheetProps) {
               </div>
               <p className="text-ink-muted text-sm">
                 {fixed.axis === 'width'
-                  ? t('editSheet.size.followsHeight', { value: fmt(dims.h, unit) })
-                  : t('editSheet.size.followsWidth', { value: fmt(dims.w, unit) })}
+                  ? t('editSheet.size.followsHeight', { value: formatLength(dims.h, unit) })
+                  : t('editSheet.size.followsWidth', { value: formatLength(dims.w, unit) })}
               </p>
             </div>
           )}
@@ -306,11 +304,14 @@ export function ImageEditSheet({ imageId }: ImageEditSheetProps) {
               <Callout tone="warning" title={t('editSheet.dpi.lowTitle')}>
                 {fixed
                   ? t('editSheet.dpi.lowFixed', {
-                      w: roundForUnit(mmToUnit(sharp.w, unit), unit),
-                      h: roundForUnit(mmToUnit(sharp.h, unit), unit),
-                      unit,
+                      w: formatLengthNumber(sharp.w, unit),
+                      h: formatLengthNumber(sharp.h, unit),
+                      unit: unitLabel(unit),
                     })
-                  : t('editSheet.dpi.lowAuto', { mm: MIN_COMFORT_SHORT_SIDE_MM, dpi })}
+                  : t('editSheet.dpi.lowAuto', {
+                      size: formatLength(MIN_COMFORT_SHORT_SIDE_MM, 'mm'),
+                      dpi,
+                    })}
               </Callout>
             </div>
           )}

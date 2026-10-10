@@ -1,13 +1,7 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import { CUSTOM_PAPER_LIMITS } from '../../shared/model/paper'
-import {
-  clampMm,
-  formatLength,
-  normalizeCustomSize,
-  NOTE_KEYS,
-  stepMmFor,
-} from './page-setup-logic'
+import { clampMm, normalizeCustomSize, NOTE_KEYS, stepMmFor } from './page-setup-logic'
 
 const { minMm, maxMm } = CUSTOM_PAPER_LIMITS
 
@@ -45,15 +39,6 @@ describe('clampMm', () => {
     expect(clampMm(500, 3, 30)).toBe(30)
     expect(clampMm(Number.NaN, 3, 30)).toBe(3)
     expect(clampMm(Number.POSITIVE_INFINITY, 3, 30)).toBe(3)
-  })
-})
-
-describe('formatLength', () => {
-  it('formats mm with one decimal at most and inches with two', () => {
-    expect(formatLength(5, 'mm')).toBe('5 mm')
-    expect(formatLength(215.9, 'mm')).toBe('215.9 mm')
-    expect(formatLength(5, 'in')).toBe('0.2 in')
-    expect(formatLength(25.4, 'in')).toBe('1 in')
   })
 })
 

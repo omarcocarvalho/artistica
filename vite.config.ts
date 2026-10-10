@@ -34,6 +34,7 @@ export default defineConfig({
         'src/features/render/**',
         'src/features/studies/**',
         'src/shared/colour/**',
+        'src/shared/i18n/format.ts',
         'src/shared/model/lines.ts',
         'src/shared/model/page-setup-schema.ts',
         'src/shared/model/preset.ts',

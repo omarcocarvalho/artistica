@@ -48,10 +48,6 @@ export function guideView(
   }
 }
 
-export function formatMb(bytes: number): string {
-  return (Math.round(bytes / 100_000) / 10).toFixed(1)
-}
-
 export function useGuideStatus(
   kind: GuideKind,
   image: Pick<ImageDescriptor, 'contentHash' | 'edits' | 'lines'>,

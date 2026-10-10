@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { printedPixelSize, type ImageId } from '../../../shared/model/image'
-import { mmToUnit, roundForUnit, type Unit } from '../../../shared/model/units'
+import { formatLength } from '../../../shared/i18n/format'
+import type { Unit } from '../../../shared/model/units'
 import { Badge, Button, Dialog, IconButton, VisuallyHidden } from '../../../shared/ui'
 import { useSettings } from '../../settings'
 import { dpiInfo } from '../dpi'
@@ -39,7 +40,7 @@ function Row({
   const sizeLabel =
     size.kind === 'auto'
       ? t('list.sizeAuto')
-      : t('list.sizeFixed', { value: roundForUnit(mmToUnit(size.mm, unit), unit), unit })
+      : t('list.sizeFixed', { size: formatLength(size.mm, unit) })
 
   return (
     <li
