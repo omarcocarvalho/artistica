@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   armaturePaths,
   centreDashMm,
+  centreDashPhaseMm,
   centrePaths,
   goldenPaths,
   GOLDEN_FRACTIONS,
@@ -11,6 +12,7 @@ import {
   thirdsPaths,
 } from './geometry'
 import { points, segments, subpaths, type Seg } from './test-support/paths'
+import { clearGaps, wholeGaps } from './test-support/dash'
 import type { FrameSize, PathCmd } from './types'
 
 const frame = { w: 300, h: 400 }
@@ -242,6 +244,85 @@ describe('centre lines', () => {
       fc.property(widths, shorts, (w, short) => {
         fc.pre(short >= 30 * w)
         expect(centreDashMm(w, short)).toEqual(m3(w))
+      }),
+    )
+  })
+})
+
+describe('centre dash phase', () => {
+  const widths = fc.double({ min: 0.1, max: 2, noNaN: true })
+  const sides = fc.double({ min: 1, max: 1000, noNaN: true })
+  const mod = (a: number, m: number) => ((a % m) + m) % m
+
+  it('the 12 × 8 mm tile at 2 mm: the 8 mm line gets the phase that centres a dash on the crossing, the 12 mm line keeps 0', () => {
+    const [dash, gap] = centreDashMm(2, 8)
+    expect(dash).toBeCloseTo(3, 9)
+    expect(gap).toBeCloseTo(2, 9)
+    expect(clearGaps(8, dash, gap, 0, 4, 2)).toEqual({ before: 0, after: 0 })
+    const phase = centreDashPhaseMm(8, dash, gap, 4, 2)
+    expect(phase).toBeCloseTo(2.5, 9)
+    expect(clearGaps(8, dash, gap, phase, 4, 2)).toEqual({ before: 1, after: 1 })
+    expect(
+      wholeGaps(8, dash, gap, phase).map(([a, b]) => [a, b].map((v) => +v.toFixed(9))),
+    ).toEqual([
+      [0.5, 2.5],
+      [5.5, 7.5],
+    ])
+    expect(centreDashPhaseMm(12, dash, gap, 6, 2)).toBe(0)
+  })
+
+  it('a 20 mm tile at 2 mm keeps phase 0 on both lines', () => {
+    const [dash, gap] = centreDashMm(2, 20)
+    for (const length of [20, 26.67])
+      expect(centreDashPhaseMm(length, dash, gap, length / 2, 2)).toBe(0)
+  })
+
+  it('is 0 exactly when phase 0 leaves a whole gap off the crossing, on each side whose half-line holds a period (property)', () => {
+    fc.assert(
+      fc.property(widths, sides, sides, (w, short, length) => {
+        fc.pre(short <= length)
+        const [dash, gap] = centreDashMm(w, short)
+        const period = dash + gap
+        const half = length / 2
+        const { before, after } = clearGaps(length, dash, gap, 0, half, w)
+        const meets =
+          before + after > 0 && (half < period || before > 0) && (half < period || after > 0)
+        const phase = centreDashPhaseMm(length, dash, gap, half, w)
+        expect(phase === 0).toBe(meets)
+      }),
+    )
+  })
+
+  it('otherwise centres a dash on the crossing, with a phase in [0, period) (property)', () => {
+    fc.assert(
+      fc.property(
+        widths,
+        sides,
+        sides,
+        fc.double({ min: 0, max: 1, noNaN: true }),
+        (w, short, length, at) => {
+          const [dash, gap] = centreDashMm(w, short)
+          const period = dash + gap
+          const crossAt = at * length
+          const phase = centreDashPhaseMm(length, dash, gap, crossAt, w)
+          expect(phase).toBeGreaterThanOrEqual(0)
+          expect(phase).toBeLessThan(period)
+          if (phase !== 0) {
+            const pos = mod(crossAt + phase, period)
+            expect(
+              Math.min(Math.abs(pos - dash / 2), period - Math.abs(pos - dash / 2)),
+            ).toBeLessThan(1e-9 * (1 + length))
+          }
+        },
+      ),
+    )
+  })
+
+  it('a centred dash covers the crossing, so the gaps either side of it clear the crossing line (property)', () => {
+    fc.assert(
+      fc.property(widths, sides, (w, short) => {
+        const [dash] = centreDashMm(w, short)
+        expect(dash).toBeGreaterThanOrEqual(w)
       }),
     )
   })

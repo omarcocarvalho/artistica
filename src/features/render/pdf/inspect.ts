@@ -172,6 +172,7 @@ export interface PdfStroke {
   readonly colour: { readonly space: 'rgb' | 'cmyk' | 'gray'; readonly values: readonly number[] }
   readonly widthPt: number
   readonly dashPt: readonly number[]
+  readonly dashPhasePt: number
   /** ExtGState /CA in effect, 1 when none. */
   readonly opacity: number
   /** The innermost clip's rect, in the user space it was written in (no CTM applied); null when there is no clip or that clip path is not one `re`. */
@@ -305,6 +306,7 @@ interface GState {
   colour: PdfStroke['colour']
   widthPt: number
   dashPt: readonly number[]
+  dashPhasePt: number
   opacity: number
   clip: PdfStroke['clip']
   cap: number
@@ -325,6 +327,7 @@ export function strokesOf(
     colour: { space: 'gray', values: [0] },
     widthPt: 1,
     dashPt: [],
+    dashPhasePt: 0,
     opacity: 1,
     clip: null,
     cap: 0,
@@ -348,8 +351,8 @@ export function strokesOf(
   }
   const paint = (strokes: boolean): void => {
     if (strokes && path.length > 0) {
-      const { colour, widthPt, dashPt, opacity, clip, cap, join } = gs
-      out.push({ colour, widthPt, dashPt, opacity, clip, cap, join, path })
+      const { colour, widthPt, dashPt, dashPhasePt, opacity, clip, cap, join } = gs
+      out.push({ colour, widthPt, dashPt, dashPhasePt, opacity, clip, cap, join, path })
     }
     path = []
     start = null
@@ -382,6 +385,7 @@ export function strokesOf(
       case 'd': {
         const dash = args[0]
         gs.dashPt = Array.isArray(dash) ? dash : []
+        gs.dashPhasePt = v[0] ?? 0
         break
       }
       case 'RG':

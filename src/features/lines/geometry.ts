@@ -68,3 +68,40 @@ export function centreDashMm(widthMm: Mm, tileShortMm: Mm): readonly [Mm, Mm] {
   if (dash + gap <= period * (1 + 1e-12)) return [dash, gap]
   return [(6 * period) / 10, (4 * period) / 10]
 }
+
+/**
+ * The phase of a [dash, gap] pattern on a line of `lengthMm` crossed at `crossAtMm` by a line
+ * `crossWidthMm` wide: 0 when phase 0 leaves a whole gap clear of the crossing (on each side whose
+ * half-line holds a full period, and at least one in all); otherwise the phase that centres a dash
+ * on the crossing.
+ */
+export function centreDashPhaseMm(
+  lengthMm: Mm,
+  dash: Mm,
+  gap: Mm,
+  crossAtMm: Mm,
+  crossWidthMm: Mm,
+): Mm {
+  const period = dash + gap
+  const eps = 1e-9 * (1 + lengthMm)
+  const lo = crossAtMm - crossWidthMm / 2
+  const hi = crossAtMm + crossWidthMm / 2
+  let before = false
+  let after = false
+  for (let k = 0; k * period + dash + gap <= lengthMm + eps; k++) {
+    const start = k * period + dash
+    if (start + gap <= lo + eps) before = true
+    else if (start >= hi - eps) after = true
+  }
+  const sideOk = (half: Mm, found: boolean) => half < period || found
+  if ((before || after) && sideOk(crossAtMm, before) && sideOk(lengthMm - crossAtMm, after))
+    return 0
+  return centredDashPhaseMm(dash, gap, crossAtMm)
+}
+
+/** The phase that puts the middle of a dash `atMm` along the line. */
+export function centredDashPhaseMm(dash: Mm, gap: Mm, atMm: Mm): Mm {
+  const period = dash + gap
+  const phase = (dash / 2 - atMm) % period
+  return phase < 0 ? phase + period : phase
+}

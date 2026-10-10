@@ -78,6 +78,7 @@ describe('inspectPdf strokes', () => {
         colour: { space: 'rgb', values: [0.25, 0.5, 0.75] },
         widthPt: 2.5,
         dashPt: [],
+        dashPhasePt: 0,
         opacity: 1,
         clip: { x: 10, y: 20, w: 30, h: 40 },
         cap: 0,
@@ -101,6 +102,30 @@ describe('inspectPdf strokes', () => {
       stroke(),
     ])
     expect(at(strokes, 0)).toMatchObject({ dashPt: [3, 1.5], cap: 1, join: 2, clip: null })
+  })
+
+  it('reads the dash phase, and resets it with the next d and after Q', async () => {
+    const { strokes } = await strokesDrawnBy(() => [
+      pushGraphicsState(),
+      setDashPattern([3, 1.5], 2.25),
+      moveTo(0, 0),
+      lineTo(1, 1),
+      stroke(),
+      setDashPattern([4, 2], 0),
+      moveTo(0, 0),
+      lineTo(1, 1),
+      stroke(),
+      setDashPattern([3, 1.5], 1),
+      popGraphicsState(),
+      moveTo(0, 0),
+      lineTo(1, 1),
+      stroke(),
+    ])
+    expect(strokes.map((s) => [s.dashPt, s.dashPhasePt])).toEqual([
+      [[3, 1.5], 2.25],
+      [[4, 2], 0],
+      [[], 0],
+    ])
   })
 
   it('reads the ExtGState opacity and drops it again after Q', async () => {

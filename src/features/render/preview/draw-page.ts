@@ -105,8 +105,8 @@ export function drawPage(
     ctx.lineCap = 'butt'
     ctx.lineJoin = 'miter'
     ctx.miterLimit = 10
-    ctx.lineDashOffset = 0
     for (const s of tl.strokes) {
+      ctx.lineDashOffset = (s.dashPhaseMm ?? 0) * k
       ctx.setLineDash(s.dashMm.map((d) => d * k))
       ctx.beginPath()
       for (const c of s.cmds) {

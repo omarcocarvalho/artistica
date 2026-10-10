@@ -87,6 +87,7 @@ export function strokeMismatches(
     w.dashMm.forEach((d, k) => {
       near(s.dashPt[k] ?? NaN, d * PT_PER_MM, 0.01, `${at} dash[${String(k)}] pt`)
     })
+    near(s.dashPhasePt, (w.dashPhaseMm ?? 0) * PT_PER_MM, 0.01, `${at} dash phase pt`)
     if (!s.clip) out.push(`${at} has no rect clip`)
     else {
       const c = rectPtToMm(s.clip, pageHeightPt)
@@ -126,6 +127,7 @@ type Piece =
 interface Subpath {
   readonly pieces: readonly Piece[]
   readonly dashMm: readonly number[]
+  readonly dashPhaseMm: number
   /** Polyline through the subpath (curves split finely), for distances. */
   readonly poly: readonly PointMm[]
 }
@@ -197,7 +199,12 @@ function subpathsOf(tile: TileLines): Subpath[] {
     let cur: PointMm | null = null
     const flush = () => {
       if (pieces.length > 0)
-        out.push({ pieces, dashMm: s.dashMm, poly: pieces.flatMap((p) => polyOf(p)) })
+        out.push({
+          pieces,
+          dashMm: s.dashMm,
+          dashPhaseMm: s.dashPhaseMm ?? 0,
+          poly: pieces.flatMap((p) => polyOf(p)),
+        })
       pieces = []
     }
     for (const c of s.cmds) {
@@ -286,7 +293,7 @@ export function lineSamples(tile: TileLines, o: SampleOptions): LineSamples {
         let gap = false
         if (sub.dashMm.length === 2) {
           const [dash, space] = sub.dashMm
-          const pos = (before + lengthOf(piece, t)) % (dash + space)
+          const pos = (before + lengthOf(piece, t) + sub.dashPhaseMm) % (dash + space)
           const m = o.dashMarginMm
           if (pos >= m && pos <= dash - m) gap = false
           else if (pos >= dash + m && pos <= dash + space - m) gap = true
