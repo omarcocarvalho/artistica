@@ -85,10 +85,28 @@ describe('ImportDropzone', () => {
     expect((addFromDrop.mock.calls[0]?.[0] as DataTransfer).files).toEqual(dataTransfer.files)
     expect(addFromClipboard).not.toHaveBeenCalled()
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent("notes.pdf can't be added")
+    await waitFor(() => {
+      expect(alert).toHaveTextContent("notes.pdf can't be added")
+    })
     expect(alert).toHaveTextContent('Use JPG, PNG, WebP, GIF or HEIC.')
     await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('an import error is a live callout, so its region is in the page before the message, and Dismiss is outside it', async () => {
+    const { addFromDrop } = mockStore()
+    addFromDrop.mockResolvedValue([{ ok: false, source: 'notes.pdf', error: 'unsupported-format' }])
+    const { container } = renderWithProviders(<ImportDropzone variant="card" />)
+    fireEvent.drop(pick(container, '[data-dropzone]'), {
+      dataTransfer: {
+        files: [file('notes.pdf', 'application/pdf')],
+        types: ['Files'],
+        getData: () => '',
+      },
+    })
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveClass('ds-note')
+    expect(alert).not.toContainElement(screen.getByRole('button', { name: 'Dismiss' }))
   })
 
   it('a drop with nothing importable says there is no image in what was dropped (owner Q-H10)', async () => {
@@ -257,6 +275,16 @@ describe('ImportDropzone', () => {
     expect(screen.getByRole('button', { name: 'Upload instead' })).toBeInTheDocument()
   })
 
+  it('announces progress in its status region, unless another dropzone on screen does', () => {
+    mockStore({ importing: 2 })
+    const { unmount } = renderWithProviders(<ImportDropzone />)
+    expect(screen.getByRole('status')).toHaveTextContent('Adding 2 photos…')
+    unmount()
+    renderWithProviders(<ImportDropzone announceProgress={false} />)
+    expect(screen.getByText('Adding 2 photos…')).toBeVisible()
+    expect(screen.getByRole('status')).not.toHaveTextContent('Adding')
+  })
+
   it('shows progress while importing', () => {
     mockStore({ importing: 2 })
     renderWithProviders(<ImportDropzone variant="card" />)
@@ -360,7 +388,9 @@ describe('ImportDropzone', () => {
       const { container } = renderWithProviders(<ImportDropzone />)
       await userEvent.setup().upload(fileInput(container), [file('huge.jpg')])
       const alert = await screen.findByRole('alert')
-      expect(alert).toHaveTextContent('huge.jpg is too large')
+      await waitFor(() => {
+        expect(alert).toHaveTextContent('huge.jpg is too large')
+      })
       expect(alert).toHaveTextContent(message)
     })
 
