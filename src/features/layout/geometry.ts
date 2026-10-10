@@ -18,7 +18,7 @@ export function blockSize(tileW: Mm, aspect: number, tiles: number, gutter: Mm):
     : { w: tileW, h: tiles * tileH + gaps }
 }
 
-function fitUnturned(aspect: number, tiles: number, gutter: Mm, boxW: Mm, boxH: Mm): Mm {
+export function fitUnturned(aspect: number, tiles: number, gutter: Mm, boxW: Mm, boxH: Mm): Mm {
   const gaps = (tiles - 1) * gutter
   return arrangementFor(aspect) === 'row'
     ? Math.min((boxW - gaps) / tiles, boxH * aspect)
