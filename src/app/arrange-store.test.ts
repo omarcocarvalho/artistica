@@ -217,6 +217,14 @@ describe('useArrange.rerunAuto and Remove all', () => {
     expect(useArrange.getState()).toMatchObject({ manual: null, undo: [], selected: null })
   })
 
+  it('removing the last photo one by one does the same', () => {
+    arrange()
+    useImages.getState().remove('a' as ImageId)
+    expect(useArrange.getState().manual).not.toBeNull()
+    useImages.getState().remove('b' as ImageId)
+    expect(useArrange.getState()).toMatchObject({ manual: null, undo: [], selected: null })
+  })
+
   it('removing one photo of several keeps the arrangement (the engine reconciles it)', () => {
     arrange()
     const before = useArrange.getState()
@@ -242,13 +250,11 @@ describe('useArrange.adopt', () => {
     (kind) => {
       const { manual } = arranged()
       const undo = useArrange.getState().undo
-      const next: ManualLayout = { ...manual, pageCount: manual.pageCount }
       const moved = nudge(manual, idOf(manual, 0), 0, 1, items())
       if (!moved.ok) throw new Error(moved.reason)
       useArrange.getState().adopt({ kind, manual: moved.manual })
       expect(useArrange.getState().manual).toBe(moved.manual)
       expect(useArrange.getState().undo).toBe(undo)
-      expect(next).toEqual(manual)
     },
   )
 

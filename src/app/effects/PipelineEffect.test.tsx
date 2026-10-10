@@ -469,3 +469,93 @@ describe('PipelineEffect with a manual layout (M5-R8, M5-R14)', () => {
     })
   })
 })
+
+describe('PipelineEffect with a manual layout: what does not run it', () => {
+  const items = () => buildLayoutItems(selectImageDescriptors(useImages.getState()))
+
+  beforeEach(() => {
+    useArrange.setState(useArrange.getInitialState(), true)
+    layoutAsync.mockImplementation((setup, items, manual) =>
+      Promise.resolve(computeLayout(setup, items, manual)),
+    )
+  })
+  afterEach(() => {
+    useDetections.setState(INITIAL_DETECTIONS, true)
+  })
+
+  async function arranged(): Promise<void> {
+    render(<PipelineEffect />)
+    await waitFor(() => {
+      expect(usePages.getState().pages).toHaveLength(1)
+    })
+    act(() => {
+      useArrange.getState().apply((m) => nudge(m, 'a#0', 1, 0, items()))
+    })
+    await waitFor(() => {
+      expect(usePages.getState().pages[0]?.tiles[0]?.trim.x).toBeCloseTo(11, 6)
+    })
+    await waitFor(() => {
+      expect(usePages.getState().status).toBe('idle')
+    })
+  }
+
+  it('selecting a block or switching Arrange mode runs no layout and marks nothing as updating', async () => {
+    await arranged()
+    const calls = layoutAsync.mock.calls.length
+    act(() => {
+      useArrange.getState().setMode(true)
+      useArrange.getState().select('a#0')
+    })
+    expect(usePages.getState().status).toBe('idle')
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    expect(layoutAsync).toHaveBeenCalledTimes(calls)
+  })
+
+  it('a detection result keeps the arrangement on the pages (the layout memo is reused)', async () => {
+    act(() => {
+      useImages.getState().updateLines('a' as ImageId, { edges: { on: true } })
+    })
+    await arranged()
+    const calls = layoutAsync.mock.calls.length
+    const img = selectImageDescriptors(useImages.getState())[0]
+    if (!img) throw new Error('no image')
+    act(() => {
+      useDetections.setState({
+        results: new Map([
+          [
+            detectionKey('edges', img),
+            {
+              polylines: [
+                [
+                  { x: 0.1, y: 0.1 },
+                  { x: 0.9, y: 0.9 },
+                ],
+              ],
+            },
+          ],
+        ]),
+      })
+    })
+    await waitFor(() => {
+      expect(usePages.getState().pages[0]?.lines.map((l) => l.types)).toEqual([['edges']])
+    })
+    expect(layoutAsync).toHaveBeenCalledTimes(calls)
+    expect(usePages.getState().pages[0]?.tiles[0]?.trim.x).toBeCloseTo(11, 6)
+    expect(useArrange.getState().manual).not.toBeNull()
+  })
+
+  it('a dropped outcome while nothing is arranged posts no notice', async () => {
+    layoutAsync.mockImplementation((setup, items) =>
+      Promise.resolve({
+        ...computeLayout(setup, items),
+        manual: { kind: 'dropped', reason: 'paper' },
+      }),
+    )
+    render(<PipelineEffect />)
+    await waitFor(() => {
+      expect(usePages.getState().pages).toHaveLength(1)
+    })
+    expect(useArrange.getState().manual).toBeNull()
+    expect(useNotices.getState().notices).toEqual([])
+  })
+})
