@@ -646,6 +646,16 @@ describe('download limiter', () => {
   })
 })
 
+const settledWithin = <T>(p: Promise<T>, ms: number): Promise<T | 'pending'> =>
+  Promise.race([
+    p,
+    new Promise<'pending'>((r) =>
+      setTimeout(() => {
+        r('pending')
+      }, ms),
+    ),
+  ])
+
 const pastedLinks = (n: number): DataTransfer =>
   ({
     files: [],
@@ -816,9 +826,40 @@ describe('cancelImports (owner Q-H5)', () => {
     await store.getState().addFiles([file('a.jpg')])
     const before = store.getState()
     store.getState().cancelImports()
-    expect(store.getState().images).toBe(before.images)
-    expect(store.getState().selectedId).toBe(before.selectedId)
-    expect(store.getState().importing).toBe(0)
+    expect(store.getState()).toBe(before)
+  })
+
+  it('a photo waiting for a decode slot leaves the queue at once, before the decodes in flight end', async () => {
+    const gate = deferred<DecodedImage>()
+    const decode = vi.fn(() => gate.promise)
+    const { store } = setup({ decode })
+    const busy = store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    const waiting = store.getState().addFiles([file('c.jpg')])
+    await vi.waitFor(() => {
+      expect(decode).toHaveBeenCalledTimes(2)
+    })
+    store.getState().cancelImports()
+    expect(await settledWithin(waiting, 50)).toBe(null)
+    gate.resolve(decoded())
+    expect(await busy).toBeNull()
+  })
+
+  it('a finished download waiting for a decode slot drops its blob and download slot at once', async () => {
+    const gate = deferred<DecodedImage>()
+    const decode = vi.fn(() => gate.promise)
+    const fetchImage = vi.fn<ImagesDeps['fetchImage']>((url) =>
+      Promise.resolve({ blob: new Blob([url]), name: 'u.jpg' }),
+    )
+    const { store } = setup({ decode, fetchImage })
+    const busy = store.getState().addFiles([file('a.jpg'), file('b.jpg')])
+    const waiting = store.getState().addFromUrl('https://x.com/u.jpg')
+    await vi.waitFor(() => {
+      expect(fetchImage).toHaveBeenCalledTimes(1)
+    })
+    store.getState().cancelImports()
+    expect(await settledWithin(waiting, 50)).toBe(null)
+    gate.resolve(decoded())
+    expect(await busy).toBeNull()
   })
 })
 

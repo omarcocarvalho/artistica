@@ -368,6 +368,21 @@ describe('the CORS probe', () => {
     await vi.advanceTimersByTimeAsync(PROBE_TIMEOUT_MS)
     expect(await result).toBe('network')
   })
+
+  it("a probe stopped by the import's signal leaves no timer behind", async () => {
+    vi.useFakeTimers()
+    const caller = new AbortController()
+    const f = corsThenHangingProbe()
+    const result = code(
+      fetchImageBlob('https://x.com/a.jpg', deps({ fetch: f, signal: caller.signal })),
+    )
+    await vi.waitFor(() => {
+      expect(f).toHaveBeenCalledTimes(2)
+    })
+    caller.abort()
+    expect(await result).toBe('network')
+    expect(vi.getTimerCount()).toBe(0)
+  })
 })
 
 describe('anySignal', () => {

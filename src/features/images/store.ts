@@ -179,7 +179,7 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
       }
     }
 
-    /** Resolves to null when clear() ran before the batch finished: nothing of it is left to report. */
+    /** Resolves to null when clear() or cancelImports() ran before the batch finished: nothing of it is left to report. */
     async function run(jobs: Job[]): Promise<ImportOutcome[] | null> {
       const gen = generation
       const signal = abort.signal
