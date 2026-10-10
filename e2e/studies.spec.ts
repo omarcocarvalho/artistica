@@ -55,6 +55,7 @@ async function withPhotos(page: Page, files: string[] = [FIXTURES.valueRamp]): P
   await app.upload(files)
   await app.expectImages(files.length)
   await app.expectPreviewPages(1)
+  await app.expectPreviewSettled()
   await app.openStudiesTab()
   return app
 }

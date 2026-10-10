@@ -12,17 +12,6 @@ const LARGE_SET_LAYOUT_BUDGET_MS = 2000
 const LARGE_SET_LONG_TASK_BUDGET_MS = 1000
 const CHANGES_PER_KIND = 5
 const PHONE_CPU_SLOWDOWN = 4
-/**
- * Setting kinds whose CI median misses PREVIEW_UPDATE_BUDGET_MS. They are recorded as known misses
- * and not asserted until Task D8 of docs/superpowers/plans/2026-10-10-m5-d-performance.md, which
- * must empty this list, lands. Every other kind is asserted.
- */
-const PREVIEW_UPDATE_KNOWN_MISSES: ReadonlySet<string> = new Set([
-  'paper',
-  'orientation',
-  'gutter',
-  'crop-marks',
-])
 
 let guard: NetworkGuard | undefined
 
@@ -394,13 +383,9 @@ test.describe('§3 timing targets, desktop (chromium asserts)', () => {
         ]),
       ),
     })
-    const knownMisses = Object.keys(medians).filter((k) => PREVIEW_UPDATE_KNOWN_MISSES.has(k))
-    record(testInfo, 'T2 known misses (recorded, not asserted)', {
-      previewUpdateKnownMisses: knownMisses,
-    })
+    expect(Object.keys(medians)).toHaveLength(7)
     for (const [kind, ms] of Object.entries(medians))
-      if (!PREVIEW_UPDATE_KNOWN_MISSES.has(kind))
-        expect(ms, `${kind} preview update median`).toBeLessThan(PREVIEW_UPDATE_BUDGET_MS)
+      expect(ms, `${kind} preview update median`).toBeLessThan(PREVIEW_UPDATE_BUDGET_MS)
     expect(studiesSettledMs).toBeLessThan(STUDIES_SETTLED_BOUND_MS)
   })
 

@@ -46,8 +46,14 @@ export interface Pipeline {
   dispose: () => void
 }
 
+/**
+ * A change that follows a quiet `delayMs` runs at once; a change within `delayMs` of the previous one
+ * waits until the changes stop for `delayMs`. The run at once starts in a microtask, so changes
+ * scheduled before it starts run once, with the last input.
+ */
 export function createPipeline(deps: PipelineDeps, sink: PipelineSink): Pipeline {
   let timer: ReturnType<typeof setTimeout> | undefined
+  let leading: (() => void) | null = null
   let seq = 0
   let memo: { key: string; layout: LayoutResult } | null = null
 
@@ -87,15 +93,32 @@ export function createPipeline(deps: PipelineDeps, sink: PipelineSink): Pipeline
 
   return {
     schedule(setup, images, guides = noGuides, manual = null) {
-      clearTimeout(timer)
       const mine = ++seq
       sink.computing()
+      const go = () => void run(mine, setup, images, guides, manual)
+      if (leading) {
+        leading = go
+        return
+      }
+      const burst = timer !== undefined
+      clearTimeout(timer)
+      if (!burst) {
+        leading = go
+        queueMicrotask(() => {
+          const next = leading
+          leading = null
+          next?.()
+        })
+      }
       timer = setTimeout(() => {
-        void run(mine, setup, images, guides, manual)
+        timer = undefined
+        if (burst) go()
       }, deps.delayMs)
     },
     dispose() {
       clearTimeout(timer)
+      timer = undefined
+      leading = null
       seq++
     },
   }
