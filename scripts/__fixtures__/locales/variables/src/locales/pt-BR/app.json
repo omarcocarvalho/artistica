@@ -1,0 +1,10 @@
+{
+  "title": "App Artistica",
+  "greeting": "Olá {{nome}}",
+  "farewell": "Tchau",
+  "count_one": "{{count, number}} imagem",
+  "count_many": "{{count, number}} de imagens",
+  "count_other": "{{count}} imagens",
+  "forImage": "Linhas de <name/>",
+  "help": "Veja <1>o guia</1>."
+}
