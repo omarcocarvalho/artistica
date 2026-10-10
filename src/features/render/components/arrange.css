@@ -1,10 +1,13 @@
 /* The sheet is white in both themes, so outlines on it use fixed colours with at least 3:1 on white. */
 @layer components {
-  .arrange-layer {
+  .arrange-layer,
+  .arrange-ghost {
     --on-paper-select: #2f4c9e;
     --on-paper-block: #5e5146;
     --on-paper-danger: #a3261b;
     --on-paper-swap: #b0432a;
+  }
+  .arrange-layer {
     --arrange-handle-hit: 24px;
   }
 
@@ -80,15 +83,19 @@
     cursor: nwse-resize;
   }
 
-  .arrange-ghost,
   .arrange-swap-target {
     position: absolute;
     left: 0;
     top: 0;
     pointer-events: none;
   }
+  /* Drawn in the viewport, outside the preview's scroller, so it is never clipped. */
   .arrange-ghost {
-    z-index: 5;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: var(--z-popover);
+    pointer-events: none;
     border: 2px solid var(--on-paper-select);
     background: rgb(47 76 158 / 0.12);
     box-shadow: 0 6px 14px rgb(0 0 0 / 0.25);

@@ -93,8 +93,10 @@ export interface GhostBox {
 export interface DragView {
   readonly id: string
   readonly kind: 'move' | 'resize'
+  /** In viewport pixels, so it can be drawn outside any scroller. */
   readonly ghost: GhostBox
   readonly valid: boolean
+  /** In pixels from the dragged block's sheet. */
   readonly swapTarget: GhostBox | null
 }
 
@@ -120,7 +122,14 @@ interface Options {
   readonly sheet: () => HTMLElement | null
 }
 
-function toBox(r: ArrangeRect, box: DOMRect, origin: DOMRect, pageW: Mm): GhostBox {
+const VIEWPORT = { left: 0, top: 0 } as const
+
+function toBox(
+  r: ArrangeRect,
+  box: DOMRect,
+  origin: Pick<DOMRect, 'left' | 'top'>,
+  pageW: Mm,
+): GhostBox {
   const ppm = box.width / pageW
   return {
     left: box.left - origin.left + r.x * ppm,
@@ -172,7 +181,7 @@ export function useBlockDrag({ arrange, page, pageW, sheet }: Options) {
         setView({
           id: s.block.id,
           kind: 'resize',
-          ghost: toBox(rect, s.origin, s.origin, pageW),
+          ghost: toBox(rect, s.origin, VIEWPORT, pageW),
           valid: result.ok,
           swapTarget: null,
         })
@@ -210,7 +219,7 @@ export function useBlockDrag({ arrange, page, pageW, sheet }: Options) {
       setView({
         id: s.block.id,
         kind: 'move',
-        ghost: toBox(rect, hit.box, s.origin, pageW),
+        ghost: toBox(rect, hit.box, VIEWPORT, pageW),
         valid,
         swapTarget: targetBlock ? toBox(targetBlock.rect, hit.box, s.origin, pageW) : null,
       })

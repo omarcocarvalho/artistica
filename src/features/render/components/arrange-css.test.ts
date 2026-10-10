@@ -24,3 +24,22 @@ describe('arrange.css on touch screens', () => {
     expect(rulesWith(/-webkit-user-select:\s*none/)).toEqual(['.arrange-block'])
   })
 })
+
+describe('arrange.css drag ghost', () => {
+  const ghost = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .filter((m) => (m[1] ?? '').split(',').some((sel) => sel.trim() === '.arrange-ghost'))
+    .map((m) => m[2] ?? '')
+    .join(';')
+
+  it('is fixed to the viewport, above the panels and below dialogs, and never takes the pointer', () => {
+    expect(ghost).toMatch(/position:\s*fixed/)
+    expect(ghost).toMatch(/pointer-events:\s*none/)
+    expect(ghost).toMatch(/z-index:\s*var\(--z-popover\)/)
+  })
+
+  it('carries its own on-paper colours, since it is drawn outside the arrange layer', () => {
+    for (const name of ['--on-paper-select', '--on-paper-danger']) {
+      expect(ghost).toContain(`${name}:`)
+    }
+  })
+})

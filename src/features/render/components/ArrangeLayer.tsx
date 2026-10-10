@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { cx } from '../../../shared/ui'
 import type { SizeMm } from '../../../shared/model/paper'
@@ -182,18 +183,20 @@ export function ArrangeLayer({ arrange, page, pageSize, sheet, warnings }: Arran
           <span className="arrange-chip arrange-chip--swap">{t('arrange.chip.swap')}</span>
         </div>
       )}
-      {drag && (
-        <div
-          className={cx('arrange-ghost', !drag.valid && 'is-invalid')}
-          aria-hidden="true"
-          data-testid="arrange-ghost"
-          style={boxStyle(drag.ghost)}
-        >
-          {!drag.valid && (
-            <span className="arrange-chip arrange-chip--danger">{t('arrange.chip.invalid')}</span>
-          )}
-        </div>
-      )}
+      {drag &&
+        createPortal(
+          <div
+            className={cx('arrange-ghost', !drag.valid && 'is-invalid')}
+            aria-hidden="true"
+            data-testid="arrange-ghost"
+            style={boxStyle(drag.ghost)}
+          >
+            {!drag.valid && (
+              <span className="arrange-chip arrange-chip--danger">{t('arrange.chip.invalid')}</span>
+            )}
+          </div>,
+          document.body,
+        )}
     </>
   )
 }
