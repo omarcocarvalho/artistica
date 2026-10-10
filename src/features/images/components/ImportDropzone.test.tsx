@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ImageId } from '../../../shared/model/image'
@@ -91,14 +91,35 @@ describe('ImportDropzone', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('a drop with nothing importable says there is no image', async () => {
+  it('a drop with nothing importable says there is no image in what was dropped (owner Q-H10)', async () => {
     const { addFromDrop } = mockStore()
     addFromDrop.mockResolvedValue([])
     const { container } = renderWithProviders(<ImportDropzone />)
     fireEvent.drop(pick(container, '[data-dropzone]'), {
       dataTransfer: { files: [], types: ['text/plain'], getData: () => 'just words' },
     })
-    expect(await screen.findByRole('status')).toHaveTextContent('No image on the clipboard')
+    const status = await screen.findByRole('status')
+    await waitFor(() => {
+      expect(status).toHaveTextContent('No image in what you dropped')
+    })
+    expect(status).toHaveTextContent('Drop a photo file, or an image from another page.')
+    expect(status).not.toHaveTextContent('clipboard')
+  })
+
+  it('a paste with nothing importable keeps the clipboard wording', async () => {
+    const { addFromClipboard } = mockStore()
+    addFromClipboard.mockResolvedValue([])
+    vi.spyOn(navigator, 'clipboard', 'get').mockReturnValue({
+      read: () => Promise.resolve([]),
+    } as unknown as Clipboard)
+    renderWithProviders(<ImportDropzone />)
+    await userEvent.click(screen.getByRole('button', { name: /Paste/ }))
+    const status = screen.getByRole('status')
+    await waitFor(() => {
+      expect(status).toHaveTextContent('No image on the clipboard')
+    })
+    expect(status).toHaveTextContent('Copy an image first, then paste again.')
+    expect(status).not.toHaveTextContent('dropped')
   })
 
   it('registers no document paste listener (CR-E3): a window paste is not handled here', () => {
@@ -241,6 +262,57 @@ describe('ImportDropzone', () => {
     renderWithProviders(<ImportDropzone variant="card" />)
     expect(screen.getByText('Adding 2 photos…')).toBeInTheDocument()
     expect(screen.getByRole('progressbar', { name: 'Adding photos' })).toBeInTheDocument()
+  })
+
+  describe('Cancel while importing (owner Q-H5)', () => {
+    it('shows no Cancel button while nothing is importing', () => {
+      mockStore()
+      renderWithProviders(<ImportDropzone />)
+      expect(screen.queryByRole('button', { name: /Cancel/ })).not.toBeInTheDocument()
+    })
+
+    for (const variant of ['compact', 'card'] as const) {
+      it(`${variant}: Cancel next to the progress stops every import, announces it and moves focus to Upload`, async () => {
+        const cancelImports = vi.fn(() => {
+          useImages.setState({ importing: 0 })
+        })
+        mockStore({ importing: 3, cancelImports })
+        renderWithProviders(<ImportDropzone variant={variant} />)
+        expect(screen.getByText('Adding 3 photos…')).toBeInTheDocument()
+        const cancel = screen.getByRole('button', { name: 'Cancel adding photos' })
+        expect(cancel).toHaveTextContent('Cancel')
+        expect(screen.getByRole('status')).not.toContainElement(cancel)
+        await userEvent.click(cancel)
+        expect(cancelImports).toHaveBeenCalledTimes(1)
+        expect(screen.getByRole('status')).toHaveTextContent('Stopped adding photos.')
+        expect(screen.queryByText('Adding 3 photos…')).not.toBeInTheDocument()
+        expect(
+          screen.queryByRole('button', { name: 'Cancel adding photos' }),
+        ).not.toBeInTheDocument()
+        expect(
+          screen.getByRole('button', { name: variant === 'card' ? /Upload photos/ : /Upload/ }),
+        ).toHaveFocus()
+      })
+    }
+
+    it('the stopped notice goes once the next import starts', async () => {
+      const cancelImports = vi.fn(() => {
+        useImages.setState({ importing: 0 })
+      })
+      mockStore({ importing: 1, cancelImports })
+      renderWithProviders(<ImportDropzone />)
+      await userEvent.click(screen.getByRole('button', { name: 'Cancel adding photos' }))
+      expect(screen.getByRole('status')).toHaveTextContent('Stopped adding photos.')
+      act(() => {
+        useImages.setState({ importing: 2 })
+      })
+      expect(screen.getByRole('status')).not.toHaveTextContent('Stopped adding photos.')
+      expect(screen.getByText('Adding 2 photos…')).toBeInTheDocument()
+      act(() => {
+        useImages.setState({ importing: 0 })
+      })
+      expect(screen.getByRole('status')).not.toHaveTextContent('Stopped adding photos.')
+    })
   })
 
   it('reports outcomes to the shell', async () => {

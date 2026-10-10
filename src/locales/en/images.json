@@ -15,10 +15,17 @@
     "importing_one": "Adding {{count}} photo…",
     "importing_other": "Adding {{count}} photos…",
     "importingLabel": "Adding photos",
+    "cancel": "Cancel",
+    "cancelLabel": "Cancel adding photos",
+    "stopped": "Stopped adding photos.",
     "dismiss": "Dismiss",
     "noImage": {
       "title": "No image on the clipboard",
       "message": "Copy an image first, then paste again."
+    },
+    "noImageDrop": {
+      "title": "No image in what you dropped",
+      "message": "Drop a photo file, or an image from another page."
     },
     "pasteHint": {
       "title": "Paste with the keyboard",

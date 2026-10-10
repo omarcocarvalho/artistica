@@ -99,6 +99,24 @@ describe('ImageList', () => {
     expect(screen.queryByRole('button', { name: 'Remove all images' })).not.toBeInTheDocument()
   })
 
+  it('shows Remove all while photos are importing even when none has loaded, and it cancels them (owner Q-H5)', async () => {
+    const clear = vi.fn()
+    useImages.setState({ importing: 2, clear })
+    renderWithProviders(
+      <div data-images-panel>
+        <section data-dropzone>
+          <button type="button">Upload</button>
+        </section>
+        <ImageList onEdit={() => undefined} />
+      </div>,
+    )
+    expect(screen.getByText('No images yet. Add photos to start your sheets.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Remove all images' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(clear).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: 'Upload' })).toHaveFocus()
+  })
+
   it('Remove all with a single image clears at once, without asking', async () => {
     load(makeLoadedImage({ id: 'a' as ImageId }))
     renderWithProviders(<ImageList onEdit={() => undefined} />)

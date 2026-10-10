@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ImportFailure } from './errors'
-import { FETCH_TIMEOUT_MS, MAX_FILE_BYTES } from './limits'
+import { FETCH_TIMEOUT_MS, MAX_FILE_BYTES, PROBE_TIMEOUT_MS } from './limits'
 import { skeletonJpeg } from './test-bytes'
 import {
+  anySignal,
   classifyFetchFailure,
   fetchImageBlob,
   nameFromUrl,
@@ -282,6 +283,121 @@ describe('stall timeout', () => {
       'network',
     )
     expect(f).not.toHaveBeenCalled()
+  })
+})
+
+const settledWithin = <T>(p: Promise<T>, ms: number): Promise<T | 'pending'> =>
+  Promise.race([
+    p,
+    new Promise<'pending'>((r) =>
+      setTimeout(() => {
+        r('pending')
+      }, ms),
+    ),
+  ])
+
+/** First call fails like a CORS block; the no-cors probe after it never answers on its own. */
+function corsThenHangingProbe() {
+  return vi
+    .fn<typeof fetch>()
+    .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    .mockImplementationOnce(() => new Promise<Response>(() => undefined))
+}
+
+function withoutAbortSignalAny(): () => void {
+  const original = Object.getOwnPropertyDescriptor(AbortSignal, 'any')
+  Object.defineProperty(AbortSignal, 'any', { value: undefined, configurable: true })
+  return () => {
+    if (original) Object.defineProperty(AbortSignal, 'any', original)
+  }
+}
+
+describe('the CORS probe', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  for (const variant of ['AbortSignal.any', 'the manual combiner'] as const) {
+    describe(`with ${variant}`, () => {
+      let restore = (): void => undefined
+      afterEach(() => {
+        restore()
+        restore = () => undefined
+      })
+
+      it("aborting the import's signal stops a probe in flight at once", async () => {
+        if (variant === 'the manual combiner') restore = withoutAbortSignalAny()
+        const caller = new AbortController()
+        const f = corsThenHangingProbe()
+        const result = code(
+          fetchImageBlob('https://x.com/a.jpg', deps({ fetch: f, signal: caller.signal })),
+        )
+        await vi.waitFor(() => {
+          expect(f).toHaveBeenCalledTimes(2)
+        })
+        const probeSignal = f.mock.calls[1]?.[1]?.signal
+        expect(probeSignal?.aborted).toBe(false)
+        caller.abort()
+        expect(probeSignal?.aborted).toBe(true)
+        expect(await settledWithin(result, 50)).toBe('network')
+      })
+
+      it('a probe with no answer still gives up after PROBE_TIMEOUT_MS', async () => {
+        if (variant === 'the manual combiner') restore = withoutAbortSignalAny()
+        vi.useFakeTimers()
+        const caller = new AbortController()
+        const f = corsThenHangingProbe()
+        const result = code(
+          fetchImageBlob('https://x.com/a.jpg', deps({ fetch: f, signal: caller.signal })),
+        )
+        await vi.advanceTimersByTimeAsync(PROBE_TIMEOUT_MS - 1)
+        const probeSignal = f.mock.calls[1]?.[1]?.signal
+        expect(probeSignal?.aborted).toBe(false)
+        await vi.advanceTimersByTimeAsync(1)
+        expect(probeSignal?.aborted).toBe(true)
+        expect(await result).toBe('network')
+        expect(caller.signal.aborted).toBe(false)
+      })
+    })
+  }
+
+  it('a probe without an import signal still gives up after PROBE_TIMEOUT_MS', async () => {
+    vi.useFakeTimers()
+    const f = corsThenHangingProbe()
+    const result = code(fetchImageBlob('https://x.com/a.jpg', deps({ fetch: f })))
+    await vi.advanceTimersByTimeAsync(PROBE_TIMEOUT_MS)
+    expect(await result).toBe('network')
+  })
+})
+
+describe('anySignal', () => {
+  let restore = (): void => undefined
+  afterEach(() => {
+    restore()
+    restore = () => undefined
+  })
+
+  it('the manual combiner aborts with the first reason, starts aborted for an aborted input, and stops listening once disposed', () => {
+    restore = withoutAbortSignalAny()
+    const a = new AbortController()
+    const b = new AbortController()
+    const removeA = vi.spyOn(a.signal, 'removeEventListener')
+    const one = anySignal([a.signal, b.signal])
+    b.abort('b first')
+    a.abort('a later')
+    expect(one.signal.aborted).toBe(true)
+    expect(one.signal.reason).toBe('b first')
+    expect(anySignal([AbortSignal.abort('done'), new AbortController().signal]).signal.reason).toBe(
+      'done',
+    )
+    const c = new AbortController()
+    const removeC = vi.spyOn(c.signal, 'removeEventListener')
+    const two = anySignal([c.signal])
+    two.dispose()
+    expect(removeC).toHaveBeenCalledWith('abort', expect.any(Function))
+    c.abort()
+    expect(two.signal.aborted).toBe(false)
+    expect(removeA).toHaveBeenCalled()
   })
 })
 

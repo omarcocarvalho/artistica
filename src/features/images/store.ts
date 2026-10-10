@@ -43,6 +43,8 @@ export interface ImagesState {
   addFromUrl(url: string): Promise<ImportOutcome | null>
   remove(id: ImageId): void
   clear(): void
+  /** Stops every pending import; their batches resolve to null and the photos already loaded stay. */
+  cancelImports(): void
   select(id: ImageId | null): void
   updateEdits(id: ImageId, patch: Partial<ImageEdits>): void
   /** Patch one image's study settings (sanitized). Keeps the same state when nothing changes. */
@@ -70,8 +72,8 @@ export interface ImagesDeps {
 type Job = { kind: 'blob'; blob: Blob; name: string } | { kind: 'url'; url: string }
 
 export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<ImagesState>> {
-  const limit = createLimiter(DECODE_CONCURRENCY)
-  const fetchLimit = createLimiter(FETCH_CONCURRENCY)
+  const decodeSlots = createLimiter(DECODE_CONCURRENCY)
+  const fetchSlots = createLimiter(FETCH_CONCURRENCY)
   let abort = new AbortController()
   const order = new Map<ImageId, number>()
   let autoSelectedId: ImageId | null = null
@@ -86,10 +88,30 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
       deps.revokeObjectURL(d.thumbUrl)
       d.preview.close()
     }
+    const restartImports = (): void => {
+      abort.abort()
+      abort = new AbortController()
+    }
     const dispose = (img: LoadedImage): void => {
       deps.revokeObjectURL(img.thumbUrl)
       img.preview.close()
       order.delete(img.id)
+    }
+
+    /** A download keeps its slot until a decode slot is free, so finished blobs never pile up. */
+    async function withDecodeSlot(
+      job: Job,
+      signal: AbortSignal,
+    ): Promise<{ blob: Blob; name: string; release: () => void }> {
+      if (job.kind === 'blob')
+        return { blob: job.blob, name: job.name, release: await decodeSlots.acquire(signal) }
+      const releaseFetch = await fetchSlots.acquire(signal)
+      try {
+        const { blob, name } = await deps.fetchImage(job.url, signal)
+        return { blob, name, release: await decodeSlots.acquire(signal) }
+      } finally {
+        releaseFetch()
+      }
     }
 
     async function loadOne(
@@ -100,24 +122,24 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
       signal: AbortSignal,
     ): Promise<ImportOutcome | null> {
       const label = job.kind === 'url' ? job.url : job.name
+      const stale = (): boolean => gen !== generation || signal.aborted
       try {
-        const { blob, name } =
-          job.kind === 'url'
-            ? await fetchLimit(() => deps.fetchImage(job.url, signal))
-            : { blob: job.blob, name: job.name }
-        const work = await limit(async () => {
-          if (gen !== generation) return null
-          const decoded = await deps.decode(blob, name)
+        const { blob, name, release } = await withDecodeSlot(job, signal)
+        let d: DecodedImage
+        let contentHash: string
+        try {
+          if (stale()) return null
+          d = await deps.decode(blob, name)
           try {
-            return { d: decoded, contentHash: await deps.hash(blob) }
+            contentHash = await deps.hash(blob)
           } catch (e) {
-            discard(decoded)
+            discard(d)
             throw e
           }
-        })
-        if (work === null) return null
-        const { d, contentHash } = work
-        if (gen !== generation) {
+        } finally {
+          release()
+        }
+        if (stale()) {
           discard(d)
           return null
         }
@@ -165,7 +187,8 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
       const settle = (n: number): void => {
         const k = Math.min(n, pending)
         pending -= k
-        if (k > 0 && gen === generation) set((s) => ({ importing: s.importing - k }))
+        if (k > 0 && gen === generation && !signal.aborted)
+          set((s) => ({ importing: s.importing - k }))
       }
       set((s) => ({ importing: s.importing + jobs.length }))
       try {
@@ -177,7 +200,7 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
             }),
           ),
         )
-        if (gen !== generation) return null
+        if (gen !== generation || signal.aborted) return null
         return results.filter((r): r is ImportOutcome => r !== null)
       } finally {
         settle(pending)
@@ -230,10 +253,15 @@ export function createImagesStore(deps: ImagesDeps): UseBoundStore<StoreApi<Imag
 
       clear: () => {
         generation += 1
-        abort.abort()
-        abort = new AbortController()
+        restartImports()
         for (const img of get().images) dispose(img)
         set({ images: [], selectedId: null, importing: 0 })
+      },
+
+      cancelImports: () => {
+        if (get().importing === 0) return
+        restartImports()
+        set({ importing: 0 })
       },
 
       select: (id) => {

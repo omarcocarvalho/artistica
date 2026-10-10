@@ -84,18 +84,64 @@ export function classifyFetchFailure(i: {
   return i.online && i.probe === 'reachable' ? 'cors' : 'network'
 }
 
-async function probeReachable(href: string, f: typeof fetch): Promise<'reachable' | 'unreachable'> {
+export function anySignal(signals: AbortSignal[]): {
+  signal: AbortSignal
+  dispose: () => void
+} {
+  if (typeof AbortSignal.any === 'function')
+    return { signal: AbortSignal.any(signals), dispose: () => undefined }
+  const ctl = new AbortController()
+  const dispose = (): void => {
+    for (const s of signals) s.removeEventListener('abort', onAbort)
+  }
+  function onAbort(this: AbortSignal): void {
+    dispose()
+    ctl.abort(this.reason)
+  }
+  const first = signals.find((s) => s.aborted)
+  if (first) ctl.abort(first.reason)
+  else for (const s of signals) s.addEventListener('abort', onAbort, { once: true })
+  return { signal: ctl.signal, dispose }
+}
+
+function timeoutSignal(ms: number): { signal: AbortSignal; dispose: () => void } {
+  const ctl = new AbortController()
+  const timer = setTimeout(() => {
+    ctl.abort(new DOMException('Probe timed out', 'TimeoutError'))
+  }, ms)
+  return {
+    signal: ctl.signal,
+    dispose: () => {
+      clearTimeout(timer)
+    },
+  }
+}
+
+async function probeReachable(
+  href: string,
+  f: typeof fetch,
+  outer: AbortSignal | undefined,
+): Promise<'reachable' | 'unreachable'> {
+  const timeout = timeoutSignal(PROBE_TIMEOUT_MS)
+  const combined = outer ? anySignal([outer, timeout.signal]) : timeout
+  const { signal } = combined
   try {
-    await f(href, {
-      method: 'HEAD',
-      mode: 'no-cors',
-      credentials: 'omit',
-      referrerPolicy: 'no-referrer',
-      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
-    })
+    await untilAborted(
+      f(href, {
+        method: 'HEAD',
+        mode: 'no-cors',
+        credentials: 'omit',
+        referrerPolicy: 'no-referrer',
+        signal,
+      }),
+      signal,
+    )
     return 'reachable'
   } catch {
     return 'unreachable'
+  } finally {
+    combined.dispose()
+    timeout.dispose()
   }
 }
 
@@ -146,7 +192,8 @@ export async function fetchImageBlob(
         cause instanceof DOMException &&
         (cause.name === 'TimeoutError' || cause.name === 'AbortError')
       const online = deps.isOnline()
-      const probe = timedOut || !online ? 'skipped' : await probeReachable(url.href, deps.fetch)
+      const probe =
+        timedOut || !online ? 'skipped' : await probeReachable(url.href, deps.fetch, deps.signal)
       throw new ImportFailure(classifyFetchFailure({ online, probe }), { cause })
     }
 
