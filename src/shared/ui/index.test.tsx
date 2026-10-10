@@ -29,6 +29,7 @@ describe('ui barrel', () => {
         'buttonClasses',
         'cx',
         'parseDecimal',
+        'useAfterPaint',
         'useImportWait',
       ].sort(),
     )

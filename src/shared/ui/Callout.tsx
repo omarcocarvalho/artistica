@@ -1,6 +1,7 @@
-import { useEffect, useState, type HTMLAttributes, type ReactNode } from 'react'
+import type { HTMLAttributes, ReactNode } from 'react'
 import { cx } from './cx'
 import { Icon, type IconName } from './Icon'
+import { useAfterPaint } from './use-after-paint'
 
 export type CalloutTone = 'info' | 'warning' | 'danger' | 'success' | 'quiet'
 
@@ -34,12 +35,7 @@ export function Callout({
   ...rest
 }: CalloutProps) {
   const role = live ? (tone === 'danger' ? 'alert' : 'status') : undefined
-  const [mounted, setMounted] = useState(!live)
-  useEffect(() => {
-    // A second commit, so the live region is in the page before its message.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true)
-  }, [])
+  const mounted = useAfterPaint(live)
   return (
     <div
       role={role}

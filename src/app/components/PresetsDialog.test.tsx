@@ -577,9 +577,11 @@ describe('Import', () => {
       expect(within(dialog).getByRole('alert')).not.toBe(first)
     })
     expect(first).not.toBeInTheDocument()
-    expect(within(dialog).getByRole('alert')).toHaveTextContent(
-      "This file isn't a presets file from Artistica.",
-    )
+    await waitFor(() => {
+      expect(within(dialog).getByRole('alert')).toHaveTextContent(
+        "This file isn't a presets file from Artistica.",
+      )
+    })
   })
 
   it('reports presets that did not fit under the device limit', async () => {
@@ -627,7 +629,9 @@ describe('Import', () => {
   ])('refuses a file that is %s with an alert', async (_label, file, message) => {
     const { user, dialog } = await openDialog()
     await user.upload(fileInput(dialog), file)
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(message)
+    await waitFor(() => {
+      expect(within(dialog).getByRole('alert')).toHaveTextContent(message)
+    })
     expect(useSettings.getState().presets).toEqual([])
   })
 

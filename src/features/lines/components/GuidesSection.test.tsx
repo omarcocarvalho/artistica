@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useImages } from '../../images'
@@ -355,7 +355,9 @@ describe('GuidesSection', () => {
       const { actions } = renderPanel()
       setStatus('edges', { state: 'failed', reason: 'error' })
       const alert = within(section()).getByRole('alert')
-      expect(alert).toHaveTextContent("Couldn't trace the outline.")
+      await waitFor(() => {
+        expect(alert).toHaveTextContent("Couldn't trace the outline.")
+      })
       expectAlertWithoutActions(alert)
       await user.click(within(section()).getByRole('button', { name: 'Try again' }))
       expect(actions.retry).toHaveBeenCalledWith('edges', A)
@@ -515,7 +517,9 @@ describe('GuidesSection', () => {
         const { actions } = renderPanel()
         setStatus(c.kind, { state: 'failed', reason })
         const alert = within(section()).getByRole('alert')
-        expect(alert).toHaveTextContent(c.failed)
+        await waitFor(() => {
+          expect(alert).toHaveTextContent(c.failed)
+        })
         expect(alert).toHaveTextContent(
           'Check your connection and try again. Other lines still work.',
         )
@@ -535,7 +539,9 @@ describe('GuidesSection', () => {
       const { actions } = renderPanel()
       setStatus(c.kind, { state: 'failed', reason: 'error' })
       const alert = within(section()).getByRole('alert')
-      expect(alert).toHaveTextContent(c.error)
+      await waitFor(() => {
+        expect(alert).toHaveTextContent(c.error)
+      })
       // owner Q16, default
       expect(alert).toHaveTextContent('Try again. Other lines still work.')
       expect(alert).not.toHaveTextContent(c.failed)
@@ -690,7 +696,7 @@ describe('GuidesSection', () => {
       expect(liveRegion()).toBe(region)
     })
 
-    it('leaves failures to their alert, so nothing is announced twice', () => {
+    it('leaves failures to their alert, so nothing is announced twice', async () => {
       seed(FACE_ON)
       renderPanel()
       const region = liveRegion()
@@ -698,7 +704,9 @@ describe('GuidesSection', () => {
       setStatus('face', { state: 'failed', reason: 'download' })
       expect(region).toHaveTextContent('Finding faces…')
       expect(region).not.toHaveTextContent("Couldn't download")
-      expect(screen.getByRole('alert')).toHaveTextContent("Couldn't download the face model")
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent("Couldn't download the face model")
+      })
     })
 
     it('announces the WebGL note (owner Q15, default)', async () => {

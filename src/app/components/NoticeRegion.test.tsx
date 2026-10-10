@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { act, useLayoutEffect, useRef } from 'react'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
@@ -14,13 +14,15 @@ beforeEach(() => {
 })
 
 describe('NoticeRegion', () => {
-  it('announces errors with role=alert and info with role=status', () => {
+  it('announces errors with role=alert and info with role=status', async () => {
     render(<NoticeRegion />)
     act(() => {
       useNotices.getState().notify('error', 'Could not read old.heic')
       useNotices.getState().notify('info', 'Gutter raised')
     })
-    expect(screen.getByRole('alert')).toHaveTextContent('Could not read old.heic')
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('Could not read old.heic')
+    })
     expect(screen.getByRole('status')).toHaveTextContent('Gutter raised')
   })
   it('dismisses a notice with its button', async () => {
@@ -31,7 +33,7 @@ describe('NoticeRegion', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(screen.queryByText('Nope')).not.toBeInTheDocument()
   })
-  it('mounts an error toast with its alert empty, then inserts the message (M1 #70)', () => {
+  it('mounts an error toast with its alert empty, then inserts the message (M1 #70)', async () => {
     const seen: string[] = []
     function Probe() {
       const ref = useRef<HTMLDivElement>(null)
@@ -51,7 +53,10 @@ describe('NoticeRegion', () => {
       useNotices.getState().notify('error', 'Could not read old.heic')
     })
     expect(seen[0]).toBe('')
-    expect(screen.getByRole('alert')).toHaveTextContent('Could not read old.heic')
+    expect(screen.getByRole('alert').querySelector('p')).toBeEmptyDOMElement()
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('Could not read old.heic')
+    })
   })
   it('keeps the status live region mounted and only changes its content', () => {
     render(<NoticeRegion />)
