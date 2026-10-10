@@ -1,0 +1,9 @@
+{
+  "title": "Artistica アプリ",
+  "greeting": "こんにちは {{name}}",
+  "farewell": "さようなら {{name}}",
+  "count_other": "{{count, number}} 枚",
+  "forImage": "<name/> の線",
+  "help": "<1>ガイド</1>を参照。",
+  "count_zero": "写真なし"
+}

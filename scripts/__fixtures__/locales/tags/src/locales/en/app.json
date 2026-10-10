@@ -1,0 +1,9 @@
+{
+  "title": "Artistica app",
+  "greeting": "Hello {{name}}",
+  "farewell": "Bye {{name}}",
+  "count_one": "{{count, number}} image",
+  "count_other": "{{count, number}} images",
+  "forImage": "Lines for <name/>",
+  "help": "See <1>the guide</1>."
+}
