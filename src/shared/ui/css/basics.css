@@ -258,6 +258,11 @@
       ds-stripes 1s linear infinite,
       ds-slide 1.6s ease-in-out infinite alternate;
   }
+  .ds-progress__fill--indeterminate-static {
+    width: 100%;
+    animation: none;
+    transition: none;
+  }
   @keyframes ds-stripes {
     to {
       background-position: 28px 0;

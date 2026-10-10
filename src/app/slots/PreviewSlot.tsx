@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { GuidesLegend, GuidesToggle, PagePreview } from '../../features/render'
 import { useImages } from '../../features/images'
@@ -10,6 +10,9 @@ import { useIsDesktop } from '../hooks/useIsDesktop'
 import { usePages } from '../pages-store'
 import { useAppUi } from '../state/useAppUi'
 import { appStudyProvider, getPreviewSource } from '../study-provider'
+import { useDelayedFlag } from '../use-delayed-flag'
+
+export const UPDATING_ANNOUNCE_DELAY_MS = 500
 
 const selectImage = (id: ImageId) => {
   useImages.getState().select(id)
@@ -25,6 +28,22 @@ export function PreviewSlot() {
   const paper = useSettings((s) => s.pageSetup.paper)
   const showGuides = useAppUi((s) => s.showGuides)
   const isDesktop = useIsDesktop()
+  const computing = status === 'computing'
+  const slow = useDelayedFlag(computing, UPDATING_ANNOUNCE_DELAY_MS)
+  const [wasComputing, setWasComputing] = useState(computing)
+  const [announced, setAnnounced] = useState(false)
+  if (computing !== wasComputing) {
+    setWasComputing(computing)
+    if (computing) setAnnounced(false)
+  }
+  if (slow && !announced) setAnnounced(true)
+  const statusText = computing
+    ? slow
+      ? t('app:preview.updating')
+      : null
+    : announced && status === 'idle'
+      ? t('app:preview.updated')
+      : null
   const names = useMemo(() => new Map(images.map((i) => [i.id, i.name])), [images])
   const linesOf = useMemo(() => new Map(images.map((i) => [i.id, i.lines])), [images])
   const getName = (id: ImageId) => names.get(id) ?? t('app:preview.unnamedImage')
@@ -50,16 +69,14 @@ export function PreviewSlot() {
 
   return (
     <div
-      aria-busy={status === 'computing'}
+      aria-busy={computing}
       className={
         isDesktop
           ? 'flex flex-col items-center gap-8 p-6'
           : 'flex snap-x snap-mandatory gap-4 overflow-x-auto p-4'
       }
     >
-      <VisuallyHidden role="status">
-        {status === 'computing' ? t('app:preview.updating') : null}
-      </VisuallyHidden>
+      <VisuallyHidden role="status">{statusText}</VisuallyHidden>
       {status === 'error' && (
         <Callout tone="danger" live>
           {t('app:topBar.exportError')}

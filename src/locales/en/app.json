@@ -79,6 +79,7 @@
   "preview": {
     "editSelected": "Edit selected image",
     "updating": "Updating layout…",
+    "updated": "Layout updated.",
     "pageCaption": "Page {{current}} of {{total}} · {{paper}} · {{orientation}}",
     "pageItems": "Page {{current}} contents",
     "item": "{{name}}, {{w}} × {{h}} mm",
