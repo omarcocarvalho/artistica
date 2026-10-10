@@ -352,7 +352,7 @@ export function PagePreview({
                 {area.groupSize > 1 && (
                   <span
                     aria-hidden="true"
-                    className="absolute top-1 left-1 rounded-[3px] bg-white/85 px-1.5 text-[10px] font-bold tracking-wide text-[#2b2420] uppercase"
+                    className="page-tile-label absolute top-1 left-1 rounded-[3px] bg-white/85 px-1.5 text-[10px] font-bold tracking-wide text-[#2b2420] uppercase"
                   >
                     {versionLabel}
                   </span>

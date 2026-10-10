@@ -1,7 +1,5 @@
-import { AxeBuilder } from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
-
-const WCAG_22_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
+import { expectNoAxeViolations } from './support/axe.ts'
 
 const PAGES = [
   { name: 'landing', path: './', h1: /\S/ },
@@ -37,8 +35,7 @@ for (const { name, path, h1 } of PAGES) {
         await page.goto(path)
         await expect(page.getByRole('heading', { level: 1, name: h1 })).toBeAttached()
 
-        const results = await new AxeBuilder({ page }).withTags(WCAG_22_AA).analyze()
-        expect(results.violations).toEqual([])
+        await expectNoAxeViolations(page)
       })
     }
   })
