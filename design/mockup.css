@@ -1015,6 +1015,10 @@ dialog.dialog--sm { width: min(480px, calc(100vw - 32px)); }
 .arrange-controls .field { gap: 2px; }
 .arrange-controls .select, .arrange-controls .input { min-height: 32px; font-size: var(--text-sm); }
 .arrange-controls .unit-input { width: 120px; }
+.nudge { display: flex; gap: 2px; }
+.arrange-controls .nudge .btn { min-height: 32px; width: 32px; min-width: 32px; padding: 0; }
+.m-sheet .nudge { gap: var(--space-2); }
+.m-sheet .nudge .btn { min-height: var(--size-target); min-width: var(--size-target); }
 .sr-text { font-family: var(--font-mono); font-size: var(--text-xs); background: var(--color-surface-sunken); border: 1px dashed var(--color-line-strong); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); color: var(--color-ink); }
 .sr-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); width: 100%; }
 

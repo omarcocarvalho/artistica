@@ -15,7 +15,7 @@ Clickable HTML mockups for every screen in spec §8 "D — Design". Open `index.
 | `index.html` | Gallery of all screens and the palette. |
 | `landing.html` | Public landing page (`/`): hero, how it works, features, privacy, FAQ. |
 | `workspace.html` | Desktop workspace: images panel · live page preview · settings tabs. |
-| `mobile-flow.html` | Phone flow (390 × 844) in a device frame: Images → Page → Studies → Preview → Export, plus the edit bottom sheet. Preview has the Arrange toolbar under the pages; two more phones show Arrange mode (44 px handles) and the selected photo's sheet. Export is inline in its step. |
+| `mobile-flow.html` | Phone flow (390 × 844) in a device frame: Images → Page → Studies → Preview → Export, plus the edit bottom sheet. Preview has the Arrange toolbar under the pages; two more phones show Arrange mode (44 px handles) and the selected photo's sheet (Move to page, Swap with…, Width, Position). Export is inline in its step. |
 | `image-edit.html` | Per-image edit dialog: crop and aspect, rotate, flip, copies, Auto/Fixed size, DPI meter and low-DPI warning. |
 | `page-setup.html` | Page tab with bleed on: guide legend, shortened crop marks, and the "gutter raised" note. |
 | `studies.html` | Studies tab: versions, blur, values 2–20, single-hue picker, generated ramp, apply to all; study groups on the page. |
@@ -24,7 +24,7 @@ Clickable HTML mockups for every screen in spec §8 "D — Design". Open `index.
 | `empty-state.html` | First run with no images. Export is disabled and the reason is given. |
 | `errors.html` | CORS link, unsupported file / non-image paste / animated GIF, no face, low resolution, oversized fixed size, model download failure, export with 0 images. |
 | `presets.html` | Presets: the top-bar button; the dialog empty and with three presets; saving (no name, a taken name, a full list); renaming; the apply and delete confirmations; Export all and Import… with every result and error; the phone bottom sheet. |
-| `arrange.html` | Arrange mode: the preview toolbar off and on (Undo, Re-run auto layout, and Move to page, Swap with…, Width for the selected photo); a keyboard-driven desk; drag ghosts (valid, invalid), a swap target, a keyboard pick-up, a fixed-size photo, the re-run confirmation, the "arranged automatically again" notices and what a screen reader hears. |
+| `arrange.html` | Arrange mode: the preview toolbar off and on (Undo, Re-run auto layout, and Move to page, Swap with…, Width and Position for the selected photo); a keyboard-driven desk; drag ghosts (valid, invalid), a swap target, a keyboard pick-up, a fixed-size photo, the re-run confirmation, the "arranged automatically again" notices and what a screen reader hears. |
 | `logo.html` | Three logo directions on the sketchbook concept, recommended one first, at 512, 180, 32 and 16 px, in light, dark, forced colours and one colour. |
 
 ## Visual concept: "a sketchbook on a warm studio desk"
