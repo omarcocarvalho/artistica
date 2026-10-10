@@ -177,6 +177,10 @@ export class AppPage {
     return { bytes: Buffer.concat(chunks), fileName: d.suggestedFilename() }
   }
 
+  async openPageTab(): Promise<void> {
+    await this.page.getByRole('tab', { name: 'Page' }).click()
+  }
+
   // --- Studies (D3) ---
   async openStudiesTab(): Promise<void> {
     await this.page.getByRole('tab', { name: 'Studies' }).click()
@@ -540,6 +544,89 @@ export class AppPage {
   async sheetScale(n: number, pageWidthMm: number): Promise<{ pxPerMm: number }> {
     const width = await this.pageCanvases.nth(n).evaluate((c: SheetCanvas) => c.width)
     return { pxPerMm: width / pageWidthMm }
+  }
+
+  // --- Presets (A3) ---
+  get presetsButton(): Locator {
+    return this.page.getByRole('button', { name: 'Presets', exact: true })
+  }
+  get presetsDialog(): Locator {
+    return this.page.getByRole('dialog', { name: 'Presets', exact: true })
+  }
+  get presetList(): Locator {
+    return this.presetsDialog.getByRole('list', { name: 'Saved presets' })
+  }
+  /** The name of each saved preset, in list order (the first line of each row). */
+  async presetNames(): Promise<string[]> {
+    if ((await this.presetList.count()) === 0) return []
+    return this.presetList.getByRole('listitem').evaluateAll(
+      (
+        rows: {
+          firstElementChild: { firstElementChild: { textContent: string | null } | null } | null
+        }[],
+      ) => rows.map((r) => r.firstElementChild?.firstElementChild?.textContent ?? ''),
+    )
+  }
+  get savePresetOpen(): Locator {
+    return this.presetsDialog.getByRole('button', { name: 'Save current settings…', exact: true })
+  }
+  get presetNameField(): Locator {
+    return this.presetsDialog.getByLabel('Preset name', { exact: true })
+  }
+  presetAction(action: 'Apply' | 'Rename' | 'Delete', name: string): Locator {
+    return this.presetsDialog.getByRole('button', { name: `${action} ${name}`, exact: true })
+  }
+  /** The polite region of the dialog that reports saves, applies, renames, deletes and imports. */
+  get presetsStatus(): Locator {
+    return this.presetsDialog.getByRole('status')
+  }
+  get presetsAlert(): Locator {
+    return this.presetsDialog.getByRole('alert')
+  }
+  async openPresets(): Promise<void> {
+    await this.presetsButton.click()
+    await expect(this.presetsDialog).toBeVisible()
+  }
+  async closePresets(): Promise<void> {
+    await this.presetsDialog.getByRole('button', { name: 'Close', exact: true }).click()
+    await expect(this.presetsDialog).toHaveCount(0)
+  }
+  /** Saves the current settings under `name` (the dialog must be open). */
+  async savePreset(name: string): Promise<void> {
+    await this.savePresetOpen.click()
+    await this.presetNameField.fill(name)
+    await this.presetsDialog.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(this.presetsStatus).toHaveText(`Saved ${name}.`)
+  }
+  /**
+   * Applies a preset (the dialog must be open). With photos loaded the app asks first: pass
+   * `asks: true` to answer Apply.
+   */
+  async applyPreset(name: string, { asks }: { asks: boolean }): Promise<void> {
+    await this.presetAction('Apply', name).click()
+    if (asks)
+      await this.page
+        .getByRole('dialog', { name: `Apply “${name}”?`, exact: true })
+        .getByRole('button', { name: 'Apply', exact: true })
+        .click()
+    await expect(this.presetsStatus).toHaveText(`Applied ${name}.`)
+  }
+  /** "Export all": the downloaded file's name and text. */
+  async exportPresets(): Promise<{ fileName: string; text: string }> {
+    const download = this.page.waitForEvent('download')
+    await this.presetsDialog.getByRole('button', { name: 'Export all', exact: true }).click()
+    const d = await download
+    const chunks: Buffer[] = []
+    for await (const c of await d.createReadStream()) chunks.push(c as Buffer)
+    return { fileName: d.suggestedFilename(), text: Buffer.concat(chunks).toString('utf8') }
+  }
+  /** "Import…" through the browser's file chooser (the dialog must be open). */
+  async importPresets(
+    file: string | { name: string; mimeType: string; buffer: Buffer },
+  ): Promise<void> {
+    const chooser = this.page.waitForEvent('filechooser')
+    await this.presetsDialog.getByRole('button', { name: 'Import…', exact: true }).click()
+    await (await chooser).setFiles(file)
   }
 
   // --- Guides from the photo (E3) ---

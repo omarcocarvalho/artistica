@@ -4,6 +4,7 @@ import { AppPage } from './support/app.ts'
 import { FIXTURES } from './support/fixtures.ts'
 import { AI_ASSET_PATHS, DOWNLOAD_PATHS } from './support/guides.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
+import { keysOutsideWhitelist } from './support/presets.ts'
 import { runOnly } from './support/projects.ts'
 
 // The e2e tsconfig has no DOM lib; these are the browser globals used inside page.evaluate.
@@ -180,6 +181,49 @@ test('P2 nothing from the photos is persisted: storage stays small and a reload 
     ['Blur + Values', 'false'],
   ] as const)
     await expect(app.versionChip(v)).toHaveAttribute('aria-pressed', on)
+})
+
+test('P-S1 presets saved with photos loaded: storage holds only settings v5, presets of whitelisted keys and no photo names', async ({
+  page,
+}) => {
+  const app = startApp(page)
+  await app.goto()
+  await app.upload([FIXTURES.quadrantsJpg, FIXTURES.portraitJpg])
+  await app.expectImages(2)
+  await app.selectButton('portrait.jpg').click()
+  await app.openStudiesTab()
+  await app.setVersions(['Original', 'Blur + Values'])
+  await app.openLinesTab()
+  await app.setLineSwitch('Golden spiral', true)
+  await app.openPresets()
+  await app.savePreset('Portrait study')
+  await app.closePresets()
+  await app.selectButton('quadrants.jpg').click()
+  await app.openPageTab()
+  await app.setPaper('A3')
+  await app.openPresets()
+  await app.savePreset('A3 sheet')
+
+  const stored = await page.evaluate(() => {
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i) ?? '')
+    return {
+      keys,
+      settings: localStorage.getItem('artistica:settings') ?? '',
+      session: sessionStorage.length,
+    }
+  })
+  expect(stored.keys).toEqual(['artistica:settings'])
+  expect(stored.session).toBe(0)
+  const envelope = JSON.parse(stored.settings) as {
+    version: number
+    state: { presets: { name: string; study: { versions: string[] } }[] }
+  }
+  expect(envelope.version).toBe(5)
+  expect(envelope.state.presets.map((p) => p.name)).toEqual(['Portrait study', 'A3 sheet'])
+  expect(envelope.state.presets[0]?.study.versions).toEqual(['original', 'blurValues'])
+  expect(keysOutsideWhitelist(envelope.state.presets)).toEqual([])
+  for (const name of ['quadrants', 'portrait.jpg']) expect(stored.settings).not.toContain(name)
 })
 
 interface CacheWindow {
