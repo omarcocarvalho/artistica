@@ -211,8 +211,7 @@ test.describe('landing page without JavaScript', () => {
 })
 
 const SITE = 'https://omarcocarvalho.github.io/artistica/'
-const CJK: readonly LanguageCode[] = ['ja', 'ko', 'zh-CN']
-/** How `findOverflow` names the hero's hand-written tip. */
+/** The hero's hand-written tip. */
 const HERO_TIP = 'span.font-hand.text-ink-muted'
 const LANDING: readonly LanguageCode[] = LANGUAGES.filter((code) =>
   existsSync(new URL(`../landing/locales/${code}.json`, import.meta.url)),
@@ -373,7 +372,6 @@ for (const code of LANDING) {
 
     test(`LND-L4 no horizontal scroll or overflow at phone width in ${code}`, async ({
       page,
-      browserName,
       isMobile,
     }) => {
       if (!isMobile) await page.setViewportSize({ width: 390, height: 844 })
@@ -385,15 +383,7 @@ for (const code of LANDING) {
           (el: { scrollWidth: number; clientWidth: number }) => el.scrollWidth - el.clientWidth,
         )
       expect(scroll).toBeLessThanOrEqual(0)
-      const overflow = await findOverflow(page)
-      test.fail(
-        browserName === 'firefox' &&
-          CJK.includes(code) &&
-          overflow.length > 0 &&
-          overflow.every((found) => found.includes(HERO_TIP)),
-        'D4: Firefox draws the CJK line of the hero tip taller than its box (ledger B7-6)',
-      )
-      expect(overflow).toEqual([])
+      expect(await findOverflow(page)).toEqual([])
     })
 
     test.describe('with an English browser', () => {

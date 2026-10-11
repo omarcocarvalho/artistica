@@ -1,8 +1,10 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test'
-import { AppPage, type LineTypeName } from './support/app.ts'
+import { AppPage } from './support/app.ts'
+import { setLanguage } from './support/l10n.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { runOnly } from './support/projects.ts'
 import { arm, installPerfProbe, readUpdate, type ProbeWindow, type Update } from './support/perf.ts'
+import { textIn } from './support/screens.ts'
 import { mixedJpegs, syntheticJpegs, type UploadFile } from './support/synthetic.ts'
 
 /** Spec §3 targets (M5-R27, owner Q11 and Q12 defaults). A miss is fixed, never relaxed. */
@@ -85,6 +87,96 @@ async function paperLayouts(app: AppPage): Promise<number[]> {
   return out
 }
 
+/**
+ * Five changes of each of the seven kinds of setting, each read back as the preview update. Controls
+ * are found by their names in `lang`.
+ */
+async function previewUpdates(
+  app: AppPage,
+  photos: readonly UploadFile[],
+  lang: 'en' | 'ja',
+): Promise<Record<string, Update[]>> {
+  const { page } = app
+  const t = (key: string, vars?: Record<string, string>) => textIn(lang, key, vars)
+  const forImage = (key: string, name: string) => t(key).replace('<name/>', name)
+  const select = (name: string) =>
+    page.getByRole('button', { name: t('images:list.select', { name }), exact: true })
+  const paper = page.getByLabel(t('pageSetup:paper.size'), { exact: true })
+  const first = photos[0]?.name ?? ''
+
+  const runs: Record<string, Update[]> = {}
+  const measure = async (kind: string, change: (i: number) => Promise<void>) => {
+    runs[kind] = []
+    for (let i = 0; i < CHANGES_PER_KIND; i++) {
+      await arm(page)
+      await change(i)
+      runs[kind].push(await readUpdate(app))
+    }
+  }
+
+  // Option values are paper ids in every language.
+  await measure('paper', async (i) => {
+    await paper.selectOption(i % 2 ? 'A4' : 'Letter')
+  })
+  await paper.selectOption('A4')
+  await app.expectPreviewSettled()
+
+  const orientation = page.getByRole('radiogroup', { name: t('pageSetup:orientation.label') })
+  const radio = (key: string) => orientation.getByRole('radio', { name: t(key), exact: true })
+  await measure('orientation', (i) =>
+    radio(i % 2 ? 'pageSetup:orientation.portrait' : 'pageSetup:orientation.landscape').click(),
+  )
+  await radio('pageSetup:orientation.auto').click()
+  await app.expectPreviewSettled()
+
+  const gutter = page.getByLabel(t('pageSetup:spacing.gutterSize'), { exact: true })
+  await gutter.focus()
+  await measure('gutter', (i) => gutter.press(i % 2 ? 'ArrowDown' : 'ArrowUp'))
+  await gutter.press('ArrowDown')
+  await app.expectPreviewSettled()
+
+  const cropMarks = page.getByRole('switch', { name: t('pageSetup:cutting.cropMarks') })
+  await measure('crop-marks', () => cropMarks.click())
+  if (!(await cropMarks.isChecked())) await cropMarks.click()
+  await app.expectPreviewSettled()
+
+  await page.getByRole('tab', { name: t('app:settingsTabs.studies'), exact: true }).click()
+  const blurred = page
+    .getByRole('group', { name: t('studies:versions.legend') })
+    .getByRole('button', { name: t('studies:version.blurred'), exact: true })
+  await measure('study-version', async (i) => {
+    const name = photos[i]?.name ?? ''
+    await select(name).click()
+    await expect(page.getByText(forImage('studies:panel.forImage', name))).toBeVisible()
+    await app.expectPreviewSettled()
+    await arm(page)
+    await blurred.click()
+  })
+  for (let i = 0; i < CHANGES_PER_KIND; i++) {
+    await select(photos[i]?.name ?? '').click()
+    if ((await blurred.getAttribute('aria-pressed')) === 'true') await blurred.click()
+    await expect(blurred).toHaveAttribute('aria-pressed', 'false')
+  }
+  await select(first).click()
+  await app.expectPreviewSettled()
+
+  await page.getByRole('tab', { name: t('app:settingsTabs.lines'), exact: true }).click()
+  await expect(
+    page
+      .getByRole('tabpanel', { name: t('app:settingsTabs.lines') })
+      .getByText(forImage('lines:panel.forImage', first)),
+  ).toBeVisible()
+  const thirds = page.getByRole('switch', { name: t('lines:type.thirds'), exact: true })
+  await measure('line-type', () => thirds.click())
+  if ((await thirds.getAttribute('aria-checked')) !== 'true') await thirds.click()
+  await expect(thirds).toHaveAttribute('aria-checked', 'true')
+  await app.expectPreviewSettled()
+  const thickness = page.getByRole('slider', { name: t('lines:thickness.label'), exact: true })
+  const widths = ['1', '2']
+  await measure('line-width', (i) => thickness.fill(widths[i % 2] ?? '1'))
+  return runs
+}
+
 test.describe('§3 timing targets, desktop (chromium asserts)', () => {
   runOnly('chromium')
   test.use({ viewport: { width: 1280, height: 900 } })
@@ -107,98 +199,41 @@ test.describe('§3 timing targets, desktop (chromium asserts)', () => {
     expect(layoutMedianMs).toBeLessThan(LAYOUT_50_BUDGET_MS)
   })
 
-  test('T2 preview update after a setting change with 20 images < 200 ms (median of 5 per kind; studies recorded)', async ({
-    page,
-  }, testInfo) => {
-    test.setTimeout(420_000)
-    const app = await start(page)
-    const photos = await mixedJpegs(page, 20, 4000)
-    await load(app, photos, 120_000)
-    const first = photos[0]?.name ?? ''
+  for (const lang of ['en', 'ja'] as const)
+    test(`T2${lang === 'en' ? '' : `-${lang}`} preview update after a setting change with 20 images < 200 ms${lang === 'en' ? '' : `, the app in ${lang}`} (median of 5 per kind; studies recorded)`, async ({
+      page,
+    }, testInfo) => {
+      test.setTimeout(420_000)
+      const app = await start(page)
+      const photos = await mixedJpegs(page, 20, 4000)
+      await load(app, photos, 120_000)
+      if (lang !== 'en') await setLanguage(page, lang)
+      const runs = await previewUpdates(app, photos, lang)
 
-    const runs: Record<string, Update[]> = {}
-    const measure = async (kind: string, change: (i: number) => Promise<void>) => {
-      runs[kind] = []
-      for (let i = 0; i < CHANGES_PER_KIND; i++) {
-        await arm(page)
-        await change(i)
-        runs[kind].push(await readUpdate(app))
-      }
-    }
-
-    await measure('paper', (i) => app.setPaper(i % 2 ? 'A4' : 'Letter'))
-    await app.setPaper('A4')
-    await app.expectPreviewSettled()
-
-    const orientation = page.getByRole('radiogroup', { name: 'Orientation' })
-    await measure('orientation', (i) =>
-      orientation.getByRole('radio', { name: i % 2 ? 'Portrait' : 'Landscape' }).click(),
-    )
-    await orientation.getByRole('radio', { name: 'Auto' }).click()
-    await app.expectPreviewSettled()
-
-    const gutter = page.getByLabel('Gutter size', { exact: true })
-    await gutter.focus()
-    await measure('gutter', (i) => gutter.press(i % 2 ? 'ArrowDown' : 'ArrowUp'))
-    await gutter.press('ArrowDown')
-    await app.expectPreviewSettled()
-
-    const cropMarks = page.getByRole('switch', { name: 'Crop marks' })
-    await measure('crop-marks', () => cropMarks.click())
-    await app.setSwitch('Crop marks', true)
-    await app.expectPreviewSettled()
-
-    await app.openStudiesTab()
-    const blurred = app.versionChip('Blurred')
-    await measure('study-version', async (i) => {
-      const name = photos[i]?.name ?? ''
-      await app.selectButton(name).click()
-      await expect(page.getByText(`Studies for ${name}`)).toBeVisible()
-      await app.expectPreviewSettled()
-      await arm(page)
-      await blurred.click()
+      const medians = Object.fromEntries(
+        Object.entries(runs).map(([kind, rs]) => [kind, round(median(rs.map((r) => r.updateMs)))]),
+      )
+      const studiesSettledMs = round(median((runs['study-version'] ?? []).map((r) => r.settledMs)))
+      record(testInfo, `T2 preview update 20 (${lang})`, {
+        previewUpdateMedianMs: medians,
+        studiesSettledMs,
+        runs: Object.fromEntries(
+          Object.entries(runs).map(([kind, rs]) => [
+            kind,
+            rs.map((r) => ({
+              update: round(r.updateMs),
+              settled: round(r.settledMs),
+              layout: r.layoutMs === null ? null : round(r.layoutMs),
+              visible: r.visiblePages,
+            })),
+          ]),
+        ),
+      })
+      expect(Object.keys(medians)).toHaveLength(7)
+      for (const [kind, ms] of Object.entries(medians))
+        expect(ms, `${kind} preview update median`).toBeLessThan(PREVIEW_UPDATE_BUDGET_MS)
+      expect(studiesSettledMs).toBeLessThan(STUDIES_SETTLED_BOUND_MS)
     })
-    for (let i = 0; i < CHANGES_PER_KIND; i++) {
-      await app.selectButton(photos[i]?.name ?? '').click()
-      await app.setVersions(['Original'])
-    }
-    await app.selectButton(first).click()
-    await app.expectPreviewSettled()
-
-    await app.openLinesTab()
-    await expect(app.linesPanel.getByText(`Lines for ${first}`)).toBeVisible()
-    const lineType: LineTypeName = 'Rule of thirds'
-    await measure('line-type', () => app.lineSwitch(lineType).click())
-    await app.setLineSwitch(lineType, true)
-    await app.expectPreviewSettled()
-    const thickness = app.lineSlider('Thickness')
-    const widths = ['1', '2']
-    await measure('line-width', (i) => thickness.fill(widths[i % 2] ?? '1'))
-
-    const medians = Object.fromEntries(
-      Object.entries(runs).map(([kind, rs]) => [kind, round(median(rs.map((r) => r.updateMs)))]),
-    )
-    const studiesSettledMs = round(median((runs['study-version'] ?? []).map((r) => r.settledMs)))
-    record(testInfo, 'T2 preview update 20', {
-      previewUpdateMedianMs: medians,
-      studiesSettledMs,
-      runs: Object.fromEntries(
-        Object.entries(runs).map(([kind, rs]) => [
-          kind,
-          rs.map((r) => ({
-            update: round(r.updateMs),
-            settled: round(r.settledMs),
-            layout: r.layoutMs === null ? null : round(r.layoutMs),
-            visible: r.visiblePages,
-          })),
-        ]),
-      ),
-    })
-    expect(Object.keys(medians)).toHaveLength(7)
-    for (const [kind, ms] of Object.entries(medians))
-      expect(ms, `${kind} preview update median`).toBeLessThan(PREVIEW_UPDATE_BUDGET_MS)
-    expect(studiesSettledMs).toBeLessThan(STUDIES_SETTLED_BOUND_MS)
-  })
 
   test('T3 @slow 100 photos at 12 MP: layout median < 2000 ms and no long task > 1000 ms while scrolling', async ({
     page,

@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { expect, type Locator, type Page } from '@playwright/test'
 import { ENDONYMS, LANGUAGES, type LanguageCode } from '../../src/shared/i18n/languages.ts'
 import { PSEUDO_LANGUAGE } from '../../src/shared/i18n/pseudo.ts'
+import { ENGLISH_WORDS } from './english-words.ts'
 
 export { pseudoLocalize } from '../../src/shared/i18n/pseudo.ts'
 
@@ -214,7 +215,11 @@ const PROBES = String.raw`(() => {
     return out
   }
   const CONTROLS = 'button, a[href], summary, [role="button"], [role="link"], [role="tab"], [role="radio"], [role="switch"], [role="checkbox"], [role="menuitem"], [role="option"]'
-  const norm = (t) => clean(t).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+  // Japanese and Chinese write no space between CJK and Latin text, so a change of script is a
+  // word boundary too (B5 ruling): "quadrants.jpgを選択" holds the visible word "quadrants.jpg".
+  const CJK = '\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}\\u30fc'
+  const SCRIPT_CHANGE = new RegExp('(?<=[' + CJK + '])(?=[\\p{Script=Latin}\\p{N}])|(?<=[\\p{Script=Latin}\\p{N}])(?=[' + CJK + '])', 'gu')
+  const norm = (t) => clean(t).toLowerCase().replace(SCRIPT_CHANGE, ' ').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
   // WCAG 2.5.3 for a control named by ARIA: the text it shows (aria-hidden parts and its own
   // description excepted) must be inside the name.
   const labelInName = () => {
@@ -243,7 +248,53 @@ const PROBES = String.raw`(() => {
     }
     return out
   }
-  return { untranslated, overflow, live, labelInName }
+  const english = (words, strips) => {
+    const word = new RegExp('(?<![\\p{L}\\p{N}])(' + words.join('|') + ')(?![\\p{L}\\p{N}])', 'iu')
+    const stripped = strips.map(([source, flags]) => new RegExp(source, flags.includes('g') ? flags : flags + 'g'))
+    const lang = document.documentElement.lang
+    const own = (el) => {
+      const marked = el.closest('[lang]')
+      return !marked || marked.getAttribute('lang') === lang
+    }
+    const found = (text) => {
+      let rest = text
+      for (const r of stripped) rest = rest.replace(r, ' ')
+      const m = word.exec(rest)
+      return m ? m[1] : null
+    }
+    const out = []
+    const title = found(clean(document.title))
+    if (title) out.push('document title "' + clean(document.title) + '": ' + title)
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const el = n.parentElement
+      const text = clean(n.data)
+      if (!text || !el || el.closest('script, style, template, option')) continue
+      if (!rendered(el) || !own(el)) continue
+      const w = found(text)
+      if (w) out.push('text "' + text + '" in ' + describe(el) + ': ' + w)
+    }
+    for (const el of document.body.querySelectorAll('*')) {
+      if (!rendered(el) || !own(el)) continue
+      for (const attr of ATTRS) {
+        const value = clean(el.getAttribute(attr))
+        const w = value && found(value)
+        if (w) out.push(attr + ' "' + value + '" on ' + describe(el) + ': ' + w)
+      }
+      const option = el.tagName === 'SELECT' ? el.selectedOptions[0] : null
+      if (option && own(option) && getComputedStyle(el).opacity !== '0') {
+        const w = found(clean(option.textContent))
+        if (w) out.push('selected option "' + clean(option.textContent) + '" of ' + describe(el) + ': ' + w)
+      }
+    }
+    return [...new Set(out)]
+  }
+  const page = () => ({
+    lang: document.documentElement.lang,
+    title: document.title,
+    sideScroll: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  })
+  return { untranslated, overflow, live, labelInName, english, page }
 })()`
 
 /**
@@ -315,4 +366,37 @@ export async function findOverflow(page: Page): Promise<string[]> {
  */
 export async function labelInName(page: Page): Promise<string[]> {
   return page.evaluate<string[]>(`(() => ${PROBES}.labelInName())()`)
+}
+
+export { ENGLISH_WORDS }
+
+/** A file name, which is the user's and never translated. */
+export const FILE_NAME = /[^\s"'“”‘’「」«»]+\.(jpe?g|png|webp|gif|heic|heif|avif|json|pdf)\b/iu
+
+/**
+ * Visible text, the document title and the names, values, titles, placeholders and alt texts of
+ * rendered elements in the page's language that hold one of `words` once every `strip` match
+ * (file names, names the user typed) is taken out. Text marked with another `lang` is skipped.
+ */
+export async function findEnglish(
+  page: Page,
+  words: readonly string[] = ENGLISH_WORDS,
+  strip: readonly RegExp[] = [FILE_NAME],
+): Promise<string[]> {
+  const sources = strip.map((r) => [r.source, r.flags])
+  return page.evaluate<string[]>(
+    `(() => ${PROBES}.english(${JSON.stringify(words)}, ${JSON.stringify(sources)}))()`,
+  )
+}
+
+export interface PageLanguage {
+  readonly lang: string
+  readonly title: string
+  /** How far the page scrolls sideways, in CSS pixels (0 when it reflows). */
+  readonly sideScroll: number
+}
+
+/** `<html lang>`, the document title and the page's sideways scroll. */
+export async function pageLanguage(page: Page): Promise<PageLanguage> {
+  return page.evaluate<PageLanguage>(`(() => ${PROBES}.page())()`)
 }

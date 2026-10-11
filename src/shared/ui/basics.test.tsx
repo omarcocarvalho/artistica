@@ -72,6 +72,13 @@ describe('buttonClasses', () => {
     )
     expect(screen.getByRole('button').className).toBe(screen.getByRole('link').className)
   })
+
+  it('lets a full-width button wrap its label, centred, where every other button keeps one line', () => {
+    expect(ruleBody(basicsCss, '.ds-btn')).toMatch(/white-space:\s*nowrap/)
+    const block = ruleBody(basicsCss, '.ds-btn--block')
+    expect(block).toMatch(/white-space:\s*normal/)
+    expect(block).toMatch(/text-align:\s*center/)
+  })
 })
 
 describe('Button', () => {

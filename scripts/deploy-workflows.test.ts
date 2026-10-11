@@ -75,7 +75,12 @@ describe('every workflow job', () => {
     const jobs = allJobs()
     expect(jobs.length).toBeGreaterThanOrEqual(10)
     expect(jobs.map((j) => `${j.file}:${j.name}`)).toEqual(
-      expect.arrayContaining(['pr-title.yml:pr-title', 'release.yml:release-please', 'ci.yml:e2e']),
+      expect.arrayContaining([
+        'pr-title.yml:pr-title',
+        'release.yml:release-please',
+        'ci.yml:e2e',
+        'screens.yml:capture',
+      ]),
     )
     const missing = jobs.flatMap((j) => {
       const problem = timeoutMissing(j)
@@ -176,5 +181,30 @@ describe('deployChecksMissing', () => {
         steps: [good[0], step(CHECKS[0], '        continue-on-error: true\n'), good[2], good[3]],
       }),
     ).toEqual([`"${CHECKS[0]}" is conditional`])
+  })
+})
+
+describe('the screens workflow (M6-R26)', () => {
+  const yaml = readFileSync(join(WORKFLOWS, 'screens.yml'), 'utf8')
+  const triggers = yaml.slice(yaml.indexOf('\non:\n'), yaml.indexOf('\njobs:\n'))
+  const job = jobsOf('screens.yml', yaml).find((j) => j.name === 'capture')
+
+  it('runs only when started by hand, so it never gates a merge', () => {
+    expect(triggers).toMatch(/^ {2}workflow_dispatch:/m)
+    expect(triggers).not.toMatch(
+      /^ {2}(pull_request|pull_request_target|push|merge_group|schedule):/m,
+    )
+  })
+
+  it('captures every screen with CJK fonts and uploads the contact sheet as "screens"', () => {
+    expect(job?.text).toMatch(/^ {4}timeout-minutes: 40$/m)
+    const at = (needle: string) => job?.steps.findIndex((step) => step.includes(needle)) ?? -1
+    expect(at('fonts-noto-cjk')).toBeGreaterThanOrEqual(0)
+    expect(at('playwright install --with-deps chromium')).toBeGreaterThanOrEqual(0)
+    expect(at('pnpm e2e:screens')).toBeGreaterThan(at('fonts-noto-cjk'))
+    const upload = job?.steps.find((step) => step.includes('actions/upload-artifact@')) ?? ''
+    expect(upload).toMatch(/^ {10}name: screens$/m)
+    expect(upload).toMatch(/^ {10}path: screens\/$/m)
+    expect(upload).not.toMatch(/^ {8}if:/m)
   })
 })

@@ -1,13 +1,19 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Browser, type Page, type TestInfo } from '@playwright/test'
 import { AppPage } from './support/app.ts'
 import { expectNoAxeViolations } from './support/axe.ts'
 import { languageSelect, offeredLanguages, setLanguage } from './support/l10n.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { runOnly } from './support/projects.ts'
+import { textIn } from './support/screens.ts'
 import { isLanguageCode, type LanguageCode } from '../src/shared/i18n/languages.ts'
 
 declare const localStorage: { getItem(key: string): string | null }
 declare const document: { activeElement: { tagName: string; closest(s: string): unknown } | null }
+
+/** Spec §3 and M6 performance budgets, asserted on chromium. */
+const FIRST_PAINT_LAG_BUDGET_MS = 200
+const SWITCH_BUDGET_MS = 300
+const RUNS = 5
 
 let guard: NetworkGuard | undefined
 
@@ -213,4 +219,138 @@ test.describe('the language switcher in the top bar', () => {
       await expectNoAxeViolations(page, { include: 'header' })
     })
   }
+})
+
+/** The browser locale each context sets, and the language the app must open in. */
+const BROWSER_LOCALES: readonly (readonly [string, LanguageCode])[] = [
+  ['en-GB', 'en'],
+  ['pt-BR', 'pt-BR'],
+  ['ja-JP', 'ja'],
+  ['ko-KR', 'ko'],
+  ['it-IT', 'it'],
+  ['es-MX', 'es'],
+  ['zh-CN', 'zh-CN'],
+  ['zh-TW', 'en'],
+]
+
+function themeLabel(code: LanguageCode): string {
+  return textIn(code, 'app:theme.changeLabel', { current: textIn(code, 'app:theme.auto') })
+}
+
+for (const [locale, code] of BROWSER_LOCALES) {
+  test.describe(`a ${locale} browser`, () => {
+    test.use({ locale })
+
+    test(`LANG-D6 ${locale}: a browser in each language opens the app in it (${code})`, async ({
+      page,
+    }) => {
+      await openApp(page)
+      await expect(page.locator('html')).toHaveAttribute('lang', code)
+      await expect(page).toHaveTitle(textIn(code, 'app:documentTitle'))
+      await expect(page.getByRole('button', { name: themeLabel(code), exact: true })).toBeVisible()
+      await expect(languageSelect(page)).toHaveValue(code)
+      expect(await savedLanguage(page)).toBeNull()
+    })
+  })
+}
+
+const median = (xs: readonly number[]): number => {
+  const s = [...xs].sort((a, b) => a - b)
+  const mid = Math.floor(s.length / 2)
+  return s.length % 2 ? (s[mid] ?? NaN) : ((s[mid - 1] ?? NaN) + (s[mid] ?? NaN)) / 2
+}
+
+function record(testInfo: TestInfo, figures: Record<string, unknown>): void {
+  for (const [type, value] of Object.entries(figures))
+    testInfo.annotations.push({ type, description: JSON.stringify(value) })
+  console.log(`${testInfo.title}: ${JSON.stringify(figures)}`)
+}
+
+/** A fresh context (empty cache and storage) with the browser language `locale`. */
+async function freshPage(browser: Browser, testInfo: TestInfo, locale: string) {
+  const context = await browser.newContext({
+    baseURL: testInfo.project.use.baseURL,
+    serviceWorkers: 'block',
+    viewport: { width: 1280, height: 900 },
+    locale,
+  })
+  const page = await context.newPage()
+  const network = guardNetwork(page)
+  return { context, page, network }
+}
+
+/**
+ * Records, as `window.__appPaint`, the time from navigation start to the first frame that draws
+ * the app's top bar. The page's own first-contentful-paint fires before the app renders, so it
+ * cannot see the wait for a locale chunk.
+ */
+const APP_PAINT = `(() => {
+  const seen = new MutationObserver(() => {
+    if (!document.querySelector('header select')) return
+    seen.disconnect()
+    requestAnimationFrame(() => { window.__appPaint = performance.now() })
+  })
+  seen.observe(document, { childList: true, subtree: true })
+})()`
+
+test.describe('language timings (chromium asserts)', () => {
+  runOnly('chromium')
+
+  test('LANG-P1: first paint of the app in ja is within 200 ms of English (median of 5)', async ({
+    browser,
+  }, testInfo) => {
+    const paints: Record<'en' | 'ja', number[]> = { en: [], ja: [] }
+    for (let i = 0; i < RUNS; i++) {
+      for (const [lang, locale] of [
+        ['en', 'en-US'],
+        ['ja', 'ja-JP'],
+      ] as const) {
+        const { context, page, network } = await freshPage(browser, testInfo, locale)
+        await page.addInitScript(APP_PAINT)
+        await page.goto('app/')
+        await expect(page.locator('html')).toHaveAttribute('lang', lang)
+        await expect(page.getByRole('button', { name: themeLabel(lang) })).toBeVisible()
+        await expect.poll(() => page.evaluate('window.__appPaint ?? null')).not.toBeNull()
+        const paint = Number(await page.evaluate('window.__appPaint'))
+        expect(network.violations()).toEqual([])
+        await context.close()
+        paints[lang].push(Math.round(paint))
+      }
+    }
+    const lagMs = Math.round(median(paints.ja) - median(paints.en))
+    record(testInfo, { appPaintMs: paints, lagMs })
+    expect([...paints.en, ...paints.ja].every(Number.isFinite)).toBe(true)
+    expect(lagMs).toBeLessThanOrEqual(FIRST_PAINT_LAG_BUDGET_MS)
+  })
+
+  test('LANG-S5: switching to ja shows the translated top bar within 300 ms (median of 5)', async ({
+    browser,
+  }, testInfo) => {
+    const switches: number[] = []
+    for (let i = 0; i < RUNS; i++) {
+      const { context, page, network } = await freshPage(browser, testInfo, 'en-US')
+      await page.goto('app/')
+      await expect(page.getByRole('button', { name: themeLabel('en') })).toBeVisible()
+      const ms = await page.evaluate(`(async (label) => {
+        const select = document.querySelector('header select')
+        const shown = () =>
+          [...document.querySelectorAll('header button')].some((b) => b.getAttribute('aria-label') === label)
+        const t0 = performance.now()
+        select.value = 'ja'
+        select.dispatchEvent(new Event('change', { bubbles: true }))
+        await new Promise((done) => {
+          const tick = () => (shown() ? done() : requestAnimationFrame(tick))
+          tick()
+        })
+        return performance.now() - t0
+      })(${JSON.stringify(themeLabel('ja'))})`)
+      await expect(page.locator('html')).toHaveAttribute('lang', 'ja')
+      expect(network.violations()).toEqual([])
+      await context.close()
+      switches.push(Math.round(Number(ms)))
+    }
+    const medianMs = Math.round(median(switches))
+    record(testInfo, { switchMs: switches, medianMs })
+    expect(medianMs).toBeLessThan(SWITCH_BUDGET_MS)
+  })
 })
