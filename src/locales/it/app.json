@@ -3,7 +3,7 @@
   "documentTitle": "App Artistica",
   "language": {
     "label": "Lingua",
-    "loadFailed": "Impossibile scaricare questa lingua. Controlla la connessione e riprova."
+    "loadFailed": "Impossibile scaricare quella lingua. Controlla la connessione e riprova."
   },
   "skipToPreview": "Vai all'anteprima",
   "topBar": {
@@ -74,7 +74,7 @@
     "noImage": "Nessuna immagine negli appunti. Copia prima un'immagine, poi incolla di nuovo.",
     "animatedGif": "{{name}}: solo il primo fotogramma. Le GIF animate stampano il loro primo fotogramma.",
     "failed": "{{list}}: {{title}}. {{message}}",
-    "more_one": "{{count, number}} altra",
+    "more_one": "altra {{count, number}}",
     "more_many": "altre {{count, number}}",
     "more_other": "altre {{count, number}}",
     "unnamed": "Questa immagine"

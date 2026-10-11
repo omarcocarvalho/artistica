@@ -74,7 +74,7 @@
     "noImage": "클립보드에 이미지가 없어요. 먼저 이미지를 복사한 다음 다시 붙여넣으세요.",
     "animatedGif": "{{name}}: 첫 프레임만 사용해요. 움직이는 GIF는 첫 프레임이 인쇄돼요.",
     "failed": "{{list}}: {{title}}. {{message}}",
-    "more_other": "다른 이미지 {{count, number}}장",
+    "more_other": "다른 항목 {{count, number}}개",
     "unnamed": "이 이미지"
   },
   "preview": {

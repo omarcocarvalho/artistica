@@ -32,7 +32,7 @@
     "safeArea": "安全边距",
     "safeAreaHint": "页面边缘的空白边框。最小{{min}}。",
     "gutter": "图片间距",
-    "gutterSize": "间距大小",
+    "gutterSize": "图片间距大小",
     "gutterHint": "图片之间留出的裁切空间。"
   },
   "cutting": {

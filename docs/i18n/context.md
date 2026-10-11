@@ -63,6 +63,19 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | `export:summary.pages` `export:summary.tiles` `export:summary.cropMarks` `export:summary.bleed` `export:summary.quality` | term column of the export summary, Export | 10 | 5 | 71 px at 320 px; longer text wraps |
 | `studies:values.min` `studies:values.darkest` `studies:values.lightest` | labels under the ends of a slider or ramp, Studies | 14 | 7 | half the slider width each |
 
+**Ruled: over the limit without overflow (pt-BR).** Each key below is longer than its limit, has no shorter wording that keeps its meaning, and fits or wraps the way its row allows: the language walk (`e2e/l10n.spec.ts`, desktop and phone) and the fit checks (`e2e/fit.spec.ts`, 320 to 1280 px) find no overflow in pt-BR. A change to one of these strings is checked again.
+
+- `app:topBar.privacy` "Fotos ficam neste dispositivo" (29 of 28): a privacy claim, so "ficam" and "neste dispositivo" stay; one line at 960 px with the app name whole, three short lines at 640 px.
+- `images:dropzone.upload` "Arquivo" (7 of 6): the glossary's short form; the three buttons wrap as a group (FIT-2).
+- `images:dropzone.uploadHero` "Adicionar fotos" (15 of 14): the glossary term; the empty card wraps its buttons.
+- `images:list.count` "Nenhuma imagem" at 0 (14 of 10), and the `_many` form, used only for millions: the count keeps its line and "Remover todas as imagens" moves below it (FIT-4).
+- `pageSetup:paper.unitIn` "polegadas" (9 of 8): the only word; the units field wraps its options.
+- `preview:guides.legend.safe` "Margem de segurança" (19 of 14): the glossary term; the legend wraps.
+- `export:summary.cropMarks` "Marcas de corte" (15 of 10): the term column wraps, as its row allows.
+- `images:editSheet.crop.annotation` "arraste os cantos" (17 of 16): no screen shows this key today (no call site in `src/`), so it cannot overflow; it stays translated for the day it is shown.
+
+The es and it keys over a limit are ruled in the M6 ledger (Rulings B3-1, B3-3, B4-1 and B4-4, and the it rulings of E2).
+
 ## Variables
 
 | Variable | What it holds |

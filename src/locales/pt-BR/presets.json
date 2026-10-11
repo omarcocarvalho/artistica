@@ -55,6 +55,7 @@
   "import": {
     "button": "Importar…",
     "file": "Arquivo de presets",
+    "imported_zero": "Nenhum preset importado.",
     "imported_one": "{{count, number}} preset importado.",
     "imported_many": "{{count, number}} de presets importados.",
     "imported_other": "{{count, number}} presets importados.",

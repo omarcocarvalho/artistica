@@ -19,6 +19,7 @@ import { DEFAULT_LINES } from '../shared/model/lines'
 import { DEFAULT_PAGE_SETUP } from '../shared/model/page-setup'
 import { presetFromSettings } from '../shared/model/preset'
 import { DEFAULT_STUDY } from '../shared/model/study'
+import landing from '../../landing/locales/ko.json'
 
 vi.mock('../features/render/export/export-pdf', () => ({ exportPdf: vi.fn() }))
 const mockedExport = vi.mocked(exportPdf)
@@ -243,15 +244,46 @@ describe('Korean plural forms (ko has only "other")', () => {
     [
       'app:import.more',
       {},
-      [
-        '다른 이미지 0장',
-        '다른 이미지 1장',
-        '다른 이미지 2장',
-        '다른 이미지 5장',
-        '다른 이미지 1,000,000장',
-      ],
+      ['다른 항목 0개', '다른 항목 1개', '다른 항목 2개', '다른 항목 5개', '다른 항목 1,000,000개'],
     ],
   ])('%s', (key, vars, expected) => {
     expect(COUNTS.map((count) => t(key, count, vars))).toEqual(expected)
+  })
+})
+
+describe('Korean reviewed wording', () => {
+  it.each<[string, Record<string, unknown>, string]>([
+    [
+      'export:done.printBody',
+      {},
+      '크기가 정확하도록 ‘페이지에 맞추기’ 대신 ‘실제 크기’ 옵션을 선택하세요.',
+    ],
+    ['images:editSheet.copies.hint', {}, '이 이미지를 여러 장 인쇄할 수 있어요.'],
+    ['studies:values.darkest', {}, '가장 어두운 색'],
+    [
+      'errors:images.unsupportedFormat.title',
+      { name: 'notes.pdf' },
+      '‘notes.pdf’ 파일을 추가할 수 없어요',
+    ],
+    ['errors:images.decodeFailed.title', { name: 'a.jpg' }, '‘a.jpg’ 파일을 읽을 수 없어요'],
+    ['errors:images.tooLarge.title', { name: 'a.jpg' }, '‘a.jpg’ 파일이 너무 커요'],
+  ])('%s', (key, vars, expected) => {
+    expect(i18next.t(key, vars)).toBe(expected)
+  })
+
+  it('a paste toast names the file once before its colon', () => {
+    const message = i18next.t('app:import.failed', {
+      list: 'notes.pdf',
+      title: i18next.t('errors:images.unsupportedFormat.title', { name: 'notes.pdf' }),
+      message: i18next.t('errors:images.unsupportedFormat.message'),
+    })
+    expect(message.match(/:/g)).toHaveLength(1)
+  })
+
+  it('the landing page says "private" without promising protection', () => {
+    for (const text of [landing.meta.description, landing.share.description]) {
+      expect(text).toMatch(/무료이고 비공개이며 브라우저에서 실행돼요\.$/)
+      expect(text).not.toMatch(/개인 정보를 지키/)
+    }
   })
 })

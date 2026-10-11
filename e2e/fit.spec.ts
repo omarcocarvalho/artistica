@@ -4,6 +4,7 @@ import { FIXTURES } from './support/fixtures.ts'
 import { setLanguage } from './support/l10n.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { runOnly } from './support/projects.ts'
+import { textIn } from './support/screens.ts'
 
 // Text that must fit in every language whatever font the system falls back to: the hand-lettered
 // notes of the landing page, the compact add buttons, the phone step tabs, the images panel, the
@@ -331,6 +332,49 @@ for (const width of [320, 390, 640, 768, 1024]) {
       if (!inside) found.push(`${code}: the tip runs past its picture`)
     }
     expect(found).toEqual([])
+  })
+}
+
+for (const width of [640, 700, 960]) {
+  test(`FIT-10 the top bar's button text stays clear of the next control in every theme at ${String(width)} px`, async ({
+    page,
+  }) => {
+    test.setTimeout(120_000)
+    guard = guardNetwork(page)
+    await page.setViewportSize({ width, height: 800 })
+    await page.goto('app/')
+    const found: string[] = []
+    for (const code of LANGUAGES) {
+      await setLanguage(page, code)
+      for (const theme of ['auto', 'light', 'dark']) {
+        const current = textIn(code, `app:theme.${theme}`)
+        const button = page.getByRole('button', {
+          name: textIn(code, 'app:theme.changeLabel', { current }),
+          exact: true,
+        })
+        await expect(button).toHaveText(current)
+        const wide = await page.evaluate<string[]>(`(() => {
+          const out = []
+          const shown = [...document.querySelector('header').children].filter(
+            (el) => el.getBoundingClientRect().width > 1,
+          )
+          shown.forEach((el, i) => {
+            if (el.tagName !== 'BUTTON') return
+            const range = document.createRange()
+            range.selectNodeContents(el)
+            const text = range.getBoundingClientRect()
+            const before = shown[i - 1]?.getBoundingClientRect()
+            const after = shown[i + 1]?.getBoundingClientRect()
+            if ((after && text.right > after.left) || (before && text.left < before.right))
+              out.push('"' + el.textContent.trim() + '" runs into its neighbour')
+          })
+          return out
+        })()`)
+        found.push(...wide.map((f) => `${code}: ${f}`))
+        await button.click()
+      }
+    }
+    expect([...new Set(found)]).toEqual([])
   })
 }
 

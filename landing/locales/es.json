@@ -9,7 +9,7 @@
     "imageAlt": "Artistica: fotos de referencia acomodadas en hojas imprimibles"
   },
   "structured": {
-    "description": "Convierte fotos de referencia en hojas listas para imprimir con marcas de corte y sangrado, estudios de desenfoque y de valores, y líneas de composición. Funciona por completo en tu navegador.",
+    "description": "Convierte fotos de referencia en hojas listas para imprimir con marcas de corte y sangrado, estudios de desenfoque y de valores, y líneas de composición. Se ejecuta por completo en tu navegador.",
     "operatingSystem": "Cualquiera (navegador web)",
     "browserRequirements": "Requiere JavaScript. Versión más reciente de Chrome, Edge, Firefox o Safari."
   },
@@ -94,13 +94,13 @@
   "privacy": {
     "title": "Tus fotos se quedan contigo",
     "claims": {
-      "inBrowser": "Todo funciona en tu navegador. No se sube nada.",
+      "inBrowser": "Todo se ejecuta en tu navegador. No se sube nada.",
       "notSaved": "Las fotos nunca se guardan. Al recargar la página, se borran.",
       "settingsOnly": "Solo se conservan tu configuración y tus preajustes, en este dispositivo.",
       "models": "Los modelos de rostro y de pose se descargan de este sitio solo cuando lo pides, y se quedan en tu navegador para usarlos sin conexión.",
       "noTracking": "Sin cuentas y sin rastreo.",
       "heroNeverLeave": "Las fotos nunca salen de tu dispositivo",
-      "faqUploaded": "No. Todo funciona en tu navegador. Las fotos nunca se suben ni se guardan, y al recargar la página se borran.",
+      "faqUploaded": "No. Todo se ejecuta en tu navegador. Las fotos nunca se suben ni se guardan, y al recargar la página se borran.",
       "faqGuides": "Las guías de rostro y de pose usan los modelos MediaPipe de Google, descargados de este sitio y ejecutados en tu dispositivo.",
       "faqOffline": "Sí, después de tu primera visita a la app. Las guías de rostro y de pose funcionan sin conexión después de su descarga única."
     }
@@ -130,7 +130,7 @@
       "q": "¿Con qué se crean las guías de rostro y de pose?"
     },
     "offline": {
-      "q": "¿Puedo usarla sin conexión?"
+      "q": "¿Puedo usar la app sin conexión?"
     },
     "phone": {
       "q": "¿Funciona en mi teléfono?",

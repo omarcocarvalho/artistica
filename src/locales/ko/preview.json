@@ -2,8 +2,8 @@
   "tile": {
     "fallbackName": "이미지 {{n}}",
     "versionName": "{{name}}, {{version}}",
-    "lowDpi": "{{dpi}} DPI",
-    "lowDpiLabel": "저해상도: {{dpi}} DPI",
+    "lowDpi": "{{dpi}} DPI",
+    "lowDpiLabel": "저해상도: {{dpi}} DPI",
     "scaledToFit": "맞춤 축소",
     "scaledToFitLabel": "페이지에 맞게 축소됨"
   },

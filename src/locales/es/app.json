@@ -13,7 +13,7 @@
     "exportNoImages": "Agrega al menos una imagen para exportar.",
     "exportUpdating": "El diseño se está actualizando. Podrás exportar en un momento.",
     "exportNoRoom": "No se puede exportar: la configuración de página no deja espacio para imágenes.",
-    "exportError": "No se pudo calcular el diseño. Cambia un ajuste o vuelve a cargar la página.",
+    "exportError": "No se pudo calcular el diseño. Cambia la configuración o vuelve a cargar la página.",
     "exportGuides": "Buscando guías en tus fotos…"
   },
   "theme": {
@@ -44,7 +44,7 @@
   "notices": {
     "dismiss": "Descartar",
     "region": "Notificaciones",
-    "layoutFailed": "No se pudo calcular el diseño. Cambia un ajuste e inténtalo de nuevo."
+    "layoutFailed": "No se pudo calcular el diseño. Cambia la configuración e inténtalo de nuevo."
   },
   "mobile": {
     "steps": "Pasos",

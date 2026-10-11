@@ -24,10 +24,10 @@
     "openApp": "Abrir o app"
   },
   "theme": {
-    "auto": "Automático",
+    "auto": "Auto",
     "light": "Claro",
     "dark": "Escuro",
-    "changeAuto": "Mudar tema: Automático",
+    "changeAuto": "Mudar tema: Auto",
     "changeLight": "Mudar tema: Claro",
     "changeDark": "Mudar tema: Escuro"
   },
@@ -87,7 +87,7 @@
       "body": "Corte, gire, espelhe, imprima cópias ou defina um tamanho exato, depois mova, redimensione e troque fotos na página, com desfazer."
     },
     "phone": {
-      "title": "Funciona no seu telefone",
+      "title": "Funciona no seu celular",
       "body": "Um fluxo passo a passo em telas pequenas, painéis laterais no computador, tema claro e escuro."
     }
   },
@@ -133,7 +133,7 @@
       "q": "Posso usar offline?"
     },
     "phone": {
-      "q": "Funciona no meu telefone?",
+      "q": "Funciona no meu celular?",
       "a": "Sim: nas versões mais recentes do Chrome, Edge, Firefox e Safari, no computador, no iPhone e no Android."
     }
   },

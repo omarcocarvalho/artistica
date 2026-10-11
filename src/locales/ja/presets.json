@@ -69,7 +69,7 @@
   "summary": {
     "separator": " · ",
     "plus": " + ",
-    "custom": "カスタム{{w}} × {{h}} {{unit}}",
+    "custom": "カスタム{{w}} × {{h}} {{unit}}",
     "orientation": {
       "auto": "自動",
       "portrait": "縦",

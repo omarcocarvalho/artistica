@@ -15,7 +15,7 @@
     "on": "开",
     "off": "关",
     "quality": "质量",
-    "qualityValue": "300 DPI，从不放大"
+    "qualityValue": "300 DPI，绝不放大"
   },
   "fileName": "文件名",
   "create": "创建PDF",
@@ -38,6 +38,6 @@
     "download": "下载PDF",
     "printTitle": "按100%打印",
     "printBody": "选择“实际大小”，而不是“适合页面”，这样尺寸才会准确。",
-    "again": "再做一份"
+    "again": "再做一个PDF"
   }
 }

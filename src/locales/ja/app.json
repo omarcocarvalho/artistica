@@ -83,13 +83,13 @@
     "updated": "レイアウトを更新しました。",
     "pageCaption": "{{total}}ページ中{{current}}ページ · {{paper}} · {{orientation}}",
     "pageItems": "{{current}}ページ目の内容",
-    "item": "{{name}}、{{w}} × {{h}} {{unit}}",
+    "item": "{{name}}、{{w}} × {{h}} {{unit}}",
     "unnamedImage": "画像",
     "orientation": {
       "portrait": "縦",
       "landscape": "横"
     },
-    "itemVersion": "{{name}}、{{version}}、{{w}} × {{h}} {{unit}}",
+    "itemVersion": "{{name}}、{{version}}、{{w}} × {{h}} {{unit}}",
     "itemLines": "{{item}}、線：{{list}}"
   }
 }

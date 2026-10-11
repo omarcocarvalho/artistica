@@ -15,7 +15,7 @@
     "on": "켬",
     "off": "끔",
     "quality": "품질",
-    "qualityValue": "300 DPI, 확대 없음"
+    "qualityValue": "300 DPI, 확대 없음"
   },
   "fileName": "파일 이름",
   "create": "PDF 만들기",
@@ -36,8 +36,8 @@
     "title": "PDF가 준비됐어요",
     "yay": "야호!",
     "download": "PDF 다운로드",
-    "printTitle": "100%로 인쇄하세요",
-    "printBody": "크기가 정확하도록 ‘페이지에 맞추기’가 아니라 ‘실제 크기’를 선택하세요.",
+    "printTitle": "100% 크기로 인쇄하세요",
+    "printBody": "크기가 정확하도록 ‘페이지에 맞추기’ 대신 ‘실제 크기’ 옵션을 선택하세요.",
     "again": "하나 더 만들기"
   }
 }

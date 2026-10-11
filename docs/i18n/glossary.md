@@ -17,7 +17,7 @@ One translation per term, used in every namespace of the app and on the landing 
 | orientation | orientação | orientación | orientamento | 向き | 방향 | 方向 | Which way the paper is turned. OS print dialogs in each language. |
 | portrait | retrato | vertical | verticale | 縦 | 세로 | 纵向 | Page orientation, as OS print dialogs say it. |
 | landscape | paisagem | horizontal | orizzontale | 横 | 가로 | 横向 | As above. |
-| auto | automático | automático | automatico | 自動 | 자동 | 自动 | Orientation, size or theme chosen by the app. |
+| auto | automático | automático | automatico | 自動 | 자동 | 自动 | Orientation, size or theme chosen by the app. The theme button takes the short form (the theme row below). |
 | units | unidades | unidades | unità | 単位 | 단위 | 单位 | Millimetres or inches for every size field. OS settings and print dialogs. |
 | inches | polegadas | pulgadas | pollici | インチ | 인치 | 英寸 | The long unit name in the units control; the short symbol comes from the code. |
 | safe area | margem de segurança | margen de seguridad | margine di sicurezza | 余白 | 안전 여백 | 安全边距 | The blank border at the page edge that the printer can't reach. Japanese print usage calls a page's blank border 余白; 安全マージン reads as jargon. |
@@ -80,7 +80,7 @@ One translation per term, used in every namespace of the app and on the landing 
 | value study | estudo de valores | estudio de valores | studio dei valori tonali | 明度スタディ | 명도 스터디 | 明暗习作 | A study that reduces a photo to a few value steps. Art-school usage in each language. |
 | notan | notan | notan | notan | 濃淡 | 노탄 | 黑白 | Two-value study, from the Japanese 濃淡. |
 | value ramp | escala de valores | escala de valores | scala dei valori | 明度スケール | 명도 단계표 | 明暗色阶 | The strip of value swatches from darkest to lightest. |
-| darkest | mais escuro | más oscuro | più scuro | 最も暗い | 가장 어두운 | 最深 | Ramp end. |
+| darkest | mais escuro | más oscuro | più scuro | 最も暗い | 가장 어두운 색 | 最深 | Ramp end. ko adds 색 so it pairs with the other end, 가장 밝은 색. |
 | lightest tint | tom mais claro | tono más claro | tinta più chiara | 最も明るい色 | 가장 밝은 색 | 最浅色 | Ramp end. |
 | hue | matiz | matiz | tinta | 色相 | 색상 | 色相 | The colour of a value study. Italian painters call hue "tinta". |
 | custom hue | matiz personalizado | matiz personalizado | tinta personalizzata | カスタム色相 | 사용자 지정 색상 | 自定义色相 | A hue the user picks with the colour field instead of a swatch. OS colour pickers. |
@@ -117,7 +117,7 @@ One translation per term, used in every namespace of the app and on the landing 
 | landmarks | pontos de referência | puntos de referencia | punti di riferimento | ランドマーク | 랜드마크 | 关键点 | Points the face and pose models find. Not shown in the UI; may appear in the landing FAQ. |
 | model (AI) | modelo | modelo | modello | モデル | 모델 | 模型 | The face or pose model file. "small AI model": pequeno modelo de IA, pequeño modelo de IA, piccolo modello di IA, 小さなAIモデル, 작은 AI 모델, 小型AI模型. |
 | model download | download do modelo | descarga del modelo | download del modello | モデルのダウンロード | 모델 다운로드 | 模型下载 | The one-time download of a face or pose model, only after the user asks. |
-| on device | no dispositivo | en el dispositivo | sul dispositivo | 端末内 | 기기에서 | 本机 | Badge: the guides run on this device. Tight. |
+| on device | no dispositivo | en el dispositivo | sul dispositivo | デバイス内 | 기기에서 | 本机 | Badge: the guides run on this device. Tight. ja uses デバイス, the word of every other device string. |
 | this device | este dispositivo | este dispositivo | questo dispositivo | このデバイス | 이 기기 | 本设备 | Where photos, settings and presets stay. |
 | offline | offline | sin conexión | offline | オフライン | 오프라인 | 离线 | Working without an internet connection. |
 
@@ -135,13 +135,14 @@ One translation per term, used in every namespace of the app and on the landing 
 | layout | layout | diseño | impaginazione | レイアウト | 레이아웃 | 排版 | How photos are packed onto pages. |
 | undo | desfazer | deshacer | annulla | 元に戻す | 실행 취소 | 撤销 | OS term. |
 | preview | prévia | vista previa | anteprima | プレビュー | 미리보기 | 预览 | Also the phone step tab (`app:mobile.names.preview`, tight: 8 Latin, 4 CJK in context.md). "Vista previa" and "Anteprima" are over the limit and no shorter word keeps the meaning; the tabs size to their names, so translate it with the full word. |
-| theme: auto, light, dark | automático, claro, escuro | auto, claro, oscuro | auto, chiaro, scuro | 自動, ライト, ダーク | 자동, 라이트, 다크 | 自动, 浅色, 深色 | Colour theme names, as each OS names its appearance setting. es and it keep the short "Auto", which fits the 8-character theme button (context.md) where "Automático" and "Automatico" do not. |
+| theme: auto, light, dark | auto, claro, escuro | auto, claro, oscuro | auto, chiaro, scuro | 自動, ライト, ダーク | 자동, 라이트, 다크 | 自动, 浅色, 深色 | Colour theme names, as each OS names its appearance setting. pt-BR, es and it keep the short "Auto", which fits the 8-character theme button (context.md) where "Automático" and "Automatico" do not; the theme menu labels of the app and the landing page use the same word. |
 | cancel | cancelar | cancelar | annulla | キャンセル | 취소 | 取消 | OS term. |
 | close | fechar | cerrar | chiudi | 閉じる | 닫기 | 关闭 | OS term. |
 | done | concluído | listo | fine | 完了 | 완료 | 完成 | Button that closes an editor. |
 | dismiss | dispensar | descartar | ignora | 閉じる | 닫기 | 关闭 | Closing a notice. |
 | try again | tentar de novo | intentar de nuevo | riprova | もう一度試す | 다시 시도 | 重试 | Button that repeats a step that failed. OS error dialogs in each language. |
 | notifications | notificações | notificaciones | notifiche | 通知 | 알림 | 通知 | The notice region (screen readers). |
+| phone (smartphone) | celular | teléfono | telefono | スマートフォン | 휴대폰 | 手机 | A mobile phone, in the app and on the landing page ("Works on your phone"). pt-BR says celular: telefone reads as a landline in Brazil. |
 | arrow keys | teclas de seta | teclas de flecha | tasti freccia | 矢印キー | 화살표 키 | 方向键 | Key names themselves stay in English (see Do not translate). |
 
 ## Counters (ja, ko, zh-CN)

@@ -56,8 +56,8 @@
     "sizeFixed": "固定{{size}}",
     "copies": "×{{count, number}}",
     "copiesLabel": "{{count, number}}份",
-    "dpi": "{{dpi}} DPI",
-    "lowDpiLabel": "低分辨率：{{dpi}} DPI",
+    "dpi": "{{dpi}} DPI",
+    "lowDpiLabel": "低分辨率：{{dpi}} DPI",
     "separator": "·",
     "count_other": "{{count, number}}张图片",
     "removeAll": {
@@ -71,12 +71,12 @@
   },
   "editSheet": {
     "title": "编辑图片",
-    "subtitle": "{{name}} · {{w}} × {{h}} px",
+    "subtitle": "{{name}} · {{w}} × {{h}} px",
     "crop": {
       "stageLabel": "图片预览",
       "areaLabel": "裁剪区域",
       "help": "方向键可移动裁剪区域。按住Shift加方向键可调整其大小。",
-      "status": "裁剪{{w}} × {{h}} px，位于{{x}}, {{y}}",
+      "status": "裁剪{{w}} × {{h}} px，位于（{{x}}, {{y}}）",
       "annotation": "拖动四角",
       "controls": "裁剪位置和大小",
       "position": "位置",
@@ -124,7 +124,7 @@
       "label": "打印尺寸",
       "auto": "自动",
       "fixed": "固定",
-      "autoHint": "自动模式会在{{size}}到300 DPI上限之间选择尺寸。",
+      "autoHint": "自动模式会在{{size}}到300 DPI上限之间选择尺寸。",
       "axisLabel": "设置",
       "width": "宽度",
       "height": "高度",
@@ -134,14 +134,14 @@
     },
     "dpi": {
       "label": "打印分辨率",
-      "value": "{{dpi}} DPI",
+      "value": "{{dpi}} DPI",
       "scale0": "0",
       "scale300": "300",
       "scale400": "400",
-      "autoOk": "自动模式的打印分辨率绝不会高于300 DPI。",
+      "autoOk": "自动模式的打印尺寸绝不会超出300 DPI所允许的大小。",
       "lowTitle": "低分辨率",
-      "lowFixed": "低于300 DPI时可能打印得不够清晰。最大清晰尺寸为{{w}} × {{h}}{{unit}}。",
-      "lowAuto": "在最小的合适尺寸（{{size}}）下，打印分辨率为{{dpi}} DPI，可能不够清晰。"
+      "lowFixed": "低于300 DPI时可能打印得不够清晰。最大清晰尺寸为{{w}} × {{h}}{{unit}}。",
+      "lowAuto": "在最小的合适尺寸（{{size}}）下，打印分辨率为{{dpi}} DPI，可能不够清晰。"
     },
     "actions": {
       "close": "关闭",

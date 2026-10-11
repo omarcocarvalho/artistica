@@ -33,6 +33,8 @@ These apply to every language.
 - **Never write a number into a string.** Numbers arrive formatted for the language through a variable (overview M6-R7): `{{count, number}}`, `{{value}}`, `{{size}}` and the like already carry the language's separators, unit symbol and spacing. Don't add `%`, `mm`, `°` or `MB` next to a variable that already contains them; [context.md](context.md) says which variables do. The few digits the English writes as text (`300 DPI`, `90°`, `2 × bleed`, the `1%`/`100%` slider ends) are kept as digits, with the percent sign spaced as the language formats percentages (Spanish `1 %`, the others `1%`).
 - **Plurals.** A key that ends in `_one`, `_other` (and so on) is one message in several forms; the code picks the form from `count` (overview M6-R9). Write exactly the forms your language needs: `_one`, `_many`, `_other` in pt-BR, es and it (`_many` is used for counts like 1,000,000: "1.000.000 de imagens", "1.000.000 de imágenes", "1.000.000 di immagini"); only `_other` in ja, ko and zh-CN. Add a `_zero` form wherever "0" reads wrong with the `_one` or `_other` form (Portuguese puts 0 in `one`, so "0 imagem" needs `_zero`: "Nenhuma imagem"). A key that exists only as `_other` in English (`images:list.removeAll.confirmBody_other`) still needs every form your language uses.
 - **Counters in Japanese, Korean and Chinese** come after the number, from the glossary's counter column (`{{count}}枚`, `{{count}}장`, `{{count}}张`).
+- **A number and its unit stay on one line in Japanese, Korean and Chinese.** Where a space separates a number or a number variable from `DPI`, `MB`, `px` or `{{unit}}`, it is a no-break space (U+00A0): `{{dpi}} DPI` with U+00A0, never a plain space, since CJK text breaks at any space. `src/locales/typography.test.ts` checks it.
+- **A coordinate pair** keeps the English notation `{{x}}, {{y}}` (ASCII comma and space) in every language; in Japanese and Chinese it goes in full-width brackets: `（{{x}}, {{y}}）`.
 
 ### Punctuation
 
@@ -51,7 +53,7 @@ These apply to every language.
 - **Register:** *você*, friendly and direct. Never *tu*, never *o senhor*.
 - **Buttons and menu items:** infinitive, as Brazilian software does ("Cancelar", "Salvar", "Baixar PDF", "Adicionar link").
 - **Instructions, hints and messages:** imperative in the third person, which goes with *você* ("Adicione fotos para começar.", "Toque em uma foto para cortar…", "Tente de novo.").
-- **Vocabulary:** Brazilian, not European Portuguese: *arquivo*, *tela*, *baixar*, *celular* only in casual text and *telefone* in UI text, *excluir* or *remover* (glossary), *colar*, *link*. Avoid *ecrã*, *ficheiro*, *transferir*.
+- **Vocabulary:** Brazilian, not European Portuguese: *arquivo*, *tela*, *baixar*, *celular* for a smartphone (in the app and on the landing page alike; *telefone* reads as a landline), *excluir* or *remover* (glossary), *colar*, *link*. Avoid *ecrã*, *ficheiro*, *transferir*.
 - **Quotation marks:** “curly double” (“Tamanho real”), ‘single’ inside them.
 - **Numbers:** formatted by the code (`1.234,5`; inches are `pol.`); don't touch. Because `pol.` ends in a full stop, a sentence must not end with a length variable (it would read "0,12 pol.."): put the length in brackets or earlier in the sentence.
 - **Gender:** agree with the noun the string is about (*foto* and *imagem* are feminine: "Desfocada", "Nenhuma imagem"); where the noun is not known (a name variable), build the sentence so the name is not the grammatical subject of an adjective.
@@ -92,6 +94,7 @@ These apply to every language.
 - **Spacing:** spaces between words as in normal Korean (띄어쓰기); a number and its counter or unit are written together ("3장", "12mm", the latter from the code).
 - **Punctuation:** half-width `. , ? ! :`; “curly double” for quotations, ‘single’ for a UI name or a user-typed name (‘{{name}}’을 적용할까요?).
 - **Particles after a variable:** a particle whose form depends on the last syllable (을/를, 이/가, 은/는, 와/과, 으로/로) can't follow a variable whose value is unknown. Rewrite so no such particle follows the variable ("{{name}} 삭제", "{{name}}: …") or put the variable inside quotation marks followed by a form that doesn't change ("‘{{name}}’ 프리셋을 삭제할까요?").
+- **Particles after a closing mark:** never write a particle straight after a closing quotation mark, a closing bracket or a percent sign (`‘실제 크기’를`, `⌘V)를`, `100%로`). Browsers may break the line after the mark, even with `word-break: keep-all`, and the particle starts the next line alone. Reword so a space follows the mark: `‘실제 크기’ 옵션을`, `100% 크기로`. `src/locales/typography.test.ts` checks it.
 - **Loanwords:** as the glossary gives them; prefer Korean words where the glossary does (재단 표시, 도련, 여백).
 
 ## zh-CN (Chinese, Simplified)

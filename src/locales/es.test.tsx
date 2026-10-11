@@ -19,6 +19,7 @@ import { DEFAULT_LINES } from '../shared/model/lines'
 import { DEFAULT_PAGE_SETUP } from '../shared/model/page-setup'
 import { presetFromSettings } from '../shared/model/preset'
 import { DEFAULT_STUDY } from '../shared/model/study'
+import landing from '../../landing/locales/es.json'
 
 vi.mock('../features/render/export/export-pdf', () => ({ exportPdf: vi.fn() }))
 
@@ -247,7 +248,7 @@ describe('es: plural forms', () => {
         'Esto quita 1 imagen de esta sesión. Las fotos no se guardan en ningún lugar, así que no se pueden recuperar.',
         'Esto quita las 2 imágenes de esta sesión. Las fotos no se guardan en ningún lugar, así que no se pueden recuperar.',
         'Esto quita las 5 imágenes de esta sesión. Las fotos no se guardan en ningún lugar, así que no se pueden recuperar.',
-        'Esto quita 1.000.000 de imágenes de esta sesión. Las fotos no se guardan en ningún lugar, así que no se pueden recuperar.',
+        'Esto quita las 1.000.000 de imágenes de esta sesión. Las fotos no se guardan en ningún lugar, así que no se pueden recuperar.',
       ],
     ],
     [
@@ -289,9 +290,57 @@ describe('es: plural forms', () => {
       ],
     ],
     ['app:import.more', {}, ['0 más', '1 más', '2 más', '5 más', '1.000.000 más']],
+    [
+      'presets:import.renamed',
+      { list: 'A → A (2)' },
+      [
+        'Se cambió el nombre de 0 preajustes: A → A (2).',
+        'Se cambió el nombre de 1 preajuste: A → A (2).',
+        'Se cambió el nombre de 2 preajustes: A → A (2).',
+        'Se cambió el nombre de 5 preajustes: A → A (2).',
+        'Se cambió el nombre de 1.000.000 de preajustes: A → A (2).',
+      ],
+    ],
   ]
 
   it.each(TABLE)('%s', (key, vars, forms) => {
     expect(COUNTS.map((count) => i18next.t(key, { ...vars, count }))).toEqual(forms)
+  })
+})
+
+describe('es: reviewed wording', () => {
+  it.each<[string, Record<string, unknown>, string]>([
+    ['export:summary.qualityValue', {}, '300 DPI, sin ampliar'],
+    [
+      'images:editSheet.dpi.autoOk',
+      {},
+      'El modo automático nunca imprime más grande de lo que permiten 300 DPI.',
+    ],
+    [
+      'app:topBar.exportError',
+      {},
+      'No se pudo calcular el diseño. Cambia la configuración o vuelve a cargar la página.',
+    ],
+    [
+      'app:notices.layoutFailed',
+      {},
+      'No se pudo calcular el diseño. Cambia la configuración e inténtalo de nuevo.',
+    ],
+    ['images:dropzone.cancelLabel', {}, 'Cancelar y dejar de agregar fotos'],
+  ])('%s', (key, vars, expected) => {
+    expect(i18next.t(key, vars)).toBe(expected)
+  })
+
+  it('the landing page says everything runs in the browser, as strongly as the English', () => {
+    expect(landing.privacy.claims.inBrowser).toBe(
+      'Todo se ejecuta en tu navegador. No se sube nada.',
+    )
+    expect(landing.privacy.claims.faqUploaded).toMatch(/^No\. Todo se ejecuta en tu navegador\. /)
+    expect(landing.structured.description).toMatch(/ Se ejecuta por completo en tu navegador\.$/)
+    expect(JSON.stringify(landing)).not.toMatch(/funciona (por completo )?en tu navegador/i)
+  })
+
+  it('the offline question names the app', () => {
+    expect(landing.faq.offline.q).toBe('¿Puedo usar la app sin conexión?')
   })
 })

@@ -17,7 +17,7 @@
     "importing_other": "Agregando {{count, number}} fotos…",
     "importingLabel": "Agregando fotos",
     "cancel": "Cancelar",
-    "cancelLabel": "Cancelar la adición de fotos",
+    "cancelLabel": "Cancelar y dejar de agregar fotos",
     "stopped": "Se dejó de agregar fotos.",
     "dismiss": "Descartar",
     "noImage": {
@@ -68,7 +68,7 @@
       "button": "Quitar todas las imágenes",
       "confirmTitle": "¿Quitar todas las imágenes?",
       "confirmBody_one": "Esto quita {{count, number}} imagen de esta sesión. Las fotos no se guardan en ningún lugar, así que no se pueden recuperar.",
-      "confirmBody_many": "Esto quita {{count, number}} de imágenes de esta sesión. Las fotos no se guardan en ningún lugar, así que no se pueden recuperar.",
+      "confirmBody_many": "Esto quita las {{count, number}} de imágenes de esta sesión. Las fotos no se guardan en ningún lugar, así que no se pueden recuperar.",
       "confirmBody_other": "Esto quita las {{count, number}} imágenes de esta sesión. Las fotos no se guardan en ningún lugar, así que no se pueden recuperar.",
       "confirm": "Quitar todas",
       "cancel": "Cancelar",
@@ -144,7 +144,7 @@
       "scale0": "0",
       "scale300": "300",
       "scale400": "400",
-      "autoOk": "El modo automático nunca imprime a más de 300 DPI.",
+      "autoOk": "El modo automático nunca imprime más grande de lo que permiten 300 DPI.",
       "lowTitle": "Baja resolución",
       "lowFixed": "Por debajo de 300 DPI puede imprimirse poco nítida. Se imprime nítida hasta {{w}} × {{h}} {{unit}}.",
       "lowAuto": "En su tamaño cómodo más pequeño ({{size}}) se imprime a {{dpi}} DPI. Puede verse poco nítida."

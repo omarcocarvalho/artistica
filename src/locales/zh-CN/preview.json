@@ -2,8 +2,8 @@
   "tile": {
     "fallbackName": "图片{{n}}",
     "versionName": "{{name}}，{{version}}",
-    "lowDpi": "{{dpi}} DPI",
-    "lowDpiLabel": "低分辨率：{{dpi}} DPI",
+    "lowDpi": "{{dpi}} DPI",
+    "lowDpiLabel": "低分辨率：{{dpi}} DPI",
     "scaledToFit": "已缩小以适应",
     "scaledToFitLabel": "已缩小以适应页面"
   },
@@ -36,7 +36,7 @@
     "moveToPage": "移到页面",
     "pageOption": "第{{page}}页",
     "newPage": "新页面",
-    "swapWith": "交换位置…",
+    "swapWith": "与…交换",
     "swapChoose": "选择一张照片",
     "swapOption": "{{name}}，第{{page}}页",
     "width": "宽度",
