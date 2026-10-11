@@ -1,63 +1,61 @@
 {
   "version": {
-    "original": "",
-    "blurred": "",
-    "values": "",
-    "blurValues": ""
+    "original": "オリジナル",
+    "blurred": "ぼかし",
+    "values": "明度",
+    "blurValues": "ぼかし + 明度"
   },
   "panel": {
-    "forImage": "",
-    "noImage": "",
-    "importing": ""
+    "forImage": "<name/>のスタディ",
+    "noImage": "写真を追加するか選択して、スタディを設定してください。",
+    "importing": "写真の読み込みが終わるのを待っています…"
   },
   "versions": {
-    "legend": "",
-    "hint": "",
-    "lastOne": ""
+    "legend": "印刷するバージョン",
+    "hint": "バージョンごとに1つの枠になります。並べて一緒に印刷されます。",
+    "lastOne": "少なくとも1つのバージョンが印刷されます。"
   },
   "blur": {
-    "heading": "",
-    "accent": "",
-    "amount": "",
-    "valueText": "",
-    "min": "",
-    "max": "",
-    "hint": "",
-    "usedBy": ""
+    "heading": "ぼかし",
+    "accent": "目を細めて！",
+    "amount": "強さ",
+    "valueText": "{{value}}",
+    "min": "1%",
+    "max": "100%",
+    "hint": "画像サイズに合わせて調整されるので、{{value}}はどの写真でも同じように見えます。",
+    "usedBy": "「ぼかし」と「ぼかし + 明度」で使います。"
   },
   "values": {
-    "heading": "",
-    "count": "",
-    "countText_one": "",
-    "countText_other": "",
-    "min": "",
-    "max": "",
-    "hue": "",
-    "customHue": "",
-    "hueText": "",
-    "ramp": "",
-    "rampLabel": "",
-    "darkest": "",
-    "lightest": "",
-    "hint": "",
-    "usedBy": ""
+    "heading": "明度",
+    "count": "階調の数",
+    "countText_other": "{{count, number}}階調",
+    "min": "2 · 濃淡",
+    "max": "20",
+    "hue": "色相",
+    "customHue": "カスタム色相",
+    "hueText": "{{value}}",
+    "ramp": "明度スケール",
+    "rampLabel": "{{count, number}}階調、最も暗い色から最も明るい色まで",
+    "darkest": "最も暗い",
+    "lightest": "最も明るい色",
+    "hint": "「ぼかし + 明度」は、先にぼかしてから階調に分けます。",
+    "usedBy": "「明度」と「ぼかし + 明度」で使います。"
   },
   "swatch": {
-    "sepia": "",
-    "terracotta": "",
-    "ochre": "",
-    "sapGreen": "",
-    "teal": "",
-    "ultramarine": "",
-    "violet": "",
-    "neutral": ""
+    "sepia": "セピア",
+    "terracotta": "テラコッタ",
+    "ochre": "オーカー",
+    "sapGreen": "サップグリーン",
+    "teal": "ティール",
+    "ultramarine": "ウルトラマリン",
+    "violet": "バイオレット",
+    "neutral": "ニュートラルグレー"
   },
   "applyAll": {
-    "button": "",
-    "hintSingle": "",
-    "hint_other": "",
-    "done_one": "",
-    "done_other": "",
-    "nothingChanged": ""
+    "button": "すべての画像に適用",
+    "hintSingle": "写真をもう1枚追加すると、この設定をコピーできます。",
+    "hint_other": "このスタディの設定を、{{count, number}}枚の画像すべてにコピーします。",
+    "done_other": "スタディの設定を画像{{count, number}}枚にコピーしました。",
+    "nothingChanged": "すべての画像がすでにこのスタディの設定を使っています。"
   }
 }

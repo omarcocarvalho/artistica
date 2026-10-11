@@ -56,8 +56,11 @@ const JAPANESE = /[぀-ヿ一-鿿]/u
 const ATTRIBUTES = ['aria-label', 'aria-valuetext', 'aria-description', 'title', 'placeholder']
 
 /** Visible text plus the names and descriptions screen readers read. */
-function textOf(root: ParentNode): string {
-  const parts = [root.textContent]
+function textOf(root: Element): string {
+  const parts: string[] = []
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  for (let node = walker.nextNode(); node; node = walker.nextNode())
+    parts.push(node.nodeValue ?? '')
   for (const el of root.querySelectorAll('*'))
     for (const attr of ATTRIBUTES) parts.push(el.getAttribute(attr) ?? '')
   return parts.join('\n')
@@ -101,14 +104,20 @@ const pages = [
 describe('Japanese (ja)', () => {
   it.each<[string, () => ReactElement]>([
     ['TopBar', () => <TopBar onExport={vi.fn()} exportDisabledReason={null} />],
-    ['PageSetupPanel', () => <PageSetupPanel suggestedPerPage={4} resolvedOrientation="portrait" />],
+    [
+      'PageSetupPanel',
+      () => <PageSetupPanel suggestedPerPage={4} resolvedOrientation="portrait" />,
+    ],
     ['StudiesPanel', () => <StudiesPanel imageId={A} />],
-    ['ExportPanel (ready)', () => <ExportPanel pages={pages} paper="Letter" getSource={() => undefined} />],
+    [
+      'ExportPanel (ready)',
+      () => <ExportPanel pages={pages} paper="Letter" getSource={() => undefined} />,
+    ],
   ])('%s shows Japanese and no English UI word', (_name, make) => {
     const view = render(make())
     const text = textOf(view.container)
     expect(hasJapanese(text)).toBe(true)
-    expect(text.match(ENGLISH)?.[0]).toBeUndefined()
+    expect(ENGLISH.exec(text)?.[0]).toBeUndefined()
   })
 
   it('PresetsDialog with presets shows Japanese and no English UI word', () => {
@@ -116,7 +125,7 @@ describe('Japanese (ja)', () => {
       const preset = presetFromSettings(name, {
         pageSetup: { ...DEFAULT_PAGE_SETUP, paper: 'Letter', bleed: { enabled: true, mm: 3 } },
         study: { ...DEFAULT_STUDY, versions: ['original', 'blurred', 'values'] },
-        lines: { ...DEFAULT_LINES, thirds: true, grid: true },
+        lines: { ...DEFAULT_LINES, thirds: true, grid: { ...DEFAULT_LINES.grid, on: true } },
       })
       expect(useSettings.getState().savePreset(preset)).toBe('saved')
     }
@@ -126,7 +135,7 @@ describe('Japanese (ja)', () => {
     const text = textOf(dialog ?? document.body)
     expect(hasJapanese(text)).toBe(true)
     expect(text).toContain('肖像')
-    expect(text.match(ENGLISH)?.[0]).toBeUndefined()
+    expect(ENGLISH.exec(text)?.[0]).toBeUndefined()
   })
 
   // Japanese has one plural form (`_other`); the counter follows the number.

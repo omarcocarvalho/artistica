@@ -1,99 +1,94 @@
 {
-  "button": "",
-  "title": "",
-  "close": "",
-  "empty": "",
-  "listLabel": "",
-  "storageFailed": "",
+  "button": "プリセット",
+  "title": "プリセット",
+  "close": "閉じる",
+  "empty": "ページ設定、スタディ、線に名前を付けて保存すると、まとめて適用できます。",
+  "listLabel": "保存したプリセット",
+  "storageFailed": "このデバイスに保存されていません：ブラウザのストレージがいっぱいか、ブロックされています。変更はページを再読み込みするか閉じるまで有効です。",
   "save": {
-    "open": "",
-    "name": "",
-    "submit": "",
-    "cancel": "",
-    "needName": "",
-    "tooLong": "",
-    "exists": "",
-    "replace": "",
-    "full": "",
-    "saved": "",
-    "replaced": ""
+    "open": "現在の設定を保存…",
+    "name": "プリセット名",
+    "submit": "保存",
+    "cancel": "キャンセル",
+    "needName": "プリセットに名前を付けてください。",
+    "tooLong": "{{max}}文字以内で入力してください。",
+    "exists": "この名前のプリセットはすでにあります。",
+    "replace": "置き換える",
+    "full": "プリセットが{{max}}件あり、このデバイスに保存できる上限です。別のプリセットを保存するには、1件削除してください。",
+    "saved": "{{name}}を保存しました。",
+    "replaced": "{{name}}を置き換えました。"
   },
   "row": {
-    "apply": "",
-    "applyLabel": "",
-    "rename": "",
-    "renameLabel": "",
-    "delete": "",
-    "deleteLabel": ""
+    "apply": "適用",
+    "applyLabel": "適用：{{name}}",
+    "rename": "名前を変更",
+    "renameLabel": "名前を変更：{{name}}",
+    "delete": "削除",
+    "deleteLabel": "削除：{{name}}"
   },
   "rename": {
-    "label": "",
-    "submit": "",
-    "cancel": "",
-    "renamed": ""
+    "label": "{{name}}の新しい名前",
+    "submit": "保存",
+    "cancel": "キャンセル",
+    "renamed": "{{from}}の名前を{{to}}に変更しました。"
   },
   "apply": {
-    "confirmTitle": "",
-    "confirmBodySingle": "",
-    "confirmBody_other": "",
-    "confirm": "",
-    "cancel": "",
-    "applied": "",
-    "waiting": ""
+    "confirmTitle": "「{{name}}」を適用しますか？",
+    "confirmBodySingle": "ページ設定と、写真のスタディと線が設定されます。",
+    "confirmBody_other": "ページ設定と、{{count, number}}枚の写真すべてのスタディと線が設定されます。",
+    "confirm": "適用",
+    "cancel": "キャンセル",
+    "applied": "{{name}}を適用しました。",
+    "waiting": "写真の読み込みが終わるのを待っています…"
   },
   "delete": {
-    "confirmTitle": "",
-    "confirm": "",
-    "cancel": "",
-    "deleted": ""
+    "confirmTitle": "「{{name}}」を削除しますか？",
+    "confirm": "削除",
+    "cancel": "キャンセル",
+    "deleted": "{{name}}を削除しました。"
   },
   "export": {
-    "button": ""
+    "button": "すべて書き出し"
   },
   "import": {
-    "button": "",
-    "file": "",
-    "imported_one": "",
-    "imported_other": "",
-    "renamed_one": "",
-    "renamed_other": "",
-    "renamedPair": "",
-    "skipped_one": "",
-    "skipped_other": "",
-    "full_one": "",
-    "full_other": "",
-    "adjusted_one": "",
-    "adjusted_other": "",
+    "button": "読み込み…",
+    "file": "プリセットファイル",
+    "imported_other": "プリセットを{{count, number}}件読み込みました。",
+    "renamed_other": "{{count, number}}件の名前を変更しました：{{list}}。",
+    "renamedPair": "{{from}} → {{to}}",
+    "skipped_other": "{{count, number}}件は無効だったため、スキップしました。",
+    "full_other": "{{count, number}}件は追加されませんでした：このデバイスに保存できるプリセットは最大{{max}}件です。",
+    "adjusted_other": "{{count, number}}件のプリセットに範囲外の値があったため、調整しました。",
     "error": {
-      "tooLarge": "",
-      "notPresets": "",
-      "newerVersion": "",
-      "empty": ""
+      "tooLarge": "このファイルはプリセットファイルにしては大きすぎます。",
+      "notPresets": "このファイルはArtisticaのプリセットファイルではありません。",
+      "newerVersion": "このファイルは新しいバージョンのArtisticaで作成されています。ページを更新して、もう一度お試しください。",
+      "empty": "このファイルにプリセットが見つかりませんでした。"
     }
   },
   "summary": {
-    "separator": "",
-    "plus": "",
-    "custom": "",
+    "separator": " · ",
+    "plus": " + ",
+    "custom": "カスタム{{w}} × {{h}} {{unit}}",
     "orientation": {
-      "auto": "",
-      "portrait": "",
-      "landscape": ""
+      "auto": "自動",
+      "portrait": "縦",
+      "landscape": "横"
     },
-    "bleed": "",
+    "bleed": "塗り足し{{size}}",
     "version": {
-      "original": "",
-      "blurred": "",
-      "values": "",
-      "blurValues": ""
+      "original": "オリジナル",
+      "blurred": "ぼかし{{value}}",
+      "values": "明度{{count, number}}階調",
+      "blurValues": "ぼかし + 明度{{count, number}}階調"
     },
     "line": {
-      "grid": "",
-      "thirds": "",
-      "armature": "",
-      "golden": "",
-      "spiral": "",
-      "centre": ""
+      "grid": "グリッド",
+      "thirds": "三分割法",
+      "armature": "骨格線",
+      "golden": "黄金比",
+      "spiral": "黄金螺旋",
+      "centre": "中心線"
     }
   }
 }

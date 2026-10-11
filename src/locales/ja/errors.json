@@ -1,37 +1,37 @@
 {
   "images": {
     "cors": {
-      "title": "",
-      "message": ""
+      "title": "この画像を読み込めません",
+      "message": "このサイトは他のアプリによる画像の読み込みを許可していません。画像をダウンロードして、ファイルから追加してください。"
     },
     "network": {
-      "title": "",
-      "message": ""
+      "title": "このリンクを読み込めませんでした",
+      "message": "リンクと接続を確認して、もう一度お試しください。"
     },
     "notAnImage": {
-      "title": "",
-      "message": ""
+      "title": "画像ではありません",
+      "message": "リンクまたはファイルに画像が含まれていません。JPG、PNG、WebP、GIF、HEICを使ってください。"
     },
     "unsupportedFormat": {
-      "title": "",
-      "message": ""
+      "title": "{{name}}は追加できません",
+      "message": "JPG、PNG、WebP、GIF、HEICを使ってください。"
     },
     "decodeFailed": {
-      "title": "",
-      "message": ""
+      "title": "{{name}}を読み込めません",
+      "message": "ファイルが壊れている可能性があります。JPGまたはPNGで保存し直してみてください。"
     },
     "tooLarge": {
-      "title": "",
-      "message": ""
+      "title": "{{name}}は大きすぎます",
+      "message": "写真は{{maxMb}} MB、{{maxMp}}メガピクセルまでです。小さいサイズで試してください。"
     }
   },
   "export": {
-    "unsupported": "",
-    "missingImage": "",
-    "empty": "",
-    "failed": ""
+    "unsupported": "このブラウザではここでPDFを作成できません。ブラウザを更新するか、最新のChrome、Edge、Firefox、Safariを使ってください。",
+    "missingImage": "PDFの作成中に画像が削除されました。もう一度お試しください。",
+    "empty": "書き出すには画像を1枚以上追加してください。",
+    "failed": "PDFの作成中に問題が発生しました。もう一度お試しください。それでも失敗する場合は、画像の数を減らすか、小さい画像を使ってください。"
   },
   "generic": {
-    "unexpected": ""
+    "unexpected": "問題が発生しました。もう一度お試しください。"
   }
 }

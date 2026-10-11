@@ -1,111 +1,101 @@
 {
   "type": {
-    "grid": "",
-    "thirds": "",
-    "armature": "",
-    "golden": "",
-    "spiral": "",
-    "centre": "",
-    "edges": "",
-    "face": "",
-    "pose": ""
+    "grid": "グリッド",
+    "thirds": "三分割法",
+    "armature": "対角線と骨格線",
+    "golden": "黄金比",
+    "spiral": "黄金螺旋",
+    "centre": "中心線",
+    "edges": "輪郭線",
+    "face": "顔のアタリ",
+    "pose": "体のポーズ"
   },
   "corner": {
-    "topLeft": "",
-    "topRight": "",
-    "bottomLeft": "",
-    "bottomRight": ""
+    "topLeft": "左上",
+    "topRight": "右上",
+    "bottomLeft": "左下",
+    "bottomRight": "右下"
   },
   "panel": {
-    "forImage": "",
-    "everyVersion": "",
-    "noImage": "",
-    "composition": "",
-    "style": "",
-    "waiting": ""
+    "forImage": "<name/>の線",
+    "everyVersion": "この画像の印刷されるすべてのバージョンに重ねて描かれます。",
+    "noImage": "写真を追加するか選択して、線を描いてください。",
+    "composition": "構図",
+    "style": "線のスタイル",
+    "waiting": "写真の読み込みが終わるのを待っています…"
   },
   "grid": {
-    "columns": "",
-    "rows": "",
-    "times": "",
-    "range": ""
+    "columns": "列",
+    "rows": "行",
+    "times": "×",
+    "range": "{{min}}〜{{max}}"
   },
   "spiral": {
-    "startsAt": "",
+    "startsAt": "螺旋の始点",
     "arrow": {
-      "topLeft": "",
-      "topRight": "",
-      "bottomLeft": "",
-      "bottomRight": ""
+      "topLeft": "↖",
+      "topRight": "↗",
+      "bottomLeft": "↙",
+      "bottomRight": "↘"
     }
   },
   "guides": {
-    "heading": "",
-    "onDevice": "",
-    "detail": {
-      "label": "",
-      "value": ""
-    },
-    "size": "",
-    "download": "",
-    "progress": "",
-    "progressSpoken": "",
-    "failedHint": "",
-    "errorHint": "",
-    "tryAgain": "",
-    "noWebGL": "",
+    "heading": "写真からのガイド",
+    "onDevice": "端末内",
+    "detail": { "label": "細かさ", "value": "{{value}}" },
+    "size": "1回だけのダウンロード：{{size}}",
+    "download": "ダウンロードしてオン",
+    "progress": "{{loaded}} / {{total}}",
+    "progressSpoken": "{{total}}メガバイト中{{loaded}}メガバイト",
+    "failedHint": "接続を確認して、もう一度お試しください。ほかの線はそのまま使えます。",
+    "errorHint": "もう一度お試しください。ほかの線はそのまま使えます。",
+    "tryAgain": "もう一度試す",
+    "noWebGL": "顔とポーズのガイドにはWebGLが必要ですが、このブラウザではオフになっています。",
     "edges": {
-      "running": "",
-      "done": "",
-      "none": "",
-      "failed": ""
+      "running": "輪郭をトレース中…",
+      "done": "輪郭をトレースしました。",
+      "none": "この細かさでは輪郭が見つかりません。細かさを上げてみてください。",
+      "failed": "輪郭をトレースできませんでした。"
     },
     "face": {
-      "why": "",
-      "progressLabel": "",
-      "downloading": "",
-      "running": "",
-      "found": "",
-      "none": "",
-      "noneHint": "",
-      "noneWithHint": "",
-      "downloadFailed": "",
-      "error": "",
-      "turnOff": ""
+      "why": "顔のガイドには小さなAIモデルを使います。モデルはこのデバイスに保存され、オフラインで動作します。写真がアップロードされることはありません。",
+      "progressLabel": "顔のモデルのダウンロード",
+      "downloading": "顔のモデルをダウンロード中…",
+      "running": "顔を検出中…",
+      "found": "顔のガイドをオンにしました。眉、目、鼻、あごの線を追加しました。",
+      "none": "この画像に顔が見つかりません。",
+      "noneHint": "顔のガイドは、正面か斜めからはっきり写っているときに最もよく働きます。",
+      "noneWithHint": "この画像に顔が見つかりません。顔のガイドは、正面か斜めからはっきり写っているときに最もよく働きます。",
+      "downloadFailed": "顔のモデルをダウンロードできませんでした",
+      "error": "この画像で顔を検出できませんでした",
+      "turnOff": "顔のガイドをオフ"
     },
     "pose": {
-      "why": "",
-      "progressLabel": "",
-      "downloading": "",
-      "running": "",
-      "found": "",
-      "none": "",
-      "noneHint": "",
-      "noneWithHint": "",
-      "downloadFailed": "",
-      "error": "",
-      "turnOff": ""
+      "why": "ポーズの線には小さなAIモデルを使います。モデルはこのデバイスに保存され、オフラインで動作します。写真がアップロードされることはありません。",
+      "progressLabel": "ポーズのモデルのダウンロード",
+      "downloading": "ポーズのモデルをダウンロード中…",
+      "running": "ポーズを検出中…",
+      "found": "ポーズの線をオンにしました。",
+      "none": "この画像に人物が見つかりません。",
+      "noneHint": "ポーズの線は、全身が写っているときに最もよく働きます。",
+      "noneWithHint": "この画像に人物が見つかりません。ポーズの線は、全身が写っているときに最もよく働きます。",
+      "downloadFailed": "ポーズのモデルをダウンロードできませんでした",
+      "error": "この画像で人物を検出できませんでした",
+      "turnOff": "ポーズのガイドをオフ"
     }
   },
   "colour": {
-    "label": "",
-    "hexLabel": "",
-    "hexHint": ""
+    "label": "色",
+    "hexLabel": "色の16進コード",
+    "hexHint": "#と16進数6桁を入力してください（例：#1f3fbf）。"
   },
-  "thickness": {
-    "label": "",
-    "value": ""
-  },
-  "opacity": {
-    "label": "",
-    "value": ""
-  },
+  "thickness": { "label": "太さ", "value": "{{value}} {{unit}}" },
+  "opacity": { "label": "不透明度", "value": "{{value}}" },
   "applyAll": {
-    "button": "",
-    "hintSingle": "",
-    "hint_other": "",
-    "done_one": "",
-    "done_other": "",
-    "nothingChanged": ""
+    "button": "線をすべての画像に適用",
+    "hintSingle": "写真をもう1枚追加すると、この設定をコピーできます。",
+    "hint_other": "この線の設定を、{{count, number}}枚の画像すべてにコピーします。",
+    "done_other": "線の設定を画像{{count, number}}枚にコピーしました。",
+    "nothingChanged": "すべての画像がすでにこの線の設定を使っています。"
   }
 }
