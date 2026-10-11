@@ -42,3 +42,6 @@ export const OG_LOCALES: Readonly<Record<LanguageCode, string>> = {
   es: 'es_LA',
   'zh-CN': 'zh_CN',
 }
+
+/** The pseudo-locale (M6-R14): never in `LANGUAGES`, never offered, never saved. */
+export const PSEUDO_LANGUAGE = 'en-XA'

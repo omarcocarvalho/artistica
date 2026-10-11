@@ -6,11 +6,14 @@ import {
   INITIAL_JS_LIMIT_BYTES,
   initialScriptPaths,
   isLocaleChunk,
+  isPseudoChunk,
   LOCALE_CHUNK_LIMIT_BYTES,
   lazyOnlyViolations,
   localeChunkSetViolations,
   localeChunkViolations,
   localeMarkerViolations,
+  PSEUDO_CHUNK_LIMIT_BYTES,
+  pseudoChunkViolations,
   stringLeaves,
 } from './bundle-budget.ts'
 
@@ -38,12 +41,19 @@ const localeEntries = localeFiles.map((file) => ({
   gzipBytes: gzipBytes(readFileSync(join(distDir, file))),
 }))
 
+const pseudoEntries = readdirSync(join(distDir, 'assets'))
+  .map((name) => `assets/${name}`)
+  .filter(isPseudoChunk)
+  .map((file) => ({ file, gzipBytes: gzipBytes(readFileSync(join(distDir, file))) }))
+
 const kb = (n: number) => `${(n / 1000).toFixed(1)} KB`
 const lines = [
   `Initial app JS (gzip): ${kb(totalBytes)} of ${kb(INITIAL_JS_LIMIT_BYTES)}`,
   ...entries.map((e) => `  ${kb(e.gzipBytes).padStart(9)}  ${e.file}`),
   `Locale chunks (gzip, each at most ${kb(LOCALE_CHUNK_LIMIT_BYTES)}): ${String(localeEntries.length)}`,
   ...localeEntries.map((e) => `  ${kb(e.gzipBytes).padStart(9)}  ${e.file}`),
+  `Pseudo-locale chunk (gzip, at most ${kb(PSEUDO_CHUNK_LIMIT_BYTES)}):`,
+  ...pseudoEntries.map((e) => `  ${kb(e.gzipBytes).padStart(9)}  ${e.file}`),
 ]
 console.log(lines.join('\n'))
 if (process.env.GITHUB_STEP_SUMMARY) {
@@ -95,6 +105,13 @@ if (misgrouped.length > 0) {
 const oversized = localeChunkViolations(localeEntries)
 if (oversized.length > 0) {
   console.error(`A language chunk is over its budget:\n  ${oversized.join('\n  ')}`)
+  process.exit(1)
+}
+const pseudoProblems = pseudoChunkViolations(pseudoEntries, files)
+if (pseudoProblems.length > 0) {
+  console.error(
+    `The pseudo-locale must be one lazy chunk within its budget; load src/shared/i18n/pseudo.ts only through import():\n  ${pseudoProblems.join('\n  ')}`,
+  )
   process.exit(1)
 }
 if (!ok) {

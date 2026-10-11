@@ -10,6 +10,7 @@ export function PresetsButton() {
     <>
       <Button
         icon="sliders"
+        className="shrink-0"
         onClick={() => {
           setOpen(true)
         }}

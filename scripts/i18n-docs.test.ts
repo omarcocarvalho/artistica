@@ -127,6 +127,43 @@ function englishKeys(): Set<string> {
 
 const REF = /^- `([^`]+)` › (.+)$/
 
+function keysOf(tree: unknown, prefix = ''): string[] {
+  if (tree === null || typeof tree !== 'object') return [prefix]
+  return Object.entries(tree).flatMap(([k, v]) => keysOf(v, prefix ? `${prefix}.${k}` : k))
+}
+
+/**
+ * The key patterns of the context file's tables: each backticked key of a row's first cell, a
+ * `.sibling` in place of the last part of the cell's last full key, and `*` standing for one or
+ * more key parts. Rows under "## landing" name landing keys without a namespace.
+ */
+function contextPatterns(context: string): RegExp[] {
+  const out: RegExp[] = []
+  let section = ''
+  for (const line of context.split('\n')) {
+    if (line.startsWith('## ')) section = line.slice(3).trim()
+    if (!line.startsWith('| `')) continue
+    let base = ''
+    for (const [, token = ''] of (line.split('|')[1] ?? '').matchAll(/`([^`]+)`/g)) {
+      if (token.startsWith('{{')) continue
+      const key =
+        token.startsWith('.') && base
+          ? `${base}${base.endsWith(':') ? token.slice(1) : token}`
+          : token
+      if (!token.startsWith('.')) {
+        const stem = token.replace(/(\.\*)+$/, '')
+        const colon = stem.indexOf(':')
+        const dot = stem.lastIndexOf('.')
+        base = dot > colon ? stem.slice(0, dot) : stem.slice(0, colon + 1)
+      }
+      const full = section === 'landing' ? `landing:${key}` : key
+      const source = full.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.+')
+      out.push(new RegExp(`^${source}(_(zero|one|many|other))?$`))
+    }
+  }
+  return out
+}
+
 describe('docs/i18n', () => {
   it('has the README, the style guide, the glossary, the context file and the privacy claims', () => {
     for (const name of DOCS) expect(existsSync(`${ROOT}docs/i18n/${name}`), name).toBe(true)
@@ -180,6 +217,21 @@ describe('docs/i18n', () => {
       expect(row[2] ?? '', `${row[0] ?? '?'} latin`).toMatch(/^\d+$/)
       expect(row[3] ?? '', `${row[0] ?? '?'} CJK`).toMatch(/^\d+$/)
     }
+  })
+
+  it('every English key, app and landing, has a row in the context file (string freeze)', () => {
+    const patterns = contextPatterns(doc('context.md'))
+    const dir = `${ROOT}src/locales/en/`
+    const keys = [
+      ...readdirSync(dir)
+        .filter((f) => f.endsWith('.json'))
+        .flatMap((f) =>
+          keysOf(JSON.parse(read(`src/locales/en/${f}`))).map((k) => `${f.slice(0, -5)}:${k}`),
+        ),
+      ...keysOf(JSON.parse(read('landing/locales/en.json'))).map((k) => `landing:${k}`),
+    ]
+    expect(keys.length).toBeGreaterThan(500)
+    expect(keys.filter((key) => !patterns.some((p) => p.test(key)))).toEqual([])
   })
 
   it('every app key a privacy claim names is an English key', () => {

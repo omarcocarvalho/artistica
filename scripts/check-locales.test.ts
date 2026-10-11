@@ -1,6 +1,7 @@
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { PSEUDO_LANGUAGE, pseudoResources } from '../src/shared/i18n/pseudo.ts'
 import {
   checkLocales,
   hashOf,
@@ -252,5 +253,29 @@ describe('the repository locales', () => {
     expect(
       checkLocales({ ...readLocales(ROOT), pluralCategories: intlPluralCategories }).problems,
     ).toEqual([])
+  })
+})
+
+function keyPaths(value: unknown, prefix = ''): string[] {
+  if (value === null || typeof value !== 'object') return [prefix]
+  return Object.entries(value).flatMap(([k, v]) => keyPaths(v, `${prefix}/${k}`))
+}
+
+describe('the pseudo-locale (M6-R14)', () => {
+  // English has `_other`-only keys beside `_one`/`_other` pairs, so no single plural rule fits
+  // it; the plural keys are compared path for path instead.
+  it('passes the locale check against the real English (keys, variables, tags)', () => {
+    const app = Object.fromEntries(
+      Object.entries(readLocales(ROOT).en).filter(([ns]) => ns !== 'landing'),
+    )
+    const pseudo = pseudoResources(app as Record<string, Record<string, unknown>>)
+    const { problems } = checkLocales({
+      en: app,
+      others: { [PSEUDO_LANGUAGE]: pseudo },
+      stamps: stamp(app, PSEUDO_LANGUAGE),
+      pluralCategories: () => ['one', 'other'],
+    })
+    expect(problems.filter((p) => !p.kind.startsWith('plural-'))).toEqual([])
+    expect(keyPaths(pseudo)).toEqual(keyPaths(app))
   })
 })

@@ -2,7 +2,7 @@
 
 Where each English string appears, what kind of control shows it, and how much room it has. Read it with [style-guide.md](style-guide.md) and [glossary.md](glossary.md).
 
-This file describes the English of master `2380a82` (2026-10-11). Keys that the M6 groundwork adds, renames or removes before the string freeze (number and unit keys, one-key messages, paper names, the language menu) are not listed; for those, read the key's call site (`git grep -n "<key>" src`) and add a row here in the freeze pull request.
+This file describes the frozen English (M6-R13, from the pull request that adds the pseudo-locale probes, 2026-10-11): every key of `src/locales/en/*.json` and `landing/locales/en.json` has a row below, by its own name, a `.sibling` shorthand or a `*` group. A key added after the freeze gets its row in the pull request that adds it.
 
 ## How it was made
 
@@ -10,13 +10,13 @@ This file describes the English of master `2380a82` (2026-10-11). Keys that the 
 2. Another script loaded the built app (`corepack pnpm build && corepack pnpm preview`) in Playwright at the two narrowest layouts, the phone at 320 × 640 and the desktop at 960 × 800 (the width where the three-panel workspace starts), added one photo, walked every step and tab, and measured each control: its width, the width its text may take, and the English text's width. Latin limits are that room divided by the average width of a character of the English text (about 7 px at the 14 px UI size); CJK limits divide it by the width of a CJK character (14 px).
 3. The rows below were written by hand from both.
 
-The English screen set at desktop and phone width comes from `e2e/screens.spec.ts` (CI artifact `screens`) once that spec exists; until then, run the app and look at the screen named in each row.
+The screen set at desktop and phone width is captured by `corepack pnpm e2e:screens` (`e2e/screens.spec.ts`; `E2E_LANG=en` for English only) into `screens/`, with the contact sheet `screens/index.html`; E1's manual workflow uploads it as the CI artifact `screens`.
 
 ## Screens
 
 | Screen | What it is |
 |---|---|
-| Top bar | the bar at the top: logo, app name, privacy pill (from 640 px), theme, Presets, Export PDF (desktop) |
+| Top bar | the bar at the top: logo, app name, privacy pill (from 640 px), language menu (globe; the language's own name from 640 px), theme, Presets, Export PDF (desktop) |
 | Empty | the empty workspace or the empty Images step: "Add some reference photos", the three add buttons |
 | Images | the Images panel (desktop, 248–288 px wide) or the Images step (phone): the add buttons, the image list |
 | Edit | the Edit image dialog (desktop) or bottom sheet (phone): crop, rotate, copies, print size |
@@ -89,6 +89,9 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | Keys | Screen | Control | Notes |
 |---|---|---|---|
 | `app:title` | Top bar, Presets, Export | heading | "Artistica": never translated |
+| `app:documentTitle` | browser tab | the page title: "Artistica app" | keep "Artistica" as it is |
+| `app:language.label` | Spoken | name of the language menu: "Language" | the menu shows each language in its own name (`ENDONYMS` in `src/shared/i18n/languages.ts`), never translated |
+| `app:language.loadFailed` | Notices | error toast when a language can't be loaded | shown in the language already on screen |
 | `app:skipToPreview` | Top bar | skip link, visible on keyboard focus | |
 | `app:topBar.home` | Spoken | name of the logo link to the landing page | |
 | `app:topBar.privacy` | Top bar | pill | privacy claim (privacy-claims.md); tight |
@@ -301,3 +304,29 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | `lines:guides.face.*` `lines:guides.pose.*` (the rest) | Lines, Spoken | progress, results, errors and the Turn off button | `none` and `noneHint` are the note's title and body; `noneWithHint` is both, spoken |
 | `lines:colour.*` `lines:thickness.*` `lines:opacity.*` | Lines | line style fields | `hexHint` keeps `#1f3fbf` |
 | `lines:applyAll.*` | Lines | button, hint and announcement | `hintSingle` is shown with one image, `hint` with two or more |
+
+## landing
+
+The landing page, one per language (`landing/locales/<code>.json`, rendered by `scripts/vite-landing.ts`). Keys are written here without a namespace.
+
+| Keys | Screen | Control | Notes |
+|---|---|---|---|
+| `meta.title` `meta.description` | search results, browser tab | page title and description | a search result shows about 60 and 155 characters of them |
+| `share.title` `.description` `.imageAlt` | link previews | Open Graph and Twitter title, description and the share image's alt text | |
+| `structured.description` `.operatingSystem` `.browserRequirements` | none | structured data read by search engines | the description makes the same promises as the privacy claims; translate it as exactly |
+| `header.skip` `.home` `.nav` | Spoken, landing | skip link, name of the logo link, name of the navigation | |
+| `header.how` `.features` `.privacy` `.faq` | landing | navigation links (hidden on phones) | short |
+| `header.openApp` | landing | button to the app | short; the glossary's "app" |
+| `theme.auto` `.light` `.dark` | landing | visible text of the theme button | the same words as `app:theme.*` |
+| `theme.changeAuto` `.changeLight` `.changeDark` | Spoken | the theme button's name in each state | each holds the visible word of its state unchanged (WCAG 2.5.3) |
+| `hero.hand` `hero.tip` | landing | hand-written accents beside the heading and the sample sheet | decorative; one line each |
+| `hero.title` `.lead` | landing | the main heading and its paragraph | |
+| `hero.start` `.seeHow` | landing | the two hero buttons | short |
+| `hero.points` | landing | "Free · No sign-up" under the buttons | keep the ` · ` |
+| `how.title` `.subtitle` `how.*.title` `how.*.body` | landing | the three steps | |
+| `features.title` `features.*.title` `features.*.body` | landing | the feature cards | each body names only what the app does (C2 checked them against the app) |
+| `privacy.title` | landing | heading of the privacy box | |
+| `privacy.claims.*` | landing | the privacy box, the hero's privacy line and three FAQ answers | privacy claims ([privacy-claims.md](privacy-claims.md)): translate each claim exactly, never softer or stronger |
+| `faq.title` `faq.*.q` `faq.*.a` | landing | the questions and answers, also the FAQ structured data | three answers are privacy claims (`privacy.claims.faq*`) |
+| `footer.licence` `.source` | landing | footer line and the source link | "Artistica" and "MIT" stay as they are |
+| `footer.language` | landing | heading of the footer's language list | the list shows each language in its own name |

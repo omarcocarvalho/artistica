@@ -1,9 +1,16 @@
 import { existsSync } from 'node:fs'
 import { PDFDocument, cmyk, rgb } from '@pdfme/pdf-lib'
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { AppPage } from './support/app.ts'
 import { FIXTURES } from './support/fixtures.ts'
-import { guardNetwork } from './support/network-guard.ts'
+import {
+  findOverflow,
+  findPseudoLeak,
+  findUntranslated,
+  labelInName,
+  setLanguage,
+} from './support/l10n.ts'
+import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { mmToPt, summarizePdf } from './support/pdf.ts'
 import { solidGrayPng } from './support/png.ts'
 import { runOnly } from './support/projects.ts'
@@ -197,4 +204,109 @@ test('the worker probe counts workers alive at once, and a second terminate of o
   ])
   expect(await maxLiveWorkers(page, 'overlap.worker')).toBe(3)
   expect(await workerPosts(page, 'overlap.worker')).toBe(0)
+})
+
+test.describe('localisation probes (D3): each finds what it is for before it is trusted', () => {
+  runOnly('chromium')
+
+  async function pseudoApp(page: Page): Promise<NetworkGuard> {
+    const guard = guardNetwork(page)
+    await new AppPage(page).goto()
+    await setLanguage(page, 'pseudo')
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('⟦')
+    return guard
+  }
+
+  /** Adds `html` in a 160 px box at the top of the page. */
+  async function plant(page: Page, html: string): Promise<void> {
+    await page.evaluate(`(() => {
+      const box = document.createElement('div')
+      box.dataset.testid = 'planted'
+      box.style.width = '160px'
+      box.innerHTML = ${JSON.stringify(html)}
+      document.body.prepend(box)
+    })()`)
+  }
+
+  test('the pseudo-locale is on every string of the empty workspace', async ({ page }) => {
+    const guard = await pseudoApp(page)
+    expect(await page.title()).toContain('⟦')
+    expect(await findUntranslated(page)).toEqual([])
+    expect(guard.violations()).toEqual([])
+  })
+
+  test('findUntranslated reports a planted literal, a literal name, a literal in a <Trans> message and a literal joined to a message', async ({
+    page,
+  }) => {
+    await pseudoApp(page)
+    await plant(
+      page,
+      '<p>Hard-coded words</p><button type="button" aria-label="Close it">⟦X⟧</button>' +
+        '<p>⟦Ŝóɱé <strong>ƀóĺď</strong> ŵóŕďš⟧ <em>stray</em></p><input placeholder="Type here">' +
+        '<p>⟦Ŝàʋé⟧ (beta)</p><button type="button" aria-label="⟦Ŝàʋé⟧ now">⟦Ŝàʋé⟧</button>' +
+        '<p>⟦Ŝàʋé ⟦Ńéšţéď⟧⟧ · 12 mm · photo.jpg</p><p>photo.jpg removed</p>',
+    )
+    const found = await findUntranslated(page)
+    expect(found.filter((f) => f.includes('Hard-coded words'))).toHaveLength(1)
+    expect(found.filter((f) => f.startsWith('aria-label "Close it"'))).toHaveLength(1)
+    expect(found.filter((f) => f.includes('"stray"'))).toHaveLength(1)
+    expect(found.filter((f) => f.startsWith('placeholder "Type here"'))).toHaveLength(1)
+    expect(found.filter((f) => f.includes('(beta)'))).toHaveLength(1)
+    expect(found.filter((f) => f.startsWith('aria-label "⟦Ŝàʋé⟧ now'))).toHaveLength(1)
+    expect(found.filter((f) => f.includes('ƀóĺď') || f.includes('Ńéšţéď'))).toEqual([])
+    expect(found.filter((f) => f.includes('photo.jpg removed'))).toHaveLength(1)
+    expect(found).toHaveLength(7)
+  })
+
+  test('findUntranslated lets numbers, file names, the app name and endonyms through', async ({
+    page,
+  }) => {
+    await pseudoApp(page)
+    await plant(
+      page,
+      '<p>12,5 mm</p><p>quadrants.jpg</p><p>Artistica</p><p>日本語</p><p>3 / 4</p><p>A4</p>',
+    )
+    expect(await findUntranslated(page)).toEqual([])
+  })
+
+  test('findPseudoLeak reports ⟦…⟧ text and names', async ({ page }) => {
+    await pseudoApp(page)
+    expect((await findPseudoLeak(page)).length).toBeGreaterThan(5)
+    await setLanguage(page, 'en')
+    expect(await findPseudoLeak(page)).toEqual([])
+    await plant(page, '<button type="button" aria-label="⟦Ŝàʋé⟧">Save</button>')
+    expect(await findPseudoLeak(page)).toEqual([expect.stringContaining('aria-label "⟦Ŝàʋé⟧"')])
+  })
+
+  test('findOverflow reports a planted overflowing chip and clipped text, not a chip that wraps', async ({
+    page,
+  }) => {
+    await pseudoApp(page)
+    await plant(
+      page,
+      '<button type="button" class="ds-chip" style="white-space: nowrap">⟦Ŵáýţóóĺóñĝçĥíƥĺáƀéĺ ĺóŕéɱ íƥšúɱ⟧</button>' +
+        '<div style="width: 60px; overflow: hidden; white-space: nowrap">⟦Çĺíƥƥéď ţéẋţ ĥéŕé⟧</div>' +
+        '<button type="button" class="ds-chip">⟦Ŵŕáƥƥíñĝ çĥíƥ ţĥáţ ƒíţš⟧</button>',
+    )
+    const found = (await findOverflow(page)).filter((f) => /Ŵáýţóóĺóñĝ|Çĺíƥƥéď|Ŵŕáƥƥíñĝ/u.test(f))
+    expect(found).toEqual([
+      expect.stringMatching(/Ŵáýţóóĺóñĝ.*: box /u),
+      expect.stringMatching(/Çĺíƥƥéď.*: clipped /u),
+    ])
+  })
+
+  test('labelInName reports a control whose name leaves out its visible text, and only that', async ({
+    page,
+  }) => {
+    await pseudoApp(page)
+    const before = await labelInName(page)
+    await plant(
+      page,
+      '<button type="button" aria-label="⟦Ĉĺóšé⟧">⟦Ðíšɱíšš⟧</button>' +
+        '<button type="button" aria-label="Change theme: Auto">Auto</button>' +
+        '<button type="button" aria-label="photo.jpg"><span aria-hidden="true">Values</span></button>',
+    )
+    const found = await labelInName(page)
+    expect(found.slice(before.length)).toEqual([expect.stringContaining('shows "⟦Ðíšɱíšš⟧"')])
+  })
 })

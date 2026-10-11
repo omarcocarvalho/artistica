@@ -2,10 +2,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import '../shared/styles.css'
 import { useSettings } from '../features/settings'
-import { availableLanguages, initI18n, resolveLanguage } from '../shared/i18n'
+import { availableLanguages, initI18n, resolveLanguage, setPseudoLanguage } from '../shared/i18n'
 import { registerServiceWorker } from '../sw/register'
 import { App } from './App'
-import { installDocumentLanguage, readLangHint } from './language'
+import { installDocumentLanguage, listenForPseudo, readLangHint, wantsPseudo } from './language'
 
 const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Missing #root element in app/index.html')
@@ -17,8 +17,10 @@ const language = resolveLanguage({
   available: availableLanguages(),
 })
 
-void initI18n({ language }).then((i18n) => {
+void initI18n({ language }).then(async (i18n) => {
   installDocumentLanguage(i18n, document)
+  if (wantsPseudo(window.location)) await setPseudoLanguage()
+  listenForPseudo(window, setPseudoLanguage)
   createRoot(rootElement).render(
     <StrictMode>
       <App />

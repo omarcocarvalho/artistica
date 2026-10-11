@@ -1,5 +1,6 @@
-import i18n from 'i18next'
+import i18n, { type TFunction } from 'i18next'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { selectImageDescriptors, useImages } from '../features/images'
 import {
   blockIdOf,
@@ -68,6 +69,7 @@ export function arrangeBlocks(
   items: readonly LayoutItemInput[],
   unit: Unit,
   name: (id: ImageId) => string = nameOf,
+  t: TFunction = i18n.t,
 ): ArrangeBlock[] {
   if (manual === null) return []
   const byBlock = new Map(items.map((it) => [blockIdOf(it), it]))
@@ -84,7 +86,7 @@ export function arrangeBlocks(
       rect,
       tileW: b.tileW,
       fixed: isFixedSize(item),
-      name: i18n.t('preview:arrange.blockName', {
+      name: t('preview:arrange.blockName', {
         name: name(item.imageId),
         w: fmt(rect.w, unit),
         h: fmt(rect.h, unit),
@@ -286,12 +288,13 @@ export function useArrangeView(): { manual: ManualLayout | null; blocks: Arrange
   const images = useImages((s) => s.images)
   const setup = useSettings((s) => s.pageSetup)
   const unit = useSettings((s) => s.unit)
+  const { t } = useTranslation()
   return useMemo(() => {
     const items = buildLayoutItems(descriptors)
     const manual =
       stored ?? (layout !== null && !empty ? manualFromLayout(layout, items, setup) : null)
     const names = new Map(images.map((i) => [i.id, i.name]))
-    const name = (id: ImageId) => names.get(id) ?? i18n.t('app:preview.unnamedImage')
-    return { manual, blocks: arrangeBlocks(manual, items, unit, name) }
-  }, [stored, layout, empty, descriptors, images, setup, unit])
+    const name = (id: ImageId) => names.get(id) ?? t('app:preview.unnamedImage')
+    return { manual, blocks: arrangeBlocks(manual, items, unit, name, t) }
+  }, [stored, layout, empty, descriptors, images, setup, unit, t])
 }

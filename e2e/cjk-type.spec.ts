@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
+import { findOverflow } from './support/l10n.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { runOnly } from './support/projects.ts'
 
@@ -125,24 +126,6 @@ async function narrowChip(
   return { box: page.getByTestId('narrow-box'), chip: page.getByTestId('narrow-chip') }
 }
 
-/** The overflow D3's probe reports: hidden scroll overflow, text past the chip, or the chip past its box. */
-async function overflow(chip: Locator, box: Locator): Promise<string[]> {
-  const boxRight = await box.evaluate((el: BrowserElement) => el.getBoundingClientRect().right)
-  return chip.evaluate((el: BrowserElement, outerRight) => {
-    const problems: string[] = []
-    if (el.scrollWidth > el.clientWidth + 1) problems.push(`scrollWidth ${String(el.scrollWidth)}`)
-    const own = el.getBoundingClientRect()
-    if (own.right > outerRight + 1)
-      problems.push(`chip right ${String(own.right)} > box ${String(outerRight)}`)
-    const range = document.createRange()
-    range.selectNodeContents(el)
-    const text = range.getBoundingClientRect()
-    if (text.right > own.right + 1)
-      problems.push(`text right ${String(text.right)} > chip ${String(own.right)}`)
-    return problems
-  }, boxRight)
-}
-
 /** The first character of each line, and the one before it, in a paragraph laid out at 6 to 14 em. */
 async function lineStarts(page: Page, text: string): Promise<{ char: string; before: string }[]> {
   return page.evaluate((sample) => {
@@ -223,7 +206,8 @@ test.describe('line breaking', () => {
       const oneLine = await chip.evaluate(
         (el: unknown) => parseFloat(getComputedStyle(el).fontSize) * 1.6,
       )
-      expect(await overflow(chip, box)).toEqual([])
+      expect((await findOverflow(page)).filter((f) => f.includes(text))).toEqual([])
+      expect((await box.boundingBox())?.width).toBe(120)
       expect((await chip.boundingBox())?.height ?? 0).toBeGreaterThan(oneLine)
     })
   }

@@ -6,6 +6,7 @@ import {
   INITIAL_JS_LIMIT_BYTES,
   initialScriptPaths,
   isLocaleChunk,
+  isPseudoChunk,
   LAZY_ONLY_MARKERS,
   lazyOnlyViolations,
   LOCALE_CHUNK_LIMIT_BYTES,
@@ -13,6 +14,8 @@ import {
   localeChunkViolations,
   localeMarkers,
   localeMarkerViolations,
+  PSEUDO_CHUNK_LIMIT_BYTES,
+  pseudoChunkViolations,
   stringLeaves,
 } from './bundle-budget.ts'
 
@@ -241,5 +244,39 @@ describe('stringLeaves', () => {
       'Two',
       'Three',
     ])
+  })
+})
+
+describe('pseudoChunkViolations (M6-R14)', () => {
+  const chunk = (gzip: number) => ({ file: 'assets/pseudo-abc.js', gzipBytes: gzip })
+
+  it('passes one lazy pseudo-locale chunk within its budget', () => {
+    expect(pseudoChunkViolations([chunk(800)], ['assets/app-1.js'])).toEqual([])
+    expect(PSEUDO_CHUNK_LIMIT_BYTES).toBe(2000)
+  })
+
+  it('fails when the chunk is missing or split', () => {
+    expect(pseudoChunkViolations([], [])).toEqual(['0 pseudo-locale chunks, expected 1'])
+    expect(
+      pseudoChunkViolations([chunk(800), { file: 'assets/pseudo-def.js', gzipBytes: 10 }], []),
+    ).toEqual(['2 pseudo-locale chunks, expected 1'])
+  })
+
+  it('fails when it is loaded up front', () => {
+    expect(pseudoChunkViolations([chunk(800)], ['assets/pseudo-abc.js'])).toEqual([
+      'assets/pseudo-abc.js: loaded up front',
+    ])
+  })
+
+  it('fails over 2 KB gzip', () => {
+    expect(pseudoChunkViolations([chunk(2001)], [])).toEqual([
+      'assets/pseudo-abc.js: 2.0 KB of 2.0 KB (2001 bytes)',
+    ])
+  })
+
+  it('recognises the chunk by its name', () => {
+    expect(isPseudoChunk('assets/pseudo-Ci_mG7zp.js')).toBe(true)
+    expect(isPseudoChunk('assets/app-pseudo-1.js')).toBe(false)
+    expect(isPseudoChunk('assets/locale-ja-1.js')).toBe(false)
   })
 })

@@ -56,6 +56,7 @@ export function DownloadBox({ model, state, onDownload, disabled, describedBy }:
         <Button
           variant="secondary"
           icon="download"
+          className="min-w-0 whitespace-normal"
           disabled={disabled}
           aria-describedby={[sizeId, describedBy].filter(Boolean).join(' ')}
           onClick={onDownload}

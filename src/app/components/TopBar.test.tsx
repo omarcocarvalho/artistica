@@ -2,12 +2,14 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18next from 'i18next'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { initI18n, type LanguageCode } from '../../shared/i18n'
+import { PSEUDO_LANGUAGE, initI18n, setPseudoLanguage, type LanguageCode } from '../../shared/i18n'
 import { stubDesktop } from '../test-utils'
 import { TopBar } from './TopBar'
 
 beforeAll(async () => {
   await initI18n()
+  await setPseudoLanguage()
+  await i18next.changeLanguage('en')
 })
 beforeEach(() => {
   stubDesktop(true)
@@ -51,6 +53,12 @@ describe('TopBar', () => {
       await i18next.changeLanguage(code)
       render(<TopBar onExport={vi.fn()} exportDisabledReason={null} />)
       expect(screen.getByRole('link', { name: 'Artistica home' })).toHaveAttribute('href', href)
+    })
+    it('goes to the English landing page under the pseudo-locale (M6-R14)', async () => {
+      await i18next.changeLanguage(PSEUDO_LANGUAGE)
+      render(<TopBar onExport={vi.fn()} exportDisabledReason={null} />)
+      expect(i18next.language).toBe(PSEUDO_LANGUAGE)
+      expect(screen.getByRole('link', { name: /Áŕţíšţíçá/ })).toHaveAttribute('href', '../')
     })
     it('follows a language change while mounted', async () => {
       render(<TopBar onExport={vi.fn()} exportDisabledReason={null} />)

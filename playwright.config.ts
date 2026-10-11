@@ -6,6 +6,8 @@ const isCI = Boolean(process.env.CI)
 
 export default defineConfig({
   testDir: './e2e',
+  // The screen capture runs only through `pnpm e2e:screens`.
+  testIgnore: process.env.E2E_SCREENS ? [] : ['**/screens.spec.ts'],
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
