@@ -307,7 +307,7 @@ test('FIT-6 Japanese hints and notices break between phrases and avoid a lone la
   }
 })
 
-for (const width of [320, 390]) {
+for (const width of [320, 390, 640, 768, 1024]) {
   test(`FIT-7 the landing hero's hand-lettered tip stays on one line inside its picture at ${String(width)} px`, async ({
     page,
   }) => {
