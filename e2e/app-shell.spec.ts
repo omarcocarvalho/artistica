@@ -97,10 +97,12 @@ test.describe('desktop layout', () => {
     ).toBeVisible()
   })
 
-  test('has no language picker (D4)', async ({ page }) => {
+  test('has one language select, in the top bar (M6-R15)', async ({ page }) => {
     await page.goto('app/')
-    await expect(page.getByLabel(/language/i)).toHaveCount(0)
-    await expect(page.getByRole('combobox', { name: /language/i })).toHaveCount(0)
+    await expect(page.getByRole('combobox', { name: 'Language' })).toHaveCount(1)
+    await expect(page.getByRole('banner').getByRole('combobox', { name: 'Language' })).toHaveValue(
+      'en',
+    )
   })
 
   test('theme toggle cycles, sets data-theme and persists across reload', async ({ page }) => {

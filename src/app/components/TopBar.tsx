@@ -1,7 +1,9 @@
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, Icon, Tooltip, VisuallyHidden } from '../../shared/ui'
+import { DEFAULT_LANGUAGE } from '../../shared/i18n'
 import { useIsDesktop } from '../hooks/useIsDesktop'
+import { LanguageSelect } from './LanguageSelect'
 import { Logo } from './Logo'
 import { PresetsButton } from './PresetsButton'
 import { ThemeToggle } from './ThemeToggle'
@@ -13,7 +15,8 @@ export interface TopBarProps {
 }
 
 export function TopBar({ onExport, exportDisabledReason }: TopBarProps) {
-  const { t } = useTranslation('app')
+  const { t, i18n } = useTranslation('app')
+  const home = i18n.language === DEFAULT_LANGUAGE ? '../' : `../${i18n.language}/`
   const reasonId = useId()
   const disabled = exportDisabledReason !== null
   const showExport = useIsDesktop()
@@ -26,7 +29,7 @@ export function TopBar({ onExport, exportDisabledReason }: TopBarProps) {
         {t('skipToPreview')}
       </a>
       <a
-        href="../"
+        href={home}
         aria-label={t('topBar.home')}
         className="touch:min-h-(--size-target) touch:min-w-(--size-target) inline-flex shrink-0 items-center justify-center"
       >
@@ -38,6 +41,7 @@ export function TopBar({ onExport, exportDisabledReason }: TopBarProps) {
         {t('topBar.privacy')}
       </span>
       <span className="min-w-0 flex-1" />
+      <LanguageSelect />
       <ThemeToggle />
       <PresetsButton />
       {showExport && (
