@@ -1,0 +1,153 @@
+{
+  "dropzone": {
+    "groupLabel": "",
+    "title": "",
+    "hint": "",
+    "formats": "",
+    "privacy": "",
+    "dropMini": "",
+    "dropActive": "",
+    "upload": "",
+    "uploadHero": "",
+    "paste": "",
+    "link": "",
+    "linkHero": "",
+    "importing_other": "",
+    "importingLabel": "",
+    "cancel": "",
+    "cancelLabel": "",
+    "stopped": "",
+    "dismiss": "",
+    "noImage": {
+      "title": "",
+      "message": ""
+    },
+    "noImageDrop": {
+      "title": "",
+      "message": ""
+    },
+    "pasteHint": {
+      "title": "",
+      "message": ""
+    },
+    "url": {
+      "title": "",
+      "label": "",
+      "placeholder": "",
+      "submit": "",
+      "cancel": "",
+      "tryAnother": "",
+      "uploadInstead": ""
+    },
+    "gifNote": ""
+  },
+  "list": {
+    "ariaLabel": "",
+    "empty": {
+      "title": "",
+      "formats": ""
+    },
+    "select": "",
+    "edit": "",
+    "remove": "",
+    "pixels": "",
+    "pixelsLabel": "",
+    "sizeAuto": "",
+    "sizeFixed": "",
+    "copies": "",
+    "copiesLabel": "",
+    "dpi": "",
+    "lowDpiLabel": "",
+    "separator": "",
+    "count_other": "",
+    "removeAll": {
+      "button": "",
+      "confirmTitle": "",
+      "confirmBody_other": "",
+      "confirm": "",
+      "cancel": "",
+      "close": ""
+    }
+  },
+  "editSheet": {
+    "title": "",
+    "subtitle": "",
+    "crop": {
+      "stageLabel": "",
+      "areaLabel": "",
+      "help": "",
+      "status": "",
+      "annotation": "",
+      "controls": "",
+      "position": "",
+      "size": "",
+      "step": {
+        "left": "",
+        "up": "",
+        "down": "",
+        "right": "",
+        "narrower": "",
+        "wider": "",
+        "shorter": "",
+        "taller": ""
+      },
+      "shape": "",
+      "reset": ""
+    },
+    "aspect": {
+      "free": "",
+      "original": "",
+      "ratio11": "",
+      "ratio43": "",
+      "ratio32": "",
+      "ratio169": "",
+      "ratio34": "",
+      "ratio23": "",
+      "ratio916": ""
+    },
+    "transform": {
+      "group": "",
+      "rotateLeft": "",
+      "rotateRight": "",
+      "flipH": "",
+      "flipV": ""
+    },
+    "copies": {
+      "label": "",
+      "less": "",
+      "more": "",
+      "lessGlyph": "",
+      "moreGlyph": "",
+      "hint": ""
+    },
+    "size": {
+      "label": "",
+      "auto": "",
+      "fixed": "",
+      "autoHint": "",
+      "axisLabel": "",
+      "width": "",
+      "height": "",
+      "valueLabel": "",
+      "followsHeight": "",
+      "followsWidth": ""
+    },
+    "dpi": {
+      "label": "",
+      "value": "",
+      "scale0": "",
+      "scale300": "",
+      "scale400": "",
+      "autoOk": "",
+      "lowTitle": "",
+      "lowFixed": "",
+      "lowAuto": ""
+    },
+    "actions": {
+      "close": "",
+      "remove": "",
+      "cancel": "",
+      "done": ""
+    }
+  }
+}

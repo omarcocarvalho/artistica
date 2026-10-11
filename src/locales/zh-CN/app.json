@@ -1,0 +1,95 @@
+{
+  "title": "",
+  "documentTitle": "",
+  "language": {
+    "label": "",
+    "loadFailed": ""
+  },
+  "skipToPreview": "",
+  "topBar": {
+    "home": "",
+    "privacy": "",
+    "export": "",
+    "exportNoImages": "",
+    "exportUpdating": "",
+    "exportNoRoom": "",
+    "exportError": "",
+    "exportGuides": ""
+  },
+  "theme": {
+    "changeLabel": "",
+    "auto": "",
+    "light": "",
+    "dark": ""
+  },
+  "panels": {
+    "images": "",
+    "settings": "",
+    "preview": ""
+  },
+  "settingsTabs": {
+    "label": "",
+    "page": "",
+    "studies": "",
+    "lines": ""
+  },
+  "empty": {
+    "title": "",
+    "body": "",
+    "formats": "",
+    "privacy": "",
+    "panelHint": "",
+    "noPages": ""
+  },
+  "notices": {
+    "dismiss": "",
+    "region": "",
+    "layoutFailed": ""
+  },
+  "mobile": {
+    "steps": "",
+    "done": "",
+    "stepLabel": "",
+    "back": "",
+    "next": "",
+    "names": {
+      "images": "",
+      "page": "",
+      "studies": "",
+      "preview": "",
+      "export": ""
+    },
+    "images": {
+      "tapToEdit": ""
+    },
+    "studies": {
+      "picker": ""
+    },
+    "lines": {
+      "title": "",
+      "on": ""
+    }
+  },
+  "import": {
+    "noImage": "",
+    "animatedGif": "",
+    "failed": "",
+    "more_other": "",
+    "unnamed": ""
+  },
+  "preview": {
+    "editSelected": "",
+    "updating": "",
+    "updated": "",
+    "pageCaption": "",
+    "pageItems": "",
+    "item": "",
+    "unnamedImage": "",
+    "orientation": {
+      "portrait": "",
+      "landscape": ""
+    },
+    "itemVersion": "",
+    "itemLines": ""
+  }
+}

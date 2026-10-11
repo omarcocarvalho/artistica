@@ -1,0 +1,61 @@
+{
+  "version": {
+    "original": "",
+    "blurred": "",
+    "values": "",
+    "blurValues": ""
+  },
+  "panel": {
+    "forImage": "",
+    "noImage": "",
+    "importing": ""
+  },
+  "versions": {
+    "legend": "",
+    "hint": "",
+    "lastOne": ""
+  },
+  "blur": {
+    "heading": "",
+    "accent": "",
+    "amount": "",
+    "valueText": "",
+    "min": "",
+    "max": "",
+    "hint": "",
+    "usedBy": ""
+  },
+  "values": {
+    "heading": "",
+    "count": "",
+    "countText_other": "",
+    "min": "",
+    "max": "",
+    "hue": "",
+    "customHue": "",
+    "hueText": "",
+    "ramp": "",
+    "rampLabel": "",
+    "darkest": "",
+    "lightest": "",
+    "hint": "",
+    "usedBy": ""
+  },
+  "swatch": {
+    "sepia": "",
+    "terracotta": "",
+    "ochre": "",
+    "sapGreen": "",
+    "teal": "",
+    "ultramarine": "",
+    "violet": "",
+    "neutral": ""
+  },
+  "applyAll": {
+    "button": "",
+    "hintSingle": "",
+    "hint_other": "",
+    "done_other": "",
+    "nothingChanged": ""
+  }
+}

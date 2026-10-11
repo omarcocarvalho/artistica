@@ -1,0 +1,74 @@
+{
+  "tile": {
+    "fallbackName": "",
+    "versionName": "",
+    "lowDpi": "",
+    "lowDpiLabel": "",
+    "scaledToFit": "",
+    "scaledToFitLabel": ""
+  },
+  "guides": {
+    "label": "",
+    "legend": {
+      "label": "",
+      "safe": "",
+      "bleed": "",
+      "cut": "",
+      "mark": ""
+    }
+  },
+  "arrange": {
+    "dropped": {
+      "paper": "",
+      "noLongerFits": ""
+    },
+    "toggle": "",
+    "barLabel": "",
+    "photoOptions": "",
+    "sheetSummary": "",
+    "undo": "",
+    "rerun": "",
+    "rerunConfirm": "",
+    "rerunAction": "",
+    "cancel": "",
+    "close": "",
+    "selectedGroup": "",
+    "moveToPage": "",
+    "pageOption": "",
+    "newPage": "",
+    "swapWith": "",
+    "swapChoose": "",
+    "swapOption": "",
+    "width": "",
+    "position": "",
+    "moveLeft": "",
+    "moveUp": "",
+    "moveDown": "",
+    "moveRight": "",
+    "roleDescription": "",
+    "blockName": "",
+    "instructions": "",
+    "fixedHint": "",
+    "chip": {
+      "pickedUp": "",
+      "swap": "",
+      "invalid": ""
+    },
+    "placed": "",
+    "pickedUp": "",
+    "pickUpCancelled": "",
+    "undone": "",
+    "rerunDone": "",
+    "refused": {
+      "overlap": "",
+      "outside": "",
+      "noRoomOnPage": "",
+      "firstPage": "",
+      "blocked": "",
+      "min": "",
+      "grow": "",
+      "fixed": "",
+      "swap": ""
+    }
+  }
+}
