@@ -279,15 +279,24 @@ async function freshPage(browser: Browser, testInfo: TestInfo, locale: string) {
   return { context, page, network }
 }
 
-declare const performance: {
-  now(): number
-  getEntriesByName(name: string): { startTime: number }[]
-}
+/**
+ * Records, as `window.__appPaint`, the time from navigation start to the first frame that draws
+ * the app's top bar. The page's own first-contentful-paint fires before the app renders, so it
+ * cannot see the wait for a locale chunk.
+ */
+const APP_PAINT = `(() => {
+  const seen = new MutationObserver(() => {
+    if (!document.querySelector('header select')) return
+    seen.disconnect()
+    requestAnimationFrame(() => { window.__appPaint = performance.now() })
+  })
+  seen.observe(document, { childList: true, subtree: true })
+})()`
 
 test.describe('language timings (chromium asserts)', () => {
   runOnly('chromium')
 
-  test('LANG-P1: first paint in ja is within 200 ms of English (median of 5)', async ({
+  test('LANG-P1: first paint of the app in ja is within 200 ms of English (median of 5)', async ({
     browser,
   }, testInfo) => {
     const paints: Record<'en' | 'ja', number[]> = { en: [], ja: [] }
@@ -297,19 +306,19 @@ test.describe('language timings (chromium asserts)', () => {
         ['ja', 'ja-JP'],
       ] as const) {
         const { context, page, network } = await freshPage(browser, testInfo, locale)
+        await page.addInitScript(APP_PAINT)
         await page.goto('app/')
         await expect(page.locator('html')).toHaveAttribute('lang', lang)
         await expect(page.getByRole('button', { name: themeLabel(lang) })).toBeVisible()
-        const fcp = await page.evaluate(
-          () => performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? NaN,
-        )
+        await expect.poll(() => page.evaluate('window.__appPaint ?? null')).not.toBeNull()
+        const paint = Number(await page.evaluate('window.__appPaint'))
         expect(network.violations()).toEqual([])
         await context.close()
-        paints[lang].push(Math.round(fcp))
+        paints[lang].push(Math.round(paint))
       }
     }
     const lagMs = Math.round(median(paints.ja) - median(paints.en))
-    record(testInfo, { firstPaintMs: paints, lagMs })
+    record(testInfo, { appPaintMs: paints, lagMs })
     expect([...paints.en, ...paints.ja].every(Number.isFinite)).toBe(true)
     expect(lagMs).toBeLessThanOrEqual(FIRST_PAINT_LAG_BUDGET_MS)
   })
