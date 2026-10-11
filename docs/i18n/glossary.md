@@ -135,7 +135,7 @@ One translation per term, used in every namespace of the app and on the landing 
 | layout | layout | diseño | impaginazione | レイアウト | 레이아웃 | 排版 | How photos are packed onto pages. |
 | undo | desfazer | deshacer | annulla | 元に戻す | 실행 취소 | 撤销 | OS term. |
 | preview | prévia | vista previa | anteprima | プレビュー | 미리보기 | 预览 | Also the phone step tab (`app:mobile.names.preview`, tight: 8 Latin, 4 CJK in context.md). "Vista previa" and "Anteprima" are over the limit and no shorter word keeps the meaning; that tab row is a layout fix, so translate it with the full word. |
-| theme: auto, light, dark | automático, claro, escuro | automático, claro, oscuro | automatico, chiaro, scuro | 自動, ライト, ダーク | 자동, 라이트, 다크 | 自动, 浅色, 深色 | Colour theme names, as each OS names its appearance setting. |
+| theme: auto, light, dark | automático, claro, escuro | auto, claro, oscuro | automatico, chiaro, scuro | 自動, ライト, ダーク | 자동, 라이트, 다크 | 自动, 浅色, 深色 | Colour theme names, as each OS names its appearance setting. es keeps the short "Auto", which fits the 8-character theme button (context.md) where "Automático" does not. |
 | cancel | cancelar | cancelar | annulla | キャンセル | 취소 | 取消 | OS term. |
 | close | fechar | cerrar | chiudi | 閉じる | 닫기 | 关闭 | OS term. |
 | done | concluído | listo | fine | 完了 | 완료 | 完成 | Button that closes an editor. |

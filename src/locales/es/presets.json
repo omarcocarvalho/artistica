@@ -1,0 +1,106 @@
+{
+  "button": "Preajustes",
+  "title": "Preajustes",
+  "close": "Cerrar",
+  "empty": "Guarda tu configuración de página, tus estudios y tus líneas con un nombre, y luego aplícalos de una sola vez.",
+  "listLabel": "Preajustes guardados",
+  "storageFailed": "No se guarda en este dispositivo: el almacenamiento del navegador está lleno o bloqueado. El cambio dura hasta que vuelvas a cargar o cierres la página.",
+  "save": {
+    "open": "Guardar la configuración actual…",
+    "name": "Nombre del preajuste",
+    "submit": "Guardar",
+    "cancel": "Cancelar",
+    "needName": "Ponle un nombre al preajuste.",
+    "tooLong": "Usa como máximo {{max}} caracteres.",
+    "exists": "Ya existe un preajuste con este nombre.",
+    "replace": "Reemplazarlo",
+    "full": "Tienes {{max}} preajustes, el máximo que guarda este dispositivo. Elimina uno para guardar otro.",
+    "saved": "Se guardó {{name}}.",
+    "replaced": "Se reemplazó {{name}}."
+  },
+  "row": {
+    "apply": "Aplicar",
+    "applyLabel": "Aplicar {{name}}",
+    "rename": "Cambiar nombre",
+    "renameLabel": "Cambiar nombre de {{name}}",
+    "delete": "Eliminar",
+    "deleteLabel": "Eliminar {{name}}"
+  },
+  "rename": {
+    "label": "Nuevo nombre para {{name}}",
+    "submit": "Guardar",
+    "cancel": "Cancelar",
+    "renamed": "Se cambió el nombre de {{from}} a {{to}}."
+  },
+  "apply": {
+    "confirmTitle": "¿Aplicar “{{name}}”?",
+    "confirmBodySingle": "Establece la configuración de página y los estudios y las líneas de tu foto.",
+    "confirmBody_one": "Establece la configuración de página y los estudios y las líneas de {{count, number}} foto.",
+    "confirmBody_many": "Establece la configuración de página y los estudios y las líneas de las {{count, number}} de fotos.",
+    "confirmBody_other": "Establece la configuración de página y los estudios y las líneas de las {{count, number}} fotos.",
+    "confirm": "Aplicar",
+    "cancel": "Cancelar",
+    "applied": "Se aplicó {{name}}.",
+    "waiting": "Esperando a que terminen de importarse las fotos…"
+  },
+  "delete": {
+    "confirmTitle": "¿Eliminar “{{name}}”?",
+    "confirm": "Eliminar",
+    "cancel": "Cancelar",
+    "deleted": "Se eliminó {{name}}."
+  },
+  "export": {
+    "button": "Exportar todos"
+  },
+  "import": {
+    "button": "Importar…",
+    "file": "Archivo de preajustes",
+    "imported_one": "Se importó {{count, number}} preajuste.",
+    "imported_many": "Se importaron {{count, number}} de preajustes.",
+    "imported_other": "Se importaron {{count, number}} preajustes.",
+    "renamed_one": "Se cambió el nombre de {{count, number}}: {{list}}.",
+    "renamed_many": "Se cambió el nombre de {{count, number}}: {{list}}.",
+    "renamed_other": "Se cambió el nombre de {{count, number}}: {{list}}.",
+    "renamedPair": "{{from}} → {{to}}",
+    "skipped_one": "Se omitió {{count, number}}: no era válido.",
+    "skipped_many": "Se omitieron {{count, number}}: no eran válidos.",
+    "skipped_other": "Se omitieron {{count, number}}: no eran válidos.",
+    "full_one": "No se agregó {{count, number}}: este dispositivo guarda como máximo {{max}} preajustes.",
+    "full_many": "No se agregaron {{count, number}}: este dispositivo guarda como máximo {{max}} preajustes.",
+    "full_other": "No se agregaron {{count, number}}: este dispositivo guarda como máximo {{max}} preajustes.",
+    "adjusted_one": "{{count, number}} preajuste tenía un valor fuera de rango, que se ajustó.",
+    "adjusted_many": "{{count, number}} de preajustes tenían valores fuera de rango, que se ajustaron.",
+    "adjusted_other": "{{count, number}} preajustes tenían valores fuera de rango, que se ajustaron.",
+    "error": {
+      "tooLarge": "Este archivo es demasiado grande para ser un archivo de preajustes.",
+      "notPresets": "Este archivo no es un archivo de preajustes de Artistica.",
+      "newerVersion": "Este archivo se creó con una versión más reciente de Artistica. Actualiza la página e inténtalo de nuevo.",
+      "empty": "No se encontraron preajustes en este archivo."
+    }
+  },
+  "summary": {
+    "separator": " · ",
+    "plus": " + ",
+    "custom": "Personalizado {{w}} × {{h}} {{unit}}",
+    "orientation": {
+      "auto": "Automática",
+      "portrait": "Vertical",
+      "landscape": "Horizontal"
+    },
+    "bleed": "sangrado {{size}}",
+    "version": {
+      "original": "original",
+      "blurred": "desenfocada {{value}}",
+      "values": "valores {{count, number}}",
+      "blurValues": "valores desenfocados {{count, number}}"
+    },
+    "line": {
+      "grid": "cuadrícula",
+      "thirds": "tercios",
+      "armature": "armadura",
+      "golden": "proporción áurea",
+      "spiral": "espiral",
+      "centre": "líneas centrales"
+    }
+  }
+}

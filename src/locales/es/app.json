@@ -1,0 +1,97 @@
+{
+  "title": "Artistica",
+  "documentTitle": "App de Artistica",
+  "language": {
+    "label": "Idioma",
+    "loadFailed": "No se pudo cargar ese idioma. Revisa tu conexión e inténtalo de nuevo."
+  },
+  "skipToPreview": "Ir a la vista previa",
+  "topBar": {
+    "home": "Inicio de Artistica",
+    "privacy": "Fotos solo en tu dispositivo",
+    "export": "Exportar PDF",
+    "exportNoImages": "Agrega al menos una imagen para exportar.",
+    "exportUpdating": "El diseño se está actualizando. Podrás exportar en un momento.",
+    "exportNoRoom": "No se puede exportar: la configuración de página no deja espacio para imágenes.",
+    "exportError": "No se pudo calcular el diseño. Cambia un ajuste o vuelve a cargar la página.",
+    "exportGuides": "Buscando guías en tus fotos…"
+  },
+  "theme": {
+    "changeLabel": "Cambiar tema: {{current}}",
+    "auto": "Auto",
+    "light": "Claro",
+    "dark": "Oscuro"
+  },
+  "panels": {
+    "images": "Imágenes",
+    "settings": "Configuración",
+    "preview": "Vista previa de la página"
+  },
+  "settingsTabs": {
+    "label": "Configuración",
+    "page": "Página",
+    "studies": "Estudios",
+    "lines": "Líneas"
+  },
+  "empty": {
+    "title": "Agrega algunas <highlight>fotos de referencia</highlight>",
+    "body": "Suéltalas aquí, pégalas o agrega un enlace. Las acomodamos en páginas por ti.",
+    "formats": "JPG, PNG, WebP, GIF, HEIC · cualquier cantidad de fotos",
+    "privacy": "No se sube nada. Las fotos se quedan en este dispositivo.",
+    "panelHint": "Aún no hay imágenes. Agrega fotos para empezar tus hojas.",
+    "noPages": "Aún no hay páginas"
+  },
+  "notices": {
+    "dismiss": "Descartar",
+    "region": "Notificaciones",
+    "layoutFailed": "No se pudo calcular el diseño. Cambia un ajuste e inténtalo de nuevo."
+  },
+  "mobile": {
+    "steps": "Pasos",
+    "done": "Listo",
+    "stepLabel": "Paso {{current}} de {{total}}: {{name}}",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "names": {
+      "images": "Imágenes",
+      "page": "Página",
+      "studies": "Estudios",
+      "preview": "Vista previa",
+      "export": "Exportar"
+    },
+    "images": {
+      "tapToEdit": "Toca una foto para recortarla, girarla o elegir copias."
+    },
+    "studies": {
+      "picker": "Imagen"
+    },
+    "lines": {
+      "title": "Líneas",
+      "on": "{{count, number}} en uso"
+    }
+  },
+  "import": {
+    "noImage": "No hay ninguna imagen en el portapapeles. Primero copia una imagen y luego vuelve a pegar.",
+    "animatedGif": "{{name}}: solo el primer fotograma. Los GIF animados imprimen su primer fotograma.",
+    "failed": "{{list}}: {{title}}. {{message}}",
+    "more_one": "{{count, number}} más",
+    "more_many": "{{count, number}} más",
+    "more_other": "{{count, number}} más",
+    "unnamed": "Esta imagen"
+  },
+  "preview": {
+    "editSelected": "Editar imagen seleccionada",
+    "updating": "Actualizando el diseño…",
+    "updated": "Diseño actualizado.",
+    "pageCaption": "Página {{current}} de {{total}} · {{paper}} · {{orientation}}",
+    "pageItems": "Contenido de la página {{current}}",
+    "item": "{{name}}, {{w}} × {{h}} {{unit}}",
+    "unnamedImage": "Imagen",
+    "orientation": {
+      "portrait": "vertical",
+      "landscape": "horizontal"
+    },
+    "itemVersion": "{{name}}, {{version}}, {{w}} × {{h}} {{unit}}",
+    "itemLines": "{{item}}, líneas: {{list}}"
+  }
+}

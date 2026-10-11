@@ -1,0 +1,67 @@
+{
+  "version": {
+    "original": "Original",
+    "blurred": "Desenfocada",
+    "values": "Valores",
+    "blurValues": "Desenfoque + Valores"
+  },
+  "panel": {
+    "forImage": "Estudios de <name/>",
+    "noImage": "Agrega una foto, o selecciona una, para configurar sus estudios.",
+    "importing": "Esperando a que terminen de importarse las fotos…"
+  },
+  "versions": {
+    "legend": "Imprimir estas versiones",
+    "hint": "Cada versión es un recuadro. Se imprimen juntas, una al lado de la otra.",
+    "lastOne": "Se imprime al menos una versión."
+  },
+  "blur": {
+    "heading": "Desenfoque",
+    "accent": "¡entrecierra los ojos!",
+    "amount": "Cantidad",
+    "valueText": "{{value}}",
+    "min": "1 %",
+    "max": "100 %",
+    "hint": "Se ajusta al tamaño de la imagen, así que {{value}} se ve parecido en todas las fotos.",
+    "usedBy": "Lo usan Desenfocada y Desenfoque + Valores."
+  },
+  "values": {
+    "heading": "Valores",
+    "count": "Número de valores",
+    "countText_one": "{{count, number}} valor",
+    "countText_many": "{{count, number}} de valores",
+    "countText_other": "{{count, number}} valores",
+    "min": "2 · notan",
+    "max": "20",
+    "hue": "Matiz",
+    "customHue": "Matiz personalizado",
+    "hueText": "{{value}}",
+    "ramp": "Escala de valores",
+    "rampLabel": "{{count, number}} valores, del más oscuro al tono más claro",
+    "darkest": "Más oscuro",
+    "lightest": "Tono más claro",
+    "hint": "Desenfoque + Valores primero desenfoca y luego divide en valores.",
+    "usedBy": "Lo usan Valores y Desenfoque + Valores."
+  },
+  "swatch": {
+    "sepia": "Sepia",
+    "terracotta": "Terracota",
+    "ochre": "Ocre",
+    "sapGreen": "Verde vejiga",
+    "teal": "Verde azulado",
+    "ultramarine": "Azul ultramar",
+    "violet": "Violeta",
+    "neutral": "Gris neutro"
+  },
+  "applyAll": {
+    "button": "Aplicar a todas las imágenes",
+    "hintSingle": "Agrega otra foto para copiarle esta configuración.",
+    "hint_one": "Copia esta configuración de estudios a {{count, number}} imagen.",
+    "hint_many": "Copia esta configuración de estudios a las {{count, number}} de imágenes.",
+    "hint_other": "Copia esta configuración de estudios a las {{count, number}} imágenes.",
+    "done_one": "Configuración de estudios copiada a {{count, number}} imagen.",
+    "done_many": "Configuración de estudios copiada a {{count, number}} de imágenes.",
+    "done_other": "Configuración de estudios copiada a {{count, number}} imágenes.",
+    "nothingChanged": "Todas las imágenes ya usan esta configuración de estudios."
+  }
+}

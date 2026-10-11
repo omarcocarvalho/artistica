@@ -1,0 +1,45 @@
+{
+  "title": "Exportar PDF",
+  "close": "Cerrar",
+  "summary": {
+    "pages": "Páginas",
+    "pagesValue": "{{pages}} · {{paper}} {{orientation}}",
+    "orientation": {
+      "portrait": "vertical",
+      "landscape": "horizontal"
+    },
+    "tiles": "Recuadros",
+    "tilesValue_one": "{{tiles}} de {{count, number}} imagen",
+    "tilesValue_many": "{{tiles}} de {{count, number}} de imágenes",
+    "tilesValue_other": "{{tiles}} de {{count, number}} imágenes",
+    "cropMarks": "Marcas de corte",
+    "bleed": "Sangrado",
+    "on": "Sí",
+    "off": "No",
+    "quality": "Calidad",
+    "qualityValue": "300 DPI, nunca se amplían"
+  },
+  "fileName": "Nombre del archivo",
+  "create": "Crear PDF",
+  "retry": "Intentar de nuevo",
+  "cancel": "Cancelar",
+  "progress": {
+    "label": "Página {{page}} de {{total}}…",
+    "aria": "Progreso del PDF",
+    "page": "Página {{n}}",
+    "state": {
+      "todo": "en espera",
+      "active": "en curso",
+      "done": "lista"
+    },
+    "hint": "Una página a la vez para ahorrar memoria. Mantén esta pestaña abierta."
+  },
+  "done": {
+    "title": "Tu PDF está listo",
+    "yay": "¡genial!",
+    "download": "Descargar PDF",
+    "printTitle": "Imprime al 100 %",
+    "printBody": "Elige “Tamaño real”, no “Ajustar a la página”, para que los tamaños sean exactos.",
+    "again": "Crear otro"
+  }
+}
