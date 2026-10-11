@@ -84,6 +84,8 @@
   }
   .ds-btn--block {
     width: 100%;
+    white-space: normal;
+    text-align: center;
   }
   .ds-btn--icon {
     padding: 0;
