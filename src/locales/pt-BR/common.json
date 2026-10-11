@@ -1,16 +1,16 @@
 {
   "app": {
-    "comingSoon": ""
+    "comingSoon": "A área de trabalho chega em breve."
   },
   "actions": {
-    "cancel": "",
-    "close": "",
-    "ok": ""
+    "cancel": "Cancelar",
+    "close": "Fechar",
+    "ok": "OK"
   },
-  "joinSentences": "",
+  "joinSentences": "{{a}} {{b}}",
   "theme": {
-    "auto": "",
-    "light": "",
-    "dark": ""
+    "auto": "Automático",
+    "light": "Claro",
+    "dark": "Escuro"
   }
 }

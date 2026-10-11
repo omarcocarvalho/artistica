@@ -1,44 +1,45 @@
 {
-  "title": "",
-  "close": "",
+  "title": "Exportar PDF",
+  "close": "Fechar",
   "summary": {
-    "pages": "",
-    "pagesValue": "",
+    "pages": "Páginas",
+    "pagesValue": "{{pages}} · {{paper}} {{orientation}}",
     "orientation": {
-      "portrait": "",
-      "landscape": ""
+      "portrait": "retrato",
+      "landscape": "paisagem"
     },
-    "tiles": "",
-    "tilesValue_one": "",
-    "tilesValue_other": "",
-    "cropMarks": "",
-    "bleed": "",
-    "on": "",
-    "off": "",
-    "quality": "",
-    "qualityValue": ""
+    "tiles": "Quadros",
+    "tilesValue_one": "{{tiles}} de {{count, number}} imagem",
+    "tilesValue_many": "{{tiles}} de {{count, number}} de imagens",
+    "tilesValue_other": "{{tiles}} de {{count, number}} imagens",
+    "cropMarks": "Marcas de corte",
+    "bleed": "Sangria",
+    "on": "Sim",
+    "off": "Não",
+    "quality": "Qualidade",
+    "qualityValue": "300 DPI, nunca ampliada"
   },
-  "fileName": "",
-  "create": "",
-  "retry": "",
-  "cancel": "",
+  "fileName": "Nome do arquivo",
+  "create": "Criar PDF",
+  "retry": "Tentar de novo",
+  "cancel": "Cancelar",
   "progress": {
-    "label": "",
-    "aria": "",
-    "page": "",
+    "label": "Página {{page}} de {{total}}…",
+    "aria": "Progresso do PDF",
+    "page": "Página {{n}}",
     "state": {
-      "todo": "",
-      "active": "",
-      "done": ""
+      "todo": "aguardando",
+      "active": "em andamento",
+      "done": "concluída"
     },
-    "hint": ""
+    "hint": "Uma página de cada vez, para poupar memória. Mantenha esta aba aberta."
   },
   "done": {
-    "title": "",
-    "yay": "",
-    "download": "",
-    "printTitle": "",
-    "printBody": "",
-    "again": ""
+    "title": "Seu PDF está pronto",
+    "yay": "oba!",
+    "download": "Baixar PDF",
+    "printTitle": "Imprima em 100%",
+    "printBody": "Escolha “Tamanho real”, não “Ajustar à página”, para que os tamanhos fiquem exatos.",
+    "again": "Criar outro"
   }
 }

@@ -1,37 +1,37 @@
 {
   "images": {
     "cors": {
-      "title": "",
-      "message": ""
+      "title": "Não é possível ler esta imagem",
+      "message": "Este site não permite que outros apps leiam as imagens dele. Baixe a imagem e adicione o arquivo."
     },
     "network": {
-      "title": "",
-      "message": ""
+      "title": "Não foi possível carregar este link",
+      "message": "Verifique o link e sua conexão e tente de novo."
     },
     "notAnImage": {
-      "title": "",
-      "message": ""
+      "title": "Isso não é uma imagem",
+      "message": "O link ou arquivo não contém uma imagem. Use JPG, PNG, WebP, GIF ou HEIC."
     },
     "unsupportedFormat": {
-      "title": "",
-      "message": ""
+      "title": "Não é possível adicionar {{name}}",
+      "message": "Use JPG, PNG, WebP, GIF ou HEIC."
     },
     "decodeFailed": {
-      "title": "",
-      "message": ""
+      "title": "Não é possível ler {{name}}",
+      "message": "O arquivo pode estar danificado. Tente salvá-lo de novo como JPG ou PNG."
     },
     "tooLarge": {
-      "title": "",
-      "message": ""
+      "title": "{{name}} é grande demais",
+      "message": "As fotos podem ter até {{maxMb}} MB e {{maxMp}} megapixels. Tente uma versão menor."
     }
   },
   "export": {
-    "unsupported": "",
-    "missingImage": "",
-    "empty": "",
-    "failed": ""
+    "unsupported": "Este navegador não consegue criar PDFs aqui. Atualize-o ou use a versão mais recente do Chrome, Edge, Firefox ou Safari.",
+    "missingImage": "Uma imagem foi removida enquanto o PDF era criado. Tente de novo.",
+    "empty": "Adicione pelo menos uma imagem para exportar.",
+    "failed": "Algo deu errado ao criar o PDF. Tente de novo. Se continuar falhando, tente menos imagens ou imagens menores."
   },
   "generic": {
-    "unexpected": ""
+    "unexpected": "Algo deu errado. Tente de novo."
   }
 }

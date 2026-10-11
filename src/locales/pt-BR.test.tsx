@@ -96,7 +96,7 @@ describe('the app in Portuguese (Brazil)', () => {
   it('the Page panel has no English words and uses the glossary', () => {
     const { container } = render(<PageSetupPanel />)
     expect(englishWordsIn(shownText(container))).toEqual([])
-    for (const term of ['Margem de segurança', 'Marcas de corte', 'Sangria', 'Orientação'])
+    for (const term of ['Margem de segurança', 'Marcas de corte', 'Sangria', 'Espaçamento'])
       expect(screen.getAllByText(term).length).toBeGreaterThan(0)
   })
 
@@ -143,26 +143,47 @@ describe('plural forms in Portuguese (Brazil)', () => {
     ['images:list.count', 5, '5 imagens'],
     ['images:list.count', 1_000_000, '1.000.000 de imagens'],
     ['images:dropzone.importing', 1, 'Adicionando 1 foto…'],
+    ['images:dropzone.importing', 2, 'Adicionando 2 fotos…'],
     ['images:dropzone.importing', 5, 'Adicionando 5 fotos…'],
     ['images:dropzone.importing', 1_000_000, 'Adicionando 1.000.000 de fotos…'],
-    ['images:list.removeAll.confirmBody', 2, 'Isso remove todas as 2 imagens desta sessão.'],
+    ['studies:values.countText', 2, '2 valores'],
+    ['studies:values.countText', 5, '5 valores'],
+    ['studies:values.countText', 1_000_000, '1.000.000 de valores'],
+    ['presets:import.imported', 1, '1 preset importado.'],
+    ['presets:import.imported', 2, '2 presets importados.'],
+    ['presets:import.imported', 1_000_000, '1.000.000 de presets importados.'],
+    ['presets:import.skipped', 1, '1 foi ignorado: não era válido.'],
+    ['presets:import.skipped', 5, '5 foram ignorados: não eram válidos.'],
+    ['app:import.more', 1, 'mais 1'],
+    ['app:import.more', 1_000_000, 'mais 1.000.000'],
+    ['lines:applyAll.done', 1, 'Configurações de linhas copiadas para 1 imagem.'],
+    ['lines:applyAll.done', 2, 'Configurações de linhas copiadas para 2 imagens.'],
+    [
+      'lines:applyAll.done',
+      1_000_000,
+      'Configurações de linhas copiadas para 1.000.000 de imagens.',
+    ],
+    [
+      'images:list.removeAll.confirmBody',
+      2,
+      'Isso remove todas as 2 imagens desta sessão. As fotos não ficam salvas em lugar nenhum, então não podem ser recuperadas.',
+    ],
     [
       'images:list.removeAll.confirmBody',
       1_000_000,
-      'Isso remove todos os 1.000.000 de imagens desta sessão.',
+      'Isso remove todas as 1.000.000 de imagens desta sessão. As fotos não ficam salvas em lugar nenhum, então não podem ser recuperadas.',
     ],
-    ['studies:values.countText', 2, '2 valores'],
-    ['studies:values.countText', 1, '1 valor'],
-    ['presets:import.imported', 1, 'Importado 1 preset.'],
-    ['presets:import.imported', 5, 'Importados 5 presets.'],
-    ['presets:import.imported', 1_000_000, 'Importados 1.000.000 de presets.'],
-    ['export:summary.tilesValue', 1, '{{tiles}} de 1 imagem'],
-    ['export:summary.tilesValue', 2, '{{tiles}} de 2 imagens'],
-    ['lines:applyAll.done', 1, 'Configurações de linhas copiadas para 1 imagem.'],
-    ['lines:applyAll.done', 1_000_000, 'Configurações de linhas copiadas para 1.000.000 de imagens.'],
   ])('%s with %d', (key, count, expected) => {
-    const text = t(key, count)
-    if (expected.includes('{{tiles}}')) expect(text).toBe(expected.replace('{{tiles}}', ''))
-    else expect(text.startsWith(expected)).toBe(true)
+    expect(t(key, count)).toBe(expected)
+  })
+
+  it('names the tiles of one and of many images', () => {
+    const tiles = (count: number) =>
+      i18next.getFixedT('pt-BR')('export:summary.tilesValue', { count, tiles: 3 })
+    expect([tiles(1), tiles(2), tiles(1_000_000)]).toEqual([
+      '3 de 1 imagem',
+      '3 de 2 imagens',
+      '3 de 1.000.000 de imagens',
+    ])
   })
 })
