@@ -36,7 +36,7 @@ These apply to every language.
 
 ### Punctuation
 
-- Each language uses its own quotation marks, set out below. A name the user typed (an image or preset name) inside a sentence takes them: English `Apply “{{name}}”?`.
+- Each language uses its own quotation marks, set out below. A name the user typed (an image or preset name) takes them in dialog titles and questions: English `Apply “{{name}}”?`.
 - A trailing ellipsis (`…`, one character) means "more follows" (a menu item that opens a dialog, a running task). Keep it, as one `…` character, in every language.
 - A colon or full stop at the end of a label follows the English: labels and buttons have none; sentences end with the language's full stop.
 
