@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { I18nextProvider } from 'react-i18next'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { LANGUAGES, formatLength, type LanguageCode } from '../../../shared/i18n'
 import type { ImageId } from '../../../shared/model/image'
 import { PT_BR, switchLanguage } from '../../../test/languages'
 import { useSettings } from '../../settings'
@@ -115,6 +116,18 @@ describe('ImageEditSheet', () => {
     ).toBeInTheDocument()
   })
 
+  it('Auto size gives the comfortable minimum in inches when the unit is inches', () => {
+    useSettings.getState().setUnit('in')
+    load()
+    renderWithProviders(<ImageEditSheet imageId={ID} />)
+    expect(
+      screen.getByText(/Auto picks a size between 2\.36 in and the 300 DPI limit/),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/At its smallest comfortable size \(2\.36 in\) this prints at 203 DPI/),
+    ).toBeInTheDocument()
+  })
+
   it('Auto size of a sharp image says it never exceeds 300 DPI and shows no warning', () => {
     load({ pxW: 4000, pxH: 3000 })
     renderWithProviders(<ImageEditSheet imageId={ID} />)
@@ -210,5 +223,37 @@ describe('ImageEditSheet in Portuguese (Brazil)', () => {
     load()
     await renderInPortuguese()
     expect(screen.getByText(/entre 60 mm e o limite/)).toBeInTheDocument()
+  })
+})
+
+const IMAGES_STRINGS = import.meta.glob<Record<string, unknown>>('../../../locales/*/images.json', {
+  eager: true,
+  import: 'default',
+})
+
+describe.each(LANGUAGES)('ImageEditSheet minimum size hints in %s', (lng: LanguageCode) => {
+  afterAll(async () => {
+    await switchLanguage('en')
+  })
+
+  async function renderIn() {
+    const strings = IMAGES_STRINGS[`../../../locales/${lng}/images.json`]
+    const i18n = await switchLanguage(lng, strings ? { images: strings } : {})
+    return render(
+      <I18nextProvider i18n={i18n}>
+        <ImageEditSheet imageId={ID} />
+      </I18nextProvider>,
+    )
+  }
+
+  it.each(['mm', 'in'] as const)('shows the auto hint and the low warning in %s', async (unit) => {
+    useSettings.getState().setUnit(unit)
+    load() // 480 x 640: Auto, low resolution
+    const { container } = await renderIn()
+    const shown = formatLength(60, unit, lng)
+    const other = formatLength(60, unit === 'mm' ? 'in' : 'mm', lng)
+    const text = container.textContent
+    expect(text.split(shown)).toHaveLength(3) // the auto hint and the low-resolution callout
+    expect(text).not.toContain(other)
   })
 })

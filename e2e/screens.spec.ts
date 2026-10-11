@@ -1,6 +1,7 @@
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { expect, test, type Page } from '@playwright/test'
+import { AppPage } from './support/app.ts'
 import { setLanguage } from './support/l10n.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import {
@@ -55,16 +56,39 @@ async function capture(page: Page, id: string, lang: ScreenLanguage, width: stri
   })
 }
 
+interface Box {
+  getBoundingClientRect(): { x: number; y: number; width: number; height: number }
+}
+
+/** Each preview page and tile as a rounded box on screen: the page model the capture shows. */
+async function previewBoxes(page: Page): Promise<string[]> {
+  return page.locator('main figure canvas, main figure button').evaluateAll((els) =>
+    els.map((el) => {
+      const r = (el as unknown as Box).getBoundingClientRect()
+      return [r.x, r.y, r.width, r.height].map(Math.round).join(',')
+    }),
+  )
+}
+
 for (const lang of LANGS) {
   test(`screens in ${lang}`, async ({ page }, testInfo) => {
     test.setTimeout(300_000)
     guard = guardNetwork(page)
     const width = testInfo.project.name === 'mobile-chromium' ? 'phone' : 'desktop'
     const switchTo = lang === 'pseudo' ? 'pseudo' : (lang as LanguageCode)
+    const app = new AppPage(page)
     const visit: Visit = async (id, again) => {
+      // The walk's last change may still be laying out; every language captures the settled state.
+      await app.expectPreviewSettled()
       await setLanguage(page, switchTo)
       if (again) await again((key, vars) => textIn(lang, key, vars))
+      await app.expectPreviewSettled()
+      const shown = await previewBoxes(page)
       await capture(page, id, lang, width)
+      await app.expectPreviewSettled()
+      expect(await previewBoxes(page), `${id}: the capture shows the settled preview`).toEqual(
+        shown,
+      )
       await setLanguage(page, 'en')
     }
     if (lang !== 'pseudo')

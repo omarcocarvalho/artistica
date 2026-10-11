@@ -94,6 +94,7 @@ export function PreviewSlot() {
   const images = useImages((s) => s.images)
   const selectedId = useImages((s) => s.selectedId)
   const paper = useSettings((s) => s.pageSetup.paper)
+  const unit = useSettings((s) => s.unit)
   const showGuides = useAppUi((s) => s.showGuides)
   const isDesktop = useIsDesktop()
   const arrangeMode = useArrange((s) => s.mode)
@@ -120,9 +121,9 @@ export function PreviewSlot() {
   const orientation = layout ? t(`app:preview.orientation.${layout.orientation}`) : ''
   const describeTile = (d: TileDescription) => {
     const size = {
-      w: formatLengthNumber(d.widthMm, 'mm'),
-      h: formatLengthNumber(d.heightMm, 'mm'),
-      unit: unitLabel('mm'),
+      w: formatLengthNumber(d.widthMm, unit),
+      h: formatLengthNumber(d.heightMm, unit),
+      unit: unitLabel(unit),
     }
     const item =
       d.version === 'original'
