@@ -125,6 +125,7 @@ beforeEach(() => {
   useArrange.setState(useArrange.getInitialState(), true)
   useArrangeUi.setState(useArrangeUi.getInitialState(), true)
   useAppUi.setState({ editingId: null })
+  useSettings.getState().setUnit('mm')
   usePages.setState({
     status: 'idle',
     layout: layout(1),
@@ -168,6 +169,14 @@ describe('PreviewSlot', () => {
       expect(h.mark.mock.calls).toEqual([['draw:end', { page: 3 }]])
     },
   )
+  it("describes each tile's size in the chosen unit", () => {
+    useSettings.getState().setUnit('in')
+    render(<PreviewSlot />)
+    expect(screen.getByRole('list', { name: 'Page 1 contents' })).toHaveTextContent(
+      'anna.jpg, 3.94 × 2.36 in',
+    )
+  })
+
   it('passes the one app study provider to every page', () => {
     act(() => {
       usePages.setState({

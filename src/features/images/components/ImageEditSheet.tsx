@@ -220,7 +220,7 @@ export function ImageEditSheet({ imageId }: ImageEditSheetProps) {
             {!fixed && (
               <span className="text-ink-muted text-sm">
                 {t('editSheet.size.autoHint', {
-                  size: formatLength(MIN_COMFORT_SHORT_SIDE_MM, 'mm'),
+                  size: formatLength(MIN_COMFORT_SHORT_SIDE_MM, unit),
                 })}
               </span>
             )}
@@ -309,7 +309,7 @@ export function ImageEditSheet({ imageId }: ImageEditSheetProps) {
                       unit: unitLabel(unit),
                     })
                   : t('editSheet.dpi.lowAuto', {
-                      size: formatLength(MIN_COMFORT_SHORT_SIDE_MM, 'mm'),
+                      size: formatLength(MIN_COMFORT_SHORT_SIDE_MM, unit),
                       dpi,
                     })}
               </Callout>
