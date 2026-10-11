@@ -1,0 +1,34 @@
+name: Screens
+
+# The screen set of M6-R26 in every language, as PNGs and a contact sheet (screens/index.html).
+# Started by hand only; it is not a required check and never gates a merge.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    name: capture
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Install Chromium and OS deps
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Install CJK fonts
+        run: sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+      - name: Capture every screen in every language (builds the app first)
+        run: pnpm e2e:screens
+        env:
+          CI: '1'
+      - name: Upload the screens and the contact sheet
+        uses: actions/upload-artifact@v7
+        with:
+          name: screens
+          path: screens/
+          retention-days: 30
