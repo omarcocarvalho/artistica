@@ -18,7 +18,7 @@
   },
   "panel": {
     "forImage": "<name/>的线条",
-    "everyVersion": "绘制在这张图片每个打印版本的上层。",
+    "everyVersion": "叠加在这张图片的每个打印版本上。",
     "noImage": "添加一张照片，或选择一张，在上面绘制线条。",
     "composition": "构图",
     "style": "线条样式",

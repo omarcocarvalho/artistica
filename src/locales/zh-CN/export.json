@@ -33,7 +33,7 @@
     "hint": "一次生成一页，以节省内存。保持此标签页打开。"
   },
   "done": {
-    "title": "你的PDF已准备好",
+    "title": "PDF已准备好",
     "yay": "好耶！",
     "download": "下载PDF",
     "printTitle": "按100%打印",
