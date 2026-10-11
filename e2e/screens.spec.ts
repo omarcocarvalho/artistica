@@ -1,4 +1,5 @@
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { expect, test, type Page } from '@playwright/test'
 import { setLanguage } from './support/l10n.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
@@ -47,7 +48,7 @@ async function capture(page: Page, id: string, lang: ScreenLanguage, width: stri
   const dir = new URL(`${id}/`, OUT)
   mkdirSync(dir, { recursive: true })
   await page.screenshot({
-    path: new URL(`${lang}-${width}.png`, dir).pathname,
+    path: fileURLToPath(new URL(`${lang}-${width}.png`, dir)),
     // The workspace fills the viewport; a full-page capture resizes it under open dialogs.
     fullPage: id === 'landing',
     animations: 'disabled',
