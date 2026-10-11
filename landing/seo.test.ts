@@ -9,6 +9,7 @@ import {
   SITE_ORIGIN,
   type LandingStrings,
 } from '../scripts/vite-landing.ts'
+import { readShareText, shareText } from '../scripts/share-images.ts'
 
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
 const langs = landingLanguages(readdirSync(new URL('./locales/', import.meta.url)))
@@ -162,12 +163,49 @@ describe('landing SEO', () => {
     expect(px(114, 100)).toBe(light('--color-brand'))
     expect(px(123, 111)).toBe(light('--color-paper'))
   })
-  it('og-image.png is a 1200x630 PNG under 300 KB', () => {
-    const png = readFileSync(new URL('../public/og-image.png', import.meta.url))
+})
+
+describe('share images per language (M6-R22)', () => {
+  const imageFor = (code: string) => (code === 'en' ? 'og-image.png' : `og-image-${code}.png`)
+  const pageFor = (code: (typeof langs)[number]) =>
+    renderLandingPage(
+      read('landing/page.html'),
+      JSON.parse(read(`landing/locales/${code}.json`)) as LandingStrings,
+      code,
+      langs,
+    )
+
+  it('renders all seven languages', () => {
+    expect(langs).toHaveLength(7)
+  })
+
+  it.each(langs)("the %s page's og:image and twitter:image point at its own image", (code) => {
+    const page = pageFor(code)
+    const tag = (attr: string, key: string) =>
+      new RegExp(`<meta[^>]*${attr}="${key}"[^>]*content="([^"]*)"`).exec(page)?.[1]
+    expect(tag('property', 'og:image')).toBe(`${ORIGIN}${imageFor(code)}`)
+    expect(tag('name', 'twitter:image')).toBe(`${ORIGIN}${imageFor(code)}`)
+  })
+
+  it.each(langs)('the %s image is a 1200x630 PNG under 300 KB in public/', (code) => {
+    const png = readFileSync(new URL(`../public/${imageFor(code)}`, import.meta.url))
     expect(png.subarray(1, 4).toString('ascii')).toBe('PNG')
     expect(png.readUInt32BE(16)).toBe(1200)
     expect(png.readUInt32BE(20)).toBe(630)
     expect(png.length).toBeLessThan(300_000)
+  })
+
+  it.each(langs)("the %s image was rendered from the locale's current text", (code) => {
+    const png = readFileSync(new URL(`../public/${imageFor(code)}`, import.meta.url))
+    const strings = JSON.parse(read(`landing/locales/${code}.json`)) as LandingStrings
+    expect(readShareText(png)).toEqual(shareText(strings, code))
+  })
+
+  it('public/ holds no share image for a language without a page', () => {
+    const images = readdirSync(new URL('../public/', import.meta.url)).filter((f) =>
+      /^og-image.*\.png$/.test(f),
+    )
+    expect(images.sort()).toEqual(langs.map(imageFor).sort())
   })
 })
 
