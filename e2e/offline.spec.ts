@@ -22,10 +22,12 @@ import {
   GUIDE_SAMPLES,
   watchConsoleErrors,
 } from './support/guides.ts'
+import { setLanguage } from './support/l10n.ts'
 import { hexRgb, isTurned, rgbDistance, trimOf } from './support/line-geometry.ts'
 import { guardNetwork } from './support/network-guard.ts'
 import { guideStrokes, summarizePdf } from './support/pdf.ts'
 import { runOnly } from './support/projects.ts'
+import { textIn } from './support/screens.ts'
 
 // The e2e tsconfig has no DOM lib; the browser globals used inside evaluate.
 declare const navigator: { serviceWorker: { ready: Promise<{ active: unknown }> } }
@@ -243,4 +245,53 @@ test('G-X1 works offline once the models are cached: reload from the service wor
 
   expect(guard.violations()).toEqual([])
   expect(consoleErrors()).toEqual([])
+})
+
+const JA_CHUNK = /\/assets\/locale-ja-[^/]+\.js$/
+
+test('G-X1-ja offline, the app reloads in Japanese: its locale chunk comes from the service worker', async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(
+    browserName === 'webkit',
+    'Playwright WebKit fails an offline reload through a service worker (as G-X1); the owner checks WebKit offline on the iPhone at sign-off',
+  )
+  const guard = guardNetwork(page)
+  const app = new AppPage(page)
+  await app.goto()
+  expect(
+    await page.evaluate(() => navigator.serviceWorker.ready.then((r) => r.active !== null)),
+  ).toBe(true)
+  await setLanguage(page, 'ja')
+  await expect
+    .poll(async () =>
+      Object.entries(await cacheContents(page)).some(
+        ([name, urls]) =>
+          name.startsWith('artistica-shell-') &&
+          urls.some((u) => JA_CHUNK.test(new URL(u).pathname)),
+      ),
+    )
+    .toBe(true)
+
+  await context.setOffline(true)
+  const chunks: { path: string; fromServiceWorker: boolean }[] = []
+  page.on('response', (r) => {
+    const path = new URL(r.url()).pathname
+    if (JA_CHUNK.test(path)) chunks.push({ path, fromServiceWorker: r.fromServiceWorker() })
+  })
+  const response = await page.reload()
+  expect(response?.fromServiceWorker()).toBe(true)
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ja')
+  await expect(page).toHaveTitle(textIn('ja', 'app:documentTitle'))
+  const theme = textIn('ja', 'app:theme.changeLabel', { current: textIn('ja', 'app:theme.auto') })
+  await expect(page.getByRole('button', { name: theme, exact: true })).toBeVisible()
+  // Firefox can answer an offline reload from its HTTP cache too (G-X1), so only chromium says
+  // where each response came from; the shell check above holds the chunk on both.
+  if (browserName === 'chromium') {
+    expect(chunks.length).toBeGreaterThan(0)
+    expect(chunks.filter((c) => !c.fromServiceWorker)).toEqual([])
+  }
+  expect(guard.violations()).toEqual([])
 })
