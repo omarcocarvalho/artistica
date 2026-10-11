@@ -43,7 +43,7 @@ declare const document: {
 declare const getComputedStyle: (el: unknown) => { fontFamily: string; fontSize: string }
 declare const Text: abstract new () => BrowserText
 
-runOnly('chromium', 'webkit')
+runOnly('chromium', 'firefox', 'webkit')
 
 const UI_LATIN = [
   'Atkinson Hyperlegible Next Variable',
@@ -77,6 +77,9 @@ const NO_LINE_START = [
   'ゅ',
   'ょ',
 ]
+
+/** Closing punctuation never starts a line; small kana and ー don't either under `line-break: strict`. */
+const NO_LINE_START_ZH = [...NO_LINE_START, '，', '；', '：', '？', '！', '）', '」', '』', '”']
 
 let guard: NetworkGuard | undefined
 
@@ -221,6 +224,18 @@ test.describe('line breaking', () => {
     )
     expect(starts.length).toBeGreaterThan(20)
     expect(starts.map(({ char }) => char).filter((c) => NO_LINE_START.includes(c))).toEqual([])
+  })
+
+  test('CJK-strict-zh: no Chinese line starts with closing punctuation, a small kana or ー', async ({
+    page,
+  }) => {
+    await openApp(page, 'zh-CN')
+    const starts = await lineStarts(
+      page,
+      '把照片排列在页面上，然后导出。可以吗？好！（完成）选择“チェックリスト”中的ショップ、コピー、キャッチャー和シャッター。',
+    )
+    expect(starts.length).toBeGreaterThan(20)
+    expect(starts.map(({ char }) => char).filter((c) => NO_LINE_START_ZH.includes(c))).toEqual([])
   })
 
   test('CJK-keep-all: Korean lines start only at the start of a word', async ({ page }) => {

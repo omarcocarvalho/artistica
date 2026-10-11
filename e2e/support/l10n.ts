@@ -56,6 +56,9 @@ export const DEFAULT_ALLOW: readonly RegExp[] = [
   new RegExp(`^(${LANGUAGES.map((code) => ENDONYMS[code]).join('|')})$`, 'u'),
 ]
 
+/** WCAG 1.4.10: content reflows at 320 CSS pixels. */
+export const REFLOW_VIEWPORT = { width: 320, height: 640 } as const
+
 /** In-page probes, as one script string: the e2e tsconfig has no DOM lib. */
 const PROBES = String.raw`(() => {
   const clean = (t) => (t || '').replace(/\s+/g, ' ').trim()
@@ -213,6 +216,20 @@ const PROBES = String.raw`(() => {
       if (row || el.scrollWidth <= el.clientWidth + 1) continue
       out.push(describe(el) + ' "' + clean(el.textContent).slice(0, 40) + '": scrolls sideways (' + el.scrollWidth + ' in ' + el.clientWidth + ')')
     }
+    // A box wider than the window makes the page scroll sideways; its parent may draw no box.
+    const view = document.documentElement.clientWidth
+    const beyond = (el) => {
+      const r = el.getBoundingClientRect()
+      return r.right + scrollX > view + 1 || r.left + scrollX < -1
+    }
+    if (document.documentElement.scrollWidth > view + 1) {
+      for (const el of document.body.querySelectorAll('*')) {
+        if (!rendered(el) || inScroller(el) || !beyond(el)) continue
+        if (el.parentElement && el.parentElement !== document.body && beyond(el.parentElement)) continue
+        const r = el.getBoundingClientRect()
+        out.push(describe(el) + ' "' + clean(el.textContent).slice(0, 40) + '": box ' + px(r) + ' past the viewport (' + Math.round(r.right + scrollX) + ' in ' + view + ')')
+      }
+    }
     return [...new Set(out)]
   }
   const LIVE = '[aria-live]:not([aria-live="off"]), [role="status"], [role="alert"], [role="log"]'
@@ -224,7 +241,8 @@ const PROBES = String.raw`(() => {
     }
     return out
   }
-  const CONTROLS = 'button, a[href], summary, [role="button"], [role="link"], [role="tab"], [role="radio"], [role="switch"], [role="checkbox"], [role="menuitem"], [role="option"]'
+  const CONTROLS = 'button, a[href], summary, [role="button"], [role="link"], [role="tab"], [role="radio"], [role="switch"], [role="checkbox"], [role="menuitem"], [role="option"], [role="spinbutton"], [role="slider"], input:not([type="hidden"]), select, textarea'
+  const FIELD = 'input, select, textarea'
   // Japanese and Chinese write no space between CJK and Latin text, so a change of script is a
   // word boundary too (B5 ruling): "quadrants.jpgを選択" holds the visible word "quadrants.jpg".
   const CJK = '\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}\\u30fc'
@@ -243,14 +261,19 @@ const PROBES = String.raw`(() => {
         ? labelledby.map((id) => (document.getElementById(id) || {}).textContent || '').join(' ')
         : label
       const described = (el.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean)
+      // A form field shows its <label>s (its own value is the user's); anything else, its text.
+      const sources = el.matches(FIELD) ? [...(el.labels || [])] : [el]
       let shown = ''
-      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
-      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-        const parent = n.parentElement
-        if (!parent || !rendered(parent) || srOnly(parent)) continue
-        if (parent.closest('[aria-hidden="true"]')) continue
-        if (described.some((id) => { const d = document.getElementById(id); return d && d.contains(parent) })) continue
-        shown += ' ' + n.data
+      for (const source of sources) {
+        const walker = document.createTreeWalker(source, NodeFilter.SHOW_TEXT)
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+          const parent = n.parentElement
+          if (!parent || !rendered(parent) || srOnly(parent)) continue
+          if (parent.closest('[aria-hidden="true"]')) continue
+          if (source !== el && parent.closest(FIELD)) continue
+          if (described.some((id) => { const d = document.getElementById(id); return d && d.contains(parent) })) continue
+          shown += ' ' + n.data
+        }
       }
       const visible = norm(shown)
       if (visible && !(' ' + norm(name) + ' ').includes(' ' + visible + ' '))
@@ -363,8 +386,8 @@ export async function findPseudoLeak(page: Page): Promise<string[]> {
 
 /**
  * Elements whose own text is clipped, runs past the nearest ancestor that draws a box (border,
- * background or clip), or whose box runs past its parent, and scrollers that scroll sideways
- * (except a single row of items). A text-overflow ellipsis is a deliberate truncation, not an
+ * background or clip), or whose box runs past its parent or past the window's width, and scrollers
+ * that scroll sideways (except a single row of items). A text-overflow ellipsis is a deliberate truncation, not an
  * overflow; text inside a scroller and visually hidden text are skipped.
  */
 export async function findOverflow(page: Page): Promise<string[]> {
@@ -373,7 +396,8 @@ export async function findOverflow(page: Page): Promise<string[]> {
 
 /**
  * WCAG 2.5.3: each control whose name is set by ARIA keeps the text it shows inside that name
- * (text hidden from assistive technology and the control's own description excepted).
+ * (text hidden from assistive technology and the control's own description excepted). A form
+ * field shows the text of its `<label>`s.
  */
 export async function labelInName(page: Page): Promise<string[]> {
   return page.evaluate<string[]>(`(() => ${PROBES}.labelInName())()`)

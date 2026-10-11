@@ -102,6 +102,27 @@ describe('renderLandingPage', () => {
     ).toThrow(/script/)
   })
 
+  it('reads the context past a > or < inside an earlier quoted attribute, and past a comment', () => {
+    const v = 'x" onmouseover="alert(1)'
+    const escaped = 'x&quot; onmouseover=&quot;alert(1)'
+    const cases: readonly [string, string][] = [
+      [
+        '<a class="[&>svg]:size-4" title="{{t:v}}">',
+        `<a class="[&>svg]:size-4" title="${escaped}">`,
+      ],
+      ['<a data-x=\'a>b\' title="{{t:v}}">', `<a data-x='a>b' title="${escaped}">`],
+      ['<a title="<b>" data-y="{{t:v}}">', `<a title="<b>" data-y="${escaped}">`],
+      ['<p data-x="1 < 2">{{t:v}}</p>', `<p data-x="1 < 2">x" onmouseover="alert(1)</p>`],
+      ['<!-- <a title=" -->{{t:v}}', '<!-- <a title=" -->x" onmouseover="alert(1)'],
+      [
+        '<style>a[title="x"]{}</style><p title="{{t:v}}">',
+        `<style>a[title="x"]{}</style><p title="${escaped}">`,
+      ],
+    ]
+    for (const [template, expected] of cases)
+      expect(renderLandingPage(template, { v }, 'en', ['en']), template).toBe(expected)
+  })
+
   it.each(LANGUAGES)('sets lang, canonical, seven alternates and x-default (%s)', (code) => {
     const html = render(code)
     expect(attr(tags(html, 'html')[0] ?? '', 'lang')).toBe(code)

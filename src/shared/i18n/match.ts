@@ -1,13 +1,13 @@
 import { DEFAULT_LANGUAGE, LANGUAGES, isLanguageCode, type LanguageCode } from './languages'
 
-const BY_PRIMARY: Readonly<Record<string, LanguageCode>> = {
-  pt: 'pt-BR',
-  es: 'es',
-  it: 'it',
-  ja: 'ja',
-  ko: 'ko',
-  en: 'en',
-}
+const BY_PRIMARY: ReadonlyMap<string, LanguageCode> = new Map([
+  ['pt', 'pt-BR'],
+  ['es', 'es'],
+  ['it', 'it'],
+  ['ja', 'ja'],
+  ['ko', 'ko'],
+  ['en', 'en'],
+])
 
 function matchTag(raw: string): LanguageCode | null {
   const tag = raw.trim().replaceAll('_', '-').toLowerCase()
@@ -17,7 +17,7 @@ function matchTag(raw: string): LanguageCode | null {
   if (primary === 'zh') {
     return second === '' || second === 'cn' || second === 'sg' || second === 'hans' ? 'zh-CN' : null
   }
-  return BY_PRIMARY[primary] ?? null
+  return BY_PRIMARY.get(primary) ?? null
 }
 
 /** M6-R4: the first tag that maps to one of the seven languages. */
