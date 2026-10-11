@@ -211,7 +211,7 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | `pageSetup:title` | Page | heading | |
 | `pageSetup:paper.heading` `.size` | Page | section heading and select label | |
 | `pageSetup:paper.custom` | Page | the last option of the paper select | keeps its `…` |
-| `pageSetup:paper.name.*` | Page, Preview, Export | the names of Letter, Legal, Tabloid and Custom paper in the suggestion, the page caption and the export summary (A3–A6 are shown as they are) | the names the language's print dialogs use; file names keep the English id |
+| `pageSetup:paper.name.*` | Page, Preview, Export, Presets | the names of Letter, Legal, Tabloid and Custom paper in the suggestion, the page caption and the export summary, and of Letter, Legal and Tabloid in each preset's summary (A3–A6 are shown as they are) | the names the language's print dialogs use; file names keep the English id |
 | `pageSetup:paper.dims` `.times` `.width` `.height` | Page | the size line under the select and the custom size fields | `times` is a glyph |
 | `pageSetup:paper.units` `.unitMm` `.unitIn` | Page | units control | options are tight |
 | `pageSetup:noRoom` | Preview | message in place of the preview | |

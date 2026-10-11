@@ -26,7 +26,7 @@ import type { ModalSurfaceProps } from '../../shared/ui/ModalSurface'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import { applyPreset, presetFromCurrent } from '../presets'
 import { downloadJson, presetFileName, readPresetFile } from './preset-file'
-import { presetSummary, type I18nT } from './preset-summary'
+import { presetSummary } from './preset-summary'
 
 export interface PresetsDialogProps {
   readonly open: boolean
@@ -327,8 +327,6 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
     downloadJson(presetFileName(new Date()), buildPresetFile(presets))
   }
 
-  const summaryT: I18nT = (key, options) => t(key, options)
-
   const saveArea =
     editing.kind === 'save' ? (
       <NameField
@@ -472,7 +470,7 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
                       <div className="min-w-0">
                         <div className="font-semibold [overflow-wrap:anywhere]">{preset.name}</div>
                         <div className="text-ink-muted text-xs [overflow-wrap:anywhere]">
-                          {presetSummary(preset, unit, summaryT)}
+                          {presetSummary(preset, unit, t)}
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-1 sm:justify-end">
