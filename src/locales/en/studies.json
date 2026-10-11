@@ -22,7 +22,7 @@
     "valueText": "{{value}}",
     "min": "1%",
     "max": "100%",
-    "hint": "Scales with image size, so {{value}} looks alike on every photo.",
+    "hint": "Scales with image size, so {{value}} looks similar on every photo.",
     "usedBy": "Used by Blurred and Blur + Values."
   },
   "values": {
