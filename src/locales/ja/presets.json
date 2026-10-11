@@ -15,8 +15,8 @@
     "exists": "この名前のプリセットはすでにあります。",
     "replace": "置き換える",
     "full": "プリセットが{{max}}件あり、このデバイスに保存できる上限です。別のプリセットを保存するには、1件削除してください。",
-    "saved": "{{name}}を保存しました。",
-    "replaced": "{{name}}を置き換えました。"
+    "saved": "「{{name}}」を保存しました。",
+    "replaced": "「{{name}}」を置き換えました。"
   },
   "row": {
     "apply": "適用",
@@ -27,25 +27,25 @@
     "deleteLabel": "削除：{{name}}"
   },
   "rename": {
-    "label": "{{name}}の新しい名前",
+    "label": "「{{name}}」の新しい名前",
     "submit": "保存",
     "cancel": "キャンセル",
-    "renamed": "{{from}}の名前を{{to}}に変更しました。"
+    "renamed": "「{{from}}」の名前を「{{to}}」に変更しました。"
   },
   "apply": {
     "confirmTitle": "「{{name}}」を適用しますか？",
-    "confirmBodySingle": "ページ設定と、写真のスタディと線が設定されます。",
-    "confirmBody_other": "ページ設定と、{{count, number}}枚の写真すべてのスタディと線が設定されます。",
+    "confirmBodySingle": "ページ設定と、写真のスタディと線を設定します。",
+    "confirmBody_other": "ページ設定と、写真{{count, number}}枚すべてのスタディと線を設定します。",
     "confirm": "適用",
     "cancel": "キャンセル",
-    "applied": "{{name}}を適用しました。",
+    "applied": "「{{name}}」を適用しました。",
     "waiting": "写真の読み込みが終わるのを待っています…"
   },
   "delete": {
     "confirmTitle": "「{{name}}」を削除しますか？",
     "confirm": "削除",
     "cancel": "キャンセル",
-    "deleted": "{{name}}を削除しました。"
+    "deleted": "「{{name}}」を削除しました。"
   },
   "export": {
     "button": "すべて書き出し"

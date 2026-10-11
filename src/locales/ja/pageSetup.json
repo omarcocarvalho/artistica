@@ -24,7 +24,7 @@
     "auto": "自動",
     "portrait": "縦",
     "landscape": "横",
-    "autoPicked": "自動で{{orientation}}を選びました：ページ数が少なくなります。",
+    "autoPicked": "ページ数が少なくなる{{orientation}}を自動で選びました。",
     "resolved": { "portrait": "縦", "landscape": "横" }
   },
   "spacing": {
