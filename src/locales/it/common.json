@@ -1,0 +1,16 @@
+{
+  "app": {
+    "comingSoon": ""
+  },
+  "actions": {
+    "cancel": "",
+    "close": "",
+    "ok": ""
+  },
+  "joinSentences": "",
+  "theme": {
+    "auto": "",
+    "light": "",
+    "dark": ""
+  }
+}

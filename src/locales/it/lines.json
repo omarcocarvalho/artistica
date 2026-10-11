@@ -1,0 +1,111 @@
+{
+  "type": {
+    "grid": "",
+    "thirds": "",
+    "armature": "",
+    "golden": "",
+    "spiral": "",
+    "centre": "",
+    "edges": "",
+    "face": "",
+    "pose": ""
+  },
+  "corner": {
+    "topLeft": "",
+    "topRight": "",
+    "bottomLeft": "",
+    "bottomRight": ""
+  },
+  "panel": {
+    "forImage": "",
+    "everyVersion": "",
+    "noImage": "",
+    "composition": "",
+    "style": "",
+    "waiting": ""
+  },
+  "grid": {
+    "columns": "",
+    "rows": "",
+    "times": "",
+    "range": ""
+  },
+  "spiral": {
+    "startsAt": "",
+    "arrow": {
+      "topLeft": "",
+      "topRight": "",
+      "bottomLeft": "",
+      "bottomRight": ""
+    }
+  },
+  "guides": {
+    "heading": "",
+    "onDevice": "",
+    "detail": {
+      "label": "",
+      "value": ""
+    },
+    "size": "",
+    "download": "",
+    "progress": "",
+    "progressSpoken": "",
+    "failedHint": "",
+    "errorHint": "",
+    "tryAgain": "",
+    "noWebGL": "",
+    "edges": {
+      "running": "",
+      "done": "",
+      "none": "",
+      "failed": ""
+    },
+    "face": {
+      "why": "",
+      "progressLabel": "",
+      "downloading": "",
+      "running": "",
+      "found": "",
+      "none": "",
+      "noneHint": "",
+      "noneWithHint": "",
+      "downloadFailed": "",
+      "error": "",
+      "turnOff": ""
+    },
+    "pose": {
+      "why": "",
+      "progressLabel": "",
+      "downloading": "",
+      "running": "",
+      "found": "",
+      "none": "",
+      "noneHint": "",
+      "noneWithHint": "",
+      "downloadFailed": "",
+      "error": "",
+      "turnOff": ""
+    }
+  },
+  "colour": {
+    "label": "",
+    "hexLabel": "",
+    "hexHint": ""
+  },
+  "thickness": {
+    "label": "",
+    "value": ""
+  },
+  "opacity": {
+    "label": "",
+    "value": ""
+  },
+  "applyAll": {
+    "button": "",
+    "hintSingle": "",
+    "hint_other": "",
+    "done_one": "",
+    "done_other": "",
+    "nothingChanged": ""
+  }
+}
