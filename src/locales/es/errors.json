@@ -1,0 +1,37 @@
+{
+  "images": {
+    "cors": {
+      "title": "No se puede leer esta imagen",
+      "message": "Este sitio no permite que otras apps lean sus imágenes. Descárgala y agrégala desde tus archivos."
+    },
+    "network": {
+      "title": "No se pudo cargar este enlace",
+      "message": "Revisa el enlace y tu conexión, y vuelve a intentarlo."
+    },
+    "notAnImage": {
+      "title": "Eso no es una imagen",
+      "message": "El enlace o el archivo no contiene una imagen. Usa JPG, PNG, WebP, GIF o HEIC."
+    },
+    "unsupportedFormat": {
+      "title": "No se puede agregar {{name}}",
+      "message": "Usa JPG, PNG, WebP, GIF o HEIC."
+    },
+    "decodeFailed": {
+      "title": "No se puede leer {{name}}",
+      "message": "Puede que el archivo esté dañado. Intenta guardarlo de nuevo como JPG o PNG."
+    },
+    "tooLarge": {
+      "title": "{{name}} es demasiado grande",
+      "message": "Las fotos pueden tener hasta {{maxMb}} MB y {{maxMp}} megapíxeles. Prueba con una versión más pequeña."
+    }
+  },
+  "export": {
+    "unsupported": "Este navegador no puede crear PDF aquí. Actualízalo o usa la versión más reciente de Chrome, Edge, Firefox o Safari.",
+    "missingImage": "Se quitó una imagen mientras se creaba el PDF. Inténtalo de nuevo.",
+    "empty": "Agrega al menos una imagen para exportar.",
+    "failed": "Algo salió mal al crear el PDF. Inténtalo de nuevo. Si sigue fallando, prueba con menos imágenes o con imágenes más pequeñas."
+  },
+  "generic": {
+    "unexpected": "Algo salió mal. Inténtalo de nuevo."
+  }
+}

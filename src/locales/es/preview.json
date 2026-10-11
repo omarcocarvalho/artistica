@@ -1,0 +1,74 @@
+{
+  "tile": {
+    "fallbackName": "Imagen {{n}}",
+    "versionName": "{{name}}, {{version}}",
+    "lowDpi": "{{dpi}} DPI",
+    "lowDpiLabel": "Baja resolución: {{dpi}} DPI",
+    "scaledToFit": "Reducida para caber",
+    "scaledToFitLabel": "Reducida para caber en la página"
+  },
+  "guides": {
+    "label": "Guías",
+    "legend": {
+      "label": "Leyenda",
+      "safe": "Margen de seguridad",
+      "bleed": "Sangrado",
+      "cut": "Línea de corte",
+      "mark": "Marca de corte"
+    }
+  },
+  "arrange": {
+    "dropped": {
+      "paper": "El papel cambió, así que las fotos se volvieron a organizar automáticamente.",
+      "noLongerFits": "Tu organización ya no cabe en los nuevos márgenes, así que las fotos se volvieron a organizar automáticamente."
+    },
+    "toggle": "Organizar",
+    "barLabel": "Organizar fotos",
+    "photoOptions": "Opciones de la foto",
+    "sheetSummary": "{{w}} × {{h}} {{unit}}, página {{page}} de {{total}}",
+    "undo": "Deshacer",
+    "rerun": "Rehacer el diseño automático",
+    "rerunConfirm": "¿Rehacer el diseño automático? Se perderán tus movimientos y cambios de tamaño.",
+    "rerunAction": "Rehacer el diseño",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "selectedGroup": "Foto seleccionada: {{name}}",
+    "moveToPage": "Mover a la página",
+    "pageOption": "Página {{page}}",
+    "newPage": "Página nueva",
+    "swapWith": "Intercambiar con…",
+    "swapChoose": "Elige una foto",
+    "swapOption": "{{name}}, página {{page}}",
+    "width": "Ancho",
+    "position": "Posición",
+    "moveLeft": "Mover a la izquierda",
+    "moveUp": "Mover hacia arriba",
+    "moveDown": "Mover hacia abajo",
+    "moveRight": "Mover a la derecha",
+    "roleDescription": "foto movible",
+    "blockName": "{{name}}, {{w}} × {{h}} {{unit}}, página {{page}}",
+    "instructions": "Usa las teclas de flecha para mover, Shift y las teclas de flecha para cambiar el tamaño, Page Up y Page Down para pasar a otra página, y Enter para intercambiar con otra foto.",
+    "fixedHint": "Tamaño fijo: cámbialo en Editar.",
+    "chip": {
+      "pickedUp": "Levantada",
+      "swap": "Intercambiar",
+      "invalid": "No se puede aquí"
+    },
+    "placed": "{{name}}, {{w}} × {{h}} {{unit}}, página {{page}}, a {{x}} {{unit}} de la izquierda y {{y}} {{unit}} de arriba.",
+    "pickedUp": "Levantaste {{name}}. Ve a otra foto y presiona Enter para intercambiarlas, o Escape para cancelar.",
+    "pickUpCancelled": "Intercambio cancelado.",
+    "undone": "Se deshizo.",
+    "rerunDone": "Fotos organizadas automáticamente.",
+    "refused": {
+      "overlap": "No se puede colocar ahí: se superpondría con otra foto.",
+      "outside": "No se puede colocar ahí: pasaría del margen.",
+      "noRoomOnPage": "No se puede colocar ahí: no hay espacio para ella en esa página.",
+      "firstPage": "Ya está en la primera página.",
+      "blocked": "No se puede mover más: hay otra foto o el margen en el camino.",
+      "min": "No puede ser más pequeña.",
+      "grow": "No se puede agrandar: hay otra foto o el margen en el camino.",
+      "fixed": "Tamaño fijo: cámbialo en Editar.",
+      "swap": "No se puede intercambiar: una foto no cabe en el lugar de la otra."
+    }
+  }
+}

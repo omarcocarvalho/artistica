@@ -1,0 +1,57 @@
+{
+  "title": "Página",
+  "paper": {
+    "heading": "Papel",
+    "size": "Tamaño del papel",
+    "custom": "Personalizado…",
+    "name": {
+      "letter": "Carta",
+      "legal": "Oficio",
+      "tabloid": "Tabloide",
+      "custom": "Personalizado"
+    },
+    "dims": "{{w}} × {{h}} {{unit}}",
+    "times": "×",
+    "width": "Ancho",
+    "height": "Alto",
+    "units": "Unidades",
+    "unitMm": "mm",
+    "unitIn": "pulgadas"
+  },
+  "noRoom": "Esta configuración de página no deja espacio para imágenes. Reduce el margen de seguridad, el espacio entre imágenes, el sangrado o las marcas de corte, o elige un papel más grande.",
+  "orientation": {
+    "label": "Orientación",
+    "auto": "Automática",
+    "portrait": "Vertical",
+    "landscape": "Horizontal",
+    "autoPicked": "El modo automático eligió {{orientation}}: menos páginas.",
+    "resolved": { "portrait": "vertical", "landscape": "horizontal" }
+  },
+  "spacing": {
+    "heading": "Espaciado",
+    "safeArea": "Margen de seguridad",
+    "safeAreaHint": "Franja en blanco en el borde de la página. Mínimo: {{min}}.",
+    "gutter": "Espacio entre imágenes",
+    "gutterSize": "Tamaño del espacio",
+    "gutterHint": "Espacio para cortar entre las imágenes."
+  },
+  "cutting": {
+    "heading": "Corte",
+    "cropMarks": "Marcas de corte",
+    "bleed": "Sangrado",
+    "bleedAmount": "Cantidad de sangrado",
+    "bleedHint": "Extiende los píxeles del borde más allá de la línea de corte, para que un corte un poco desviado no deje una franja blanca."
+  },
+  "notes": {
+    "gutterEnabledForBleed": "Se activó el espacio entre imágenes. El sangrado necesita un espacio de al menos 2 × el sangrado.",
+    "gutterRaisedForBleed": "Se aumentó el espacio entre imágenes a {{gutter}}. El sangrado necesita un espacio de al menos 2 × el sangrado.",
+    "safeAreaRaisedToMinimum": "Se aumentó el margen de seguridad a {{min}}, el mínimo."
+  },
+  "suggestion": {
+    "tip": "¡consejo!",
+    "text_one": "En {{paper}} cabe cómodamente {{count, number}} referencia por página.",
+    "text_many": "En {{paper}} caben cómodamente {{count, number}} de referencias por página.",
+    "text_other": "En {{paper}} caben cómodamente {{count, number}} referencias por página."
+  },
+  "remembered": "La configuración se recuerda en este dispositivo."
+}

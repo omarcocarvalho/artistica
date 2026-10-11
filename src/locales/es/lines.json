@@ -1,0 +1,105 @@
+{
+  "type": {
+    "grid": "Cuadrícula",
+    "thirds": "Regla de los tercios",
+    "armature": "Diagonales y armadura",
+    "golden": "Proporción áurea",
+    "spiral": "Espiral áurea",
+    "centre": "Líneas centrales",
+    "edges": "Contorno de bordes",
+    "face": "Construcción del rostro",
+    "pose": "Pose del cuerpo"
+  },
+  "corner": {
+    "topLeft": "Arriba a la izquierda",
+    "topRight": "Arriba a la derecha",
+    "bottomLeft": "Abajo a la izquierda",
+    "bottomRight": "Abajo a la derecha"
+  },
+  "panel": {
+    "forImage": "Líneas de <name/>",
+    "everyVersion": "Se dibujan sobre cada versión impresa de esta imagen.",
+    "noImage": "Agrega una foto, o selecciona una, para dibujar líneas sobre ella.",
+    "composition": "Composición",
+    "style": "Estilo de línea",
+    "waiting": "Esperando a que terminen de importarse las fotos…"
+  },
+  "grid": {
+    "columns": "Columnas",
+    "rows": "Filas",
+    "times": "×",
+    "range": "De {{min}} a {{max}}"
+  },
+  "spiral": {
+    "startsAt": "La espiral empieza en",
+    "arrow": {
+      "topLeft": "↖",
+      "topRight": "↗",
+      "bottomLeft": "↙",
+      "bottomRight": "↘"
+    }
+  },
+  "guides": {
+    "heading": "Guías de la foto",
+    "onDevice": "En el dispositivo",
+    "detail": { "label": "Detalle", "value": "{{value}}" },
+    "size": "Descarga única: {{size}}",
+    "download": "Descargar y activar",
+    "progress": "{{loaded}} de {{total}}",
+    "progressSpoken": "{{loaded}} de {{total}} megabytes",
+    "failedHint": "Revisa tu conexión e inténtalo de nuevo. Las demás líneas siguen funcionando.",
+    "errorHint": "Inténtalo de nuevo. Las demás líneas siguen funcionando.",
+    "tryAgain": "Intentar de nuevo",
+    "noWebGL": "Las guías de rostro y de pose necesitan WebGL, que este navegador tiene desactivado.",
+    "edges": {
+      "running": "Trazando el contorno…",
+      "done": "Contorno trazado.",
+      "none": "No se encontraron bordes con este Detalle. Prueba con un Detalle más alto.",
+      "failed": "No se pudo trazar el contorno."
+    },
+    "face": {
+      "why": "Las guías de rostro usan un pequeño modelo de IA. Se guarda en este dispositivo y funciona sin conexión. Tus fotos nunca se suben.",
+      "progressLabel": "Descarga del modelo de rostro",
+      "downloading": "Descargando el modelo de rostro…",
+      "running": "Buscando rostros…",
+      "found": "Guías de rostro activadas. Se agregaron líneas de cejas, ojos, nariz y mentón.",
+      "none": "No se encontró ningún rostro en esta imagen.",
+      "noneHint": "Las guías de rostro funcionan mejor con una vista frontal o de ¾ clara.",
+      "noneWithHint": "No se encontró ningún rostro en esta imagen. Las guías de rostro funcionan mejor con una vista frontal o de ¾ clara.",
+      "downloadFailed": "No se pudo descargar el modelo de rostro",
+      "error": "No se pudieron buscar rostros en esta imagen",
+      "turnOff": "Desactivar las guías de rostro"
+    },
+    "pose": {
+      "why": "Las líneas de la pose usan un pequeño modelo de IA. Se guarda en este dispositivo y funciona sin conexión. Tus fotos nunca se suben.",
+      "progressLabel": "Descarga del modelo de pose",
+      "downloading": "Descargando el modelo de pose…",
+      "running": "Buscando la pose…",
+      "found": "Líneas de la pose activadas.",
+      "none": "No se encontró ninguna persona en esta imagen.",
+      "noneHint": "Las líneas de la pose funcionan mejor cuando se ve todo el cuerpo.",
+      "noneWithHint": "No se encontró ninguna persona en esta imagen. Las líneas de la pose funcionan mejor cuando se ve todo el cuerpo.",
+      "downloadFailed": "No se pudo descargar el modelo de pose",
+      "error": "No se pudo buscar a una persona en esta imagen",
+      "turnOff": "Desactivar las guías de pose"
+    }
+  },
+  "colour": {
+    "label": "Color",
+    "hexLabel": "Código hexadecimal del color",
+    "hexHint": "Escribe # y seis dígitos hexadecimales, como #1f3fbf."
+  },
+  "thickness": { "label": "Grosor", "value": "{{value}} {{unit}}" },
+  "opacity": { "label": "Opacidad", "value": "{{value}}" },
+  "applyAll": {
+    "button": "Aplicar las líneas a todas las imágenes",
+    "hintSingle": "Agrega otra foto para copiarle esta configuración.",
+    "hint_one": "Copia esta configuración de líneas a {{count, number}} imagen.",
+    "hint_many": "Copia esta configuración de líneas a las {{count, number}} de imágenes.",
+    "hint_other": "Copia esta configuración de líneas a las {{count, number}} imágenes.",
+    "done_one": "Configuración de líneas copiada a {{count, number}} imagen.",
+    "done_many": "Configuración de líneas copiada a {{count, number}} de imágenes.",
+    "done_other": "Configuración de líneas copiada a {{count, number}} imágenes.",
+    "nothingChanged": "Todas las imágenes ya usan esta configuración de líneas."
+  }
+}

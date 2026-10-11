@@ -1,0 +1,159 @@
+{
+  "dropzone": {
+    "groupLabel": "Agregar imágenes",
+    "title": "Agrega algunas fotos de referencia",
+    "hint": "Suéltalas aquí, pégalas o agrega un enlace. Las acomodamos en páginas por ti.",
+    "formats": "JPG, PNG, WebP, GIF, HEIC · cualquier cantidad de fotos",
+    "privacy": "No se sube nada. Las fotos se quedan en este dispositivo.",
+    "dropMini": "o suelta fotos aquí",
+    "dropActive": "Suelta las fotos para agregarlas",
+    "upload": "Archivo",
+    "uploadHero": "Agregar fotos",
+    "paste": "Pegar",
+    "link": "Enlace",
+    "linkHero": "Agregar enlace",
+    "importing_one": "Agregando {{count, number}} foto…",
+    "importing_many": "Agregando {{count, number}} de fotos…",
+    "importing_other": "Agregando {{count, number}} fotos…",
+    "importingLabel": "Agregando fotos",
+    "cancel": "Cancelar",
+    "cancelLabel": "Cancelar la adición de fotos",
+    "stopped": "Se dejó de agregar fotos.",
+    "dismiss": "Descartar",
+    "noImage": {
+      "title": "No hay ninguna imagen en el portapapeles",
+      "message": "Primero copia una imagen y luego vuelve a pegar."
+    },
+    "noImageDrop": {
+      "title": "No hay ninguna imagen en lo que soltaste",
+      "message": "Suelta un archivo de foto o una imagen de otra página."
+    },
+    "pasteHint": {
+      "title": "Pega con el teclado",
+      "message": "Tu navegador necesita el teclado aquí. Presiona Ctrl+V (o ⌘V en una Mac)."
+    },
+    "url": {
+      "title": "Agregar imagen desde un enlace",
+      "label": "Enlace de la imagen",
+      "placeholder": "https://example.com/photo.jpg",
+      "submit": "Agregar",
+      "cancel": "Cancelar",
+      "tryAnother": "Probar otro enlace",
+      "uploadInstead": "Agregar desde archivos"
+    },
+    "gifNote": "Los GIF animados imprimen su primer fotograma."
+  },
+  "list": {
+    "ariaLabel": "Imágenes cargadas",
+    "empty": {
+      "title": "Aún no hay imágenes. Agrega fotos para empezar tus hojas.",
+      "formats": "JPG, PNG, WebP, GIF, HEIC"
+    },
+    "select": "Seleccionar {{name}}",
+    "edit": "Editar {{name}}",
+    "remove": "Quitar {{name}}",
+    "pixels": "{{w}} × {{h}}",
+    "pixelsLabel": "{{w}} por {{h}} píxeles",
+    "sizeAuto": "Automático",
+    "sizeFixed": "Fijo {{size}}",
+    "copies": "×{{count, number}}",
+    "copiesLabel": "{{count, number}} copias",
+    "dpi": "{{dpi}} DPI",
+    "lowDpiLabel": "Baja resolución: {{dpi}} DPI",
+    "separator": "·",
+    "count_one": "{{count, number}} imagen",
+    "count_many": "{{count, number}} de imágenes",
+    "count_other": "{{count, number}} imágenes",
+    "removeAll": {
+      "button": "Quitar todas las imágenes",
+      "confirmTitle": "¿Quitar todas las imágenes?",
+      "confirmBody_one": "Esto quita {{count, number}} imagen de esta sesión. Las fotos no se guardan en ningún lugar, así que no se pueden recuperar.",
+      "confirmBody_many": "Esto quita {{count, number}} de imágenes de esta sesión. Las fotos no se guardan en ningún lugar, así que no se pueden recuperar.",
+      "confirmBody_other": "Esto quita las {{count, number}} imágenes de esta sesión. Las fotos no se guardan en ningún lugar, así que no se pueden recuperar.",
+      "confirm": "Quitar todas",
+      "cancel": "Cancelar",
+      "close": "Cerrar"
+    }
+  },
+  "editSheet": {
+    "title": "Editar imagen",
+    "subtitle": "{{name}} · {{w}} × {{h}} px",
+    "crop": {
+      "stageLabel": "Vista previa de la imagen",
+      "areaLabel": "Área de recorte",
+      "help": "Las teclas de flecha mueven el área de recorte. Shift más las teclas de flecha cambian su tamaño.",
+      "status": "Recorte de {{w}} × {{h}} px en {{x}}, {{y}}",
+      "annotation": "arrastra las esquinas",
+      "controls": "Posición y tamaño del recorte",
+      "position": "Posición",
+      "size": "Tamaño",
+      "step": {
+        "left": "Mover a la izquierda",
+        "up": "Mover hacia arriba",
+        "down": "Mover hacia abajo",
+        "right": "Mover a la derecha",
+        "narrower": "Más estrecho",
+        "wider": "Más ancho",
+        "shorter": "Más bajo",
+        "taller": "Más alto"
+      },
+      "shape": "Forma del recorte",
+      "reset": "Restablecer recorte"
+    },
+    "aspect": {
+      "free": "Libre",
+      "original": "Original",
+      "ratio11": "1:1",
+      "ratio43": "4:3",
+      "ratio32": "3:2",
+      "ratio169": "16:9",
+      "ratio34": "3:4",
+      "ratio23": "2:3",
+      "ratio916": "9:16"
+    },
+    "transform": {
+      "group": "Girar y voltear",
+      "rotateLeft": "Girar 90° a la izquierda",
+      "rotateRight": "Girar 90° a la derecha",
+      "flipH": "Voltear horizontalmente",
+      "flipV": "Voltear verticalmente"
+    },
+    "copies": {
+      "label": "Copias",
+      "less": "Menos copias",
+      "more": "Más copias",
+      "lessGlyph": "−",
+      "moreGlyph": "+",
+      "hint": "Imprime esta imagen más de una vez."
+    },
+    "size": {
+      "label": "Tamaño de impresión",
+      "auto": "Automático",
+      "fixed": "Fijo",
+      "autoHint": "El modo automático elige un tamaño entre {{size}} y el límite de 300 DPI.",
+      "axisLabel": "Definir",
+      "width": "Ancho",
+      "height": "Alto",
+      "valueLabel": "Tamaño",
+      "followsHeight": "El alto se ajusta: {{value}} (mantiene la proporción)",
+      "followsWidth": "El ancho se ajusta: {{value}} (mantiene la proporción)"
+    },
+    "dpi": {
+      "label": "Resolución de impresión",
+      "value": "{{dpi}} DPI",
+      "scale0": "0",
+      "scale300": "300",
+      "scale400": "400",
+      "autoOk": "El modo automático nunca imprime a más de 300 DPI.",
+      "lowTitle": "Baja resolución",
+      "lowFixed": "Por debajo de 300 DPI puede imprimirse poco nítida. Se ve nítida hasta {{w}} × {{h}} {{unit}}.",
+      "lowAuto": "En su tamaño cómodo más pequeño ({{size}}) se imprime a {{dpi}} DPI. Puede verse poco nítida."
+    },
+    "actions": {
+      "close": "Cerrar",
+      "remove": "Quitar imagen",
+      "cancel": "Cancelar",
+      "done": "Listo"
+    }
+  }
+}

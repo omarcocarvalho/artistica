@@ -1,0 +1,16 @@
+{
+  "app": {
+    "comingSoon": "El espacio de trabajo llegará pronto."
+  },
+  "actions": {
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "ok": "OK"
+  },
+  "joinSentences": "{{a}} {{b}}",
+  "theme": {
+    "auto": "Auto",
+    "light": "Claro",
+    "dark": "Oscuro"
+  }
+}
