@@ -350,7 +350,7 @@ test.describe('localisation probes (D3): each finds what it is for before it is 
       '<label for="p-gutter">Image gap</label><input id="p-gutter" aria-label="Gap">' +
         '<label for="p-bleed">Bleed</label><input id="p-bleed" aria-label="Bleed in mm">' +
         '<label>Paper size <select aria-label="Size"><option>Letter</option></select></label>' +
-        '<label>Notes <textarea aria-label="Notes for print"></textarea></label>' +
+        '<label>Notes <textarea aria-label="Notes for print">Draft</textarea></label>' +
         '<label for="p-hidden" class="sr-only">Hidden words</label><input id="p-hidden" aria-label="Other">' +
         '<label><input type="checkbox" aria-label="Marks"> Crop marks</label>' +
         '<div role="spinbutton" tabindex="0" aria-valuenow="3" aria-label="Copies">Count 3</div>' +
@@ -378,7 +378,7 @@ test.describe('localisation probes (D3): each finds what it is for before it is 
     const past = async () =>
       (await findOverflow(page)).filter((f) => f.includes('past the viewport'))
     expect(await past()).toEqual([])
-    await page.addStyleTag({ content: 'header { min-width: 330px }' })
+    await page.addStyleTag({ content: 'header, header > * { min-width: 330px }' })
     expect(await past()).toEqual([
       expect.stringMatching(/> header\.[^>]*: box .* past the viewport \(330 in 320\)$/),
     ])

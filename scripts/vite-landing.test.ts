@@ -100,6 +100,22 @@ describe('renderLandingPage', () => {
     expect(() =>
       renderLandingPage('<script>let a = "{{t:v}}"</script>', { v: 'x' }, 'en', ['en']),
     ).toThrow(/script/)
+    expect(() =>
+      renderLandingPage('<style>p::before { content: "{{t:v}}" }</style>', { v: 'x' }, 'en', [
+        'en',
+      ]),
+    ).toThrow(/style/)
+  })
+
+  it('reads the text after a <style> whose rules hold a < and a quote as text', () => {
+    expect(
+      renderLandingPage(
+        '<style>p::before { content: "<a" }</style><p>{{t:v}}</p>',
+        { v: 'a "b"' },
+        'en',
+        ['en'],
+      ),
+    ).toBe('<style>p::before { content: "<a" }</style><p>a "b"</p>')
   })
 
   it('reads the context past a > or < inside an earlier quoted attribute, and past a comment', () => {
