@@ -1,0 +1,37 @@
+{
+  "images": {
+    "cors": {
+      "title": "",
+      "message": ""
+    },
+    "network": {
+      "title": "",
+      "message": ""
+    },
+    "notAnImage": {
+      "title": "",
+      "message": ""
+    },
+    "unsupportedFormat": {
+      "title": "",
+      "message": ""
+    },
+    "decodeFailed": {
+      "title": "",
+      "message": ""
+    },
+    "tooLarge": {
+      "title": "",
+      "message": ""
+    }
+  },
+  "export": {
+    "unsupported": "",
+    "missingImage": "",
+    "empty": "",
+    "failed": ""
+  },
+  "generic": {
+    "unexpected": ""
+  }
+}

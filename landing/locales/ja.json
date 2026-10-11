@@ -1,0 +1,145 @@
+{
+  "meta": {
+    "title": "",
+    "description": ""
+  },
+  "share": {
+    "title": "",
+    "description": "",
+    "imageAlt": ""
+  },
+  "structured": {
+    "description": "",
+    "operatingSystem": "",
+    "browserRequirements": ""
+  },
+  "header": {
+    "skip": "",
+    "home": "",
+    "nav": "",
+    "how": "",
+    "features": "",
+    "privacy": "",
+    "faq": "",
+    "openApp": ""
+  },
+  "theme": {
+    "auto": "",
+    "light": "",
+    "dark": "",
+    "changeAuto": "",
+    "changeLight": "",
+    "changeDark": ""
+  },
+  "hero": {
+    "hand": "",
+    "title": "",
+    "lead": "",
+    "start": "",
+    "seeHow": "",
+    "points": "",
+    "tip": ""
+  },
+  "how": {
+    "title": "",
+    "subtitle": "",
+    "add": {
+      "title": "",
+      "body": ""
+    },
+    "paper": {
+      "title": "",
+      "body": ""
+    },
+    "print": {
+      "title": "",
+      "body": ""
+    }
+  },
+  "features": {
+    "title": "",
+    "packing": {
+      "title": "",
+      "body": ""
+    },
+    "marks": {
+      "title": "",
+      "body": ""
+    },
+    "studies": {
+      "title": "",
+      "body": ""
+    },
+    "lines": {
+      "title": "",
+      "body": ""
+    },
+    "guides": {
+      "title": "",
+      "body": ""
+    },
+    "presets": {
+      "title": "",
+      "body": ""
+    },
+    "edit": {
+      "title": "",
+      "body": ""
+    },
+    "phone": {
+      "title": "",
+      "body": ""
+    }
+  },
+  "privacy": {
+    "title": "",
+    "claims": {
+      "inBrowser": "",
+      "notSaved": "",
+      "settingsOnly": "",
+      "models": "",
+      "noTracking": "",
+      "heroNeverLeave": "",
+      "faqUploaded": "",
+      "faqGuides": "",
+      "faqOffline": ""
+    }
+  },
+  "faq": {
+    "title": "",
+    "free": {
+      "q": "",
+      "a": ""
+    },
+    "size": {
+      "q": "",
+      "a": ""
+    },
+    "link": {
+      "q": "",
+      "a": ""
+    },
+    "bleed": {
+      "q": "",
+      "a": ""
+    },
+    "uploaded": {
+      "q": ""
+    },
+    "guides": {
+      "q": ""
+    },
+    "offline": {
+      "q": ""
+    },
+    "phone": {
+      "q": "",
+      "a": ""
+    }
+  },
+  "footer": {
+    "licence": "",
+    "source": "",
+    "language": ""
+  }
+}

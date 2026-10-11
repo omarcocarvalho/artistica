@@ -1,0 +1,99 @@
+{
+  "button": "",
+  "title": "",
+  "close": "",
+  "empty": "",
+  "listLabel": "",
+  "storageFailed": "",
+  "save": {
+    "open": "",
+    "name": "",
+    "submit": "",
+    "cancel": "",
+    "needName": "",
+    "tooLong": "",
+    "exists": "",
+    "replace": "",
+    "full": "",
+    "saved": "",
+    "replaced": ""
+  },
+  "row": {
+    "apply": "",
+    "applyLabel": "",
+    "rename": "",
+    "renameLabel": "",
+    "delete": "",
+    "deleteLabel": ""
+  },
+  "rename": {
+    "label": "",
+    "submit": "",
+    "cancel": "",
+    "renamed": ""
+  },
+  "apply": {
+    "confirmTitle": "",
+    "confirmBodySingle": "",
+    "confirmBody_other": "",
+    "confirm": "",
+    "cancel": "",
+    "applied": "",
+    "waiting": ""
+  },
+  "delete": {
+    "confirmTitle": "",
+    "confirm": "",
+    "cancel": "",
+    "deleted": ""
+  },
+  "export": {
+    "button": ""
+  },
+  "import": {
+    "button": "",
+    "file": "",
+    "imported_one": "",
+    "imported_other": "",
+    "renamed_one": "",
+    "renamed_other": "",
+    "renamedPair": "",
+    "skipped_one": "",
+    "skipped_other": "",
+    "full_one": "",
+    "full_other": "",
+    "adjusted_one": "",
+    "adjusted_other": "",
+    "error": {
+      "tooLarge": "",
+      "notPresets": "",
+      "newerVersion": "",
+      "empty": ""
+    }
+  },
+  "summary": {
+    "separator": "",
+    "plus": "",
+    "custom": "",
+    "orientation": {
+      "auto": "",
+      "portrait": "",
+      "landscape": ""
+    },
+    "bleed": "",
+    "version": {
+      "original": "",
+      "blurred": "",
+      "values": "",
+      "blurValues": ""
+    },
+    "line": {
+      "grid": "",
+      "thirds": "",
+      "armature": "",
+      "golden": "",
+      "spiral": "",
+      "centre": ""
+    }
+  }
+}
