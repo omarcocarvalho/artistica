@@ -15,22 +15,22 @@
     "exists": "已有同名预设。",
     "replace": "替换它",
     "full": "你已有{{max}}个预设，已达本设备可保存的上限。删除一个才能保存新的。",
-    "saved": "已保存{{name}}。",
-    "replaced": "已替换{{name}}。"
+    "saved": "已保存“{{name}}”。",
+    "replaced": "已替换“{{name}}”。"
   },
   "row": {
     "apply": "应用",
-    "applyLabel": "应用{{name}}",
+    "applyLabel": "应用“{{name}}”",
     "rename": "重命名",
-    "renameLabel": "重命名{{name}}",
+    "renameLabel": "重命名“{{name}}”",
     "delete": "删除",
-    "deleteLabel": "删除{{name}}"
+    "deleteLabel": "删除“{{name}}”"
   },
   "rename": {
-    "label": "{{name}}的新名称",
+    "label": "“{{name}}”的新名称",
     "submit": "保存",
     "cancel": "取消",
-    "renamed": "已将{{from}}重命名为{{to}}。"
+    "renamed": "已将“{{from}}”重命名为“{{to}}”。"
   },
   "apply": {
     "confirmTitle": "应用“{{name}}”？",
@@ -38,14 +38,14 @@
     "confirmBody_other": "这会更改页面设置，以及全部{{count, number}}张照片的习作和线条。",
     "confirm": "应用",
     "cancel": "取消",
-    "applied": "已应用{{name}}。",
+    "applied": "已应用“{{name}}”。",
     "waiting": "正在等待照片导入完成…"
   },
   "delete": {
     "confirmTitle": "删除“{{name}}”？",
     "confirm": "删除",
     "cancel": "取消",
-    "deleted": "已删除{{name}}。"
+    "deleted": "已删除“{{name}}”。"
   },
   "export": {
     "button": "全部导出"

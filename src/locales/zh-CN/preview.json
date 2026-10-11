@@ -55,7 +55,7 @@
       "invalid": "无法放在这里"
     },
     "placed": "{{name}}，{{w}} × {{h}}{{unit}}，第{{page}}页，距左边{{x}}{{unit}}，距顶部{{y}}{{unit}}。",
-    "pickedUp": "已拿起{{name}}。移到另一张照片上并按Enter交换，或按Escape取消。",
+    "pickedUp": "已拿起“{{name}}”。移到另一张照片上并按Enter交换，或按Escape取消。",
     "pickUpCancelled": "已取消交换。",
     "undone": "已撤销。",
     "rerunDone": "照片已自动排列。",

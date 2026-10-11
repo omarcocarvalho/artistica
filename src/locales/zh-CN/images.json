@@ -47,9 +47,9 @@
       "title": "还没有图片。添加照片，开始制作参考页。",
       "formats": "JPG、PNG、WebP、GIF、HEIC"
     },
-    "select": "选择{{name}}",
-    "edit": "编辑{{name}}",
-    "remove": "移除{{name}}",
+    "select": "选择“{{name}}”",
+    "edit": "编辑“{{name}}”",
+    "remove": "移除“{{name}}”",
     "pixels": "{{w}} × {{h}}",
     "pixelsLabel": "{{w}} × {{h}}像素",
     "sizeAuto": "自动",

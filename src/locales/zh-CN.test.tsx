@@ -35,7 +35,7 @@ const ENGLISH_WORDS = [
   'device',
   'Download',
   'Export',
-  'Gutter',
+  'Tiles',
   'Images',
   'Landscape',
   'Light',
@@ -111,7 +111,7 @@ describe('Chinese (Simplified): a sample of screens shows no English', () => {
     const preset = presetFromSettings('海报', {
       pageSetup: { ...DEFAULT_PAGE_SETUP, paper: 'Letter', bleed: { enabled: true, mm: 3 } },
       study: { ...DEFAULT_STUDY, versions: ['original', 'values'] },
-      lines: { ...DEFAULT_LINES, thirds: true, grid: true },
+      lines: { ...DEFAULT_LINES, thirds: true, grid: { ...DEFAULT_LINES.grid, on: true } },
     })
     expect(useSettings.getState().savePreset(preset)).toBe('saved')
     render(<PresetsDialog open onOpenChange={vi.fn()} />)

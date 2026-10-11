@@ -7,7 +7,7 @@
   },
   "skipToPreview": "跳到预览",
   "topBar": {
-    "home": "Artistica首页",
+    "home": "Artistica · 首页",
     "privacy": "照片留在本设备上",
     "export": "导出PDF",
     "exportNoImages": "至少添加一张图片才能导出。",
@@ -72,7 +72,7 @@
   },
   "import": {
     "noImage": "剪贴板中没有图片。先复制一张图片，再粘贴。",
-    "animatedGif": "{{name}}：仅使用第一帧。动图GIF只打印第一帧。",
+    "animatedGif": "“{{name}}”：仅使用第一帧。动图GIF只打印第一帧。",
     "failed": "{{list}}：{{title}}。{{message}}",
     "more_other": "另外{{count, number}}个",
     "unnamed": "这张图片"

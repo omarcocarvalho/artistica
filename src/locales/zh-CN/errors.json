@@ -13,15 +13,15 @@
       "message": "该链接或文件中没有图片。使用JPG、PNG、WebP、GIF或HEIC。"
     },
     "unsupportedFormat": {
-      "title": "无法添加{{name}}",
+      "title": "无法添加“{{name}}”",
       "message": "改用JPG、PNG、WebP、GIF或HEIC。"
     },
     "decodeFailed": {
-      "title": "无法读取{{name}}",
+      "title": "无法读取“{{name}}”",
       "message": "文件可能已损坏。试试重新另存为JPG或PNG。"
     },
     "tooLarge": {
-      "title": "{{name}}太大",
+      "title": "“{{name}}”太大",
       "message": "照片最大为{{maxMb}} MB、{{maxMp}}百万像素。试试较小的版本。"
     }
   },
