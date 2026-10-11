@@ -1,3 +1,4 @@
+import { act, renderHook } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { selectImageDescriptors, useImages } from '../features/images'
 import { buildLayoutItems } from '../features/layout/build-items'
@@ -21,6 +22,7 @@ import {
   setArrangeMode,
   shownManual,
   undoArrange,
+  useArrangeView,
 } from './arrange-controller'
 import { useArrange } from './arrange-store'
 import { useArrangeUi } from './arrange-ui'
@@ -503,5 +505,21 @@ describe('arrangeBlocks in Portuguese (Brazil)', () => {
       `b.jpg, ${f(r.w)} × ${f(r.h)} pol., página 1, ${f(r.x)} pol. da esquerda, ${f(r.y)} pol. do topo.`,
     )
     expect(said()).toMatch(/\d,\d/)
+  })
+})
+
+describe('useArrangeView', () => {
+  afterAll(async () => {
+    await switchLanguage('en')
+  })
+
+  it('renames the blocks when the language changes', async () => {
+    show([loaded('a')])
+    const { result } = renderHook(() => useArrangeView())
+    expect(result.current.blocks[0]?.name).toMatch(/, page 1$/)
+    await act(async () => {
+      await switchLanguage('pt-BR', PT_BR)
+    })
+    expect(result.current.blocks[0]?.name).toMatch(/, página 1$/)
   })
 })

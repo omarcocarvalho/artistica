@@ -235,22 +235,27 @@ test.describe('localisation probes (D3): each finds what it is for before it is 
     expect(guard.violations()).toEqual([])
   })
 
-  test('findUntranslated reports a planted literal, a literal name and a literal in a <Trans> message', async ({
+  test('findUntranslated reports a planted literal, a literal name, a literal in a <Trans> message and a literal joined to a message', async ({
     page,
   }) => {
     await pseudoApp(page)
     await plant(
       page,
       '<p>Hard-coded words</p><button type="button" aria-label="Close it">⟦X⟧</button>' +
-        '<p>⟦Ŝóɱé <strong>ƀóĺď</strong> ŵóŕďš⟧ <em>stray</em></p><input placeholder="Type here">',
+        '<p>⟦Ŝóɱé <strong>ƀóĺď</strong> ŵóŕďš⟧ <em>stray</em></p><input placeholder="Type here">' +
+        '<p>⟦Ŝàʋé⟧ (beta)</p><button type="button" aria-label="⟦Ŝàʋé⟧ now">⟦Ŝàʋé⟧</button>' +
+        '<p>⟦Ŝàʋé ⟦Ńéšţéď⟧⟧ · 12 mm · photo.jpg</p><p>photo.jpg removed</p>',
     )
     const found = await findUntranslated(page)
     expect(found.filter((f) => f.includes('Hard-coded words'))).toHaveLength(1)
     expect(found.filter((f) => f.startsWith('aria-label "Close it"'))).toHaveLength(1)
     expect(found.filter((f) => f.includes('"stray"'))).toHaveLength(1)
     expect(found.filter((f) => f.startsWith('placeholder "Type here"'))).toHaveLength(1)
-    expect(found.filter((f) => f.includes('ƀóĺď'))).toEqual([])
-    expect(found).toHaveLength(4)
+    expect(found.filter((f) => f.includes('(beta)'))).toHaveLength(1)
+    expect(found.filter((f) => f.startsWith('aria-label "⟦Ŝàʋé⟧ now'))).toHaveLength(1)
+    expect(found.filter((f) => f.includes('ƀóĺď') || f.includes('Ńéšţéď'))).toEqual([])
+    expect(found.filter((f) => f.includes('photo.jpg removed'))).toHaveLength(1)
+    expect(found).toHaveLength(7)
   })
 
   test('findUntranslated lets numbers, file names, the app name and endonyms through', async ({

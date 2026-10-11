@@ -49,7 +49,7 @@ export const DEFAULT_ALLOW: readonly RegExp[] = [
   /^[\d.,\s]+\s?(mm|in|MB|KB|px|DPI|%|°)$/u,
   /^(mm|in|MB|px)$/u,
   /^Artistica$/u,
-  /\.(jpe?g|png|webp|gif|heic|heif|avif|json|pdf)\b/iu,
+  /\.(jpe?g|png|webp|gif|heic|heif|avif|json|pdf)$/iu,
   /^A[3-6]$/u,
   /^#[\da-f]{3,8}$/iu,
   new RegExp(`^(${LANGUAGES.map((code) => ENDONYMS[code]).join('|')})$`, 'u'),
@@ -103,9 +103,20 @@ const PROBES = String.raw`(() => {
 
   const untranslated = (allowSources, leak) => {
     const allow = allowSources.map(([source, flags]) => new RegExp(source, flags))
+    const allowed = (text) => !text || allow.some((r) => r.test(text))
+    // The text outside every ⟦…⟧ (nested, or opened or closed in another node) must be allowed:
+    // a literal joined to a translated message in code is untranslated too.
+    const outside = (text) => {
+      let rest = text
+      for (let prev = ''; prev !== rest; ) {
+        prev = rest
+        rest = rest.replace(/⟦[^⟦⟧]*⟧/g, '\u0001')
+      }
+      return rest.replace(/⟦[\s\S]*$/, '\u0001').replace(/^[\s\S]*⟧/, '\u0001').split('\u0001').map(clean)
+    }
     const ok = leak
       ? (text) => !/[⟦⟧]/.test(text)
-      : (text) => !text || text.includes('⟦') || allow.some((r) => r.test(text))
+      : (text) => (/[⟦⟧]/.test(text) ? outside(text).every(allowed) : allowed(text))
     const out = []
     if (!ok(clean(document.title))) out.push('document title: "' + clean(document.title) + '"')
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
@@ -114,7 +125,7 @@ const PROBES = String.raw`(() => {
       const text = clean(n.data)
       if (!text || !el || el.closest('script, style, template, option')) continue
       if (!rendered(el)) continue
-      if (ok(text) || (!leak && bracketed(n))) continue
+      if (ok(text) || (!leak && !/[⟦⟧]/.test(text) && bracketed(n))) continue
       out.push('text "' + text + '" in ' + describe(el))
     }
     for (const el of document.body.querySelectorAll('*')) {
