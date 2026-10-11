@@ -162,7 +162,9 @@ test.describe('the language switcher', () => {
     expect(await savedLanguage(page)).toBe(code)
   })
 
-  test('LANG-S3: keyboard only: Tab to the select, change it, focus stays', async ({ page }) => {
+  test('LANG-S3: keyboard only: Tab to the select, change it, focus stays', async ({
+    page,
+  }, testInfo) => {
     await openApp(page)
     const code = await firstTranslation(page)
     const offered = await offeredLanguages(page)
@@ -170,7 +172,12 @@ test.describe('the language switcher', () => {
     expect(await focusIsOnSelect(page)).toBe(true)
     for (let i = 0; i < offered.indexOf(code); i++) await page.keyboard.press('ArrowDown')
     if ((await languageSelect(page).inputValue()) !== code) {
-      test.info().annotations.push({
+      // Ruling A5-4: on Linux, chromium and firefox change a native select with the arrow keys.
+      expect(
+        process.platform === 'linux' && ['chromium', 'firefox'].includes(testInfo.project.name),
+        'arrow keys must change the select on Linux chromium and firefox',
+      ).toBe(false)
+      testInfo.annotations.push({
         type: 'native picker',
         description: 'arrow keys open the platform picker here, which Playwright cannot drive',
       })
