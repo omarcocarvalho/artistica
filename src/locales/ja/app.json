@@ -1,0 +1,95 @@
+{
+  "title": "Artistica",
+  "documentTitle": "Artisticaアプリ",
+  "language": {
+    "label": "言語",
+    "loadFailed": "この言語を読み込めませんでした。接続を確認して、もう一度お試しください。"
+  },
+  "skipToPreview": "プレビューへスキップ",
+  "topBar": {
+    "home": "Artisticaホーム",
+    "privacy": "写真はデバイスの外に出ません",
+    "export": "PDFを書き出し",
+    "exportNoImages": "書き出すには画像を1枚以上追加してください。",
+    "exportUpdating": "レイアウトを更新しています。まもなく書き出せます。",
+    "exportNoRoom": "書き出せません：今のページ設定では画像を置く場所がありません。",
+    "exportError": "レイアウトを計算できませんでした。設定を変えるか、ページを再読み込みしてください。",
+    "exportGuides": "写真からガイドを検出中…"
+  },
+  "theme": {
+    "changeLabel": "テーマを変更：{{current}}",
+    "auto": "自動",
+    "light": "ライト",
+    "dark": "ダーク"
+  },
+  "panels": {
+    "images": "画像",
+    "settings": "設定",
+    "preview": "ページのプレビュー"
+  },
+  "settingsTabs": {
+    "label": "設定",
+    "page": "ページ",
+    "studies": "スタディ",
+    "lines": "線"
+  },
+  "empty": {
+    "title": "<highlight>資料写真</highlight>を追加しましょう",
+    "body": "ここにドロップするか、貼り付けるか、リンクを追加してください。ページへの配置はおまかせください。",
+    "formats": "JPG、PNG、WebP、GIF、HEIC・枚数の制限なし",
+    "privacy": "何もアップロードされません。写真はこのデバイスの外に出ません。",
+    "panelHint": "画像はまだありません。写真を追加してシートを作りましょう。",
+    "noPages": "ページはまだありません"
+  },
+  "notices": {
+    "dismiss": "閉じる",
+    "region": "通知",
+    "layoutFailed": "レイアウトを計算できませんでした。設定を変えて、もう一度お試しください。"
+  },
+  "mobile": {
+    "steps": "ステップ",
+    "done": "完了",
+    "stepLabel": "ステップ{{current}}/{{total}}：{{name}}",
+    "back": "戻る",
+    "next": "次へ",
+    "names": {
+      "images": "画像",
+      "page": "ページ",
+      "studies": "スタディ",
+      "preview": "プレビュー",
+      "export": "書き出し"
+    },
+    "images": {
+      "tapToEdit": "写真をタップすると、トリミング、回転、枚数の設定ができます。"
+    },
+    "studies": {
+      "picker": "画像"
+    },
+    "lines": {
+      "title": "線",
+      "on": "{{count, number}}件オン"
+    }
+  },
+  "import": {
+    "noImage": "クリップボードに画像がありません。先に画像をコピーしてから、もう一度貼り付けてください。",
+    "animatedGif": "{{name}}：最初のフレームのみです。アニメーションGIFは最初のフレームが印刷されます。",
+    "failed": "{{list}}：{{title}}。{{message}}",
+    "more_other": "ほか{{count, number}}件",
+    "unnamed": "この画像"
+  },
+  "preview": {
+    "editSelected": "選択した画像を編集",
+    "updating": "レイアウトを更新中…",
+    "updated": "レイアウトを更新しました。",
+    "pageCaption": "{{total}}ページ中{{current}}ページ · {{paper}} · {{orientation}}",
+    "pageItems": "{{current}}ページ目の内容",
+    "item": "{{name}}、{{w}} × {{h}} {{unit}}",
+    "unnamedImage": "画像",
+    "orientation": {
+      "portrait": "縦",
+      "landscape": "横"
+    },
+    "itemVersion": "{{name}}、{{version}}、{{w}} × {{h}} {{unit}}",
+    "itemLines": "{{item}}、線：{{list}}"
+  }
+}

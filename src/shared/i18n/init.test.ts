@@ -3,7 +3,7 @@ import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
 import { initI18n } from './init'
 import { ENDONYMS, LANGUAGES, NAMESPACES, OG_LOCALES, PSEUDO_LANGUAGE } from './languages'
-import { setAppLanguage, setPseudoLanguage } from './load'
+import { availableLanguages, setAppLanguage, setPseudoLanguage } from './load'
 import { pseudoLocalize } from './pseudo'
 
 describe('initI18n', () => {
@@ -22,11 +22,15 @@ describe('initI18n', () => {
     expect(b).toBe(i18next)
   })
 
-  it('keeps English when the resolved language has no strings to load', async () => {
-    const i18n = await initI18n({ language: 'ja' })
-    expect(i18n.language).toBe('en')
-    expect(i18n.t('common:actions.close')).toBe('Close')
-  })
+  const withoutStrings = LANGUAGES.find((code) => !availableLanguages().includes(code))
+  it.runIf(withoutStrings)(
+    'keeps English when the resolved language has no strings to load',
+    async () => {
+      const i18n = await initI18n({ language: withoutStrings })
+      expect(i18n.language).toBe('en')
+      expect(i18n.t('common:actions.close')).toBe('Close')
+    },
+  )
 
   it('falls back to English for a language that is not supported at all', async () => {
     const i18n = await initI18n({ language: 'en' })

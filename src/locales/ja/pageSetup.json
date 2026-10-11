@@ -1,0 +1,55 @@
+{
+  "title": "ページ",
+  "paper": {
+    "heading": "用紙",
+    "size": "用紙サイズ",
+    "custom": "カスタム…",
+    "name": {
+      "letter": "レター",
+      "legal": "リーガル",
+      "tabloid": "タブロイド",
+      "custom": "カスタム"
+    },
+    "dims": "{{w}} × {{h}} {{unit}}",
+    "times": "×",
+    "width": "幅",
+    "height": "高さ",
+    "units": "単位",
+    "unitMm": "mm",
+    "unitIn": "インチ"
+  },
+  "noRoom": "このページ設定では画像を置く場所がありません。余白、画像の間隔、塗り足し、トンボを減らすか、大きい用紙を選んでください。",
+  "orientation": {
+    "label": "向き",
+    "auto": "自動",
+    "portrait": "縦",
+    "landscape": "横",
+    "autoPicked": "自動で{{orientation}}を選びました：ページ数が少なくなります。",
+    "resolved": { "portrait": "縦", "landscape": "横" }
+  },
+  "spacing": {
+    "heading": "間隔",
+    "safeArea": "余白",
+    "safeAreaHint": "ページの端に残す白い縁です。最小{{min}}。",
+    "gutter": "画像の間隔",
+    "gutterSize": "間隔のサイズ",
+    "gutterHint": "画像の間を切るためのスペースです。"
+  },
+  "cutting": {
+    "heading": "裁断",
+    "cropMarks": "トンボ",
+    "bleed": "塗り足し",
+    "bleedAmount": "塗り足しの幅",
+    "bleedHint": "端のピクセルを仕上がり線の外まで伸ばすので、裁断が少しずれても白い筋が残りません。"
+  },
+  "notes": {
+    "gutterEnabledForBleed": "画像の間隔をオンにしました。塗り足しには、塗り足しの2倍以上の間隔が必要です。",
+    "gutterRaisedForBleed": "画像の間隔を{{gutter}}に広げました。塗り足しには、塗り足しの2倍以上の間隔が必要です。",
+    "safeAreaRaisedToMinimum": "余白を最小値の{{min}}に広げました。"
+  },
+  "suggestion": {
+    "tip": "ヒント！",
+    "text_other": "{{paper}}なら、1ページに資料写真{{count, number}}枚がゆったり収まります。"
+  },
+  "remembered": "設定はこのデバイスに保存されます。"
+}

@@ -1,0 +1,153 @@
+{
+  "dropzone": {
+    "groupLabel": "画像を追加",
+    "title": "資料写真を追加しましょう",
+    "hint": "ここにドロップするか、貼り付けるか、リンクを追加してください。ページへの配置はおまかせください。",
+    "formats": "JPG、PNG、WebP、GIF、HEIC・枚数の制限なし",
+    "privacy": "何もアップロードされません。写真はこのデバイスの外に出ません。",
+    "dropMini": "または写真をここにドロップ",
+    "dropActive": "ドロップして写真を追加",
+    "upload": "ファイル",
+    "uploadHero": "写真を追加",
+    "paste": "貼り付け",
+    "link": "リンク",
+    "linkHero": "リンクを追加",
+    "importing_other": "写真を{{count, number}}枚追加中…",
+    "importingLabel": "写真を追加中",
+    "cancel": "キャンセル",
+    "cancelLabel": "写真の追加をキャンセル",
+    "stopped": "写真の追加を中止しました。",
+    "dismiss": "閉じる",
+    "noImage": {
+      "title": "クリップボードに画像がありません",
+      "message": "先に画像をコピーしてから、もう一度貼り付けてください。"
+    },
+    "noImageDrop": {
+      "title": "ドロップしたものに画像がありません",
+      "message": "写真ファイルか、ほかのページの画像をドロップしてください。"
+    },
+    "pasteHint": {
+      "title": "キーボードで貼り付け",
+      "message": "ここではキーボードを使う必要があります。Ctrl+V（Macでは⌘V）を押してください。"
+    },
+    "url": {
+      "title": "リンクから画像を追加",
+      "label": "画像のリンク",
+      "placeholder": "https://example.com/photo.jpg",
+      "submit": "追加",
+      "cancel": "キャンセル",
+      "tryAnother": "別のリンクを試す",
+      "uploadInstead": "ファイルから追加"
+    },
+    "gifNote": "アニメーションGIFは最初のフレームが印刷されます。"
+  },
+  "list": {
+    "ariaLabel": "読み込んだ画像",
+    "empty": {
+      "title": "画像はまだありません。写真を追加してシートを作りましょう。",
+      "formats": "JPG、PNG、WebP、GIF、HEIC"
+    },
+    "select": "{{name}}を選択",
+    "edit": "{{name}}を編集",
+    "remove": "{{name}}を削除",
+    "pixels": "{{w}} × {{h}}",
+    "pixelsLabel": "幅{{w}}、高さ{{h}}ピクセル",
+    "sizeAuto": "自動",
+    "sizeFixed": "固定{{size}}",
+    "copies": "×{{count, number}}",
+    "copiesLabel": "{{count, number}}枚印刷",
+    "dpi": "{{dpi}} DPI",
+    "lowDpiLabel": "低解像度：{{dpi}} DPI",
+    "separator": "·",
+    "count_other": "{{count, number}}枚",
+    "removeAll": {
+      "button": "すべての画像を削除",
+      "confirmTitle": "すべての画像を削除しますか？",
+      "confirmBody_other": "このセッションから{{count, number}}枚の画像をすべて削除します。写真はどこにも保存されていないため、元に戻せません。",
+      "confirm": "すべて削除",
+      "cancel": "キャンセル",
+      "close": "閉じる"
+    }
+  },
+  "editSheet": {
+    "title": "画像を編集",
+    "subtitle": "{{name}} · {{w}} × {{h}} px",
+    "crop": {
+      "stageLabel": "画像のプレビュー",
+      "areaLabel": "トリミング範囲",
+      "help": "矢印キーでトリミング範囲を移動します。Shiftと矢印キーでサイズを変更します。",
+      "status": "トリミング{{w}} × {{h}} px（位置{{x}}, {{y}}）",
+      "annotation": "角をドラッグ",
+      "controls": "トリミングの位置とサイズ",
+      "position": "位置",
+      "size": "サイズ",
+      "step": {
+        "left": "左へ移動",
+        "up": "上へ移動",
+        "down": "下へ移動",
+        "right": "右へ移動",
+        "narrower": "幅を狭く",
+        "wider": "幅を広く",
+        "shorter": "高さを低く",
+        "taller": "高さを高く"
+      },
+      "shape": "トリミングの形",
+      "reset": "トリミングをリセット"
+    },
+    "aspect": {
+      "free": "自由",
+      "original": "元の比率",
+      "ratio11": "1:1",
+      "ratio43": "4:3",
+      "ratio32": "3:2",
+      "ratio169": "16:9",
+      "ratio34": "3:4",
+      "ratio23": "2:3",
+      "ratio916": "9:16"
+    },
+    "transform": {
+      "group": "回転と反転",
+      "rotateLeft": "左に90°回転",
+      "rotateRight": "右に90°回転",
+      "flipH": "左右反転",
+      "flipV": "上下反転"
+    },
+    "copies": {
+      "label": "枚数",
+      "less": "枚数を減らす",
+      "more": "枚数を増やす",
+      "lessGlyph": "−",
+      "moreGlyph": "+",
+      "hint": "この画像を複数枚印刷します。"
+    },
+    "size": {
+      "label": "印刷サイズ",
+      "auto": "自動",
+      "fixed": "固定",
+      "autoHint": "自動では、{{size}}から300 DPIの上限までの間でサイズを選びます。",
+      "axisLabel": "指定",
+      "width": "幅",
+      "height": "高さ",
+      "valueLabel": "サイズ",
+      "followsHeight": "高さは自動：{{value}}（縦横比を維持）",
+      "followsWidth": "幅は自動：{{value}}（縦横比を維持）"
+    },
+    "dpi": {
+      "label": "印刷解像度",
+      "value": "{{dpi}} DPI",
+      "scale0": "0",
+      "scale300": "300",
+      "scale400": "400",
+      "autoOk": "自動では300 DPIを超える解像度で印刷しません。",
+      "lowTitle": "低解像度",
+      "lowFixed": "300 DPI未満では、ぼやけて印刷される場合があります。{{w}} × {{h}} {{unit}}までならシャープです。",
+      "lowAuto": "無理のない最小サイズ（{{size}}）でも{{dpi}} DPIで印刷されます。ぼやけて見える場合があります。"
+    },
+    "actions": {
+      "close": "閉じる",
+      "remove": "画像を削除",
+      "cancel": "キャンセル",
+      "done": "完了"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "app": {
+    "comingSoon": "ワークスペースはまもなく公開されます。"
+  },
+  "actions": {
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "ok": "OK"
+  },
+  "joinSentences": "{{a}}{{b}}",
+  "theme": {
+    "auto": "自動",
+    "light": "ライト",
+    "dark": "ダーク"
+  }
+}

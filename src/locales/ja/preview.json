@@ -1,0 +1,74 @@
+{
+  "tile": {
+    "fallbackName": "画像{{n}}",
+    "versionName": "{{name}}、{{version}}",
+    "lowDpi": "{{dpi}} DPI",
+    "lowDpiLabel": "低解像度：{{dpi}} DPI",
+    "scaledToFit": "縮小して配置",
+    "scaledToFitLabel": "ページに収まるよう縮小しました"
+  },
+  "guides": {
+    "label": "ガイド",
+    "legend": {
+      "label": "凡例",
+      "safe": "余白",
+      "bleed": "塗り足し",
+      "cut": "仕上がり線",
+      "mark": "トンボ"
+    }
+  },
+  "arrange": {
+    "dropped": {
+      "paper": "用紙が変わったため、写真を自動で配置し直しました。",
+      "noLongerFits": "手動の配置が新しい余白に収まらなくなったため、写真を自動で配置し直しました。"
+    },
+    "toggle": "配置",
+    "barLabel": "写真を配置",
+    "photoOptions": "写真のオプション",
+    "sheetSummary": "{{w}} × {{h}} {{unit}}、{{total}}ページ中{{page}}ページ",
+    "undo": "元に戻す",
+    "rerun": "自動レイアウトをやり直す",
+    "rerunConfirm": "自動レイアウトをやり直しますか？移動とサイズの変更は失われます。",
+    "rerunAction": "やり直す",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "selectedGroup": "選択した写真：{{name}}",
+    "moveToPage": "ページへ移動",
+    "pageOption": "{{page}}ページ",
+    "newPage": "新しいページ",
+    "swapWith": "入れ替え…",
+    "swapChoose": "写真を選択",
+    "swapOption": "{{name}}、{{page}}ページ",
+    "width": "幅",
+    "position": "位置",
+    "moveLeft": "左へ移動",
+    "moveUp": "上へ移動",
+    "moveDown": "下へ移動",
+    "moveRight": "右へ移動",
+    "roleDescription": "移動できる写真",
+    "blockName": "{{name}}、{{w}} × {{h}} {{unit}}、{{page}}ページ",
+    "instructions": "矢印キーで移動、Shiftと矢印キーでサイズ変更、Page UpとPage Downで別のページへ移動、Enterで別の写真と入れ替えます。",
+    "fixedHint": "固定サイズです：編集で変更してください。",
+    "chip": {
+      "pickedUp": "持ち上げ中",
+      "swap": "入れ替え",
+      "invalid": "配置できません"
+    },
+    "placed": "{{name}}、{{w}} × {{h}} {{unit}}、{{page}}ページ、左から{{x}} {{unit}}、上から{{y}} {{unit}}。",
+    "pickedUp": "{{name}}を持ち上げました。別の写真に移動してEnterを押すと入れ替え、Escapeでキャンセルします。",
+    "pickUpCancelled": "入れ替えをキャンセルしました。",
+    "undone": "元に戻しました。",
+    "rerunDone": "写真を自動で配置しました。",
+    "refused": {
+      "overlap": "そこには置けません：ほかの写真と重なります。",
+      "outside": "そこには置けません：余白からはみ出します。",
+      "noRoomOnPage": "そこには置けません：そのページに空きがありません。",
+      "firstPage": "すでに最初のページにあります。",
+      "blocked": "これ以上動かせません：ほかの写真か余白があります。",
+      "min": "これ以上小さくできません。",
+      "grow": "これ以上大きくできません：ほかの写真か余白があります。",
+      "fixed": "固定サイズです：編集で変更してください。",
+      "swap": "入れ替えられません：写真が相手の場所に収まりません。"
+    }
+  }
+}

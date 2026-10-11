@@ -1,0 +1,43 @@
+{
+  "title": "PDFを書き出し",
+  "close": "閉じる",
+  "summary": {
+    "pages": "ページ",
+    "pagesValue": "{{pages}} · {{paper}}{{orientation}}",
+    "orientation": {
+      "portrait": "縦",
+      "landscape": "横"
+    },
+    "tiles": "枠",
+    "tilesValue_other": "{{tiles}}枠（画像{{count, number}}枚から）",
+    "cropMarks": "トンボ",
+    "bleed": "塗り足し",
+    "on": "オン",
+    "off": "オフ",
+    "quality": "品質",
+    "qualityValue": "300 DPI、拡大なし"
+  },
+  "fileName": "ファイル名",
+  "create": "PDFを作成",
+  "retry": "もう一度試す",
+  "cancel": "キャンセル",
+  "progress": {
+    "label": "{{total}}ページ中{{page}}ページ…",
+    "aria": "PDFの進行状況",
+    "page": "{{n}}ページ",
+    "state": {
+      "todo": "待機中",
+      "active": "処理中",
+      "done": "完了"
+    },
+    "hint": "メモリを節約するため、1ページずつ処理します。このタブを開いたままにしてください。"
+  },
+  "done": {
+    "title": "PDFの準備ができました",
+    "yay": "やったね！",
+    "download": "PDFをダウンロード",
+    "printTitle": "100%で印刷",
+    "printBody": "サイズが正確に保たれるよう、「ページに合わせる」ではなく「実際のサイズ」を選んでください。",
+    "again": "もう一度作成"
+  }
+}
