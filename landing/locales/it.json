@@ -9,7 +9,7 @@
     "imageAlt": "Artistica: foto di riferimento disposte su fogli stampabili"
   },
   "structured": {
-    "description": "Trasforma le foto di riferimento in fogli pronti da stampare con segni di taglio e abbondanza, studi di sfocatura e dei valori tonali, e linee di composizione. Funziona interamente nel tuo browser.",
+    "description": "Trasforma le foto di riferimento in fogli pronti da stampare con segni di taglio e abbondanza, studi di sfocatura e dei valori tonali, e linee di composizione. Tutto viene eseguito nel tuo browser.",
     "operatingSystem": "Qualsiasi (browser web)",
     "browserRequirements": "Richiede JavaScript. Ultima versione di Chrome, Edge, Firefox o Safari."
   },
@@ -94,13 +94,13 @@
   "privacy": {
     "title": "Le tue foto restano con te",
     "claims": {
-      "inBrowser": "Tutto funziona nel tuo browser. Non viene caricato nulla.",
+      "inBrowser": "Tutto viene eseguito nel tuo browser. Non viene caricato nulla.",
       "notSaved": "Le foto non vengono mai salvate. Ricaricare la pagina le cancella.",
       "settingsOnly": "Vengono conservati solo le tue impostazioni e i tuoi preset, su questo dispositivo.",
       "models": "I modelli di volto e posa si scaricano da questo sito solo quando lo chiedi, e restano nel tuo browser per l'uso offline.",
       "noTracking": "Nessun account e nessun tracciamento.",
       "heroNeverLeave": "Le foto non lasciano mai il tuo dispositivo",
-      "faqUploaded": "No. Tutto funziona nel tuo browser. Le foto non vengono mai caricate né salvate, e ricaricare la pagina le cancella.",
+      "faqUploaded": "No. Tutto viene eseguito nel tuo browser. Le foto non vengono mai caricate né salvate, e ricaricare la pagina le cancella.",
       "faqGuides": "Le guide di volto e posa usano i modelli MediaPipe di Google, scaricati da questo sito ed eseguiti sul tuo dispositivo.",
       "faqOffline": "Sì, dopo la tua prima visita all'app. Le guide di volto e posa funzionano offline dopo il loro download una tantum."
     }

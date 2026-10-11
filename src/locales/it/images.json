@@ -65,7 +65,7 @@
     "count_many": "{{count, number}} di immagini",
     "count_other": "{{count, number}} immagini",
     "removeAll": {
-      "button": "Rimuovi tutte le immagini",
+      "button": "Rimuovi tutte",
       "confirmTitle": "Rimuovere tutte le immagini?",
       "confirmBody_one": "Rimuove {{count, number}} immagine da questa sessione. Le foto non sono salvate da nessuna parte, quindi non si possono recuperare.",
       "confirmBody_many": "Rimuove tutte le {{count, number}} di immagini da questa sessione. Le foto non sono salvate da nessuna parte, quindi non si possono recuperare.",
