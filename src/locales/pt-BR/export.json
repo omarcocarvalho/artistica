@@ -9,15 +9,15 @@
       "landscape": "paisagem"
     },
     "tiles": "Quadros",
-    "tilesValue_one": "{{tiles}} de {{count, number}} imagem",
-    "tilesValue_many": "{{tiles}} de {{count, number}} de imagens",
-    "tilesValue_other": "{{tiles}} de {{count, number}} imagens",
+    "tilesValue_one": "{{tiles}} a partir de {{count, number}} imagem",
+    "tilesValue_many": "{{tiles}} a partir de {{count, number}} de imagens",
+    "tilesValue_other": "{{tiles}} a partir de {{count, number}} imagens",
     "cropMarks": "Marcas de corte",
     "bleed": "Sangria",
     "on": "Sim",
     "off": "Não",
     "quality": "Qualidade",
-    "qualityValue": "300 DPI, nunca ampliada"
+    "qualityValue": "300 DPI, sem ampliação"
   },
   "fileName": "Nome do arquivo",
   "create": "Criar PDF",

@@ -251,9 +251,9 @@ describe('plural forms in Portuguese (Brazil)', () => {
     const tiles = (count: number) =>
       i18next.getFixedT('pt-BR')('export:summary.tilesValue', { count, tiles: 3 })
     expect([tiles(1), tiles(2), tiles(1_000_000)]).toEqual([
-      '3 de 1 imagem',
-      '3 de 2 imagens',
-      '3 de 1.000.000 de imagens',
+      '3 a partir de 1 imagem',
+      '3 a partir de 2 imagens',
+      '3 a partir de 1.000.000 de imagens',
     ])
   })
 })
