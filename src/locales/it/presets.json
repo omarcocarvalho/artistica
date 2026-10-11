@@ -1,0 +1,106 @@
+{
+  "button": "Preset",
+  "title": "Preset",
+  "close": "Chiudi",
+  "empty": "Salva l'impostazione della pagina, gli studi e le linee con un nome, poi applicali in un colpo solo.",
+  "listLabel": "Preset salvati",
+  "storageFailed": "Non conservato su questo dispositivo: lo spazio di archiviazione del browser è pieno o bloccato. La modifica dura finché non ricarichi o chiudi la pagina.",
+  "save": {
+    "open": "Salva le impostazioni attuali…",
+    "name": "Nome del preset",
+    "submit": "Salva",
+    "cancel": "Annulla",
+    "needName": "Dai un nome al preset.",
+    "tooLong": "Usa al massimo {{max}} caratteri.",
+    "exists": "Esiste già un preset con questo nome.",
+    "replace": "Sostituiscilo",
+    "full": "Hai {{max}} preset, il massimo che questo dispositivo conserva. Eliminane uno per salvarne un altro.",
+    "saved": "{{name}} salvato.",
+    "replaced": "{{name}} sostituito."
+  },
+  "row": {
+    "apply": "Applica",
+    "applyLabel": "Applica {{name}}",
+    "rename": "Rinomina",
+    "renameLabel": "Rinomina {{name}}",
+    "delete": "Elimina",
+    "deleteLabel": "Elimina {{name}}"
+  },
+  "rename": {
+    "label": "Nuovo nome per {{name}}",
+    "submit": "Salva",
+    "cancel": "Annulla",
+    "renamed": "{{from}} rinominato in {{to}}."
+  },
+  "apply": {
+    "confirmTitle": "Applicare «{{name}}»?",
+    "confirmBodySingle": "Imposta la pagina, gli studi e le linee della tua foto.",
+    "confirmBody_one": "Imposta la pagina, gli studi e le linee di {{count, number}} foto.",
+    "confirmBody_many": "Imposta la pagina, gli studi e le linee di tutte le {{count, number}} di foto.",
+    "confirmBody_other": "Imposta la pagina, gli studi e le linee di tutte le {{count, number}} foto.",
+    "confirm": "Applica",
+    "cancel": "Annulla",
+    "applied": "{{name}} applicato.",
+    "waiting": "In attesa che finisca l'aggiunta delle foto…"
+  },
+  "delete": {
+    "confirmTitle": "Eliminare «{{name}}»?",
+    "confirm": "Elimina",
+    "cancel": "Annulla",
+    "deleted": "{{name}} eliminato."
+  },
+  "export": {
+    "button": "Esporta tutti"
+  },
+  "import": {
+    "button": "Importa…",
+    "file": "File dei preset",
+    "imported_one": "Importato {{count, number}} preset.",
+    "imported_many": "Importati {{count, number}} di preset.",
+    "imported_other": "Importati {{count, number}} preset.",
+    "renamed_one": "{{count, number}} rinominato: {{list}}.",
+    "renamed_many": "{{count, number}} rinominati: {{list}}.",
+    "renamed_other": "{{count, number}} rinominati: {{list}}.",
+    "renamedPair": "{{from}} → {{to}}",
+    "skipped_one": "{{count, number}} ignorato perché non valido.",
+    "skipped_many": "{{count, number}} ignorati perché non validi.",
+    "skipped_other": "{{count, number}} ignorati perché non validi.",
+    "full_one": "{{count, number}} non aggiunto: questo dispositivo conserva al massimo {{max}} preset.",
+    "full_many": "{{count, number}} non aggiunti: questo dispositivo conserva al massimo {{max}} preset.",
+    "full_other": "{{count, number}} non aggiunti: questo dispositivo conserva al massimo {{max}} preset.",
+    "adjusted_one": "{{count, number}} preset aveva un valore fuori intervallo, che è stato corretto.",
+    "adjusted_many": "{{count, number}} di preset avevano valori fuori intervallo, che sono stati corretti.",
+    "adjusted_other": "{{count, number}} preset avevano valori fuori intervallo, che sono stati corretti.",
+    "error": {
+      "tooLarge": "Questo file è troppo grande per essere un file di preset.",
+      "notPresets": "Questo file non è un file di preset di Artistica.",
+      "newerVersion": "Questo file è stato creato da una versione più recente di Artistica. Aggiorna la pagina e riprova.",
+      "empty": "Nessun preset trovato in questo file."
+    }
+  },
+  "summary": {
+    "separator": " · ",
+    "plus": " + ",
+    "custom": "Personalizzato {{w}} × {{h}} {{unit}}",
+    "orientation": {
+      "auto": "Automatico",
+      "portrait": "Verticale",
+      "landscape": "Orizzontale"
+    },
+    "bleed": "abbondanza {{size}}",
+    "version": {
+      "original": "originale",
+      "blurred": "sfocata {{value}}",
+      "values": "valori {{count, number}}",
+      "blurValues": "valori sfocati {{count, number}}"
+    },
+    "line": {
+      "grid": "griglia",
+      "thirds": "terzi",
+      "armature": "armatura",
+      "golden": "sezione aurea",
+      "spiral": "spirale",
+      "centre": "linee centrali"
+    }
+  }
+}

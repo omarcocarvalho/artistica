@@ -1,0 +1,45 @@
+{
+  "title": "Esporta PDF",
+  "close": "Chiudi",
+  "summary": {
+    "pages": "Pagine",
+    "pagesValue": "{{pages}} · {{paper}} {{orientation}}",
+    "orientation": {
+      "portrait": "verticale",
+      "landscape": "orizzontale"
+    },
+    "tiles": "Riquadri",
+    "tilesValue_one": "{{tiles}} da {{count, number}} immagine",
+    "tilesValue_many": "{{tiles}} da {{count, number}} di immagini",
+    "tilesValue_other": "{{tiles}} da {{count, number}} immagini",
+    "cropMarks": "Segni di taglio",
+    "bleed": "Abbondanza",
+    "on": "Sì",
+    "off": "No",
+    "quality": "Qualità",
+    "qualityValue": "300 DPI, mai ingrandite"
+  },
+  "fileName": "Nome del file",
+  "create": "Crea PDF",
+  "retry": "Riprova",
+  "cancel": "Annulla",
+  "progress": {
+    "label": "Pagina {{page}} di {{total}}…",
+    "aria": "Avanzamento del PDF",
+    "page": "Pagina {{n}}",
+    "state": {
+      "todo": "in attesa",
+      "active": "in corso",
+      "done": "completata"
+    },
+    "hint": "Una pagina alla volta, per risparmiare memoria. Tieni aperta questa scheda."
+  },
+  "done": {
+    "title": "Il tuo PDF è pronto",
+    "yay": "evviva!",
+    "download": "Scarica PDF",
+    "printTitle": "Stampa al 100%",
+    "printBody": "Scegli «Dimensioni effettive», non «Adatta alla pagina», così le misure restano esatte.",
+    "again": "Creane un altro"
+  }
+}

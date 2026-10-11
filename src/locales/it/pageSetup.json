@@ -1,0 +1,57 @@
+{
+  "title": "Pagina",
+  "paper": {
+    "heading": "Carta",
+    "size": "Formato carta",
+    "custom": "Personalizzato…",
+    "name": {
+      "letter": "Lettera",
+      "legal": "Legale",
+      "tabloid": "Tabloid",
+      "custom": "Personalizzato"
+    },
+    "dims": "{{w}} × {{h}} {{unit}}",
+    "times": "×",
+    "width": "Larghezza",
+    "height": "Altezza",
+    "units": "Unità",
+    "unitMm": "mm",
+    "unitIn": "pollici"
+  },
+  "noRoom": "Questa impostazione della pagina non lascia spazio per le immagini. Riduci il margine di sicurezza, lo spazio tra le immagini, l'abbondanza o i segni di taglio, oppure scegli una carta più grande.",
+  "orientation": {
+    "label": "Orientamento",
+    "auto": "Automatico",
+    "portrait": "Verticale",
+    "landscape": "Orizzontale",
+    "autoPicked": "Scelta automatica: {{orientation}}, per avere meno pagine.",
+    "resolved": { "portrait": "verticale", "landscape": "orizzontale" }
+  },
+  "spacing": {
+    "heading": "Spaziatura",
+    "safeArea": "Margine di sicurezza",
+    "safeAreaHint": "Bordo vuoto lungo il margine della pagina. Minimo {{min}}.",
+    "gutter": "Spazio tra le immagini",
+    "gutterSize": "Larghezza dello spazio",
+    "gutterHint": "Spazio per tagliare tra un'immagine e l'altra."
+  },
+  "cutting": {
+    "heading": "Taglio",
+    "cropMarks": "Segni di taglio",
+    "bleed": "Abbondanza",
+    "bleedAmount": "Misura dell'abbondanza",
+    "bleedHint": "Estende i pixel del bordo oltre la linea di taglio, così un taglio un po' impreciso non lascia una striscia bianca."
+  },
+  "notes": {
+    "gutterEnabledForBleed": "Spazio tra le immagini attivato. L'abbondanza richiede uno spazio di almeno 2 × l'abbondanza.",
+    "gutterRaisedForBleed": "Spazio tra le immagini portato a {{gutter}}. L'abbondanza richiede uno spazio di almeno 2 × l'abbondanza.",
+    "safeAreaRaisedToMinimum": "Margine di sicurezza portato a {{min}}, il minimo."
+  },
+  "suggestion": {
+    "tip": "consiglio!",
+    "text_one": "{{paper}} contiene comodamente {{count, number}} riferimento per pagina.",
+    "text_many": "{{paper}} contiene comodamente {{count, number}} di riferimenti per pagina.",
+    "text_other": "{{paper}} contiene comodamente {{count, number}} riferimenti per pagina."
+  },
+  "remembered": "Le impostazioni vengono ricordate su questo dispositivo."
+}
