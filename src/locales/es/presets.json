@@ -4,7 +4,7 @@
   "close": "Cerrar",
   "empty": "Guarda tu configuración de página, tus estudios y tus líneas con un nombre, y luego aplícalos de una sola vez.",
   "listLabel": "Preajustes guardados",
-  "storageFailed": "No se guarda en este dispositivo: el almacenamiento del navegador está lleno o bloqueado. El cambio dura hasta que vuelvas a cargar o cierres la página.",
+  "storageFailed": "No se guardó en este dispositivo: el almacenamiento del navegador está lleno o bloqueado. El cambio dura hasta que vuelvas a cargar o cierres la página.",
   "save": {
     "open": "Guardar la configuración actual…",
     "name": "Nombre del preajuste",
