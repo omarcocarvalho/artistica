@@ -144,6 +144,15 @@ const LATIN_FAMILY = {
 const ROLES = Object.keys(LATIN_FAMILY) as (keyof typeof LATIN_FAMILY)[]
 const CJK_LANGUAGES = Object.keys(CJK_FONTS) as CjkLanguage[]
 
+/** The local-only face that draws Chinese curly quotes from a Chinese font (Latin fonts draw them narrow). */
+const QUOTES = '"Artistica Quotes"'
+const QUOTE_RANGE = 'U+2018-2019, U+201C-201D'
+const lead = (lng: string): string[] => (lng === 'zh-CN' ? [QUOTES] : [])
+const fontFaces = [tokensCss, baseCss, ...controlsCss]
+  .flatMap(rules)
+  .filter((r) => r.selector === '@font-face')
+  .map((r) => declarations(r.body))
+
 describe('CJK fonts per language (M6-R17)', () => {
   it('covers every CJK language the app ships', () => {
     expect(LANGUAGES.filter((l) => /^(ja|ko|zh)/.test(l)).sort()).toEqual([...CJK_LANGUAGES].sort())
@@ -167,9 +176,10 @@ describe('CJK fonts per language (M6-R17)', () => {
     (lng) => {
       for (const role of ROLES) {
         const families = stack(role, lng)
-        expect(families[0], `${lng} ${role}`).toBe(LATIN_FAMILY[role])
+        expect(families.slice(0, lead(lng).length), `${lng} ${role}`).toEqual(lead(lng))
+        expect(families[lead(lng).length], `${lng} ${role}`).toBe(LATIN_FAMILY[role])
         expect(cjkOnly(families), `${lng} ${role}`).toEqual(CJK_FONTS[lng])
-        const latin = families.slice(0, families.indexOf(CJK_FONTS[lng][0]))
+        const latin = families.slice(lead(lng).length, families.indexOf(CJK_FONTS[lng][0]))
         expect(cjkOnly(latin), `${lng} ${role}`).toEqual([])
         expect(
           latin.every((f) => splitList(sharedStacks.get(role) ?? '').includes(f)),
@@ -216,18 +226,45 @@ describe('CJK fonts per language (M6-R17)', () => {
     expect(declarations(rule?.body ?? '').get('font-family')).toBe('var(--font-ui)')
   })
 
-  it('adds no font file', () => {
-    for (const css of [tokensCss, baseCss, ...controlsCss]) expect(css).not.toContain('@font-face')
+  it('adds no font file: its only faces are local fonts, for the quote marks alone', () => {
+    expect(fontFaces.length).toBeGreaterThan(0)
+    for (const face of fontFaces) {
+      expect(face.get('font-family')).toBe(QUOTES)
+      expect(face.get('unicode-range')).toBe(QUOTE_RANGE)
+      const sources = splitList(face.get('src') ?? '')
+      expect(sources.length).toBeGreaterThan(2)
+      for (const source of sources) expect(source).toMatch(/^local\("[^"]+"\)$/)
+      expect(face.get('src')).not.toMatch(/url\(/)
+    }
+  })
+
+  it('zh-CN draws curly quotes from a Chinese font before the Latin family takes them', () => {
+    for (const role of ROLES) expect(stack(role, 'zh-CN')[0], role).toBe(QUOTES)
+    for (const lng of LANGUAGES.filter((l) => l !== 'zh-CN'))
+      for (const role of ROLES) expect(stack(role, lng), `${lng} ${role}`).not.toContain(QUOTES)
+    const sources = fontFaces.flatMap((face) => splitList(face.get('src') ?? ''))
+    for (const font of ['PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC'])
+      expect(
+        sources.some((source) => source.includes(font)),
+        font,
+      ).toBe(true)
+    const chinese =
+      /^local\("(PingFang ?SC|Hiragino ?Sans ?GB|Microsoft ?YaHei|Noto ?Sans ?(CJK ?)?SC)/i
+    for (const source of sources) expect(source).toMatch(chinese)
+  })
+
+  it('zh-CN asks for the full-width quote glyphs (PingFang SC draws them proportional by default)', () => {
+    expect(forLanguage('zh-CN').get('font-variant-east-asian')).toBe('full-width')
+    for (const lng of LANGUAGES.filter((l) => l !== 'zh-CN'))
+      expect(forLanguage(lng).get('font-variant-east-asian'), lng).toBeUndefined()
   })
 })
 
 describe('CJK line breaking (M6-R18)', () => {
   it('ja and zh-CN set line-break: strict; ko sets word-break: keep-all; each sets overflow-wrap: anywhere and font-synthesis: none', () => {
-    for (const lng of ['ja', 'zh-CN']) {
-      const d = forLanguage(lng)
-      expect(d.get('line-break'), lng).toBe('strict')
-      expect(d.get('word-break'), lng).toBe('normal')
-    }
+    for (const lng of ['ja', 'zh-CN'])
+      expect(forLanguage(lng).get('line-break'), lng).toBe('strict')
+    expect(forLanguage('zh-CN').get('word-break')).toBe('normal')
     expect(forLanguage('ko').get('word-break')).toBe('keep-all')
     expect(forLanguage('ko').get('line-break')).toBeUndefined()
     for (const lng of CJK_LANGUAGES) {
@@ -244,15 +281,16 @@ describe('CJK line breaking (M6-R18)', () => {
     }
   })
 
-  it('Japanese headings and buttons break at phrases where the browser can', () => {
-    const rule = allRules.find(
-      (r) =>
-        r.selector.includes(':lang(ja)') &&
-        declarations(r.body).get('word-break') === 'auto-phrase',
-    )
-    expect(rule?.selector).toMatch(/h1/)
-    expect(rule?.selector).toMatch(/\.ds-btn/)
-    expect(rule?.selector).not.toMatch(/zh|ko/)
+  it('Japanese text, hints and notices included, breaks at phrases where the browser can', () => {
+    expect(forLanguage('ja').get('word-break')).toBe('auto-phrase')
+    const rules = allRules.filter((r) => declarations(r.body).get('word-break') === 'auto-phrase')
+    for (const rule of rules) expect(rule.selector).not.toMatch(/zh|ko/)
+  })
+
+  it('hint and notice paragraphs avoid a lone word or character on their last line', () => {
+    const pretty = allRules.filter((r) => declarations(r.body).get('text-wrap') === 'pretty')
+    const selectors = pretty.flatMap((r) => splitList(r.selector.replace(/^:where\((.*)\)$/, '$1')))
+    expect(selectors).toEqual(expect.arrayContaining(['p', '.ds-note__body']))
   })
 
   it('never hyphenates automatically', () => {

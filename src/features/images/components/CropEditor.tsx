@@ -195,7 +195,7 @@ export function CropEditor({ bitmap, pxW, pxH, crop, ratio, view, onChange }: Cr
       <span id={labelId} className="text-ink text-sm font-semibold">
         {label}
       </span>
-      <div role="group" aria-labelledby={labelId} className="flex gap-1">
+      <div role="group" aria-labelledby={labelId} className="flex flex-wrap gap-1">
         {steps.map(({ step, icon }) => (
           <IconButton
             key={step}
@@ -212,7 +212,7 @@ export function CropEditor({ bitmap, pxW, pxH, crop, ratio, view, onChange }: Cr
   )
 
   return (
-    <div className="flex w-full flex-col items-center">
+    <div className="flex w-full max-w-full min-w-0 flex-col items-center">
       <div className="w-full" style={{ padding: HANDLE_REACH_PX }}>
         <div ref={wrap} className="flex w-full justify-center">
           <div className="relative touch-none select-none" style={{ width: cssW, height: cssH }}>

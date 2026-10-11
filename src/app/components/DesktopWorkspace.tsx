@@ -56,9 +56,11 @@ export function DesktopWorkspace(props: DesktopWorkspaceProps) {
       >
         <div
           ref={toolbarRef}
-          className="text-ink-muted bg-surface border-line sticky top-0 z-10 flex items-center gap-3 border-b px-4 py-2 text-sm"
+          className="text-ink-muted bg-surface border-line sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b px-4 py-2 text-sm"
         >
-          {props.imageCount === 0 ? <span>{t('empty.noPages')}</span> : null}
+          {props.imageCount === 0 ? (
+            <span className="shrink-0 whitespace-nowrap">{t('empty.noPages')}</span>
+          ) : null}
           <span className="flex-1" />
           {props.previewToolbar}
         </div>

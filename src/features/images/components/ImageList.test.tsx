@@ -36,6 +36,26 @@ describe('ImageList', () => {
     expect(within(list).getByText('Auto')).toBeInTheDocument()
   })
 
+  it('wraps between whole details: number and word, separator and item, never inside', () => {
+    load(
+      makeLoadedImage({ id: 'a' as ImageId, name: 'a.jpg', pxW: 3000, pxH: 4000 }),
+      makeLoadedImage({ id: 'b' as ImageId, name: 'b.jpg', pxW: 300, pxH: 400 }),
+    )
+    renderWithProviders(<ImageList onEdit={() => undefined} />)
+    const count = screen.getByText('2 images')
+    expect(count).toHaveClass('whitespace-nowrap')
+    expect(count.parentElement).toHaveClass('flex-wrap')
+    const list = screen.getByRole('list', { name: 'Loaded images' })
+    const pixels = within(list).getByText('3000 × 4000')
+    expect(pixels).toHaveClass('whitespace-nowrap')
+    // The details take the row's full width under the name and the buttons.
+    expect(pixels.parentElement).toHaveClass('col-span-2', 'row-start-2', 'flex-wrap')
+    const auto = within(list).getAllByText('Auto')[0]
+    expect(auto?.previousElementSibling).toHaveTextContent('·')
+    expect(auto?.parentElement).not.toBe(pixels.parentElement)
+    expect(auto?.parentElement).toHaveClass('flex')
+  })
+
   it('shows a fixed size in the chosen unit', () => {
     load(
       makeLoadedImage({

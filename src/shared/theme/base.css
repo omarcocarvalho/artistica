@@ -56,11 +56,22 @@
 
   :is(:lang(ja), :lang(zh-CN)) {
     line-break: strict;
-    word-break: normal;
   }
 
-  :is(h1, h2, h3, h4, .ds-btn):lang(ja) {
+  /* Full-width glyphs where a Chinese font has both (the curly quotes); Latin fonts have none. */
+  :lang(zh-CN) {
+    word-break: normal;
+    font-variant-east-asian: full-width;
+  }
+
+  /* Phrase breaking where the browser has it (Chromium); elsewhere the declaration is dropped. */
+  :lang(ja) {
     word-break: auto-phrase;
+  }
+
+  /* No lone word or character on the last line of a hint or a notice, where supported. */
+  :where(p, .ds-note__body) {
+    text-wrap: pretty;
   }
 
   :lang(ko) {
