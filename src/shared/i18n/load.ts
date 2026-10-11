@@ -1,5 +1,11 @@
 import i18next, { type i18n as I18nInstance } from 'i18next'
-import { DEFAULT_LANGUAGE, LANGUAGES, isLanguageCode, type LanguageCode } from './languages'
+import {
+  DEFAULT_LANGUAGE,
+  LANGUAGES,
+  PSEUDO_LANGUAGE,
+  isLanguageCode,
+  type LanguageCode,
+} from './languages'
 import { lazyLocaleFiles } from './resources'
 
 export type LocaleLoader = () => Promise<Record<string, unknown>>
@@ -18,14 +24,42 @@ export function groupLoaders(files: Readonly<Record<string, LocaleLoader>>): Loc
   return out
 }
 
+type Bundles = Record<string, Record<string, unknown>>
+/** Builds the pseudo-locale's bundles from the English ones. */
+export type PseudoLoader = (english: Bundles) => Promise<Bundles>
+
+const loadPseudoChunk: PseudoLoader = async (english) =>
+  (await import('./pseudo')).pseudoResources(english)
+
 export interface LanguageLoader {
   readonly availableLanguages: () => readonly LanguageCode[]
   readonly loadLanguage: (code: LanguageCode) => Promise<void>
   readonly setAppLanguage: (code: LanguageCode) => Promise<'changed' | 'failed'>
+  /** Switches to the pseudo-locale (M6-R14); its chunk loads on the first call. Saves nothing. */
+  readonly setPseudoLanguage: () => Promise<'changed' | 'failed'>
 }
 
-export function createLanguageLoader(i18n: I18nInstance, loaders: LocaleLoaders): LanguageLoader {
+export function createLanguageLoader(
+  i18n: I18nInstance,
+  loaders: LocaleLoaders,
+  loadPseudo: PseudoLoader = loadPseudoChunk,
+): LanguageLoader {
   const loading = new Map<LanguageCode, Promise<void>>()
+  let pseudo: Promise<void> | null = null
+
+  function loadPseudoBundles(): Promise<void> {
+    pseudo ??= loadPseudo(i18n.getDataByLanguage(DEFAULT_LANGUAGE) ?? {}).then(
+      (bundles) => {
+        for (const [ns, bundle] of Object.entries(bundles))
+          i18n.addResourceBundle(PSEUDO_LANGUAGE, ns, bundle, true, true)
+      },
+      (error: unknown) => {
+        pseudo = null
+        throw error
+      },
+    )
+    return pseudo
+  }
 
   async function fetchAndAdd(code: LanguageCode): Promise<void> {
     const namespaces = loaders[code]
@@ -62,10 +96,17 @@ export function createLanguageLoader(i18n: I18nInstance, loaders: LocaleLoaders)
         return 'failed'
       }
     },
+    setPseudoLanguage: async () => {
+      try {
+        await loadPseudoBundles()
+        await i18n.changeLanguage(PSEUDO_LANGUAGE)
+        return 'changed'
+      } catch {
+        return 'failed'
+      }
+    },
   }
 }
 
-export const { availableLanguages, loadLanguage, setAppLanguage } = createLanguageLoader(
-  i18next,
-  groupLoaders(lazyLocaleFiles),
-)
+export const { availableLanguages, loadLanguage, setAppLanguage, setPseudoLanguage } =
+  createLanguageLoader(i18next, groupLoaders(lazyLocaleFiles))

@@ -1,6 +1,12 @@
 import i18n, { type i18n as I18nInstance } from 'i18next'
 import { initReactI18next } from 'react-i18next'
-import { DEFAULT_LANGUAGE, LANGUAGES, NAMESPACES, type LanguageCode } from './languages'
+import {
+  DEFAULT_LANGUAGE,
+  LANGUAGES,
+  NAMESPACES,
+  PSEUDO_LANGUAGE,
+  type LanguageCode,
+} from './languages'
 import { setAppLanguage } from './load'
 import { resources } from './resources'
 
@@ -17,7 +23,7 @@ export async function initI18n(options: InitI18nOptions = {}): Promise<I18nInsta
       resources,
       lng: DEFAULT_LANGUAGE,
       fallbackLng: DEFAULT_LANGUAGE,
-      supportedLngs: [...LANGUAGES],
+      supportedLngs: [...LANGUAGES, PSEUDO_LANGUAGE],
       nonExplicitSupportedLngs: false,
       ns: [...NAMESPACES],
       defaultNS: 'common',

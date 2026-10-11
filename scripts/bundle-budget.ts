@@ -140,3 +140,27 @@ export function localeChunkSetViolations(
     .map((file) => `${file}: loaded up front`)
   return [...perCode, ...unknown, ...initial]
 }
+
+/** M6-R14: the pseudo-locale is one lazy chunk, named after `pseudo.ts`, at most this big (gzip). */
+export const PSEUDO_CHUNK_LIMIT_BYTES = 2_000
+
+export function isPseudoChunk(file: string): boolean {
+  const name = file.slice(file.lastIndexOf('/') + 1)
+  return name.startsWith('pseudo-') && name.endsWith('.js')
+}
+
+export function pseudoChunkViolations(
+  entries: readonly { file: string; gzipBytes: number }[],
+  initialFiles: readonly string[],
+  limit: number = PSEUDO_CHUNK_LIMIT_BYTES,
+): string[] {
+  const chunks = entries.filter((e) => isPseudoChunk(e.file))
+  if (chunks.length !== 1) return [`${String(chunks.length)} pseudo-locale chunks, expected 1`]
+  const kb = (n: number) => `${(n / 1000).toFixed(1)} KB`
+  return chunks.flatMap((e) => [
+    ...(initialFiles.includes(e.file) ? [`${e.file}: loaded up front`] : []),
+    ...(e.gzipBytes > limit
+      ? [`${e.file}: ${kb(e.gzipBytes)} of ${kb(limit)} (${String(e.gzipBytes)} bytes)`]
+      : []),
+  ])
+}

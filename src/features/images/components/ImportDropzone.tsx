@@ -16,6 +16,8 @@ import { decodedPixelLimit } from '../pixel-limit'
 import { useImages } from '../store'
 import type { ImportErrorCode, ImportOutcome } from '../types'
 
+const WRAP_LABEL = 'min-w-0 whitespace-normal'
+
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif'
 const limitVars = () => ({
   maxMb: Math.round(MAX_FILE_BYTES / 1048576),
@@ -317,16 +319,28 @@ export function ImportDropzone({
           ref={uploadButton}
           variant={card ? 'primary' : 'secondary'}
           size={buttonSize}
+          className={WRAP_LABEL}
           onClick={() => fileInput.current?.click()}
         >
           <Icon name="upload" />
           {t(card ? 'dropzone.uploadHero' : 'dropzone.upload')}
         </Button>
-        <Button variant="secondary" size={buttonSize} onClick={() => void onPasteClick()}>
+        <Button
+          variant="secondary"
+          size={buttonSize}
+          className={WRAP_LABEL}
+          onClick={() => void onPasteClick()}
+        >
           <Icon name="paste" />
           {t('dropzone.paste')}
         </Button>
-        <Button variant="secondary" size={buttonSize} onClick={openLink} aria-expanded={linkOpen}>
+        <Button
+          variant="secondary"
+          size={buttonSize}
+          className={WRAP_LABEL}
+          onClick={openLink}
+          aria-expanded={linkOpen}
+        >
           <Icon name="link" />
           {t(card ? 'dropzone.linkHero' : 'dropzone.link')}
         </Button>

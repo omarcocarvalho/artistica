@@ -28,6 +28,7 @@
     "test:coverage": "vitest run --coverage --project=!perf",
     "test:perf": "vitest run --project=perf",
     "e2e": "playwright test",
+    "e2e:screens": "E2E_SCREENS=1 playwright test e2e/screens.spec.ts --project=chromium --project=mobile-chromium && node scripts/screens-index.ts screens",
     "i18n:check": "node scripts/check-locales.ts",
     "i18n:stamp": "node scripts/check-locales.ts --stamp"
   },

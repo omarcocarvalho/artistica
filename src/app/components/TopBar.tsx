@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, Icon, Tooltip, VisuallyHidden } from '../../shared/ui'
-import { DEFAULT_LANGUAGE } from '../../shared/i18n'
+import { DEFAULT_LANGUAGE, isLanguageCode } from '../../shared/i18n'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import { LanguageSelect } from './LanguageSelect'
 import { Logo } from './Logo'
@@ -16,7 +16,8 @@ export interface TopBarProps {
 
 export function TopBar({ onExport, exportDisabledReason }: TopBarProps) {
   const { t, i18n } = useTranslation('app')
-  const home = i18n.language === DEFAULT_LANGUAGE ? '../' : `../${i18n.language}/`
+  const lang = i18n.language
+  const home = isLanguageCode(lang) && lang !== DEFAULT_LANGUAGE ? `../${lang}/` : '../'
   const reasonId = useId()
   const disabled = exportDisabledReason !== null
   const showExport = useIsDesktop()

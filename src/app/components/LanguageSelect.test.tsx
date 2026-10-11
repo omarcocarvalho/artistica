@@ -3,7 +3,13 @@ import userEvent from '@testing-library/user-event'
 import i18next from 'i18next'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSettings } from '../../features/settings'
-import { ENDONYMS, LANGUAGES, initI18n, type LanguageCode } from '../../shared/i18n'
+import {
+  ENDONYMS,
+  LANGUAGES,
+  PSEUDO_LANGUAGE,
+  initI18n,
+  type LanguageCode,
+} from '../../shared/i18n'
 import { useNotices } from '../state/useNotices'
 import { LanguageSelect } from './LanguageSelect'
 
@@ -71,6 +77,19 @@ describe('LanguageSelect', () => {
         .getAllByRole('option')
         .map((o) => o.getAttribute('value')),
     ).toEqual(['en', 'ja'])
+  })
+
+  it('shows English and offers no pseudo option under the pseudo-locale (M6-R14)', async () => {
+    await i18next.changeLanguage(PSEUDO_LANGUAGE)
+    const { container } = render(<LanguageSelect />)
+    expect(i18next.language).toBe(PSEUDO_LANGUAGE)
+    expect(select()).toHaveValue('en')
+    expect(container.querySelector('[data-language-name]')).toHaveTextContent('English')
+    expect(
+      within(select())
+        .getAllByRole('option')
+        .map((o) => o.getAttribute('value')),
+    ).not.toContain(PSEUDO_LANGUAGE)
   })
 
   it('selects the language showing', async () => {

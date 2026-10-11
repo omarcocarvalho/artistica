@@ -1,7 +1,13 @@
 // @vitest-environment happy-dom
 import i18next, { type i18n as I18nInstance } from 'i18next'
 import { describe, expect, it, vi } from 'vitest'
-import { installDocumentLanguage, readLangHint } from './language'
+import {
+  PSEUDO_EVENT,
+  installDocumentLanguage,
+  listenForPseudo,
+  readLangHint,
+  wantsPseudo,
+} from './language'
 
 function at(url: string): { location: Location; history: History } {
   window.history.replaceState({ keep: 1 }, '', url)
@@ -70,5 +76,47 @@ describe('installDocumentLanguage', () => {
     uninstall()
     await i18n.changeLanguage('en')
     expect(html.lang).toBe('ar')
+  })
+})
+
+describe('the pseudo-locale (M6-R14)', () => {
+  it('wantsPseudo is true only for ?pseudo=1', () => {
+    expect(wantsPseudo(at('/artistica/app/?pseudo=1').location)).toBe(true)
+    expect(wantsPseudo(at('/artistica/app/?a=1&pseudo=1#x').location)).toBe(true)
+    expect(wantsPseudo(at('/artistica/app/').location)).toBe(false)
+    expect(wantsPseudo(at('/artistica/app/?pseudo=0').location)).toBe(false)
+    expect(wantsPseudo(at('/artistica/app/?pseudo').location)).toBe(false)
+  })
+
+  it('the pseudo event switches only while the address has ?pseudo=1', () => {
+    const enter = vi.fn(() => Promise.resolve())
+    const stop = listenForPseudo(window, enter)
+    at('/artistica/app/')
+    window.dispatchEvent(new Event(PSEUDO_EVENT))
+    expect(enter).not.toHaveBeenCalled()
+    at('/artistica/app/?pseudo=1')
+    window.dispatchEvent(new Event(PSEUDO_EVENT))
+    expect(enter).toHaveBeenCalledOnce()
+    stop()
+    window.dispatchEvent(new Event(PSEUDO_EVENT))
+    expect(enter).toHaveBeenCalledOnce()
+  })
+
+  it('the pseudo-locale sets lang="en-XA" and its own title', async () => {
+    const i18n = i18next.createInstance()
+    await i18n.init({
+      resources: {
+        en: { app: { documentTitle: 'Artistica app' } },
+        'en-XA': { app: { documentTitle: '⟦Áŕţíšţíçá áƥƥ⟧' } },
+      },
+      lng: 'en',
+      fallbackLng: 'en',
+      initAsync: false,
+    })
+    const stop = installDocumentLanguage(i18n, document)
+    await i18n.changeLanguage('en-XA')
+    expect(document.documentElement.lang).toBe('en-XA')
+    expect(document.title).toBe('⟦Áŕţíšţíçá áƥƥ⟧')
+    stop()
   })
 })

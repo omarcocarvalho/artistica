@@ -23,3 +23,21 @@ export function installDocumentLanguage(i18n: I18nInstance, doc: Document): () =
     i18n.off('languageChanged', apply)
   }
 }
+
+/** The window event that switches to the pseudo-locale, honoured only under `?pseudo=1` (M6-R14). */
+export const PSEUDO_EVENT = 'artistica:pseudo-locale'
+
+export function wantsPseudo(location: Location): boolean {
+  return new URL(location.href).searchParams.get('pseudo') === '1'
+}
+
+/** Lets the E2E probes switch to the pseudo-locale without a reload, which would drop the photos. */
+export function listenForPseudo(win: Window, enter: () => Promise<unknown>): () => void {
+  const onEvent = () => {
+    if (wantsPseudo(win.location)) void enter()
+  }
+  win.addEventListener(PSEUDO_EVENT, onEvent)
+  return () => {
+    win.removeEventListener(PSEUDO_EVENT, onEvent)
+  }
+}

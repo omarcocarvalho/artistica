@@ -2,7 +2,9 @@ import { readFileSync } from 'node:fs'
 import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
 import { initI18n } from './init'
-import { ENDONYMS, LANGUAGES, NAMESPACES, OG_LOCALES } from './languages'
+import { ENDONYMS, LANGUAGES, NAMESPACES, OG_LOCALES, PSEUDO_LANGUAGE } from './languages'
+import { setAppLanguage, setPseudoLanguage } from './load'
+import { pseudoLocalize } from './pseudo'
 
 describe('initI18n', () => {
   it('serves English strings from every namespace file', async () => {
@@ -31,6 +33,18 @@ describe('initI18n', () => {
     await i18n.changeLanguage('fr')
     expect(i18n.t('common:actions.close')).toBe('Close')
     await i18n.changeLanguage('en')
+  })
+
+  it('serves the pseudo-locale once it is loaded', async () => {
+    const i18n = await initI18n({ language: 'en' })
+    expect(await setPseudoLanguage()).toBe('changed')
+    expect(i18n.language).toBe(PSEUDO_LANGUAGE)
+    expect(i18n.t('common:actions.close')).toBe(pseudoLocalize('Close'))
+    expect(i18n.t('app:import.more', { count: 5 })).toBe(
+      pseudoLocalize('{{count, number}} more').replace('{{count, number}}', '5'),
+    )
+    await setAppLanguage('en')
+    expect(i18n.t('common:actions.close')).toBe('Close')
   })
 
   it('no longer reads navigator through the detector', () => {

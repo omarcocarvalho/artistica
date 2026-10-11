@@ -138,7 +138,7 @@ export function ImageList({ onEdit }: ImageListProps) {
   }
 
   const removeAllButton = (
-    <Button variant="ghost" icon="trash" onClick={removeAll}>
+    <Button variant="ghost" icon="trash" className="min-w-0 whitespace-normal" onClick={removeAll}>
       {t('list.removeAll.button')}
     </Button>
   )

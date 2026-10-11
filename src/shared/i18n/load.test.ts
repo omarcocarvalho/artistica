@@ -1,6 +1,9 @@
 import i18next, { type i18n as I18nInstance } from 'i18next'
 import { describe, expect, it, vi } from 'vitest'
-import { createLanguageLoader, groupLoaders, type LocaleLoader } from './load'
+import { useSettings } from '../../features/settings'
+import { PSEUDO_LANGUAGE } from './languages'
+import { createLanguageLoader, groupLoaders, type LocaleLoader, type PseudoLoader } from './load'
+import { pseudoLocalize } from './pseudo'
 
 async function freshI18n(): Promise<I18nInstance> {
   const i18n = i18next.createInstance()
@@ -158,5 +161,53 @@ describe('setAppLanguage', () => {
     await setAppLanguage('it')
     await expect(setAppLanguage('en')).resolves.toBe('changed')
     expect(i18n.t('hello')).toBe('Hello')
+  })
+})
+
+describe('setPseudoLanguage (?pseudo=1, M6-R14)', () => {
+  it('?pseudo=1 loads the pseudo resources lazily and never saves a language', async () => {
+    const i18n = await freshI18n()
+    const before = useSettings.getState().language
+    const loadPseudo = vi.fn<PseudoLoader>(() =>
+      Promise.resolve({ common: { hello: '⟦Ĥéĺĺó⟧' }, app: { title: '⟦Áƥƥ⟧' } }),
+    )
+    const { setPseudoLanguage, availableLanguages } = createLanguageLoader(i18n, {}, loadPseudo)
+    expect(loadPseudo).not.toHaveBeenCalled()
+    await expect(setPseudoLanguage()).resolves.toBe('changed')
+    expect(loadPseudo).toHaveBeenCalledOnce()
+    expect(i18n.language).toBe(PSEUDO_LANGUAGE)
+    expect(i18n.t('hello')).toBe('⟦Ĥéĺĺó⟧')
+    expect(i18n.t('app:title')).toBe('⟦Áƥƥ⟧')
+    expect(availableLanguages()).not.toContain(PSEUDO_LANGUAGE)
+    expect(useSettings.getState().language).toBe(before)
+  })
+
+  it('loads once, and a switch away and back needs no second load', async () => {
+    const i18n = await freshI18n()
+    const loadPseudo = vi.fn<PseudoLoader>(() => Promise.resolve({ common: { hello: '⟦X⟧' } }))
+    const { setPseudoLanguage, setAppLanguage } = createLanguageLoader(i18n, {}, loadPseudo)
+    await setPseudoLanguage()
+    await setAppLanguage('en')
+    expect(i18n.t('hello')).toBe('Hello')
+    await setPseudoLanguage()
+    expect(i18n.t('hello')).toBe('⟦X⟧')
+    expect(loadPseudo).toHaveBeenCalledOnce()
+  })
+
+  it("returns 'failed' and keeps the language when the chunk fails", async () => {
+    const i18n = await freshI18n()
+    const { setPseudoLanguage } = createLanguageLoader(i18n, {}, () =>
+      Promise.reject(new Error('chunk failed')),
+    )
+    await expect(setPseudoLanguage()).resolves.toBe('failed')
+    expect(i18n.language).toBe('en')
+  })
+
+  it('builds the real pseudo resources from the English strings', async () => {
+    const i18n = await freshI18n()
+    const { setPseudoLanguage } = createLanguageLoader(i18n, {})
+    await setPseudoLanguage()
+    expect(i18n.t('hello')).toBe(pseudoLocalize('Hello'))
+    expect(i18n.t('app:title')).toBe(pseudoLocalize('App'))
   })
 })
