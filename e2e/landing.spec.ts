@@ -261,6 +261,15 @@ function contrast(a: string, b: string): number {
 
 declare function getComputedStyle(el: object): { color: string; backgroundColor: string }
 
+interface TipElement {
+  getBoundingClientRect(): { left: number; top: number; width: number; height: number }
+  contains(other: TipElement): boolean
+}
+
+interface TipDocument {
+  elementFromPoint(x: number, y: number): TipElement | null
+}
+
 interface Attributes {
   getAttribute(name: string): string | null
 }
@@ -348,6 +357,17 @@ for (const code of LANDING) {
           })
         expect(rgba(backing)[3], 'the tip backing is opaque').toBe(1)
         expect(contrast(ink, backing)).toBeGreaterThanOrEqual(4.5)
+        const tip = page.locator(`main [aria-hidden="true"] > ${HERO_TIP}`)
+        await tip.scrollIntoViewIfNeeded()
+        const onTop = await tip.evaluate((el: TipElement) => {
+          const doc = (globalThis as unknown as { document: TipDocument }).document
+          const r = el.getBoundingClientRect()
+          return [0.25, 0.5, 0.75].map((fx) => {
+            const hit = doc.elementFromPoint(r.left + r.width * fx, r.top + r.height / 2)
+            return hit !== null && el.contains(hit)
+          })
+        })
+        expect(onTop, 'nothing is drawn over the tip').toEqual([true, true, true])
       })
     }
 
