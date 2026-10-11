@@ -576,6 +576,28 @@ describe('PreviewSlot in other languages', () => {
     await switchLanguage('en')
   })
 
+  it('lists the line types with the list format of the language', async () => {
+    await switchLanguage('zh-CN')
+    act(() => {
+      usePages.setState({
+        pages: [
+          {
+            index: 0,
+            size: { w: 210, h: 297 },
+            safeArea: { x: 5, y: 5, w: 200, h: 287 },
+            cropMarks: [],
+            lines: [{ tileIndex: 0, types: ['thirds', 'golden', 'centre'] }],
+            tiles: [{ imageId: 'a', version: 'original', trim: { x: 10, y: 10, w: 60, h: 40 } }],
+          },
+        ] as never,
+      })
+    })
+    render(<PreviewSlot />)
+    expect(screen.getByRole('list', { name: 'Page 1 contents' })).toHaveTextContent(
+      'lines: Rule of thirds、Golden ratio和Centre lines',
+    )
+  })
+
   it("describes each tile's size with the language's unit symbol", async () => {
     await switchLanguage('zh-CN')
     render(<PreviewSlot />)

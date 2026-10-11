@@ -12,7 +12,7 @@ import {
 import { useImages } from '../../features/images'
 import { paperName } from '../../features/page-setup'
 import { useSettings } from '../../features/settings'
-import { formatLengthNumber, unitLabel } from '../../shared/i18n/format'
+import { formatLengthNumber, formatList, unitLabel } from '../../shared/i18n/format'
 import type { ImageId } from '../../shared/model/image'
 import { Button, Callout, VisuallyHidden } from '../../shared/ui'
 import {
@@ -87,7 +87,7 @@ function ArrangeAnnouncer() {
 }
 
 export function PreviewSlot() {
-  const { t, i18n } = useTranslation(['app', 'pageSetup', 'studies', 'lines'])
+  const { t } = useTranslation(['app', 'pageSetup', 'studies', 'lines'])
   const pages = usePages((s) => s.pages)
   const layout = usePages((s) => s.layout)
   const status = usePages((s) => s.status)
@@ -118,7 +118,6 @@ export function PreviewSlot() {
   const linesOf = useMemo(() => new Map(images.map((i) => [i.id, i.lines])), [images])
   const getName = (id: ImageId) => names.get(id) ?? t('app:preview.unnamedImage')
   const orientation = layout ? t(`app:preview.orientation.${layout.orientation}`) : ''
-  const listFormat = useMemo(() => new Intl.ListFormat(i18n.language), [i18n.language])
   const describeTile = (d: TileDescription) => {
     const size = {
       w: formatLengthNumber(d.widthMm, 'mm'),
@@ -134,7 +133,7 @@ export function PreviewSlot() {
             ...size,
           })
     if (d.lines.length === 0) return item
-    const list = listFormat.format(d.lines.map((type) => t(`lines:type.${type}`)))
+    const list = formatList(d.lines.map((type) => t(`lines:type.${type}`)))
     return t('app:preview.itemLines', { item, list })
   }
   const noRoom =
