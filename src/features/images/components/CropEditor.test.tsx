@@ -55,6 +55,18 @@ describe('CropEditor', () => {
     expect(CROP_STAGE_FALLBACK_PX).toBe(400)
   })
 
+  it('never grows past its column, and the position and size buttons wrap', () => {
+    renderWithProviders(<CropEditor {...base()} />)
+    const root = screen.getByTestId('crop-canvas').closest('.flex-col')
+    expect(root).toHaveClass('min-w-0', 'max-w-full')
+    const controls = screen.getByRole('group', { name: 'Crop position and size' })
+    expect(controls).toHaveClass('flex-wrap')
+    for (const name of ['Position', 'Size']) {
+      const group = within(controls).getByRole('group', { name })
+      expect(group, name).toHaveClass('flex-wrap')
+    }
+  })
+
   it('moves by dragging the box and commits once, on pointer up', () => {
     const props = base()
     renderWithProviders(<CropEditor {...props} />)

@@ -296,6 +296,26 @@ test.describe('localisation probes (D3): each finds what it is for before it is 
     ])
   })
 
+  test('findOverflow reports a column that scrolls sideways inside its scroller, not a row of items meant to scroll', async ({
+    page,
+  }) => {
+    await pseudoApp(page)
+    await plant(
+      page,
+      '<div data-probe="column" style="overflow: auto; height: 60px; display: flex; flex-direction: column">' +
+        '<div style="width: 400px">⟦Ŵíďé çóñţéñţ⟧</div><p>⟦Ŝĥóŕţ⟧</p></div>' +
+        '<div data-probe="block" style="overflow-y: auto; height: 60px"><div style="display: grid">' +
+        '<p style="width: 300px">⟦Ĝŕíď çéĺĺ⟧</p></div></div>' +
+        '<div data-probe="row" style="display: flex; overflow-x: auto; gap: 8px">' +
+        '<span style="flex: none; width: 120px">⟦Ţĥúɱƀ⟧</span><span style="flex: none; width: 120px">⟦Ţĥúɱƀ⟧</span></div>',
+    )
+    const found = (await findOverflow(page)).filter((f) => f.includes('scrolls sideways'))
+    expect(found).toEqual([
+      expect.stringMatching(/Ŵíďé çóñţéñţ.*: scrolls sideways \(400 in 160\)/u),
+      expect.stringMatching(/Ĝŕíď çéĺĺ.*: scrolls sideways \(300 in 160\)/u),
+    ])
+  })
+
   test('labelInName reports a control whose name leaves out its visible text, and only that', async ({
     page,
   }) => {

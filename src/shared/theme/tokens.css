@@ -8,7 +8,8 @@
  *                      Tailwind's own spacing scale already equals --space-N (p-4 = 1rem).
  * - dark blocks     -> same names re-pointed. "data-theme" on <html> wins; with no attribute the
  *                      OS preference decides. The printed page (--color-paper) is white in both.
- * - :lang() blocks  -> each CJK language's own system fonts right after the Latin family (M6-R17).
+ * - :lang() blocks  -> each CJK language's own system fonts right after the Latin family (M6-R17);
+ *                      zh-CN takes its curly quotes from a local Chinese font first.
  */
 
 @theme static {
@@ -252,6 +253,32 @@
   --font-ui: "Atkinson Hyperlegible Next Variable", "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", var(--font-cjk), system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
   --font-display: "Fraunces Variable", "Fraunces", var(--font-cjk), sans-serif;
   --font-hand: "Caveat Variable", "Caveat", var(--font-cjk), sans-serif;
+}
+
+/*
+ * Chinese curly quotes: the Latin family leads the zh-CN stacks and draws “ ” narrow, so a face that
+ * covers only those four characters takes them from a Chinese system font first (full width through
+ * `font-variant-east-asian` in base.css). Its sources are local fonts only, so nothing is ever
+ * downloaded for it.
+ */
+@font-face {
+  font-family: "Artistica Quotes";
+  font-weight: 100 549;
+  src: local("PingFang SC Regular"), local("PingFangSC-Regular"), local("Hiragino Sans GB W3"), local("HiraginoSansGB-W3"), local("Microsoft YaHei UI"), local("Microsoft YaHei"), local("Noto Sans CJK SC Regular"), local("NotoSansCJKsc-Regular"), local("Noto Sans SC Regular"), local("NotoSansSC-Regular");
+  unicode-range: U+2018-2019, U+201C-201D;
+}
+
+@font-face {
+  font-family: "Artistica Quotes";
+  font-weight: 550 900;
+  src: local("PingFang SC Semibold"), local("PingFangSC-Semibold"), local("Hiragino Sans GB W6"), local("HiraginoSansGB-W6"), local("Microsoft YaHei UI Bold"), local("Microsoft YaHei Bold"), local("Noto Sans CJK SC Bold"), local("NotoSansCJKsc-Bold"), local("Noto Sans SC Bold"), local("NotoSansSC-Bold");
+  unicode-range: U+2018-2019, U+201C-201D;
+}
+
+:lang(zh-CN) {
+  --font-ui: "Artistica Quotes", "Atkinson Hyperlegible Next Variable", "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", var(--font-cjk), system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --font-display: "Artistica Quotes", "Fraunces Variable", "Fraunces", var(--font-cjk), sans-serif;
+  --font-hand: "Artistica Quotes", "Caveat Variable", "Caveat", var(--font-cjk), sans-serif;
 }
 
 /* The CJK glyphs are taller than a line box set by Caveat's metrics; `normal` counts every font drawn. */

@@ -56,6 +56,8 @@ const FIRST_CJK_FONT = {
   ko: 'Apple SD Gothic Neo',
   'zh-CN': 'PingFang SC',
 } as const
+/** zh-CN takes its curly quotes from a local Chinese face before the Latin family. */
+const LEAD = { ja: [], ko: [], 'zh-CN': ['Artistica Quotes'] } as const
 const CJK_NAME = /Hiragino|PingFang|YaHei|Gothic|Meiryo|Mincho|Malgun|CJK|Noto Sans (JP|KR|SC)/
 const NO_LINE_START = [
   '。',
@@ -161,15 +163,14 @@ test.describe('each CJK language takes its own fonts', () => {
       page,
     }) => {
       await openApp(page, lang)
+      const ui = [...LEAD[lang], ...UI_LATIN, FIRST_CJK_FONT[lang]]
       const body = await families(page.locator('body'))
-      expect(body.slice(0, UI_LATIN.length + 1)).toEqual([...UI_LATIN, FIRST_CJK_FONT[lang]])
+      expect(body.slice(0, ui.length)).toEqual(ui)
       const button = await families(page.locator('.ds-btn').first())
-      expect(button.slice(0, UI_LATIN.length + 1)).toEqual([...UI_LATIN, FIRST_CJK_FONT[lang]])
+      expect(button.slice(0, ui.length)).toEqual(ui)
+      const display = [...LEAD[lang], ...DISPLAY_LATIN, FIRST_CJK_FONT[lang]]
       const heading = await families(page.getByRole('heading', { level: 1 }))
-      expect(heading.slice(0, DISPLAY_LATIN.length + 1)).toEqual([
-        ...DISPLAY_LATIN,
-        FIRST_CJK_FONT[lang],
-      ])
+      expect(heading.slice(0, display.length)).toEqual(display)
       expect(heading.at(-1)).toBe('sans-serif')
     })
   }

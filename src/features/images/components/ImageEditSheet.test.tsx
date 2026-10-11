@@ -178,6 +178,19 @@ describe('ImageEditSheet', () => {
     expect(screen.getByText(/Height follows: 4\.72 in/)).toBeInTheDocument()
   })
 
+  it('fits the phone sheet: one column no wider than the sheet, and its rows wrap', () => {
+    load()
+    renderWithProviders(<ImageEditSheet imageId={ID} />)
+    const crop = screen.getByRole('group', { name: 'Crop area' })
+    const grid = crop.closest('.grid')
+    // An implicit auto column grows to its widest content (the crop stage's first guess).
+    expect(grid).toHaveClass('grid-cols-[minmax(0,1fr)]')
+    for (const column of grid?.children ?? []) expect(column).toHaveClass('min-w-0')
+    const transform = screen.getByRole('group', { name: 'Rotate and flip' })
+    expect(transform).toHaveClass('flex-wrap')
+    expect(transform.parentElement).toHaveClass('flex-wrap')
+  })
+
   it('removes the image and then renders nothing', async () => {
     load()
     const { container } = renderWithProviders(<ImageEditSheet imageId={ID} />)

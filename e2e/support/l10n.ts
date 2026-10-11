@@ -203,6 +203,16 @@ const PROBES = String.raw`(() => {
           out.push(label + ': box ' + px(el.getBoundingClientRect()) + ' past ' + describe(parent) + ' ' + px(parent.getBoundingClientRect()))
       }
     }
+    // The checks above skip whatever a scroller holds, so a column wider than its scroller (a
+    // sheet body, a side panel) hides its overflow behind a sideways scroll. Only a single row of
+    // items (a thumbnail strip, the phone's page strip) scrolls sideways by design.
+    for (const el of document.body.querySelectorAll('*')) {
+      if (!scroller(el) || !rendered(el) || el.clientWidth === 0) continue
+      const s = getComputedStyle(el)
+      const row = /flex/.test(s.display) && /^row/.test(s.flexDirection) && s.flexWrap === 'nowrap'
+      if (row || el.scrollWidth <= el.clientWidth + 1) continue
+      out.push(describe(el) + ' "' + clean(el.textContent).slice(0, 40) + '": scrolls sideways (' + el.scrollWidth + ' in ' + el.clientWidth + ')')
+    }
     return [...new Set(out)]
   }
   const LIVE = '[aria-live]:not([aria-live="off"]), [role="status"], [role="alert"], [role="log"]'
@@ -353,8 +363,9 @@ export async function findPseudoLeak(page: Page): Promise<string[]> {
 
 /**
  * Elements whose own text is clipped, runs past the nearest ancestor that draws a box (border,
- * background or clip), or whose box runs past its parent. A text-overflow ellipsis is a deliberate
- * truncation, not an overflow; scrollers and visually hidden text are skipped.
+ * background or clip), or whose box runs past its parent, and scrollers that scroll sideways
+ * (except a single row of items). A text-overflow ellipsis is a deliberate truncation, not an
+ * overflow; text inside a scroller and visually hidden text are skipped.
  */
 export async function findOverflow(page: Page): Promise<string[]> {
   return page.evaluate<string[]>(`(() => ${PROBES}.overflow())()`)

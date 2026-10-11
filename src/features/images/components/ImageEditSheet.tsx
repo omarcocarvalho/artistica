@@ -70,8 +70,8 @@ export function ImageEditSheet({ imageId }: ImageEditSheetProps) {
 
   return (
     <div className="@container flex flex-col gap-6">
-      <div className="grid gap-6 @xl:grid-cols-[minmax(0,1.25fr)_minmax(16rem,1fr)]">
-        <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 @xl:grid-cols-[minmax(0,1.25fr)_minmax(16rem,1fr)]">
+        <div className="flex min-w-0 flex-col gap-4">
           <CropEditor
             bitmap={image.preview}
             pxW={d.pxW}
@@ -84,7 +84,11 @@ export function ImageEditSheet({ imageId }: ImageEditSheetProps) {
             }}
           />
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div role="group" aria-label={t('editSheet.transform.group')} className="flex gap-2">
+            <div
+              role="group"
+              aria-label={t('editSheet.transform.group')}
+              className="flex flex-wrap gap-2"
+            >
               <IconButton
                 label={t('editSheet.transform.rotateLeft')}
                 icon="rotateLeft"
@@ -161,7 +165,7 @@ export function ImageEditSheet({ imageId }: ImageEditSheetProps) {
           </fieldset>
         </div>
 
-        <div className="flex flex-col gap-5">
+        <div className="flex min-w-0 flex-col gap-5">
           <div className="flex flex-col gap-1">
             <label htmlFor={copiesId} className="text-ink text-sm font-medium">
               {t('editSheet.copies.label')}

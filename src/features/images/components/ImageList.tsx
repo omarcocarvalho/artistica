@@ -46,34 +46,38 @@ function Row({
     <li
       ref={ref}
       aria-current={selected ? 'true' : undefined}
-      className="border-line aria-[current=true]:border-accent aria-[current=true]:bg-accent-soft grid grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-3 rounded-md border p-2"
+      className="border-line aria-[current=true]:border-accent aria-[current=true]:bg-accent-soft grid grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-md border p-2"
     >
       <img
         src={image.thumbUrl}
         alt=""
-        className="size-12 rounded-sm object-cover"
+        className="row-span-2 size-12 rounded-sm object-cover"
         draggable={false}
       />
-      <div className="min-w-0">
+      <div className="contents">
         <button
           type="button"
           onClick={() => {
             useImages.getState().select(image.id)
           }}
           aria-label={t('list.select', { name: image.name })}
-          className="text-ink touch:min-h-(--size-target) block max-w-full truncate text-left font-medium"
+          className="text-ink touch:min-h-(--size-target) col-start-2 row-start-1 block max-w-full min-w-0 truncate text-left font-medium"
         >
           {image.name}
         </button>
-        <div className="text-ink-muted flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm">
-          <span className="font-mono tabular-nums" aria-hidden="true">
+        <div className="text-ink-muted col-span-2 col-start-2 row-start-2 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-sm">
+          <span className="font-mono whitespace-nowrap tabular-nums" aria-hidden="true">
             {t('list.pixels', { w: image.originalPxW, h: image.originalPxH })}
           </span>
           <VisuallyHidden>
             {t('list.pixelsLabel', { w: image.originalPxW, h: image.originalPxH })}
           </VisuallyHidden>
-          <span aria-hidden="true">{t('list.separator')}</span>
-          <span>{sizeLabel}</span>
+          <span className="flex min-w-0 gap-x-1.5">
+            <span aria-hidden="true" className="shrink-0">
+              {t('list.separator')}
+            </span>
+            <span>{sizeLabel}</span>
+          </span>
           {image.edits.copies > 1 && (
             <Badge tone="accent">
               <span aria-hidden="true">{t('list.copies', { count: image.edits.copies })}</span>
@@ -92,7 +96,7 @@ function Row({
           )}
         </div>
       </div>
-      <div className="flex">
+      <div className="col-start-3 row-start-1 flex">
         <IconButton
           label={t('list.edit', { name: image.name })}
           icon="edit"
@@ -138,7 +142,12 @@ export function ImageList({ onEdit }: ImageListProps) {
   }
 
   const removeAllButton = (
-    <Button variant="ghost" icon="trash" className="min-w-0 whitespace-normal" onClick={removeAll}>
+    <Button
+      variant="ghost"
+      icon="trash"
+      className="ml-auto min-w-0 whitespace-normal"
+      onClick={removeAll}
+    >
       {t('list.removeAll.button')}
     </Button>
   )
@@ -154,8 +163,10 @@ export function ImageList({ onEdit }: ImageListProps) {
   }
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-ink-muted text-sm">{t('list.count', { count: images.length })}</span>
+      <div className="flex flex-wrap items-center justify-between gap-x-2">
+        <span className="text-ink-muted text-sm whitespace-nowrap">
+          {t('list.count', { count: images.length })}
+        </span>
         {removeAllButton}
       </div>
       <ul aria-label={t('list.ariaLabel')} className="flex flex-col gap-2 p-0">
