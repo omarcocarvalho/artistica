@@ -35,11 +35,11 @@
   },
   "empty": {
     "title": "添加一些<highlight>参考照片</highlight>",
-    "body": "拖放到这里、粘贴，或添加链接。我们会帮你把它们排到页面上。",
+    "body": "拖放到这里、粘贴或添加链接。我们帮你排到页面上。",
     "formats": "JPG、PNG、WebP、GIF、HEIC · 照片数量不限",
     "privacy": "不会上传任何内容。照片留在本设备上。",
     "panelHint": "还没有图片。添加照片，开始制作参考页。",
-    "noPages": "还没有页面"
+    "noPages": "暂无页面"
   },
   "notices": {
     "dismiss": "关闭",

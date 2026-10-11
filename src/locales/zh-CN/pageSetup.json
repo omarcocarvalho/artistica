@@ -49,7 +49,7 @@
   },
   "suggestion": {
     "tip": "提示！",
-    "text_other": "{{paper}}每页可舒适地放下{{count, number}}张参考图。"
+    "text_other": "{{paper}}每页放{{count, number}}张参考照片正合适。"
   },
   "remembered": "设置会保存在本设备上。"
 }
