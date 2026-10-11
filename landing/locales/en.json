@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Artistica: printable reference sheets for artists",
-    "description": "Turn reference photos into print-ready sheets with crop marks, bleed, blur and value studies and composition lines. Free, private, in your browser."
+    "description": "Turn reference photos into print-ready sheets with crop marks and bleed, blur and value studies, and composition lines. Free, private, in your browser."
   },
   "share": {
     "title": "Artistica: printable reference sheets for artists",
@@ -76,7 +76,7 @@
     },
     "guides": {
       "title": "Guides from the photo",
-      "body": "Trace an edge outline, or add face construction lines and pose lines, found on your device."
+      "body": "Trace an edge outline, or add face construction lines and pose lines that follow the person in it."
     },
     "presets": {
       "title": "Presets",
@@ -102,7 +102,7 @@
       "heroNeverLeave": "Photos never leave your device",
       "faqUploaded": "No. Everything runs in your browser. Photos are never uploaded or saved, and refreshing the page clears them.",
       "faqGuides": "Face and pose guides use Google's MediaPipe models, downloaded from this site and run on your device.",
-      "faqOffline": "Yes, after the first visit. Face and pose guides work offline after their one-time download."
+      "faqOffline": "Yes, after your first visit to the app. Face and pose guides work offline after their one-time download."
     }
   },
   "faq": {

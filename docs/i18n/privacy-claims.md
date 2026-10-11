@@ -74,9 +74,9 @@ Names who made the models (Google's MediaPipe) without implying Google receives 
 - `e2e/guides.spec.ts` › G-X2 nothing is uploaded: same-origin GETs with no body; the only new URLs are the four AI assets, each once
 - `src/features/lines/detect/fetch-guard.test.ts` › refuses a Request object to another origin
 
-### 9. `privacy.claims.faqOffline`: "Yes, after the first visit. Face and pose guides work offline after their one-time download."
+### 9. `privacy.claims.faqOffline`: "Yes, after your first visit to the app. Face and pose guides work offline after their one-time download."
 
-The answer to "Can I use it offline?".
+The answer to "Can I use it offline?". The app registers its service worker on the first visit to the app (not the landing page), which keeps the app's files for offline use; the face and pose models are kept once downloaded. Keep "to the app" and "one-time download".
 
 - `e2e/offline.spec.ts` › G-X1 works offline once the models are cached: reload from the service worker, add photos, guides in the preview and the PDF
 
