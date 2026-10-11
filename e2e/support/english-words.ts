@@ -1,0 +1,36 @@
+/**
+ * Frequent words of the English UI that no translation uses (pinned by `scripts/english-words.test.ts`):
+ * one showing in another language is English left in the UI.
+ */
+export const ENGLISH_WORDS: readonly string[] = [
+  'Add',
+  'Apply',
+  'Bleed',
+  'Blur',
+  'Cancel',
+  'Close',
+  'Copies',
+  'Crop',
+  'Dark',
+  'Delete',
+  'Export',
+  'Gutter',
+  'Height',
+  'Image',
+  'Images',
+  'Landscape',
+  'Light',
+  'Lines',
+  'Orientation',
+  'Paper',
+  'Photos',
+  'Portrait',
+  'Preview',
+  'Rename',
+  'Save',
+  'Settings',
+  'Size',
+  'Studies',
+  'Theme',
+  'Values',
+]

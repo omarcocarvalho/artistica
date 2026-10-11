@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { expect, type Locator, type Page } from '@playwright/test'
 import { ENDONYMS, LANGUAGES, type LanguageCode } from '../../src/shared/i18n/languages.ts'
 import { PSEUDO_LANGUAGE } from '../../src/shared/i18n/pseudo.ts'
+import { ENGLISH_WORDS } from './english-words.ts'
 
 export { pseudoLocalize } from '../../src/shared/i18n/pseudo.ts'
 
@@ -367,42 +368,7 @@ export async function labelInName(page: Page): Promise<string[]> {
   return page.evaluate<string[]>(`(() => ${PROBES}.labelInName())()`)
 }
 
-/**
- * Frequent words of the English UI that no translation uses (checked against every locale file):
- * one showing in another language is English left in the UI.
- */
-export const ENGLISH_WORDS: readonly string[] = [
-  'Add',
-  'Apply',
-  'Bleed',
-  'Blur',
-  'Cancel',
-  'Close',
-  'Copies',
-  'Crop',
-  'Dark',
-  'Delete',
-  'Export',
-  'Gutter',
-  'Height',
-  'Image',
-  'Images',
-  'Landscape',
-  'Light',
-  'Lines',
-  'Orientation',
-  'Paper',
-  'Photos',
-  'Portrait',
-  'Preview',
-  'Rename',
-  'Save',
-  'Settings',
-  'Size',
-  'Studies',
-  'Theme',
-  'Values',
-]
+export { ENGLISH_WORDS }
 
 /** A file name, which is the user's and never translated. */
 export const FILE_NAME = /[^\s"'“”‘’「」«»]+\.(jpe?g|png|webp|gif|heic|heif|avif|json|pdf)\b/iu
