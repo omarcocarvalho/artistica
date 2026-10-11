@@ -9,9 +9,9 @@
       "landscape": "horizontal"
     },
     "tiles": "Recuadros",
-    "tilesValue_one": "{{tiles}} de {{count, number}} imagen",
-    "tilesValue_many": "{{tiles}} de {{count, number}} de imágenes",
-    "tilesValue_other": "{{tiles}} de {{count, number}} imágenes",
+    "tilesValue_one": "{{tiles}} a partir de {{count, number}} imagen",
+    "tilesValue_many": "{{tiles}} a partir de {{count, number}} de imágenes",
+    "tilesValue_other": "{{tiles}} a partir de {{count, number}} imágenes",
     "cropMarks": "Marcas de corte",
     "bleed": "Sangrado",
     "on": "Sí",

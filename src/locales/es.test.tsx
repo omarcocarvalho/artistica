@@ -203,7 +203,7 @@ describe('es: sample screens have no English', () => {
     ]
     render(<ExportPanel pages={pages} paper="Letter" getSource={() => undefined} />)
     expect(screen.getByText('2 · Carta vertical')).toBeInTheDocument()
-    expect(screen.getByText('3 de 3 imágenes')).toBeInTheDocument()
+    expect(screen.getByText('3 a partir de 3 imágenes')).toBeInTheDocument()
     expect(englishOnScreen()).toEqual([])
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Crear PDF' }))
@@ -254,11 +254,11 @@ describe('es: plural forms', () => {
       'export:summary.tilesValue',
       { tiles: 7 },
       [
-        '7 de 0 imágenes',
-        '7 de 1 imagen',
-        '7 de 2 imágenes',
-        '7 de 5 imágenes',
-        '7 de 1.000.000 de imágenes',
+        '7 a partir de 0 imágenes',
+        '7 a partir de 1 imagen',
+        '7 a partir de 2 imágenes',
+        '7 a partir de 5 imágenes',
+        '7 a partir de 1.000.000 de imágenes',
       ],
     ],
     [

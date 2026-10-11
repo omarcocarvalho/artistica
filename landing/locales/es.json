@@ -59,7 +59,7 @@
   "features": {
     "title": "Hecho para ayudarte a ver",
     "packing": {
-      "title": "Acomodo inteligente",
+      "title": "Distribución inteligente",
       "body": "Da a cada foto un tamaño para dibujar, nunca mayor del que permiten sus píxeles a 300 DPI."
     },
     "marks": {
@@ -127,7 +127,7 @@
       "q": "¿Mis fotos se suben a algún lugar?"
     },
     "guides": {
-      "q": "¿Con qué se detectan las guías de rostro y de pose?"
+      "q": "¿Con qué se crean las guías de rostro y de pose?"
     },
     "offline": {
       "q": "¿Puedo usarla sin conexión?"
