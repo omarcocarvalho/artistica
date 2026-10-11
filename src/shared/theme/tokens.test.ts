@@ -57,6 +57,17 @@ describe('design tokens', () => {
     expect(ourLight.get('--font-mono')).toBe(designLight.get('--font-mono'))
   })
 
+  it('keep the shared stacks of design/tokens.css behind the self-hosted family, with no CJK font', () => {
+    for (const [name, variable] of [
+      ['--font-ui', '"Atkinson Hyperlegible Next Variable"'],
+      ['--font-display', '"Fraunces Variable"'],
+      ['--font-hand', '"Caveat Variable"'],
+    ] as const) {
+      expect(ourLight.get(name), name).toBe(`${variable}, ${designLight.get(name) ?? ''}`)
+      expect(ourLight.get(name), name).not.toMatch(/Hiragino|PingFang|Gothic|YaHei|CJK|Mincho/)
+    }
+  })
+
   it('carry every dark token, both for the manual override and for the OS preference', () => {
     expect(designDark.size).toBeGreaterThan(20)
     for (const [name, value] of designDark) {

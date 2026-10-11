@@ -19,6 +19,7 @@
     line-height: 1.2;
     text-decoration: none;
     cursor: pointer;
+    overflow-wrap: anywhere;
     white-space: nowrap;
     transition:
       transform var(--duration-fast) var(--ease-out),
@@ -166,6 +167,7 @@
     font-size: var(--text-sm);
     font-weight: var(--weight-semibold);
     cursor: pointer;
+    overflow-wrap: anywhere;
   }
   .ds-chip[aria-pressed='true'] {
     background: var(--color-accent-soft);

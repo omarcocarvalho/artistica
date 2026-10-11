@@ -8,6 +8,7 @@
  *                      Tailwind's own spacing scale already equals --space-N (p-4 = 1rem).
  * - dark blocks     -> same names re-pointed. "data-theme" on <html> wins; with no attribute the
  *                      OS preference decides. The printed page (--color-paper) is white in both.
+ * - :lang() blocks  -> each CJK language's own system fonts right after the Latin family (M6-R17).
  */
 
 @theme static {
@@ -54,8 +55,8 @@
   --color-crop-mark: #000000;
   --color-selection: #2f4c9e;
   --color-line-overlay: #e0457b;
-  --font-ui: "Atkinson Hyperlegible Next Variable", "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Hiragino Sans", "PingFang SC", "Apple SD Gothic Neo", "Noto Sans CJK JP", sans-serif;
-  --font-display: "Fraunces Variable", "Fraunces", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Hiragino Mincho ProN", "Noto Serif CJK JP", serif;
+  --font-ui: "Atkinson Hyperlegible Next Variable", "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --font-display: "Fraunces Variable", "Fraunces", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   --font-hand: "Caveat Variable", "Caveat", "Segoe Print", "Bradley Hand", "Chalkboard SE", "Comic Sans MS", cursive;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --text-2xs: 0.6875rem;
@@ -233,6 +234,24 @@
     --duration-base: 0ms;
     --duration-slow: 0ms;
   }
+}
+
+:lang(ja) {
+  --font-cjk: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, "Noto Sans JP", "Noto Sans CJK JP";
+}
+
+:lang(ko) {
+  --font-cjk: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Noto Sans CJK KR";
+}
+
+:lang(zh-CN) {
+  --font-cjk: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", "Noto Sans CJK SC";
+}
+
+:is(:lang(ja), :lang(ko), :lang(zh-CN)) {
+  --font-ui: "Atkinson Hyperlegible Next Variable", "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", var(--font-cjk), system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --font-display: "Fraunces Variable", "Fraunces", var(--font-cjk), sans-serif;
+  --font-hand: "Caveat Variable", "Caveat", var(--font-cjk), sans-serif;
 }
 
 /* Shadows change with the theme, so they are plain variables; these utilities read them. */

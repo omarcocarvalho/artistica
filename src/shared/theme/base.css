@@ -44,6 +44,29 @@
     z-index: 1;
   }
 
+  /* Zero specificity: a lang subtree re-resolves --font-ui, and headings keep --font-display. */
+  :where([lang]) {
+    font-family: var(--font-ui);
+  }
+
+  :is(:lang(ja), :lang(ko), :lang(zh-CN)) {
+    overflow-wrap: anywhere;
+    font-synthesis: none;
+  }
+
+  :is(:lang(ja), :lang(zh-CN)) {
+    line-break: strict;
+    word-break: normal;
+  }
+
+  :is(h1, h2, h3, h4, .ds-btn):lang(ja) {
+    word-break: auto-phrase;
+  }
+
+  :lang(ko) {
+    word-break: keep-all;
+  }
+
   h1,
   h2 {
     font-family: var(--font-display);
