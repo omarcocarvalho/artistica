@@ -22,7 +22,7 @@
     },
     "tooLarge": {
       "title": "{{name}}: 너무 커요",
-      "message": "사진은 최대 {{maxMb}} MB, {{maxMp}}메가픽셀까지 가능해요. 더 작은 버전을 사용해 보세요."
+      "message": "사진은 최대 {{maxMb}}MB, {{maxMp}}메가픽셀까지 가능해요. 더 작은 버전을 사용해 보세요."
     }
   },
   "export": {

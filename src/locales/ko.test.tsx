@@ -58,6 +58,10 @@ const ENGLISH_WORDS = [
 ]
 const ENGLISH = new RegExp(`\\b(${ENGLISH_WORDS.join('|')})\\b`, 'iu')
 const HANGUL = /\p{Script=Hangul}/u
+/** Latin words a Korean screen may show: product names, formats, units and key names. */
+const LATIN_ALLOWED = new Set(['Artistica', 'PDF', 'DPI', 'A', 'mm', 'in', 'px', 'MB'])
+/** File names and hex colours are the user's data, not UI text. */
+const DATA = /[\p{L}\p{N}_-]+\.(?:jpe?g|png|webp|gif|heic|pdf|json)\b|#[0-9a-f]{6}\b/giu
 const NAMED = [
   'aria-label',
   'aria-description',
@@ -68,11 +72,21 @@ const NAMED = [
   'alt',
 ]
 
-/** Visible text plus every accessible name, description and hint in the document. */
+/** An element marked as another language, such as an endonym in the language menu. */
+function inOtherLanguage(el: Element | null): boolean {
+  const owner = el?.closest('[lang]')
+  if (!owner || !document.body.contains(owner)) return false
+  return owner.getAttribute('lang') !== 'ko'
+}
+
+/** Every text node, accessible name, description and hint in the document, one per line. */
 function shownText(): string {
-  const parts = [document.title, document.body.textContent]
+  const parts = [document.title]
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+  for (let node = walker.nextNode(); node; node = walker.nextNode())
+    if (!inOtherLanguage(node.parentElement)) parts.push(node.textContent ?? '')
   for (const el of document.body.querySelectorAll('*'))
-    for (const attr of NAMED) parts.push(el.getAttribute(attr) ?? '')
+    if (!inOtherLanguage(el)) for (const attr of NAMED) parts.push(el.getAttribute(attr) ?? '')
   return parts.join('\n')
 }
 
@@ -80,6 +94,8 @@ function expectKorean(): void {
   const text = shownText()
   expect(text).toMatch(HANGUL)
   expect(ENGLISH.exec(text)?.[0] ?? null).toBeNull()
+  const latin = text.replace(DATA, ' ').match(/[A-Za-z]+/g) ?? []
+  expect([...new Set(latin.filter((word) => !LATIN_ALLOWED.has(word)))]).toEqual([])
 }
 
 beforeAll(async () => {
