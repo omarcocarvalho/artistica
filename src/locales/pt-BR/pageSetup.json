@@ -1,0 +1,57 @@
+{
+  "title": "Página",
+  "paper": {
+    "heading": "Papel",
+    "size": "Tamanho do papel",
+    "custom": "Personalizado…",
+    "name": {
+      "letter": "Carta",
+      "legal": "Ofício",
+      "tabloid": "Tabloide",
+      "custom": "Personalizado"
+    },
+    "dims": "{{w}} × {{h}} {{unit}}",
+    "times": "×",
+    "width": "Largura",
+    "height": "Altura",
+    "units": "Unidades",
+    "unitMm": "mm",
+    "unitIn": "polegadas"
+  },
+  "noRoom": "Esta configuração da página não deixa espaço para imagens. Reduza a margem de segurança, o espaço entre imagens, a sangria ou as marcas de corte, ou escolha um papel maior.",
+  "orientation": {
+    "label": "Orientação",
+    "auto": "Automático",
+    "portrait": "Retrato",
+    "landscape": "Paisagem",
+    "autoPicked": "O automático escolheu {{orientation}}: menos páginas.",
+    "resolved": { "portrait": "retrato", "landscape": "paisagem" }
+  },
+  "spacing": {
+    "heading": "Espaçamento",
+    "safeArea": "Margem de segurança",
+    "safeAreaHint": "Faixa em branco na borda da página (mínimo de {{min}}).",
+    "gutter": "Espaço entre imagens",
+    "gutterSize": "Tamanho do espaço",
+    "gutterHint": "Espaço para cortar entre as imagens."
+  },
+  "cutting": {
+    "heading": "Corte",
+    "cropMarks": "Marcas de corte",
+    "bleed": "Sangria",
+    "bleedAmount": "Tamanho da sangria",
+    "bleedHint": "Estende os pixels da borda além da linha de corte, para que um corte um pouco torto não deixe um filete branco."
+  },
+  "notes": {
+    "gutterEnabledForBleed": "Espaço entre imagens ativado. A sangria precisa de um espaço de pelo menos 2 × a sangria.",
+    "gutterRaisedForBleed": "Espaço entre imagens aumentado para {{gutter}}: a sangria precisa de um espaço de pelo menos 2 × a sangria.",
+    "safeAreaRaisedToMinimum": "Margem de segurança aumentada para {{min}}, o mínimo."
+  },
+  "suggestion": {
+    "tip": "dica!",
+    "text_one": "{{paper}} comporta bem {{count, number}} referência por página.",
+    "text_many": "{{paper}} comporta bem {{count, number}} de referências por página.",
+    "text_other": "{{paper}} comporta bem {{count, number}} referências por página."
+  },
+  "remembered": "As configurações ficam guardadas neste dispositivo."
+}

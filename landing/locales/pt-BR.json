@@ -1,0 +1,145 @@
+{
+  "meta": {
+    "title": "Artistica: folhas de referência imprimíveis para artistas",
+    "description": "Transforme fotos de referência em folhas prontas para imprimir, com marcas de corte e sangria, estudos de desfoque e de valores e linhas de composição. Grátis, privado, no seu navegador."
+  },
+  "share": {
+    "title": "Artistica: folhas de referência imprimíveis para artistas",
+    "description": "Solte suas fotos e receba folhas prontas para imprimir, com marcas de corte, sangria, estudos e linhas de composição. Grátis, privado, no seu navegador.",
+    "imageAlt": "Artistica: fotos de referência organizadas em folhas para imprimir"
+  },
+  "structured": {
+    "description": "Transforme fotos de referência em folhas prontas para imprimir, com marcas de corte e sangria, estudos de desfoque e de valores e linhas de composição. Roda inteiramente no seu navegador.",
+    "operatingSystem": "Qualquer um (navegador web)",
+    "browserRequirements": "Requer JavaScript. Versão mais recente do Chrome, Edge, Firefox ou Safari."
+  },
+  "header": {
+    "skip": "Pular para o conteúdo",
+    "home": "Início do Artistica",
+    "nav": "Principal",
+    "how": "Como funciona",
+    "features": "Recursos",
+    "privacy": "Privacidade",
+    "faq": "Perguntas",
+    "openApp": "Abrir o app"
+  },
+  "theme": {
+    "auto": "Automático",
+    "light": "Claro",
+    "dark": "Escuro",
+    "changeAuto": "Mudar tema: Automático",
+    "changeLight": "Mudar tema: Claro",
+    "changeDark": "Mudar tema: Escuro"
+  },
+  "hero": {
+    "hand": "para desenho e pintura",
+    "title": "Transforme fotos de referência em folhas prontas para imprimir.",
+    "lead": "Solte suas fotos. O Artistica as organiza nas páginas em um bom tamanho para desenhar, com marcas de corte e sangria, e pode adicionar estudos e linhas de composição. Depois é só imprimir, cortar e desenhar.",
+    "start": "Começar uma folha",
+    "seeHow": "Ver como funciona",
+    "points": "Grátis · Sem cadastro",
+    "tip": "dica! 4 por página"
+  },
+  "how": {
+    "title": "Como funciona",
+    "subtitle": "Três etapas, em menos de um minuto.",
+    "add": {
+      "title": "Adicione fotos",
+      "body": "Escolha arquivos, arraste, cole ou use um link. JPG, PNG, WebP, GIF e HEIC do iPhone."
+    },
+    "paper": {
+      "title": "Escolha o papel",
+      "body": "A4, Carta e outros. O Artistica encontra um layout com o menor número de páginas e as maiores imagens."
+    },
+    "print": {
+      "title": "Imprima e corte",
+      "body": "Baixe um PDF com marcas de corte e sangria opcional. Imprima em 100% e corte seguindo as marcas."
+    }
+  },
+  "features": {
+    "title": "Feito para ajudar você a ver",
+    "packing": {
+      "title": "Organização inteligente",
+      "body": "Dimensiona cada foto para desenhar, nunca além do que os pixels dela permitem a 300 DPI."
+    },
+    "marks": {
+      "title": "Marcas de corte e sangria",
+      "body": "Marcas como as de gráfica, sangria opcional e uma margem de segurança, para cortar com facilidade."
+    },
+    "studies": {
+      "title": "Estudos de desfoque e de valores",
+      "body": "Imprima uma versão desfocada, um estudo de valores com 2 a 20 valores no matiz que você escolher, ou os dois, ao lado do original."
+    },
+    "lines": {
+      "title": "Linhas de composição",
+      "body": "Grade, regra dos terços, diagonais e armadura, proporção áurea, espiral áurea e linhas centrais, na cor e espessura que você quiser."
+    },
+    "guides": {
+      "title": "Guias da foto",
+      "body": "Trace um contorno das bordas ou adicione linhas de construção do rosto e linhas da pose que acompanham a pessoa na foto."
+    },
+    "presets": {
+      "title": "Presets",
+      "body": "Salve a configuração da página, os estudos e as linhas com um nome e aplique tudo a todas as suas fotos de uma vez."
+    },
+    "edit": {
+      "title": "Edite e organize à mão",
+      "body": "Corte, gire, espelhe, imprima cópias ou defina um tamanho exato, depois mova, redimensione e troque fotos na página, com desfazer."
+    },
+    "phone": {
+      "title": "Funciona no seu telefone",
+      "body": "Um fluxo passo a passo em telas pequenas, painéis laterais no computador, tema claro e escuro."
+    }
+  },
+  "privacy": {
+    "title": "Suas fotos ficam com você",
+    "claims": {
+      "inBrowser": "Tudo roda no seu navegador. Nada é enviado.",
+      "notSaved": "As fotos nunca são salvas. Recarregar a página as apaga.",
+      "settingsOnly": "Só as suas configurações e presets são guardados, neste dispositivo.",
+      "models": "Os modelos de rosto e de pose são baixados deste site só quando você pede e ficam no seu navegador para uso offline.",
+      "noTracking": "Sem contas e sem rastreamento.",
+      "heroNeverLeave": "As fotos nunca saem do seu dispositivo",
+      "faqUploaded": "Não. Tudo roda no seu navegador. As fotos nunca são enviadas nem salvas, e recarregar a página as apaga.",
+      "faqGuides": "As guias de rosto e de pose usam os modelos MediaPipe do Google, baixados deste site e executados no seu dispositivo.",
+      "faqOffline": "Sim, depois da sua primeira visita ao app. As guias de rosto e de pose funcionam offline depois de um download único."
+    }
+  },
+  "faq": {
+    "title": "Perguntas",
+    "free": {
+      "q": "É grátis?",
+      "a": "Sim. Grátis e de código aberto (MIT)."
+    },
+    "size": {
+      "q": "Minhas impressões vão sair no tamanho certo?",
+      "a": "Sim, se você imprimir em 100% (“Tamanho real”). As páginas são criadas no tamanho exato do papel que você escolher."
+    },
+    "link": {
+      "q": "Por que o link de uma imagem não funciona?",
+      "a": "Alguns sites impedem que outros apps leiam as imagens deles. Baixe a imagem e adicione o arquivo."
+    },
+    "bleed": {
+      "q": "O que significam “sangria” e “marcas de corte”?",
+      "a": "As marcas de corte mostram onde cortar. A sangria imprime um pouco além do corte, para que um corte um pouco torto não deixe uma borda branca."
+    },
+    "uploaded": {
+      "q": "Minhas fotos são enviadas para algum lugar?"
+    },
+    "guides": {
+      "q": "O que encontra as guias de rosto e de pose?"
+    },
+    "offline": {
+      "q": "Posso usar offline?"
+    },
+    "phone": {
+      "q": "Funciona no meu telefone?",
+      "a": "Sim: nas versões mais recentes do Chrome, Edge, Firefox e Safari, no computador, no iPhone e no Android."
+    }
+  },
+  "footer": {
+    "licence": "Artistica · licença MIT ·",
+    "source": "Código-fonte no GitHub",
+    "language": "Idioma"
+  }
+}

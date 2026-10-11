@@ -1,0 +1,106 @@
+{
+  "button": "Presets",
+  "title": "Presets",
+  "close": "Fechar",
+  "empty": "Salve a configuração da página, os estudos e as linhas com um nome e aplique tudo de uma vez.",
+  "listLabel": "Presets salvos",
+  "storageFailed": "Não guardado neste dispositivo: o armazenamento do navegador está cheio ou bloqueado. A mudança vale até você recarregar ou fechar a página.",
+  "save": {
+    "open": "Salvar as configurações atuais…",
+    "name": "Nome do preset",
+    "submit": "Salvar",
+    "cancel": "Cancelar",
+    "needName": "Dê um nome ao preset.",
+    "tooLong": "Use no máximo {{max}} caracteres.",
+    "exists": "Já existe um preset com este nome.",
+    "replace": "Substituir",
+    "full": "Você tem {{max}} presets, o máximo que este dispositivo guarda. Exclua um para salvar outro.",
+    "saved": "Preset {{name}} salvo.",
+    "replaced": "Preset {{name}} substituído."
+  },
+  "row": {
+    "apply": "Aplicar",
+    "applyLabel": "Aplicar {{name}}",
+    "rename": "Renomear",
+    "renameLabel": "Renomear {{name}}",
+    "delete": "Excluir",
+    "deleteLabel": "Excluir {{name}}"
+  },
+  "rename": {
+    "label": "Novo nome para {{name}}",
+    "submit": "Salvar",
+    "cancel": "Cancelar",
+    "renamed": "Preset {{from}} renomeado para {{to}}."
+  },
+  "apply": {
+    "confirmTitle": "Aplicar “{{name}}”?",
+    "confirmBodySingle": "Isso define a configuração da página e os estudos e as linhas da sua foto.",
+    "confirmBody_one": "Isso define a configuração da página e os estudos e as linhas de {{count, number}} foto.",
+    "confirmBody_many": "Isso define a configuração da página e os estudos e as linhas de todas as {{count, number}} de fotos.",
+    "confirmBody_other": "Isso define a configuração da página e os estudos e as linhas de todas as {{count, number}} fotos.",
+    "confirm": "Aplicar",
+    "cancel": "Cancelar",
+    "applied": "Preset {{name}} aplicado.",
+    "waiting": "Aguardando as fotos terminarem de ser importadas…"
+  },
+  "delete": {
+    "confirmTitle": "Excluir “{{name}}”?",
+    "confirm": "Excluir",
+    "cancel": "Cancelar",
+    "deleted": "Preset {{name}} excluído."
+  },
+  "export": {
+    "button": "Exportar todos"
+  },
+  "import": {
+    "button": "Importar…",
+    "file": "Arquivo de presets",
+    "imported_one": "{{count, number}} preset importado.",
+    "imported_many": "{{count, number}} de presets importados.",
+    "imported_other": "{{count, number}} presets importados.",
+    "renamed_one": "{{count, number}} foi renomeado: {{list}}.",
+    "renamed_many": "{{count, number}} foram renomeados: {{list}}.",
+    "renamed_other": "{{count, number}} foram renomeados: {{list}}.",
+    "renamedPair": "{{from}} → {{to}}",
+    "skipped_one": "{{count, number}} foi ignorado: não era válido.",
+    "skipped_many": "{{count, number}} foram ignorados: não eram válidos.",
+    "skipped_other": "{{count, number}} foram ignorados: não eram válidos.",
+    "full_one": "{{count, number}} não foi adicionado: este dispositivo guarda no máximo {{max}} presets.",
+    "full_many": "{{count, number}} não foram adicionados: este dispositivo guarda no máximo {{max}} presets.",
+    "full_other": "{{count, number}} não foram adicionados: este dispositivo guarda no máximo {{max}} presets.",
+    "adjusted_one": "{{count, number}} preset tinha um valor fora do intervalo, que foi ajustado.",
+    "adjusted_many": "{{count, number}} de presets tinham valores fora do intervalo, que foram ajustados.",
+    "adjusted_other": "{{count, number}} presets tinham valores fora do intervalo, que foram ajustados.",
+    "error": {
+      "tooLarge": "Este arquivo é grande demais para ser um arquivo de presets.",
+      "notPresets": "Este arquivo não é um arquivo de presets do Artistica.",
+      "newerVersion": "Este arquivo foi criado por uma versão mais nova do Artistica. Atualize a página e tente de novo.",
+      "empty": "Nenhum preset foi encontrado neste arquivo."
+    }
+  },
+  "summary": {
+    "separator": " · ",
+    "plus": " + ",
+    "custom": "Personalizado {{w}} × {{h}} {{unit}}",
+    "orientation": {
+      "auto": "Automático",
+      "portrait": "Retrato",
+      "landscape": "Paisagem"
+    },
+    "bleed": "sangria {{size}}",
+    "version": {
+      "original": "original",
+      "blurred": "desfocada {{value}}",
+      "values": "valores {{count, number}}",
+      "blurValues": "valores desfocados {{count, number}}"
+    },
+    "line": {
+      "grid": "grade",
+      "thirds": "terços",
+      "armature": "armadura",
+      "golden": "proporção áurea",
+      "spiral": "espiral",
+      "centre": "linhas centrais"
+    }
+  }
+}

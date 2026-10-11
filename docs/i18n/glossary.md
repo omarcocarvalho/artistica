@@ -30,7 +30,7 @@ One translation per term, used in every namespace of the app and on the landing 
 | print size | tamanho de impressão | tamaño de impresión | dimensione di stampa | 印刷サイズ | 인쇄 크기 | 打印尺寸 | How large an image prints on the paper. Print-dialog and photo-printing usage. |
 | print resolution | resolução de impressão | resolución de impresión | risoluzione di stampa | 印刷解像度 | 인쇄 해상도 | 打印分辨率 | Pixels per inch at the print size; 300 DPI is the target. Print-shop usage. |
 | low resolution | baixa resolução | baja resolución | bassa risoluzione | 低解像度 | 저해상도 | 低分辨率 | Below 300 DPI; it may print soft. |
-| scaled to fit | reduzida para caber | reducida para caber | ridotta per stare | 縮小して配置 | 맞춤 축소 | 已缩小以适应 | Badge on a tile that was shrunk to fit the page. Tight (context.md). |
+| scaled to fit | reduzida para caber | reducida para caber | ridotta per stare | 縮小して配置 | 맞춤 축소 | 已缩小以适应 | Badge on a tile that was shrunk to fit the page. Tight (context.md): where the full term is over the limit, the badge takes the short form (pt-BR "Reduzida") and the spoken label `scaledToFitLabel` keeps the full meaning. |
 | upscaled | ampliada | ampliada | ingrandita | 拡大 | 확대 | 放大 | "never upscaled": the image is never printed larger than its pixels allow at 300 DPI. |
 | tile | quadro | recuadro | riquadro | 枠 | 칸 | 图块 | One printed picture on a page (an image, one of its versions, one copy). |
 | quality | qualidade | calidad | qualità | 品質 | 품질 | 质量 | Export summary. |

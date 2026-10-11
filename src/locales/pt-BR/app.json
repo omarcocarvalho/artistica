@@ -1,0 +1,97 @@
+{
+  "title": "Artistica",
+  "documentTitle": "Artistica app",
+  "language": {
+    "label": "Idioma",
+    "loadFailed": "Não foi possível carregar esse idioma. Verifique sua conexão e tente de novo."
+  },
+  "skipToPreview": "Pular para a prévia",
+  "topBar": {
+    "home": "Início do Artistica",
+    "privacy": "As fotos ficam neste dispositivo",
+    "export": "Exportar PDF",
+    "exportNoImages": "Adicione pelo menos uma imagem para exportar.",
+    "exportUpdating": "O layout está sendo atualizado. A exportação fica disponível em instantes.",
+    "exportNoRoom": "Não é possível exportar: a configuração da página não deixa espaço para imagens.",
+    "exportError": "Não foi possível calcular o layout. Mude uma configuração ou recarregue a página.",
+    "exportGuides": "Procurando guias nas suas fotos…"
+  },
+  "theme": {
+    "changeLabel": "Mudar tema: {{current}}",
+    "auto": "Automático",
+    "light": "Claro",
+    "dark": "Escuro"
+  },
+  "panels": {
+    "images": "Imagens",
+    "settings": "Configurações",
+    "preview": "Prévia da página"
+  },
+  "settingsTabs": {
+    "label": "Configurações",
+    "page": "Página",
+    "studies": "Estudos",
+    "lines": "Linhas"
+  },
+  "empty": {
+    "title": "Adicione algumas <highlight>fotos de referência</highlight>",
+    "body": "Solte-as aqui, cole ou adicione um link. Nós as organizamos nas páginas para você.",
+    "formats": "JPG, PNG, WebP, GIF, HEIC · quantas fotos quiser",
+    "privacy": "Nada é enviado. As fotos ficam neste dispositivo.",
+    "panelHint": "Nenhuma imagem ainda. Adicione fotos para começar suas folhas.",
+    "noPages": "Nenhuma página ainda"
+  },
+  "notices": {
+    "dismiss": "Dispensar",
+    "region": "Notificações",
+    "layoutFailed": "Não foi possível calcular o layout. Mude uma configuração e tente de novo."
+  },
+  "mobile": {
+    "steps": "Etapas",
+    "done": "Concluído",
+    "stepLabel": "Etapa {{current}} de {{total}}: {{name}}",
+    "back": "Voltar",
+    "next": "Avançar",
+    "names": {
+      "images": "Imagens",
+      "page": "Página",
+      "studies": "Estudos",
+      "preview": "Prévia",
+      "export": "Exportar"
+    },
+    "images": {
+      "tapToEdit": "Toque em uma foto para cortar, girar ou definir cópias."
+    },
+    "studies": {
+      "picker": "Imagem"
+    },
+    "lines": {
+      "title": "Linhas",
+      "on": "Ativas: {{count, number}}"
+    }
+  },
+  "import": {
+    "noImage": "Nenhuma imagem na área de transferência. Copie uma imagem primeiro e cole de novo.",
+    "animatedGif": "{{name}}: só o primeiro quadro. GIFs animados imprimem o primeiro quadro.",
+    "failed": "{{list}}: {{title}}. {{message}}",
+    "more_one": "mais {{count, number}}",
+    "more_many": "mais {{count, number}}",
+    "more_other": "mais {{count, number}}",
+    "unnamed": "Esta imagem"
+  },
+  "preview": {
+    "editSelected": "Editar a imagem selecionada",
+    "updating": "Atualizando o layout…",
+    "updated": "Layout atualizado.",
+    "pageCaption": "Página {{current}} de {{total}} · {{paper}} · {{orientation}}",
+    "pageItems": "Conteúdo da página {{current}}",
+    "item": "{{name}}, {{w}} × {{h}} {{unit}}",
+    "unnamedImage": "Imagem",
+    "orientation": {
+      "portrait": "retrato",
+      "landscape": "paisagem"
+    },
+    "itemVersion": "{{name}}, {{version}}, {{w}} × {{h}} {{unit}}",
+    "itemLines": "{{item}}, linhas: {{list}}"
+  }
+}
