@@ -1,0 +1,61 @@
+{
+  "version": {
+    "original": "원본",
+    "blurred": "흐림",
+    "values": "명도",
+    "blurValues": "흐림 + 명도"
+  },
+  "panel": {
+    "forImage": "<name/>의 스터디",
+    "noImage": "사진을 추가하거나 선택하면 스터디를 설정할 수 있어요.",
+    "importing": "사진 가져오기가 끝나기를 기다리는 중…"
+  },
+  "versions": {
+    "legend": "인쇄할 버전",
+    "hint": "버전마다 한 칸이에요. 나란히 함께 인쇄돼요.",
+    "lastOne": "버전을 하나 이상 인쇄해야 해요."
+  },
+  "blur": {
+    "heading": "흐림",
+    "accent": "눈을 가늘게!",
+    "amount": "강도",
+    "valueText": "{{value}}",
+    "min": "1%",
+    "max": "100%",
+    "hint": "이미지 크기에 따라 조절되므로 같은 {{value}} 값이면 어떤 사진에서도 비슷하게 보여요.",
+    "usedBy": "흐림, 흐림 + 명도에 사용돼요."
+  },
+  "values": {
+    "heading": "명도",
+    "count": "명도 단계 수",
+    "countText_other": "{{count, number}}단계",
+    "min": "2 · 노탄",
+    "max": "20",
+    "hue": "색상",
+    "customHue": "사용자 지정 색상",
+    "hueText": "{{value}}",
+    "ramp": "명도 단계표",
+    "rampLabel": "{{count, number}}단계, 가장 어두운 색부터 가장 밝은 색까지",
+    "darkest": "가장 어두운",
+    "lightest": "가장 밝은 색",
+    "hint": "흐림 + 명도는 먼저 흐리게 한 다음 명도 단계로 나눠요.",
+    "usedBy": "명도, 흐림 + 명도에 사용돼요."
+  },
+  "swatch": {
+    "sepia": "세피아",
+    "terracotta": "테라코타",
+    "ochre": "오커",
+    "sapGreen": "샙 그린",
+    "teal": "청록",
+    "ultramarine": "울트라마린",
+    "violet": "바이올렛",
+    "neutral": "뉴트럴 그레이"
+  },
+  "applyAll": {
+    "button": "모든 이미지에 적용",
+    "hintSingle": "사진을 하나 더 추가하면 이 설정을 복사할 수 있어요.",
+    "hint_other": "이 스터디 설정을 이미지 {{count, number}}장 모두에 복사해요.",
+    "done_other": "스터디 설정을 이미지 {{count, number}}장에 복사했어요.",
+    "nothingChanged": "모든 이미지가 이미 이 스터디 설정을 사용하고 있어요."
+  }
+}

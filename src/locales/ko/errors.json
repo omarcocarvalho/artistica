@@ -1,0 +1,37 @@
+{
+  "images": {
+    "cors": {
+      "title": "이 이미지를 읽을 수 없어요",
+      "message": "이 사이트는 다른 앱이 이미지를 읽지 못하게 해요. 이미지를 다운로드한 다음 파일에서 추가하세요."
+    },
+    "network": {
+      "title": "이 링크를 불러오지 못했어요",
+      "message": "링크와 연결을 확인한 다음 다시 시도하세요."
+    },
+    "notAnImage": {
+      "title": "이미지가 아니에요",
+      "message": "링크나 파일에 그림이 없어요. JPG, PNG, WebP, GIF 또는 HEIC를 사용하세요."
+    },
+    "unsupportedFormat": {
+      "title": "{{name}}: 추가할 수 없어요",
+      "message": "JPG, PNG, WebP, GIF 또는 HEIC를 사용하세요."
+    },
+    "decodeFailed": {
+      "title": "{{name}}: 읽을 수 없어요",
+      "message": "파일이 손상되었을 수 있어요. JPG나 PNG로 다시 저장해 보세요."
+    },
+    "tooLarge": {
+      "title": "{{name}}: 너무 커요",
+      "message": "사진은 최대 {{maxMb}} MB, {{maxMp}}메가픽셀까지 가능해요. 더 작은 버전을 사용해 보세요."
+    }
+  },
+  "export": {
+    "unsupported": "이 브라우저에서는 PDF를 만들 수 없어요. 브라우저를 업데이트하거나 최신 Chrome, Edge, Firefox 또는 Safari를 사용하세요.",
+    "missingImage": "PDF를 만드는 동안 이미지가 삭제되었어요. 다시 시도하세요.",
+    "empty": "내보내려면 이미지를 하나 이상 추가하세요.",
+    "failed": "PDF를 만드는 중에 문제가 생겼어요. 다시 시도하세요. 계속 실패하면 이미지 수를 줄이거나 더 작은 이미지를 사용해 보세요."
+  },
+  "generic": {
+    "unexpected": "문제가 생겼어요. 다시 시도해 주세요."
+  }
+}

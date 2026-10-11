@@ -1,0 +1,153 @@
+{
+  "dropzone": {
+    "groupLabel": "이미지 추가",
+    "title": "참고 사진을 추가하세요",
+    "hint": "여기에 놓거나, 붙여넣거나, 링크를 추가하세요. 페이지에 알맞게 배치해 드려요.",
+    "formats": "JPG, PNG, WebP, GIF, HEIC · 사진 개수 제한 없음",
+    "privacy": "아무것도 업로드되지 않아요. 사진은 이 기기에만 있어요.",
+    "dropMini": "또는 여기에 사진을 놓으세요",
+    "dropActive": "사진을 놓아 추가하세요",
+    "upload": "파일",
+    "uploadHero": "사진 추가",
+    "paste": "붙여넣기",
+    "link": "링크",
+    "linkHero": "링크 추가",
+    "importing_other": "사진 {{count, number}}장 추가 중…",
+    "importingLabel": "사진 추가 중",
+    "cancel": "취소",
+    "cancelLabel": "사진 추가 취소",
+    "stopped": "사진 추가를 멈췄어요.",
+    "dismiss": "닫기",
+    "noImage": {
+      "title": "클립보드에 이미지가 없어요",
+      "message": "먼저 이미지를 복사한 다음 다시 붙여넣으세요."
+    },
+    "noImageDrop": {
+      "title": "놓은 항목에 이미지가 없어요",
+      "message": "사진 파일이나 다른 페이지의 이미지를 놓으세요."
+    },
+    "pasteHint": {
+      "title": "키보드로 붙여넣기",
+      "message": "여기서는 브라우저에서 키보드를 사용해야 해요. Ctrl+V(Mac에서는 ⌘V)를 누르세요."
+    },
+    "url": {
+      "title": "링크로 이미지 추가",
+      "label": "이미지 링크",
+      "placeholder": "https://example.com/photo.jpg",
+      "submit": "추가",
+      "cancel": "취소",
+      "tryAnother": "다른 링크 시도",
+      "uploadInstead": "대신 파일에서 추가"
+    },
+    "gifNote": "움직이는 GIF는 첫 프레임이 인쇄돼요."
+  },
+  "list": {
+    "ariaLabel": "불러온 이미지",
+    "empty": {
+      "title": "아직 이미지가 없어요. 사진을 추가해 시트를 시작하세요.",
+      "formats": "JPG, PNG, WebP, GIF, HEIC"
+    },
+    "select": "{{name}} 선택",
+    "edit": "{{name}} 편집",
+    "remove": "{{name}} 삭제",
+    "pixels": "{{w}} × {{h}}",
+    "pixelsLabel": "가로 {{w}}, 세로 {{h}}픽셀",
+    "sizeAuto": "자동",
+    "sizeFixed": "고정 {{size}}",
+    "copies": "×{{count, number}}",
+    "copiesLabel": "{{count, number}}장 인쇄",
+    "dpi": "{{dpi}} DPI",
+    "lowDpiLabel": "저해상도: {{dpi}} DPI",
+    "separator": "·",
+    "count_other": "{{count, number}}장",
+    "removeAll": {
+      "button": "모든 이미지 삭제",
+      "confirmTitle": "모든 이미지를 삭제할까요?",
+      "confirmBody_other": "이 세션의 이미지 {{count, number}}장을 모두 삭제해요. 사진은 어디에도 저장되지 않으므로 되돌릴 수 없어요.",
+      "confirm": "모두 삭제",
+      "cancel": "취소",
+      "close": "닫기"
+    }
+  },
+  "editSheet": {
+    "title": "이미지 편집",
+    "subtitle": "{{name}} · {{w}} × {{h}}px",
+    "crop": {
+      "stageLabel": "이미지 미리보기",
+      "areaLabel": "자르기 영역",
+      "help": "화살표 키로 자르기 영역을 옮겨요. Shift와 화살표 키로 크기를 바꿔요.",
+      "status": "자르기 {{w}} × {{h}}px, 위치 {{x}}, {{y}}",
+      "annotation": "모서리 드래그",
+      "controls": "자르기 위치와 크기",
+      "position": "위치",
+      "size": "크기",
+      "step": {
+        "left": "왼쪽으로 이동",
+        "up": "위로 이동",
+        "down": "아래로 이동",
+        "right": "오른쪽으로 이동",
+        "narrower": "좁게",
+        "wider": "넓게",
+        "shorter": "낮게",
+        "taller": "높게"
+      },
+      "shape": "자르기 모양",
+      "reset": "자르기 초기화"
+    },
+    "aspect": {
+      "free": "자유",
+      "original": "원본 비율",
+      "ratio11": "1:1",
+      "ratio43": "4:3",
+      "ratio32": "3:2",
+      "ratio169": "16:9",
+      "ratio34": "3:4",
+      "ratio23": "2:3",
+      "ratio916": "9:16"
+    },
+    "transform": {
+      "group": "회전 및 반전",
+      "rotateLeft": "왼쪽으로 90° 회전",
+      "rotateRight": "오른쪽으로 90° 회전",
+      "flipH": "좌우 반전",
+      "flipV": "상하 반전"
+    },
+    "copies": {
+      "label": "매수",
+      "less": "매수 줄이기",
+      "more": "매수 늘리기",
+      "lessGlyph": "−",
+      "moreGlyph": "+",
+      "hint": "이 이미지를 여러 장 인쇄해요."
+    },
+    "size": {
+      "label": "인쇄 크기",
+      "auto": "자동",
+      "fixed": "고정",
+      "autoHint": "자동은 {{size}}부터 300 DPI 한도까지의 범위에서 크기를 골라요.",
+      "axisLabel": "기준",
+      "width": "너비",
+      "height": "높이",
+      "valueLabel": "크기",
+      "followsHeight": "높이 자동: {{value}} (가로세로 비율 유지)",
+      "followsWidth": "너비 자동: {{value}} (가로세로 비율 유지)"
+    },
+    "dpi": {
+      "label": "인쇄 해상도",
+      "value": "{{dpi}} DPI",
+      "scale0": "0",
+      "scale300": "300",
+      "scale400": "400",
+      "autoOk": "자동은 300 DPI를 넘겨 인쇄하지 않아요.",
+      "lowTitle": "저해상도",
+      "lowFixed": "300 DPI 미만에서는 흐릿하게 인쇄될 수 있어요. {{w}} × {{h}}{{unit}}까지는 선명해요.",
+      "lowAuto": "알맞게 볼 수 있는 가장 작은 크기({{size}})에서 {{dpi}} DPI로 인쇄돼요. 흐릿해 보일 수 있어요."
+    },
+    "actions": {
+      "close": "닫기",
+      "remove": "이미지 삭제",
+      "cancel": "취소",
+      "done": "완료"
+    }
+  }
+}

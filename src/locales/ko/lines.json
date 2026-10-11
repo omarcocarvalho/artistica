@@ -1,0 +1,101 @@
+{
+  "type": {
+    "grid": "격자",
+    "thirds": "삼분할 법칙",
+    "armature": "대각선과 골격선",
+    "golden": "황금비",
+    "spiral": "황금 나선",
+    "centre": "중심선",
+    "edges": "윤곽선",
+    "face": "얼굴 구조선",
+    "pose": "신체 포즈"
+  },
+  "corner": {
+    "topLeft": "왼쪽 위",
+    "topRight": "오른쪽 위",
+    "bottomLeft": "왼쪽 아래",
+    "bottomRight": "오른쪽 아래"
+  },
+  "panel": {
+    "forImage": "<name/>의 선",
+    "everyVersion": "이 이미지의 모든 인쇄 버전 위에 그려져요.",
+    "noImage": "사진을 추가하거나 선택하면 선을 그릴 수 있어요.",
+    "composition": "구도",
+    "style": "선 스타일",
+    "waiting": "사진 가져오기가 끝나기를 기다리는 중…"
+  },
+  "grid": {
+    "columns": "열",
+    "rows": "행",
+    "times": "×",
+    "range": "{{min}}~{{max}}"
+  },
+  "spiral": {
+    "startsAt": "나선 시작 위치",
+    "arrow": {
+      "topLeft": "↖",
+      "topRight": "↗",
+      "bottomLeft": "↙",
+      "bottomRight": "↘"
+    }
+  },
+  "guides": {
+    "heading": "사진 기반 가이드",
+    "onDevice": "기기에서",
+    "detail": { "label": "세밀도", "value": "{{value}}" },
+    "size": "한 번만 다운로드: {{size}}",
+    "download": "다운로드하고 켜기",
+    "progress": "{{loaded}} / {{total}}",
+    "progressSpoken": "{{total}}메가바이트 중 {{loaded}}메가바이트",
+    "failedHint": "연결을 확인하고 다시 시도하세요. 다른 선은 계속 사용할 수 있어요.",
+    "errorHint": "다시 시도하세요. 다른 선은 계속 사용할 수 있어요.",
+    "tryAgain": "다시 시도",
+    "noWebGL": "얼굴 및 포즈 가이드에는 WebGL이 필요한데, 이 브라우저에서 꺼져 있어요.",
+    "edges": {
+      "running": "윤곽선을 따는 중…",
+      "done": "윤곽선을 땄어요.",
+      "none": "이 세밀도에서는 윤곽을 찾지 못했어요. 세밀도를 높여 보세요.",
+      "failed": "윤곽선을 따지 못했어요."
+    },
+    "face": {
+      "why": "얼굴 가이드는 작은 AI 모델을 사용해요. 모델은 이 기기에 저장되고 오프라인에서 실행돼요. 사진은 절대 업로드되지 않아요.",
+      "progressLabel": "얼굴 모델 다운로드",
+      "downloading": "얼굴 모델 다운로드 중…",
+      "running": "얼굴 찾는 중…",
+      "found": "얼굴 가이드를 켰어요. 눈썹, 눈, 코, 턱 선을 추가했어요.",
+      "none": "이 이미지에서 얼굴을 찾지 못했어요.",
+      "noneHint": "얼굴 가이드는 정면이나 ¾ 각도의 선명한 얼굴에서 가장 잘 작동해요.",
+      "noneWithHint": "이 이미지에서 얼굴을 찾지 못했어요. 얼굴 가이드는 정면이나 ¾ 각도의 선명한 얼굴에서 가장 잘 작동해요.",
+      "downloadFailed": "얼굴 모델을 다운로드하지 못했어요",
+      "error": "이 이미지에서 얼굴을 찾을 수 없었어요",
+      "turnOff": "얼굴 가이드 끄기"
+    },
+    "pose": {
+      "why": "포즈 선은 작은 AI 모델을 사용해요. 모델은 이 기기에 저장되고 오프라인에서 실행돼요. 사진은 절대 업로드되지 않아요.",
+      "progressLabel": "포즈 모델 다운로드",
+      "downloading": "포즈 모델 다운로드 중…",
+      "running": "포즈 찾는 중…",
+      "found": "포즈 선을 켰어요.",
+      "none": "이 이미지에서 사람을 찾지 못했어요.",
+      "noneHint": "포즈 선은 몸 전체가 보일 때 가장 잘 작동해요.",
+      "noneWithHint": "이 이미지에서 사람을 찾지 못했어요. 포즈 선은 몸 전체가 보일 때 가장 잘 작동해요.",
+      "downloadFailed": "포즈 모델을 다운로드하지 못했어요",
+      "error": "이 이미지에서 사람을 찾을 수 없었어요",
+      "turnOff": "포즈 가이드 끄기"
+    }
+  },
+  "colour": {
+    "label": "색상",
+    "hexLabel": "색상 16진수 코드",
+    "hexHint": "#과 16진수 여섯 자리를 입력하세요(예: #1f3fbf)."
+  },
+  "thickness": { "label": "두께", "value": "{{value}}{{unit}}" },
+  "opacity": { "label": "불투명도", "value": "{{value}}" },
+  "applyAll": {
+    "button": "모든 이미지에 선 적용",
+    "hintSingle": "사진을 하나 더 추가하면 이 설정을 복사할 수 있어요.",
+    "hint_other": "이 선 설정을 이미지 {{count, number}}장 모두에 복사해요.",
+    "done_other": "선 설정을 이미지 {{count, number}}장에 복사했어요.",
+    "nothingChanged": "모든 이미지가 이미 이 선 설정을 사용하고 있어요."
+  }
+}
