@@ -254,6 +254,23 @@ describe('the repository locales', () => {
       checkLocales({ ...readLocales(ROOT), pluralCategories: intlPluralCategories }).problems,
     ).toEqual([])
   })
+
+  it('leave no value equal to the English one unless its key is reviewed', () => {
+    expect(
+      checkLocales({ ...readLocales(ROOT), pluralCategories: intlPluralCategories }).sameAsEnglish,
+    ).toEqual([])
+  })
+
+  it('review only keys English has, each once', () => {
+    const { en } = readLocales(ROOT)
+    const english = new Set(
+      Object.entries(en).flatMap(([ns, tree]) =>
+        keyPaths(tree).map((k) => `${ns}:${k.slice(1).replaceAll('/', '.')}`),
+      ),
+    )
+    expect(SAME_AS_ENGLISH.filter((key) => !english.has(key))).toEqual([])
+    expect(new Set(SAME_AS_ENGLISH).size).toBe(SAME_AS_ENGLISH.length)
+  })
 })
 
 function keyPaths(value: unknown, prefix = ''): string[] {

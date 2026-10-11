@@ -79,14 +79,40 @@ function richText(value: string, key: string, lang: LanguageCode): string {
   return html.replace(RICH_TAGS, '<$1$2>')
 }
 
+/** Scans from the start, so a `<` or `>` inside a quoted attribute or a comment never misleads it. */
 function contextAt(template: string, index: number): Context | 'script' {
-  const before = template.slice(0, index)
-  const scriptOpen = before.lastIndexOf('<script')
-  if (scriptOpen > before.lastIndexOf('</script')) {
-    const tag = template.slice(scriptOpen, template.indexOf('>', scriptOpen) + 1)
-    return tag.includes('type="application/ld+json"') ? 'json' : 'script'
+  let state: 'text' | 'tag' | 'quoted' = 'text'
+  let quote = ''
+  let tagStart = 0
+  for (let i = 0; i < index; i++) {
+    const ch = template[i]
+    if (state === 'quoted') {
+      if (ch === quote) state = 'tag'
+    } else if (state === 'tag') {
+      if (ch === '"' || ch === "'") {
+        state = 'quoted'
+        quote = ch
+      } else if (ch === '>') {
+        state = 'text'
+        const tag = template.slice(tagStart, i + 1)
+        const name = /^<(script|style)\b/i.exec(tag)?.[1]?.toLowerCase()
+        if (!name) continue
+        const close = template.toLowerCase().indexOf(`</${name}`, i)
+        if (close === -1 || close >= index) {
+          return name === 'script' && tag.includes('type="application/ld+json"') ? 'json' : 'script'
+        }
+        i = close
+      }
+    } else if (template.startsWith('<!--', i)) {
+      const end = template.indexOf('-->', i + 4)
+      if (end === -1 || end >= index) return 'text'
+      i = end + 2
+    } else if (ch === '<' && /[A-Za-z/!?]/.test(template[i + 1] ?? '')) {
+      state = 'tag'
+      tagStart = i
+    }
   }
-  return before.lastIndexOf('<') > before.lastIndexOf('>') ? 'attribute' : 'text'
+  return state === 'text' ? 'text' : 'attribute'
 }
 
 function localised(
@@ -156,7 +182,7 @@ export function renderLandingPage(
     PLACEHOLDER,
     (match, t: string | undefined, key: string, index: number) => {
       const context = contextAt(template, index)
-      if (context === 'script') throw new Error(`landing: ${match} inside a <script>`)
+      if (context === 'script') throw new Error(`landing: ${match} inside a <script> or <style>`)
       if (t) return localised(strings, key, context, lang)
       const block = raw.get(key)
       if (block !== undefined) return block

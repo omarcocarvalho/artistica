@@ -12,6 +12,7 @@ import {
   findUntranslated,
   labelInName,
   pageLanguage,
+  REFLOW_VIEWPORT,
   setLanguage,
   staleAnnouncements,
 } from './support/l10n.ts'
@@ -42,8 +43,6 @@ const LANGS: readonly ScreenLanguage[] = process.env.E2E_LANG
 const FULL = ['chromium', 'mobile-chromium']
 const OTHER_LANGS: readonly ScreenLanguage[] = ['pseudo', 'ja', 'pt-BR']
 const PHONE = ['mobile-chromium', 'mobile-webkit']
-/** WCAG 1.4.10: content reflows at 320 CSS pixels. */
-const NARROW = { width: 320, height: 640 }
 
 /** Names the walk types or loads: photo and preset names are the user's, never translated. */
 const USER_NAMES = /^(A4 values|Values 2)$/u
@@ -181,7 +180,7 @@ LANGS.forEach((lang) => {
     })
 
     test.describe('at 320 px', () => {
-      test.use({ viewport: NARROW })
+      test.use({ viewport: REFLOW_VIEWPORT })
 
       test(`the phone walk reflows (${lang})`, async ({ page }, testInfo) => {
         test.skip(!PHONE.includes(testInfo.project.name), 'the phone layout')

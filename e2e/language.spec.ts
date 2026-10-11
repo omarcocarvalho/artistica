@@ -254,6 +254,60 @@ for (const [locale, code] of BROWSER_LOCALES) {
   })
 }
 
+/** Records, as `window.__firstTopBar`, the top bar's texts the moment React first puts it in. */
+const FIRST_TOP_BAR = `(() => {
+  const seen = new MutationObserver(() => {
+    const label = document.querySelector('header label')
+    if (!label) return
+    seen.disconnect()
+    window.__firstTopBar = {
+      label: label.textContent,
+      home: document.querySelector('header a[aria-label]')?.getAttribute('aria-label') ?? null,
+    }
+  })
+  seen.observe(document, { childList: true, subtree: true })
+})()`
+
+/** A locale chunk of the build (`locale-<code>-[hash].js`, M6-R5). */
+const localeChunk = (code: LanguageCode) => new RegExp(`/assets/locale-${code}-[^/]*\\.js$`)
+
+test.describe('booting in a ja-JP browser', () => {
+  test.use({ locale: 'ja-JP' })
+
+  test('LANG-B1: the first top bar the app renders is already in Japanese (load, then render)', async ({
+    page,
+  }) => {
+    await page.addInitScript(FIRST_TOP_BAR)
+    await openApp(page)
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ja')
+    expect(await page.evaluate('window.__firstTopBar ?? null')).toEqual({
+      label: textIn('ja', 'app:language.label'),
+      home: textIn('ja', 'app:topBar.home'),
+    })
+  })
+
+  test('LANG-B2: a failed language chunk keeps English and says so once, at boot and in the switcher; nothing is saved', async ({
+    page,
+  }) => {
+    await page.route(localeChunk('ja'), (route) => route.abort())
+    await openApp(page)
+    await expectEnglish(page)
+    const alert = page.getByRole('alert')
+    await expect(alert).toHaveText(textIn('en', 'app:language.loadFailed'))
+    await expect(alert).toHaveCount(1)
+    expect(await savedLanguage(page)).toBeNull()
+
+    await alert.getByRole('button', { name: textIn('en', 'app:notices.dismiss') }).click()
+    await expect(alert).toHaveCount(0)
+    await languageSelect(page).selectOption('ja')
+    await expect(alert).toHaveText(textIn('en', 'app:language.loadFailed'))
+    await expect(alert).toHaveCount(1)
+    await expect(languageSelect(page)).toHaveValue('en')
+    await expectEnglish(page)
+    expect(await savedLanguage(page)).toBeNull()
+  })
+})
+
 const median = (xs: readonly number[]): number => {
   const s = [...xs].sort((a, b) => a - b)
   const mid = Math.floor(s.length / 2)

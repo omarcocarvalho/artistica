@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { LANGUAGES } from '../src/shared/i18n/languages.ts'
+import { hashOf, readLocales } from './check-locales.ts'
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url))
 const read = (path: string): string => readFileSync(`${ROOT}${path}`, 'utf8')
@@ -258,5 +259,66 @@ describe('docs/i18n', () => {
         expect(read(file), `${file} › ${title}`).toContain(title)
       }
     }
+  })
+})
+
+const PLURAL_FORM = /_(zero|one|two|few|many|other)$/
+
+function flatten(value: unknown, prefix = ''): [string, unknown][] {
+  if (value === null || typeof value !== 'object') return [[prefix, value]]
+  return Object.entries(value).flatMap(([k, v]) => flatten(v, prefix ? `${prefix}.${k}` : k))
+}
+
+/** Every claim key the doc's headings name: `privacy.claims.*` (landing) and the app's `ns:key`. */
+function claimKeys(text: string): string[] {
+  const landing = text.split('## Landing page claims')[1]?.split('\n## ')[0] ?? ''
+  const app = text.split('## Claims in the app')[1]?.split('\n## ')[0] ?? ''
+  return [
+    ...[...landing.matchAll(/^### \d+\. `(privacy\.claims\.\w+)`/gm)].map((m) => `landing:${m[1]}`),
+    ...[...app.matchAll(/^### .*$/gm)].flatMap((h) =>
+      [...h[0].matchAll(/`([a-zA-Z]+:[\w.]+)`/g)].map((m) => m[1]),
+    ),
+  ]
+}
+
+/** `language key` → its recorded hash and back-translation, from "Reviewed translations". */
+function reviewedRows(text: string): Map<string, { hash: string; back: string }> {
+  const section = text.split('\n## Reviewed translations')[1]?.split('\n## ')[0] ?? ''
+  const rows = new Map<string, { hash: string; back: string }>()
+  for (const m of section.matchAll(/^\| ([\w-]+) \| `([^`]+)` \| `([0-9a-f]{8})` \| (.*) \|$/gm))
+    rows.set(`${m[1]} ${m[2]}`, { hash: m[3], back: m[4].trim() })
+  return rows
+}
+
+describe('translated privacy claims (M6-R23)', () => {
+  it('each matches the hash recorded with its back-translation in privacy-claims.md', () => {
+    const text = doc('privacy-claims.md')
+    const keys = claimKeys(text)
+    expect(keys.length).toBeGreaterThanOrEqual(15)
+    const { others } = readLocales(ROOT)
+    const expected = new Map<string, string>()
+    for (const [lang, tree] of Object.entries(others)) {
+      const leaves = new Map(
+        Object.entries(tree).flatMap(([ns, file]) =>
+          flatten(file).map(([k, v]) => [`${ns}:${k}`, v] as const),
+        ),
+      )
+      for (const key of keys)
+        for (const [full, value] of leaves)
+          if ((full === key || full.replace(PLURAL_FORM, '') === key) && typeof value === 'string')
+            expected.set(`${lang} ${full}`, hashOf(value))
+    }
+    expect(expected.size).toBeGreaterThanOrEqual(keys.length * (LANGUAGES.length - 1))
+    const rows = reviewedRows(text)
+    const problems: string[] = []
+    for (const [id, hash] of expected) {
+      const row = rows.get(id)
+      if (!row) problems.push(`${id}: no reviewed row; back-translate it and record hash ${hash}`)
+      else if (row.hash !== hash)
+        problems.push(`${id}: changed since its back-translation; re-check it and record ${hash}`)
+      else if (!/\p{L}/u.test(row.back)) problems.push(`${id}: no back-translation`)
+    }
+    for (const id of rows.keys()) if (!expected.has(id)) problems.push(`${id}: not a claim`)
+    expect(problems).toEqual([])
   })
 })

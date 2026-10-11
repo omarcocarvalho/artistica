@@ -25,7 +25,48 @@ export interface LocaleProblem {
 }
 
 /** Reviewed keys whose translation may equal the English text in any language. */
-export const SAME_AS_ENGLISH: readonly string[] = ['common:actions.ok', 'pageSetup:paper.unitMm']
+export const SAME_AS_ENGLISH: readonly string[] = [
+  'app:documentTitle',
+  'app:import.failed',
+  'app:preview.item',
+  'app:preview.itemVersion',
+  'app:theme.auto',
+  'app:title',
+  'common:actions.ok',
+  'common:joinSentences',
+  'common:theme.auto',
+  'export:summary.pagesValue',
+  'images:dropzone.link',
+  'images:dropzone.url.placeholder',
+  'images:editSheet.aspect.original',
+  'images:editSheet.dpi.value',
+  'images:editSheet.subtitle',
+  'images:list.copies',
+  'images:list.dpi',
+  'images:list.empty.formats',
+  'images:list.pixels',
+  'landing:features.presets.title',
+  'landing:header.privacy',
+  'landing:theme.auto',
+  'lines:guides.detail.value',
+  'lines:opacity.value',
+  'lines:thickness.value',
+  'pageSetup:paper.dims',
+  'pageSetup:paper.name.tabloid',
+  'pageSetup:paper.unitMm',
+  'presets:button',
+  'presets:import.renamedPair',
+  'presets:summary.version.original',
+  'presets:title',
+  'preview:tile.lowDpi',
+  'preview:tile.versionName',
+  'studies:blur.valueText',
+  'studies:swatch.sepia',
+  'studies:swatch.terracotta',
+  'studies:values.hueText',
+  'studies:values.min',
+  'studies:version.original',
+]
 
 const LANDING = 'landing'
 const STAMPS_FILE = 'src/locales/translated-from.json'

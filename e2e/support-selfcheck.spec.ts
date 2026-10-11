@@ -9,6 +9,7 @@ import {
   findUntranslated,
   labelInName,
   pageLanguage,
+  REFLOW_VIEWPORT,
   setLanguage,
 } from './support/l10n.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
@@ -328,16 +329,66 @@ test.describe('localisation probes (D3): each finds what it is for before it is 
       page,
       '<button type="button" aria-label="⟦Ĉĺóšé⟧">⟦Ðíšɱíšš⟧</button>' +
         '<button type="button" aria-label="Change theme: Auto">Auto</button>' +
-        '<button type="button" aria-label="photo.jpg"><span aria-hidden="true">Values</span></button>',
+        '<button type="button" aria-label="photo.jpg"><span aria-hidden="true">Values</span></button>' +
+        '<button type="button" aria-label="Remove">Remove all</button>' +
+        '<button type="button" aria-label="Remove all images">Remove all</button>',
     )
     const found = await labelInName(page)
-    expect(found.slice(before.length)).toEqual([expect.stringContaining('shows "⟦Ðíšɱíšš⟧"')])
+    expect(found.slice(before.length)).toEqual([
+      expect.stringContaining('shows "⟦Ðíšɱíšš⟧"'),
+      expect.stringContaining('shows "Remove all", named "Remove"'),
+    ])
+  })
+
+  test('labelInName checks form fields and sliders named by aria-label against their visible label', async ({
+    page,
+  }) => {
+    await pseudoApp(page)
+    const before = await labelInName(page)
+    await plant(
+      page,
+      '<label for="p-gutter">Image gap</label><input id="p-gutter" aria-label="Gap">' +
+        '<label for="p-bleed">Bleed</label><input id="p-bleed" aria-label="Bleed in mm">' +
+        '<label>Paper size <select aria-label="Size"><option>Letter</option></select></label>' +
+        '<label>Notes <textarea aria-label="Notes for print">Draft</textarea></label>' +
+        '<label for="p-hidden" class="sr-only">Hidden words</label><input id="p-hidden" aria-label="Other">' +
+        '<label><input type="checkbox" aria-label="Marks"> Crop marks</label>' +
+        '<div role="spinbutton" tabindex="0" aria-valuenow="3" aria-label="Copies">Count 3</div>' +
+        '<div role="slider" tabindex="0" aria-valuenow="5" aria-label="Blur strength">Blur</div>',
+    )
+    const found = (await labelInName(page)).slice(before.length)
+    expect(found).toEqual([
+      expect.stringContaining('shows "Image gap", named "Gap"'),
+      expect.stringContaining('shows "Paper size", named "Size"'),
+      expect.stringContaining('shows "Crop marks", named "Marks"'),
+      expect.stringContaining('shows "Count 3", named "Copies"'),
+    ])
+  })
+
+  test('the reflow walks run at 320 CSS pixels (WCAG 1.4.10)', () => {
+    expect(REFLOW_VIEWPORT.width).toBe(320)
+  })
+
+  test('findOverflow reports a box that runs past the viewport at 320 px, once, and not its contents', async ({
+    page,
+  }) => {
+    await page.setViewportSize(REFLOW_VIEWPORT)
+    const guard = guardNetwork(page)
+    await new AppPage(page).goto()
+    const past = async () =>
+      (await findOverflow(page)).filter((f) => f.includes('past the viewport'))
+    expect(await past()).toEqual([])
+    await page.addStyleTag({ content: 'header, header > * { min-width: 330px }' })
+    expect(await past()).toEqual([
+      expect.stringMatching(/> header\.[^>]*: box .* past the viewport \(330 in 320\)$/),
+    ])
+    expect(guard.violations()).toEqual([])
   })
 
   test('pageLanguage reads lang and title, and reports a page that scrolls sideways at 320 px', async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 320, height: 640 })
+    await page.setViewportSize(REFLOW_VIEWPORT)
     const guard = guardNetwork(page)
     await new AppPage(page).goto()
     expect(await pageLanguage(page)).toEqual({ lang: 'en', title: 'Artistica app', sideScroll: 0 })

@@ -48,6 +48,30 @@ describe('matchLanguage', () => {
     expect(matchLanguage(['fr', 'de'])).toBeNull()
     expect(matchLanguage([])).toBeNull()
   })
+
+  it.each(['constructor', 'toString', '__proto__', 'hasOwnProperty', 'valueOf-JP'])(
+    'matches no inherited object key: %j',
+    (tag) => {
+      expect(matchLanguage([tag])).toBeNull()
+      expect(matchLanguage([tag, 'ja'])).toBe('ja')
+    },
+  )
+
+  it('always returns null or one of the seven languages', () => {
+    const prototypeKey = fc.constantFrom(...Object.getOwnPropertyNames(Object.prototype))
+    const tag = fc.oneof(
+      fc.string(),
+      prototypeKey,
+      fc.tuple(prototypeKey, fc.string()).map(([a, b]) => `${a}-${b}`),
+      fc.constantFrom(...LANGUAGES, 'pt-PT', 'zh-TW', 'zh-Hans', 'es-419'),
+    )
+    fc.assert(
+      fc.property(fc.array(tag, { maxLength: 5 }), (tags) => {
+        const code = matchLanguage(tags)
+        expect(code === null || (LANGUAGES as readonly string[]).includes(code)).toBe(true)
+      }),
+    )
+  })
 })
 
 const ALL = LANGUAGES
