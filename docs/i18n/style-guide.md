@@ -53,7 +53,7 @@ These apply to every language.
 - **Instructions, hints and messages:** imperative in the third person, which goes with *você* ("Adicione fotos para começar.", "Toque em uma foto para cortar…", "Tente de novo.").
 - **Vocabulary:** Brazilian, not European Portuguese: *arquivo*, *tela*, *baixar*, *celular* only in casual text and *telefone* in UI text, *excluir* or *remover* (glossary), *colar*, *link*. Avoid *ecrã*, *ficheiro*, *transferir*.
 - **Quotation marks:** “curly double” (“Tamanho real”), ‘single’ inside them.
-- **Numbers:** formatted by the code (`1.234,5`; inches are `pol.`); don't touch.
+- **Numbers:** formatted by the code (`1.234,5`; inches are `pol.`); don't touch. Because `pol.` ends in a full stop, a sentence must not end with a length variable (it would read "0,12 pol.."): put the length in brackets or earlier in the sentence.
 - **Gender:** agree with the noun the string is about (*foto* and *imagem* are feminine: "Desfocada", "Nenhuma imagem"); where the noun is not known (a name variable), build the sentence so the name is not the grammatical subject of an adjective.
 
 ## es (Spanish, neutral Latin American)

@@ -9,7 +9,7 @@
     "imageAlt": "Artistica: fotos de referência organizadas em folhas para imprimir"
   },
   "structured": {
-    "description": "Transforme fotos de referência em folhas prontas para imprimir, com marcas de corte e sangria, estudos de desfoque e de valores e linhas de composição. Funciona inteiramente no seu navegador.",
+    "description": "Transforme fotos de referência em folhas prontas para imprimir, com marcas de corte e sangria, estudos de desfoque e de valores e linhas de composição. Roda inteiramente no seu navegador.",
     "operatingSystem": "Qualquer um (navegador web)",
     "browserRequirements": "Requer JavaScript. Versão mais recente do Chrome, Edge, Firefox ou Safari."
   },
@@ -36,7 +36,7 @@
     "title": "Transforme fotos de referência em folhas prontas para imprimir.",
     "lead": "Solte suas fotos. O Artistica as organiza nas páginas em um bom tamanho para desenhar, com marcas de corte e sangria, e pode adicionar estudos e linhas de composição. Depois é só imprimir, cortar e desenhar.",
     "start": "Começar uma folha",
-    "seeHow": "Veja como funciona",
+    "seeHow": "Ver como funciona",
     "points": "Grátis · Sem cadastro",
     "tip": "dica! 4 por página"
   },
@@ -94,13 +94,13 @@
   "privacy": {
     "title": "Suas fotos ficam com você",
     "claims": {
-      "inBrowser": "Tudo funciona no seu navegador. Nada é enviado.",
+      "inBrowser": "Tudo roda no seu navegador. Nada é enviado.",
       "notSaved": "As fotos nunca são salvas. Recarregar a página as apaga.",
       "settingsOnly": "Só as suas configurações e presets são guardados, neste dispositivo.",
       "models": "Os modelos de rosto e de pose são baixados deste site só quando você pede e ficam no seu navegador para uso offline.",
       "noTracking": "Sem contas e sem rastreamento.",
       "heroNeverLeave": "As fotos nunca saem do seu dispositivo",
-      "faqUploaded": "Não. Tudo funciona no seu navegador. As fotos nunca são enviadas nem salvas, e recarregar a página as apaga.",
+      "faqUploaded": "Não. Tudo roda no seu navegador. As fotos nunca são enviadas nem salvas, e recarregar a página as apaga.",
       "faqGuides": "As guias de rosto e de pose usam os modelos MediaPipe do Google, baixados deste site e executados no seu dispositivo.",
       "faqOffline": "Sim, depois da sua primeira visita ao app. As guias de rosto e de pose funcionam offline depois de um download único."
     }

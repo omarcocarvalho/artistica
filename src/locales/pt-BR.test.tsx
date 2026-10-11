@@ -18,6 +18,27 @@ import { DEFAULT_LINES } from '../shared/model/lines'
 import { DEFAULT_PAGE_SETUP } from '../shared/model/page-setup'
 import { presetFromSettings } from '../shared/model/preset'
 import { DEFAULT_STUDY } from '../shared/model/study'
+import landing from '../../landing/locales/pt-BR.json'
+
+const files = import.meta.glob<Record<string, unknown>>('./pt-BR/*.json', {
+  eager: true,
+  import: 'default',
+})
+
+/** Every pt-BR string, app and landing, as `ns:key` → value. */
+function allStrings(): Record<string, string> {
+  const out: Record<string, string> = {}
+  const walk = (prefix: string, node: unknown): void => {
+    if (typeof node === 'string') out[prefix] = node
+    else if (node && typeof node === 'object')
+      for (const [k, v] of Object.entries(node))
+        walk(prefix.endsWith(':') ? prefix + k : `${prefix}.${k}`, v)
+  }
+  for (const [path, tree] of Object.entries(files))
+    walk(`${path.replace(/^.*\/(.+)\.json$/, '$1')}:`, tree)
+  walk('landing:', landing)
+  return out
+}
 
 // Frequent English UI words that never belong in the Portuguese text.
 const ENGLISH = [
@@ -133,6 +154,39 @@ describe('the app in Portuguese (Brazil)', () => {
   })
 })
 
+describe('every Portuguese (Brazil) string', () => {
+  it('has none of the frequent English words, key names aside', () => {
+    const hits = Object.entries(allStrings())
+      .map(
+        ([key, value]) =>
+          [
+            key,
+            englishWordsIn(value.replace(/\{\{[^}]*\}\}|<[^>]*>|Page (Up|Down)/g, '')).filter(
+              // Also Portuguese: "remove" (remover) and the noun "download".
+              (word) => word !== 'Remove' && word !== 'Download',
+            ),
+          ] as const,
+      )
+      .filter(([, words]) => words.length > 0)
+    expect(hits).toEqual([])
+  })
+
+  it('never names the file picker with the privacy claims\' word for "uploaded"', () => {
+    const strings = allStrings()
+    const picker = [
+      'images:dropzone.upload',
+      'images:dropzone.uploadHero',
+      'images:dropzone.url.uploadInstead',
+      'images:dropzone.groupLabel',
+      'landing:how.add.body',
+      'errors:images.cors.message',
+      'landing:faq.link.a',
+    ]
+    for (const key of picker) expect(strings[key], key).not.toMatch(/envi/i)
+    expect(strings['landing:privacy.claims.inBrowser']).toMatch(/Nada é enviado/)
+  })
+})
+
 describe('plural forms in Portuguese (Brazil)', () => {
   const t = (key: string, count: number) => i18next.getFixedT('pt-BR')(key, { count })
 
@@ -162,6 +216,22 @@ describe('plural forms in Portuguese (Brazil)', () => {
       'lines:applyAll.done',
       1_000_000,
       'Configurações de linhas copiadas para 1.000.000 de imagens.',
+    ],
+    ['lines:applyAll.hint', 2, 'Copia estas configurações de linhas para todas as 2 imagens.'],
+    [
+      'lines:applyAll.hint',
+      1_000_000,
+      'Copia estas configurações de linhas para todas as 1.000.000 de imagens.',
+    ],
+    [
+      'studies:applyAll.hint',
+      1_000_000,
+      'Copia estas configurações de estudo para todas as 1.000.000 de imagens.',
+    ],
+    [
+      'presets:apply.confirmBody',
+      1_000_000,
+      'Isso define a configuração da página e os estudos e as linhas de todas as 1.000.000 de fotos.',
     ],
     [
       'images:list.removeAll.confirmBody',
