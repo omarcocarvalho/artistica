@@ -309,4 +309,29 @@ test.describe('localisation probes (D3): each finds what it is for before it is 
     const found = await labelInName(page)
     expect(found.slice(before.length)).toEqual([expect.stringContaining('shows "⟦Ðíšɱíšš⟧"')])
   })
+
+  test('labelInName reads a change between CJK and Latin script as a word boundary, and nothing else', async ({
+    page,
+  }) => {
+    await pseudoApp(page)
+    const before = await labelInName(page)
+    await plant(
+      page,
+      '<button type="button" aria-label="quadrants.jpgを選択">quadrants.jpg</button>' +
+        '<button type="button" aria-label="Artisticaホーム">Artistica</button>' +
+        '<button type="button" aria-label="PDFを作成">PDF</button>' +
+        '<button type="button" aria-label="2장 선택됨">2</button>' +
+        '<button type="button" aria-label="选中的照片">选中</button>' +
+        '<button type="button" aria-label="ホーム">Artistica</button>' +
+        '<button type="button" aria-label="Pages setup">Page</button>' +
+        '<button type="button" aria-label="Automatic theme">Auto</button>',
+    )
+    const found = (await labelInName(page)).slice(before.length)
+    expect(found).toEqual([
+      expect.stringContaining('shows "选中"'),
+      expect.stringContaining('shows "Artistica", named "ホーム"'),
+      expect.stringContaining('shows "Page"'),
+      expect.stringContaining('shows "Auto"'),
+    ])
+  })
 })

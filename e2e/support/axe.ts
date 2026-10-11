@@ -81,6 +81,20 @@ export const REVIEWED_INCOMPLETE: readonly ReviewedIncomplete[] = [
   },
   {
     rule: 'color-contrast',
+    selector: '.ds-field > label, [role="tab"]',
+    messageKeys: ['shortTextContent'],
+    reason:
+      'A field label or settings tab of one CJK character (ja 線 and ko 선 for Lines, zh-CN 列 and 行 for Columns and Rows): axe skips text this short. Each shares its colours with the longer labels and tabs beside it (forms.css, the tab styles), which axe measures in the same scan.',
+  },
+  {
+    rule: 'color-contrast',
+    selector: '.text-ink-muted > span[aria-hidden="true"]',
+    messageKeys: ['shortTextContent'],
+    reason:
+      'The "·" between an image\'s pixel size and its print size in the image list: aria-hidden decoration in the muted ink of the row, whose size text axe measures beside it in the same scan.',
+  },
+  {
+    rule: 'color-contrast',
     selector: '.lines-pair__times',
     messageKeys: ['shortTextContent'],
     reason:
@@ -245,7 +259,10 @@ export async function unreviewedIncomplete(
   return open
 }
 
-export async function expectNoAxeViolations(page: Page, options: AxeOptions = {}): Promise<void> {
+async function scan(
+  page: Page,
+  options: AxeOptions,
+): Promise<{ violations: string[]; open: string[] }> {
   for (let attempt = 0; ; attempt++) {
     await settleAnimations(page)
     const builder = new AxeBuilder({ page }).withTags(WCAG_22_AA)
@@ -253,15 +270,25 @@ export async function expectNoAxeViolations(page: Page, options: AxeOptions = {}
     if (options.exclude) builder.exclude(options.exclude)
     if (options.disableRules) builder.disableRules(options.disableRules)
     const results = await builder.analyze()
-    expect(
-      results.violations.map(
-        (v) =>
-          `${v.id}: ${v.help} (${String(v.nodes.length)} nodes) ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`,
-      ),
-    ).toEqual([])
+    const violations = results.violations.map(
+      (v) =>
+        `${v.id}: ${v.help} (${String(v.nodes.length)} nodes) ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`,
+    )
+    if (violations.length > 0) return { violations, open: [] }
     const open = await unreviewedIncomplete(page, results.incomplete)
     if (attempt < 2 && open.some((line) => line.startsWith(GONE))) continue
-    expect(open, 'unreviewed axe incomplete').toEqual([])
-    return
+    return { violations, open }
   }
+}
+
+/** Axe violations and unreviewed `incomplete` results, as readable lines (none when clean). */
+export async function axeFindings(page: Page, options: AxeOptions = {}): Promise<string[]> {
+  const { violations, open } = await scan(page, options)
+  return [...violations, ...open.map((line) => `unreviewed incomplete ${line}`)]
+}
+
+export async function expectNoAxeViolations(page: Page, options: AxeOptions = {}): Promise<void> {
+  const { violations, open } = await scan(page, options)
+  expect(violations).toEqual([])
+  expect(open, 'unreviewed axe incomplete').toEqual([])
 }

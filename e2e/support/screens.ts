@@ -245,7 +245,7 @@ export async function desktopWalk(
       const chooser = page.waitForEvent('filechooser')
       await dialog.getByRole('button', { name: t('presets:import.button'), exact: true }).click()
       await (await chooser).setFiles(PRESET_FIXTURES.notJson)
-      await expect(dialog.getByRole('alert')).toBeVisible()
+      await expect(dialog.getByRole('alert')).toContainText(t('presets:import.error.notPresets'))
     })
     await app.closePresets()
 
