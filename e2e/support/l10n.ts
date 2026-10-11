@@ -290,10 +290,9 @@ export async function findPseudoLeak(page: Page): Promise<string[]> {
 }
 
 /**
- * Elements whose own text is clipped (hidden scroll overflow; a text-overflow ellipsis is a
- * deliberate truncation, not an overflow), runs past the
- * nearest ancestor that draws a box (border, background or clip), or whose box runs past its
- * parent. Scrollers and visually hidden text are skipped.
+ * Elements whose own text is clipped, runs past the nearest ancestor that draws a box (border,
+ * background or clip), or whose box runs past its parent. A text-overflow ellipsis is a deliberate
+ * truncation, not an overflow; scrollers and visually hidden text are skipped.
  */
 export async function findOverflow(page: Page): Promise<string[]> {
   return page.evaluate<string[]>(`(() => ${PROBES}.overflow())()`)
