@@ -1,63 +1,67 @@
 {
   "version": {
-    "original": "",
-    "blurred": "",
-    "values": "",
-    "blurValues": ""
+    "original": "Originale",
+    "blurred": "Sfocata",
+    "values": "Valori",
+    "blurValues": "Sfocatura + Valori"
   },
   "panel": {
-    "forImage": "",
-    "noImage": "",
-    "importing": ""
+    "forImage": "Studi per <name/>",
+    "noImage": "Aggiungi una foto, o selezionane una, per impostarne gli studi.",
+    "importing": "In attesa che finisca l'aggiunta delle foto…"
   },
   "versions": {
-    "legend": "",
-    "hint": "",
-    "lastOne": ""
+    "legend": "Stampa queste versioni",
+    "hint": "Ogni versione è un riquadro. Vengono stampate insieme, una accanto all'altra.",
+    "lastOne": "Almeno una versione viene stampata."
   },
   "blur": {
-    "heading": "",
-    "accent": "",
-    "amount": "",
-    "valueText": "",
-    "min": "",
-    "max": "",
-    "hint": "",
-    "usedBy": ""
+    "heading": "Sfocatura",
+    "accent": "strizza gli occhi!",
+    "amount": "Intensità",
+    "valueText": "{{value}}",
+    "min": "1%",
+    "max": "100%",
+    "hint": "Si adatta alle dimensioni dell'immagine, così {{value}} dà lo stesso effetto su ogni foto.",
+    "usedBy": "Usata da Sfocata e Sfocatura + Valori."
   },
   "values": {
-    "heading": "",
-    "count": "",
-    "countText_one": "",
-    "countText_other": "",
-    "min": "",
-    "max": "",
-    "hue": "",
-    "customHue": "",
-    "hueText": "",
-    "ramp": "",
-    "rampLabel": "",
-    "darkest": "",
-    "lightest": "",
-    "hint": "",
-    "usedBy": ""
+    "heading": "Valori",
+    "count": "Numero di valori",
+    "countText_one": "{{count, number}} valore",
+    "countText_many": "{{count, number}} di valori",
+    "countText_other": "{{count, number}} valori",
+    "min": "2 · notan",
+    "max": "20",
+    "hue": "Tinta",
+    "customHue": "Tinta personalizzata",
+    "hueText": "{{value}}",
+    "ramp": "Scala dei valori",
+    "rampLabel": "{{count, number}} valori, dal più scuro alla tinta più chiara",
+    "darkest": "Più scuro",
+    "lightest": "Tinta più chiara",
+    "hint": "Sfocatura + Valori prima sfoca, poi divide in valori.",
+    "usedBy": "Usati da Valori e Sfocatura + Valori."
   },
   "swatch": {
-    "sepia": "",
-    "terracotta": "",
-    "ochre": "",
-    "sapGreen": "",
-    "teal": "",
-    "ultramarine": "",
-    "violet": "",
-    "neutral": ""
+    "sepia": "Seppia",
+    "terracotta": "Terracotta",
+    "ochre": "Ocra",
+    "sapGreen": "Verde vescica",
+    "teal": "Verde petrolio",
+    "ultramarine": "Blu oltremare",
+    "violet": "Violetto",
+    "neutral": "Grigio neutro"
   },
   "applyAll": {
-    "button": "",
-    "hintSingle": "",
-    "hint_other": "",
-    "done_one": "",
-    "done_other": "",
-    "nothingChanged": ""
+    "button": "Applica a tutte le immagini",
+    "hintSingle": "Aggiungi un'altra foto per copiarci queste impostazioni.",
+    "hint_one": "Copia queste impostazioni degli studi su {{count, number}} immagine.",
+    "hint_many": "Copia queste impostazioni degli studi su tutte le {{count, number}} di immagini.",
+    "hint_other": "Copia queste impostazioni degli studi su tutte le {{count, number}} immagini.",
+    "done_one": "Impostazioni degli studi copiate su {{count, number}} immagine.",
+    "done_many": "Impostazioni degli studi copiate su {{count, number}} di immagini.",
+    "done_other": "Impostazioni degli studi copiate su {{count, number}} immagini.",
+    "nothingChanged": "Tutte le immagini usano già queste impostazioni degli studi."
   }
 }

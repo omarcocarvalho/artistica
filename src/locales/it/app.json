@@ -1,96 +1,97 @@
 {
-  "title": "",
-  "documentTitle": "",
+  "title": "Artistica",
+  "documentTitle": "App Artistica",
   "language": {
-    "label": "",
-    "loadFailed": ""
+    "label": "Lingua",
+    "loadFailed": "Impossibile scaricare questa lingua. Controlla la connessione e riprova."
   },
-  "skipToPreview": "",
+  "skipToPreview": "Vai all'anteprima",
   "topBar": {
-    "home": "",
-    "privacy": "",
-    "export": "",
-    "exportNoImages": "",
-    "exportUpdating": "",
-    "exportNoRoom": "",
-    "exportError": "",
-    "exportGuides": ""
+    "home": "Pagina iniziale di Artistica",
+    "privacy": "Le foto restano sul dispositivo",
+    "export": "Esporta PDF",
+    "exportNoImages": "Aggiungi almeno un'immagine per esportare.",
+    "exportUpdating": "L'impaginazione si sta aggiornando. L'esportazione sarà disponibile tra un attimo.",
+    "exportNoRoom": "Esportazione non disponibile: l'impostazione della pagina non lascia spazio per le immagini.",
+    "exportError": "Impossibile calcolare l'impaginazione. Cambia un'impostazione o ricarica la pagina.",
+    "exportGuides": "Ricerca delle guide nelle tue foto…"
   },
   "theme": {
-    "changeLabel": "",
-    "auto": "",
-    "light": "",
-    "dark": ""
+    "changeLabel": "Cambia tema: {{current}}",
+    "auto": "Automatico",
+    "light": "Chiaro",
+    "dark": "Scuro"
   },
   "panels": {
-    "images": "",
-    "settings": "",
-    "preview": ""
+    "images": "Immagini",
+    "settings": "Impostazioni",
+    "preview": "Anteprima della pagina"
   },
   "settingsTabs": {
-    "label": "",
-    "page": "",
-    "studies": "",
-    "lines": ""
+    "label": "Impostazioni",
+    "page": "Pagina",
+    "studies": "Studi",
+    "lines": "Linee"
   },
   "empty": {
-    "title": "",
-    "body": "",
-    "formats": "",
-    "privacy": "",
-    "panelHint": "",
-    "noPages": ""
+    "title": "Aggiungi delle <highlight>foto di riferimento</highlight>",
+    "body": "Trascinale qui, incollale o aggiungi un link. Le sistemiamo noi sulle pagine.",
+    "formats": "JPG, PNG, WebP, GIF, HEIC · tutte le foto che vuoi",
+    "privacy": "Non viene caricato nulla. Le foto restano su questo dispositivo.",
+    "panelHint": "Ancora nessuna immagine. Aggiungi delle foto per iniziare i tuoi fogli.",
+    "noPages": "Ancora nessuna pagina"
   },
   "notices": {
-    "dismiss": "",
-    "region": "",
-    "layoutFailed": ""
+    "dismiss": "Ignora",
+    "region": "Notifiche",
+    "layoutFailed": "Impossibile calcolare l'impaginazione. Cambia un'impostazione e riprova."
   },
   "mobile": {
-    "steps": "",
-    "done": "",
-    "stepLabel": "",
-    "back": "",
-    "next": "",
+    "steps": "Passaggi",
+    "done": "Fine",
+    "stepLabel": "Passaggio {{current}} di {{total}}: {{name}}",
+    "back": "Indietro",
+    "next": "Avanti",
     "names": {
-      "images": "",
-      "page": "",
-      "studies": "",
-      "preview": "",
-      "export": ""
+      "images": "Immagini",
+      "page": "Pagina",
+      "studies": "Studi",
+      "preview": "Anteprima",
+      "export": "Esporta"
     },
     "images": {
-      "tapToEdit": ""
+      "tapToEdit": "Tocca una foto per ritagliarla, ruotarla o impostare le copie."
     },
     "studies": {
-      "picker": ""
+      "picker": "Immagine"
     },
     "lines": {
-      "title": "",
-      "on": ""
+      "title": "Linee",
+      "on": "Attive: {{count, number}}"
     }
   },
   "import": {
-    "noImage": "",
-    "animatedGif": "",
-    "failed": "",
-    "more_one": "",
-    "more_other": "",
-    "unnamed": ""
+    "noImage": "Nessuna immagine negli appunti. Copia prima un'immagine, poi incolla di nuovo.",
+    "animatedGif": "{{name}}: solo il primo fotogramma. Le GIF animate stampano il loro primo fotogramma.",
+    "failed": "{{list}}: {{title}}. {{message}}",
+    "more_one": "{{count, number}} altra",
+    "more_many": "altre {{count, number}}",
+    "more_other": "altre {{count, number}}",
+    "unnamed": "Questa immagine"
   },
   "preview": {
-    "editSelected": "",
-    "updating": "",
-    "updated": "",
-    "pageCaption": "",
-    "pageItems": "",
-    "item": "",
-    "unnamedImage": "",
+    "editSelected": "Modifica l'immagine selezionata",
+    "updating": "Aggiornamento dell'impaginazione…",
+    "updated": "Impaginazione aggiornata.",
+    "pageCaption": "Pagina {{current}} di {{total}} · {{paper}} · {{orientation}}",
+    "pageItems": "Contenuto della pagina {{current}}",
+    "item": "{{name}}, {{w}} × {{h}} {{unit}}",
+    "unnamedImage": "Immagine",
     "orientation": {
-      "portrait": "",
-      "landscape": ""
+      "portrait": "verticale",
+      "landscape": "orizzontale"
     },
-    "itemVersion": "",
-    "itemLines": ""
+    "itemVersion": "{{name}}, {{version}}, {{w}} × {{h}} {{unit}}",
+    "itemLines": "{{item}}, linee: {{list}}"
   }
 }

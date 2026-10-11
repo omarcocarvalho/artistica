@@ -166,11 +166,7 @@ type Row = readonly [key: string, vars: Record<string, string>, forms: readonly 
 /** The text of each plural key at 0, 1, 2, 5 and 1,000,000 (CLDR: one, many, other). */
 const COUNTS = [0, 1, 2, 5, 1_000_000] as const
 const PLURALS: readonly Row[] = [
-  [
-    'app:import.more',
-    {},
-    ['altre 0', '1 altra', 'altre 2', 'altre 5', 'altre 1.000.000'],
-  ],
+  ['app:import.more', {}, ['altre 0', '1 altra', 'altre 2', 'altre 5', 'altre 1.000.000']],
   [
     'export:summary.tilesValue',
     { tiles: '3' },
@@ -246,11 +242,11 @@ const PLURALS: readonly Row[] = [
     'presets:apply.confirmBody',
     {},
     [
-      "Imposta la pagina, gli studi e le linee di tutte le 0 foto.",
-      "Imposta la pagina, gli studi e le linee di 1 foto.",
-      "Imposta la pagina, gli studi e le linee di tutte le 2 foto.",
-      "Imposta la pagina, gli studi e le linee di tutte le 5 foto.",
-      "Imposta la pagina, gli studi e le linee di tutte le 1.000.000 di foto.",
+      'Imposta la pagina, gli studi e le linee di tutte le 0 foto.',
+      'Imposta la pagina, gli studi e le linee di 1 foto.',
+      'Imposta la pagina, gli studi e le linee di tutte le 2 foto.',
+      'Imposta la pagina, gli studi e le linee di tutte le 5 foto.',
+      'Imposta la pagina, gli studi e le linee di tutte le 1.000.000 di foto.',
     ],
   ],
   [

@@ -1,37 +1,37 @@
 {
   "images": {
     "cors": {
-      "title": "",
-      "message": ""
+      "title": "Impossibile leggere questa immagine",
+      "message": "Questo sito non permette ad altre app di leggere le sue immagini. Scaricala e aggiungila dai tuoi file."
     },
     "network": {
-      "title": "",
-      "message": ""
+      "title": "Impossibile aprire questo link",
+      "message": "Controlla il link e la connessione, poi riprova."
     },
     "notAnImage": {
-      "title": "",
-      "message": ""
+      "title": "Questa non è un'immagine",
+      "message": "Il link o il file non contiene un'immagine. Usa JPG, PNG, WebP, GIF o HEIC."
     },
     "unsupportedFormat": {
-      "title": "",
-      "message": ""
+      "title": "Impossibile aggiungere {{name}}",
+      "message": "Usa JPG, PNG, WebP, GIF o HEIC."
     },
     "decodeFailed": {
-      "title": "",
-      "message": ""
+      "title": "Impossibile leggere {{name}}",
+      "message": "Il file potrebbe essere danneggiato. Prova a salvarlo di nuovo come JPG o PNG."
     },
     "tooLarge": {
-      "title": "",
-      "message": ""
+      "title": "{{name}} è troppo grande",
+      "message": "Le foto possono arrivare a {{maxMb}} MB e {{maxMp}} megapixel. Prova con una versione più piccola."
     }
   },
   "export": {
-    "unsupported": "",
-    "missingImage": "",
-    "empty": "",
-    "failed": ""
+    "unsupported": "Questo browser non riesce a creare PDF qui. Aggiornalo, oppure usa l'ultima versione di Chrome, Edge, Firefox o Safari.",
+    "missingImage": "Un'immagine è stata rimossa mentre veniva creato il PDF. Riprova.",
+    "empty": "Aggiungi almeno un'immagine per esportare.",
+    "failed": "Qualcosa è andato storto durante la creazione del PDF. Riprova. Se il problema continua, prova con meno immagini o con immagini più piccole."
   },
   "generic": {
-    "unexpected": ""
+    "unexpected": "Qualcosa è andato storto. Riprova, per favore."
   }
 }

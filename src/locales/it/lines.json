@@ -1,111 +1,105 @@
 {
   "type": {
-    "grid": "",
-    "thirds": "",
-    "armature": "",
-    "golden": "",
-    "spiral": "",
-    "centre": "",
-    "edges": "",
-    "face": "",
-    "pose": ""
+    "grid": "Griglia",
+    "thirds": "Regola dei terzi",
+    "armature": "Diagonali e armatura",
+    "golden": "Sezione aurea",
+    "spiral": "Spirale aurea",
+    "centre": "Linee centrali",
+    "edges": "Contorno dei bordi",
+    "face": "Costruzione del volto",
+    "pose": "Posa del corpo"
   },
   "corner": {
-    "topLeft": "",
-    "topRight": "",
-    "bottomLeft": "",
-    "bottomRight": ""
+    "topLeft": "In alto a sinistra",
+    "topRight": "In alto a destra",
+    "bottomLeft": "In basso a sinistra",
+    "bottomRight": "In basso a destra"
   },
   "panel": {
-    "forImage": "",
-    "everyVersion": "",
-    "noImage": "",
-    "composition": "",
-    "style": "",
-    "waiting": ""
+    "forImage": "Linee per <name/>",
+    "everyVersion": "Disegnate sopra ogni versione stampata di questa immagine.",
+    "noImage": "Aggiungi una foto, o selezionane una, per disegnarci sopra le linee.",
+    "composition": "Composizione",
+    "style": "Stile delle linee",
+    "waiting": "In attesa che finisca l'aggiunta delle foto…"
   },
   "grid": {
-    "columns": "",
-    "rows": "",
-    "times": "",
-    "range": ""
+    "columns": "Colonne",
+    "rows": "Righe",
+    "times": "×",
+    "range": "da {{min}} a {{max}}"
   },
   "spiral": {
-    "startsAt": "",
+    "startsAt": "La spirale parte da",
     "arrow": {
-      "topLeft": "",
-      "topRight": "",
-      "bottomLeft": "",
-      "bottomRight": ""
+      "topLeft": "↖",
+      "topRight": "↗",
+      "bottomLeft": "↙",
+      "bottomRight": "↘"
     }
   },
   "guides": {
-    "heading": "",
-    "onDevice": "",
-    "detail": {
-      "label": "",
-      "value": ""
-    },
-    "size": "",
-    "download": "",
-    "progress": "",
-    "progressSpoken": "",
-    "failedHint": "",
-    "errorHint": "",
-    "tryAgain": "",
-    "noWebGL": "",
+    "heading": "Guide dalla foto",
+    "onDevice": "Sul dispositivo",
+    "detail": { "label": "Dettaglio", "value": "{{value}}" },
+    "size": "Download una tantum: {{size}}",
+    "download": "Scarica e attiva",
+    "progress": "{{loaded}} di {{total}}",
+    "progressSpoken": "{{loaded}} di {{total}} megabyte",
+    "failedHint": "Controlla la connessione e riprova. Le altre linee funzionano comunque.",
+    "errorHint": "Riprova. Le altre linee funzionano comunque.",
+    "tryAgain": "Riprova",
+    "noWebGL": "Le guide di volto e posa richiedono WebGL, che questo browser ha disattivato.",
     "edges": {
-      "running": "",
-      "done": "",
-      "none": "",
-      "failed": ""
+      "running": "Tracciamento del contorno…",
+      "done": "Contorno tracciato.",
+      "none": "Nessun bordo trovato con questo Dettaglio. Prova un Dettaglio più alto.",
+      "failed": "Impossibile tracciare il contorno."
     },
     "face": {
-      "why": "",
-      "progressLabel": "",
-      "downloading": "",
-      "running": "",
-      "found": "",
-      "none": "",
-      "noneHint": "",
-      "noneWithHint": "",
-      "downloadFailed": "",
-      "error": "",
-      "turnOff": ""
+      "why": "Le guide del volto usano un piccolo modello di IA. Viene salvato su questo dispositivo e funziona offline. Le tue foto non vengono mai caricate.",
+      "progressLabel": "Download del modello del volto",
+      "downloading": "Download del modello del volto…",
+      "running": "Ricerca dei volti…",
+      "found": "Guide del volto attive. Aggiunte le linee di sopracciglia, occhi, naso e mento.",
+      "none": "Nessun volto trovato in questa immagine.",
+      "noneHint": "Le guide del volto funzionano meglio con una vista frontale o di ¾ ben chiara.",
+      "noneWithHint": "Nessun volto trovato in questa immagine. Le guide del volto funzionano meglio con una vista frontale o di ¾ ben chiara.",
+      "downloadFailed": "Impossibile scaricare il modello del volto",
+      "error": "Impossibile cercare volti in questa immagine",
+      "turnOff": "Disattiva le guide del volto"
     },
     "pose": {
-      "why": "",
-      "progressLabel": "",
-      "downloading": "",
-      "running": "",
-      "found": "",
-      "none": "",
-      "noneHint": "",
-      "noneWithHint": "",
-      "downloadFailed": "",
-      "error": "",
-      "turnOff": ""
+      "why": "Le linee della posa usano un piccolo modello di IA. Viene salvato su questo dispositivo e funziona offline. Le tue foto non vengono mai caricate.",
+      "progressLabel": "Download del modello della posa",
+      "downloading": "Download del modello della posa…",
+      "running": "Ricerca della posa…",
+      "found": "Linee della posa attive.",
+      "none": "Nessuna persona trovata in questa immagine.",
+      "noneHint": "Le linee della posa funzionano meglio quando tutto il corpo è visibile.",
+      "noneWithHint": "Nessuna persona trovata in questa immagine. Le linee della posa funzionano meglio quando tutto il corpo è visibile.",
+      "downloadFailed": "Impossibile scaricare il modello della posa",
+      "error": "Impossibile cercare una persona in questa immagine",
+      "turnOff": "Disattiva le guide della posa"
     }
   },
   "colour": {
-    "label": "",
-    "hexLabel": "",
-    "hexHint": ""
+    "label": "Colore",
+    "hexLabel": "Codice esadecimale del colore",
+    "hexHint": "Digita # e sei cifre esadecimali, come #1f3fbf."
   },
-  "thickness": {
-    "label": "",
-    "value": ""
-  },
-  "opacity": {
-    "label": "",
-    "value": ""
-  },
+  "thickness": { "label": "Spessore", "value": "{{value}} {{unit}}" },
+  "opacity": { "label": "Opacità", "value": "{{value}}" },
   "applyAll": {
-    "button": "",
-    "hintSingle": "",
-    "hint_other": "",
-    "done_one": "",
-    "done_other": "",
-    "nothingChanged": ""
+    "button": "Applica le linee a tutte le immagini",
+    "hintSingle": "Aggiungi un'altra foto per copiarci queste impostazioni.",
+    "hint_one": "Copia queste impostazioni delle linee su {{count, number}} immagine.",
+    "hint_many": "Copia queste impostazioni delle linee su tutte le {{count, number}} di immagini.",
+    "hint_other": "Copia queste impostazioni delle linee su tutte le {{count, number}} immagini.",
+    "done_one": "Impostazioni delle linee copiate su {{count, number}} immagine.",
+    "done_many": "Impostazioni delle linee copiate su {{count, number}} di immagini.",
+    "done_other": "Impostazioni delle linee copiate su {{count, number}} immagini.",
+    "nothingChanged": "Tutte le immagini usano già queste impostazioni delle linee."
   }
 }

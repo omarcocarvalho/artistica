@@ -1,145 +1,145 @@
 {
   "meta": {
-    "title": "",
-    "description": ""
+    "title": "Artistica: fogli di riferimento stampabili per artisti",
+    "description": "Trasforma le foto di riferimento in fogli pronti da stampare con segni di taglio e abbondanza, studi di sfocatura e dei valori tonali, e linee di composizione. Gratuito, privato, nel tuo browser."
   },
   "share": {
-    "title": "",
-    "description": "",
-    "imageAlt": ""
+    "title": "Artistica: fogli di riferimento stampabili per artisti",
+    "description": "Trascina le tue foto e ottieni fogli pronti da stampare con segni di taglio, abbondanza, studi e linee di composizione. Gratuito, privato, nel tuo browser.",
+    "imageAlt": "Artistica: foto di riferimento disposte su fogli stampabili"
   },
   "structured": {
-    "description": "",
-    "operatingSystem": "",
-    "browserRequirements": ""
+    "description": "Trasforma le foto di riferimento in fogli pronti da stampare con segni di taglio e abbondanza, studi di sfocatura e dei valori tonali, e linee di composizione. Funziona interamente nel tuo browser.",
+    "operatingSystem": "Qualsiasi (browser web)",
+    "browserRequirements": "Richiede JavaScript. Ultima versione di Chrome, Edge, Firefox o Safari."
   },
   "header": {
-    "skip": "",
-    "home": "",
-    "nav": "",
-    "how": "",
-    "features": "",
-    "privacy": "",
-    "faq": "",
-    "openApp": ""
+    "skip": "Vai al contenuto",
+    "home": "Pagina iniziale di Artistica",
+    "nav": "Principale",
+    "how": "Come funziona",
+    "features": "Funzioni",
+    "privacy": "Privacy",
+    "faq": "Domande",
+    "openApp": "Apri l'app"
   },
   "theme": {
-    "auto": "",
-    "light": "",
-    "dark": "",
-    "changeAuto": "",
-    "changeLight": "",
-    "changeDark": ""
+    "auto": "Automatico",
+    "light": "Chiaro",
+    "dark": "Scuro",
+    "changeAuto": "Cambia tema: Automatico",
+    "changeLight": "Cambia tema: Chiaro",
+    "changeDark": "Cambia tema: Scuro"
   },
   "hero": {
-    "hand": "",
-    "title": "",
-    "lead": "",
-    "start": "",
-    "seeHow": "",
-    "points": "",
-    "tip": ""
+    "hand": "per il disegno e la pittura",
+    "title": "Trasforma le foto di riferimento in fogli pronti da stampare.",
+    "lead": "Trascina le tue foto. Artistica le dispone sulle pagine a una buona dimensione per disegnare, con segni di taglio e abbondanza, e può aggiungere studi e linee di composizione. Poi stampa, ritaglia e disegna.",
+    "start": "Inizia un foglio",
+    "seeHow": "Guarda come funziona",
+    "points": "Gratuito · Nessuna registrazione",
+    "tip": "consiglio! 4 per pagina"
   },
   "how": {
-    "title": "",
-    "subtitle": "",
+    "title": "Come funziona",
+    "subtitle": "Tre passaggi, in meno di un minuto.",
     "add": {
-      "title": "",
-      "body": ""
+      "title": "Aggiungi le foto",
+      "body": "Scegli dai tuoi file, trascina, incolla o usa un link. JPG, PNG, WebP, GIF e HEIC di iPhone."
     },
     "paper": {
-      "title": "",
-      "body": ""
+      "title": "Scegli la carta",
+      "body": "A4, Lettera e altri formati. Artistica trova un'impaginazione con il minor numero di pagine e le immagini più grandi."
     },
     "print": {
-      "title": "",
-      "body": ""
+      "title": "Stampa e ritaglia",
+      "body": "Scarica un PDF con segni di taglio e abbondanza facoltativa. Stampa al 100% e taglia lungo i segni."
     }
   },
   "features": {
-    "title": "",
+    "title": "Fatto per aiutarti a vedere",
     "packing": {
-      "title": "",
-      "body": ""
+      "title": "Disposizione intelligente",
+      "body": "Dimensiona ogni foto per il disegno, mai oltre ciò che i suoi pixel permettono a 300 DPI."
     },
     "marks": {
-      "title": "",
-      "body": ""
+      "title": "Segni di taglio e abbondanza",
+      "body": "Segni di taglio come in tipografia, abbondanza facoltativa e un margine di sicurezza, così tagliare è facile."
     },
     "studies": {
-      "title": "",
-      "body": ""
+      "title": "Studi di sfocatura e dei valori tonali",
+      "body": "Stampa una versione sfocata, uno studio dei valori tonali da 2 a 20 valori in una tinta a tua scelta, o entrambi, accanto all'originale."
     },
     "lines": {
-      "title": "",
-      "body": ""
+      "title": "Linee di composizione",
+      "body": "Griglia, regola dei terzi, diagonali e armatura, sezione aurea, spirale aurea e linee centrali, nel colore e nello spessore che vuoi."
     },
     "guides": {
-      "title": "",
-      "body": ""
+      "title": "Guide dalla foto",
+      "body": "Traccia il contorno dei bordi, o aggiungi linee di costruzione del volto e linee della posa che seguono la persona nella foto."
     },
     "presets": {
-      "title": "",
-      "body": ""
+      "title": "Preset",
+      "body": "Salva l'impostazione della pagina, gli studi e le linee con un nome, poi applicali a tutte le tue foto in un colpo solo."
     },
     "edit": {
-      "title": "",
-      "body": ""
+      "title": "Modifica e disponi a mano",
+      "body": "Ritaglia, ruota, rifletti, stampa più copie o fissa una dimensione esatta, poi sposta, ridimensiona e scambia le foto sulla pagina, con la possibilità di annullare."
     },
     "phone": {
-      "title": "",
-      "body": ""
+      "title": "Funziona sul telefono",
+      "body": "Un percorso passo passo sugli schermi piccoli, pannelli laterali sul computer, tema chiaro e scuro."
     }
   },
   "privacy": {
-    "title": "",
+    "title": "Le tue foto restano con te",
     "claims": {
-      "inBrowser": "",
-      "notSaved": "",
-      "settingsOnly": "",
-      "models": "",
-      "noTracking": "",
-      "heroNeverLeave": "",
-      "faqUploaded": "",
-      "faqGuides": "",
-      "faqOffline": ""
+      "inBrowser": "Tutto funziona nel tuo browser. Non viene caricato nulla.",
+      "notSaved": "Le foto non vengono mai salvate. Ricaricare la pagina le cancella.",
+      "settingsOnly": "Vengono conservati solo le tue impostazioni e i tuoi preset, su questo dispositivo.",
+      "models": "I modelli di volto e posa si scaricano da questo sito solo quando lo chiedi, e restano nel tuo browser per l'uso offline.",
+      "noTracking": "Nessun account e nessun tracciamento.",
+      "heroNeverLeave": "Le foto non lasciano mai il tuo dispositivo",
+      "faqUploaded": "No. Tutto funziona nel tuo browser. Le foto non vengono mai caricate né salvate, e ricaricare la pagina le cancella.",
+      "faqGuides": "Le guide di volto e posa usano i modelli MediaPipe di Google, scaricati da questo sito ed eseguiti sul tuo dispositivo.",
+      "faqOffline": "Sì, dopo la tua prima visita all'app. Le guide di volto e posa funzionano offline dopo il loro download una tantum."
     }
   },
   "faq": {
-    "title": "",
+    "title": "Domande",
     "free": {
-      "q": "",
-      "a": ""
+      "q": "È gratuito?",
+      "a": "Sì. Gratuito e open source (MIT)."
     },
     "size": {
-      "q": "",
-      "a": ""
+      "q": "Le mie stampe avranno le dimensioni giuste?",
+      "a": "Sì, se stampi al 100% («Dimensioni effettive»). Le pagine vengono create esattamente nel formato carta che scegli."
     },
     "link": {
-      "q": "",
-      "a": ""
+      "q": "Perché il link di un'immagine non funziona?",
+      "a": "Alcuni siti impediscono ad altre app di leggere le loro immagini. Scarica l'immagine e aggiungila dai tuoi file."
     },
     "bleed": {
-      "q": "",
-      "a": ""
+      "q": "Cosa significano «abbondanza» e «segni di taglio»?",
+      "a": "I segni di taglio mostrano dove tagliare. L'abbondanza stampa un po' di immagine oltre il taglio, così un taglio un po' impreciso non lascia un bordo bianco."
     },
     "uploaded": {
-      "q": ""
+      "q": "Le mie foto vengono caricate da qualche parte?"
     },
     "guides": {
-      "q": ""
+      "q": "Cosa trova le guide di volto e posa?"
     },
     "offline": {
-      "q": ""
+      "q": "Si può usare offline?"
     },
     "phone": {
-      "q": "",
-      "a": ""
+      "q": "Funziona sul mio telefono?",
+      "a": "Sì: ultime versioni di Chrome, Edge, Firefox e Safari su computer, iPhone e Android."
     }
   },
   "footer": {
-    "licence": "",
-    "source": "",
-    "language": ""
+    "licence": "Artistica · licenza MIT ·",
+    "source": "Codice sorgente su GitHub",
+    "language": "Lingua"
   }
 }
