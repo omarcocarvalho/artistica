@@ -29,9 +29,9 @@ describe('number and unit stay on one line in Japanese, Korean and Chinese', () 
   it.each(['ja', 'ko', 'zh-CN'])(
     '%s writes a no-break space before DPI, MB, px and units',
     (lang) => {
-      const spaced = strings(lang)
-        .filter(([, value]) => SPACED_UNIT.test(value))
-        .map(([key]) => key)
+      const all = strings(lang)
+      expect(all.length).toBeGreaterThan(500)
+      const spaced = all.filter(([, value]) => SPACED_UNIT.test(value)).map(([key]) => key)
       expect(spaced).toEqual([])
     },
   )
@@ -39,8 +39,10 @@ describe('number and unit stay on one line in Japanese, Korean and Chinese', () 
 
 describe('Korean particles', () => {
   it('never follow a closing quotation mark, a bracket or a percent sign directly', () => {
-    const stranded = strings('ko')
-      .filter(([, value]) => /[’”)\]%][\p{Script=Hangul}]/u.test(value))
+    const all = strings('ko')
+    expect(all.length).toBeGreaterThan(500)
+    const stranded = all
+      .filter(([, value]) => /[’”"')\]）」』〉》%][\p{Script=Hangul}]/u.test(value))
       .map(([key, value]) => `${key}: ${value}`)
     expect(stranded).toEqual([])
   })
