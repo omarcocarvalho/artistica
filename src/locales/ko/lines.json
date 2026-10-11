@@ -43,7 +43,7 @@
     "heading": "사진 기반 가이드",
     "onDevice": "기기에서",
     "detail": { "label": "세밀도", "value": "{{value}}" },
-    "size": "한 번만 다운로드: {{size}}",
+    "size": "1회 다운로드: {{size}}",
     "download": "다운로드하고 켜기",
     "progress": "{{loaded}} / {{total}}",
     "progressSpoken": "{{total}}메가바이트 중 {{loaded}}메가바이트",
