@@ -1,0 +1,59 @@
+{
+  "title": "",
+  "paper": {
+    "heading": "",
+    "size": "",
+    "custom": "",
+    "name": {
+      "letter": "",
+      "legal": "",
+      "tabloid": "",
+      "custom": ""
+    },
+    "dims": "",
+    "times": "",
+    "width": "",
+    "height": "",
+    "units": "",
+    "unitMm": "",
+    "unitIn": ""
+  },
+  "noRoom": "",
+  "orientation": {
+    "label": "",
+    "auto": "",
+    "portrait": "",
+    "landscape": "",
+    "autoPicked": "",
+    "resolved": {
+      "portrait": "",
+      "landscape": ""
+    }
+  },
+  "spacing": {
+    "heading": "",
+    "safeArea": "",
+    "safeAreaHint": "",
+    "gutter": "",
+    "gutterSize": "",
+    "gutterHint": ""
+  },
+  "cutting": {
+    "heading": "",
+    "cropMarks": "",
+    "bleed": "",
+    "bleedAmount": "",
+    "bleedHint": ""
+  },
+  "notes": {
+    "gutterEnabledForBleed": "",
+    "gutterRaisedForBleed": "",
+    "safeAreaRaisedToMinimum": ""
+  },
+  "suggestion": {
+    "tip": "",
+    "text_one": "",
+    "text_other": ""
+  },
+  "remembered": ""
+}

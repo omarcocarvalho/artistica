@@ -1,0 +1,44 @@
+{
+  "title": "",
+  "close": "",
+  "summary": {
+    "pages": "",
+    "pagesValue": "",
+    "orientation": {
+      "portrait": "",
+      "landscape": ""
+    },
+    "tiles": "",
+    "tilesValue_one": "",
+    "tilesValue_other": "",
+    "cropMarks": "",
+    "bleed": "",
+    "on": "",
+    "off": "",
+    "quality": "",
+    "qualityValue": ""
+  },
+  "fileName": "",
+  "create": "",
+  "retry": "",
+  "cancel": "",
+  "progress": {
+    "label": "",
+    "aria": "",
+    "page": "",
+    "state": {
+      "todo": "",
+      "active": "",
+      "done": ""
+    },
+    "hint": ""
+  },
+  "done": {
+    "title": "",
+    "yay": "",
+    "download": "",
+    "printTitle": "",
+    "printBody": "",
+    "again": ""
+  }
+}

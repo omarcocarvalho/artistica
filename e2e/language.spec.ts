@@ -73,9 +73,15 @@ test.describe('a Traditional Chinese browser', () => {
 test.describe('a Portuguese (Brazil) browser', () => {
   test.use({ locale: 'pt-BR' })
 
-  test('LANG-D5: gets English while Portuguese has no strings', async ({ page }) => {
+  test('LANG-D5: gets Portuguese (Brazil) and lang="pt-BR", and nothing is saved', async ({
+    page,
+  }) => {
     await openApp(page)
-    await expectEnglish(page)
+    await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR')
+    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
+    await expect(page).toHaveTitle('Artistica app')
+    await expect(page.getByRole('button', { name: /^Mudar tema/ })).toBeVisible()
+    await expect(languageSelect(page)).toHaveValue('pt-BR')
     expect(await savedLanguage(page)).toBeNull()
   })
 })
