@@ -3,7 +3,7 @@
     "groupLabel": "画像を追加",
     "title": "資料写真を追加しましょう",
     "hint": "ここにドロップするか、貼り付けるか、リンクを追加してください。ページへの配置はおまかせください。",
-    "formats": "JPG、PNG、WebP、GIF、HEIC・枚数の制限なし",
+    "formats": "JPG、PNG、WebP、GIF、HEIC · 枚数の制限なし",
     "privacy": "何もアップロードされません。写真はこのデバイスの外に出ません。",
     "dropMini": "または写真をここにドロップ",
     "dropActive": "ドロップして写真を追加",
