@@ -172,6 +172,28 @@ describe('LanguageSelect', () => {
     expect(select()).not.toHaveAttribute('aria-busy')
   })
 
+  it('never loads a choice that a later one replaced before its turn came', async () => {
+    const slow = deferred<'changed'>()
+    mocks.setAppLanguage.mockImplementation(async (code) => {
+      if (code === 'ja') await slow.promise
+      return changeTo(code)
+    })
+    render(<LanguageSelect />)
+    await userEvent.selectOptions(select(), 'ja')
+    await userEvent.selectOptions(select(), 'ko')
+    await userEvent.selectOptions(select(), 'es')
+    await act(async () => {
+      slow.resolve('changed')
+      await slow.promise
+    })
+    await vi.waitFor(() => {
+      expect(select()).not.toHaveAttribute('aria-busy')
+    })
+    expect(mocks.setAppLanguage.mock.calls.map(([code]) => code)).toEqual(['ja', 'es'])
+    expect(i18next.language).toBe('es')
+    expect(useSettings.getState().language).toBe('es')
+  })
+
   describe('size and width', () => {
     it('hides the endonym and the arrow below sm, keeps the globe, and grows to 44 px on touch', () => {
       const { container } = render(<LanguageSelect />)
