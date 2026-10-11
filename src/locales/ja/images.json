@@ -56,8 +56,8 @@
     "sizeFixed": "固定{{size}}",
     "copies": "×{{count, number}}",
     "copiesLabel": "{{count, number}}枚印刷",
-    "dpi": "{{dpi}} DPI",
-    "lowDpiLabel": "低解像度：{{dpi}} DPI",
+    "dpi": "{{dpi}} DPI",
+    "lowDpiLabel": "低解像度：{{dpi}} DPI",
     "separator": "·",
     "count_other": "{{count, number}}枚",
     "removeAll": {
@@ -71,12 +71,12 @@
   },
   "editSheet": {
     "title": "画像を編集",
-    "subtitle": "{{name}} · {{w}} × {{h}} px",
+    "subtitle": "{{name}} · {{w}} × {{h}} px",
     "crop": {
       "stageLabel": "画像のプレビュー",
       "areaLabel": "トリミング範囲",
       "help": "矢印キーでトリミング範囲を移動します。Shiftと矢印キーでサイズを変更します。",
-      "status": "トリミング{{w}} × {{h}} px（位置{{x}}, {{y}}）",
+      "status": "トリミング{{w}} × {{h}} px（位置{{x}}, {{y}}）",
       "annotation": "角をドラッグ",
       "controls": "トリミングの位置とサイズ",
       "position": "位置",
@@ -86,10 +86,10 @@
         "up": "上へ移動",
         "down": "下へ移動",
         "right": "右へ移動",
-        "narrower": "幅を狭く",
-        "wider": "幅を広く",
-        "shorter": "高さを低く",
-        "taller": "高さを高く"
+        "narrower": "幅を狭める",
+        "wider": "幅を広げる",
+        "shorter": "高さを縮める",
+        "taller": "高さを伸ばす"
       },
       "shape": "トリミングの形",
       "reset": "トリミングをリセット"
@@ -124,7 +124,7 @@
       "label": "印刷サイズ",
       "auto": "自動",
       "fixed": "固定",
-      "autoHint": "自動では、{{size}}から300 DPIの上限までの間でサイズを選びます。",
+      "autoHint": "自動では、{{size}}から300 DPIの上限までの間でサイズを選びます。",
       "axisLabel": "指定",
       "width": "幅",
       "height": "高さ",
@@ -134,14 +134,14 @@
     },
     "dpi": {
       "label": "印刷解像度",
-      "value": "{{dpi}} DPI",
+      "value": "{{dpi}} DPI",
       "scale0": "0",
       "scale300": "300",
       "scale400": "400",
-      "autoOk": "自動では300 DPIを超える解像度で印刷しません。",
+      "autoOk": "自動では、300 DPIで印刷できる大きさを超えて印刷しません。",
       "lowTitle": "低解像度",
-      "lowFixed": "300 DPI未満では、ぼやけて印刷される場合があります。{{w}} × {{h}} {{unit}}までならシャープです。",
-      "lowAuto": "無理のない最小サイズ（{{size}}）でも{{dpi}} DPIで印刷されます。ぼやけて見える場合があります。"
+      "lowFixed": "300 DPI未満では、ぼやけて印刷される場合があります。{{w}} × {{h}} {{unit}}までならシャープです。",
+      "lowAuto": "無理のない最小サイズ（{{size}}）でも{{dpi}} DPIで印刷されます。ぼやけて見える場合があります。"
     },
     "actions": {
       "close": "閉じる",

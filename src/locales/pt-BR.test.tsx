@@ -111,7 +111,7 @@ describe('the app in Portuguese (Brazil)', () => {
     const { container } = render(<TopBar onExport={vi.fn()} exportDisabledReason={null} />)
     expect(englishWordsIn(shownText(container))).toEqual([])
     expect(screen.getByRole('button', { name: 'Exportar PDF' })).toBeInTheDocument()
-    expect(screen.getByText('As fotos ficam neste dispositivo')).toBeInTheDocument()
+    expect(screen.getByText('Fotos ficam neste dispositivo')).toBeInTheDocument()
   })
 
   it('the Page panel has no English words and uses the glossary', () => {
@@ -203,6 +203,7 @@ describe('plural forms in Portuguese (Brazil)', () => {
     ['studies:values.countText', 2, '2 valores'],
     ['studies:values.countText', 5, '5 valores'],
     ['studies:values.countText', 1_000_000, '1.000.000 de valores'],
+    ['presets:import.imported', 0, 'Nenhum preset importado.'],
     ['presets:import.imported', 1, '1 preset importado.'],
     ['presets:import.imported', 2, '2 presets importados.'],
     ['presets:import.imported', 1_000_000, '1.000.000 de presets importados.'],
@@ -255,5 +256,45 @@ describe('plural forms in Portuguese (Brazil)', () => {
       '3 a partir de 2 imagens',
       '3 a partir de 1.000.000 de imagens',
     ])
+  })
+})
+
+describe('reviewed wording in Portuguese (Brazil)', () => {
+  it.each<[string, Record<string, unknown>, string]>([
+    ['app:theme.auto', {}, 'Auto'],
+    ['common:theme.auto', {}, 'Auto'],
+    ['app:theme.changeLabel', { current: 'Auto' }, 'Mudar tema: Auto'],
+    [
+      'pageSetup:orientation.autoPicked',
+      { orientation: 'retrato' },
+      'O modo automático escolheu retrato: menos páginas.',
+    ],
+    [
+      'images:editSheet.size.autoHint',
+      { size: '60 mm' },
+      'O modo automático escolhe um tamanho entre 60 mm e o limite de 300 DPI.',
+    ],
+    ['images:editSheet.dpi.autoOk', {}, 'O modo automático nunca imprime acima de 300 DPI.'],
+    [
+      'images:editSheet.dpi.lowAuto',
+      { size: '2,36 pol.', dpi: 20 },
+      'No menor tamanho confortável (2,36 pol.), a imagem é impressa a 20 DPI e pode ficar sem nitidez.',
+    ],
+  ])('%s', (key, vars, expected) => {
+    expect(i18next.getFixedT('pt-BR')(key, vars)).toBe(expected)
+  })
+
+  it('the theme words fit the 8-character theme button', () => {
+    const strings = allStrings()
+    for (const key of ['app:theme.auto', 'app:theme.light', 'app:theme.dark'])
+      expect(strings[key]?.length ?? 99, key).toBeLessThanOrEqual(8)
+    expect(landing.theme.auto).toBe('Auto')
+    expect(landing.theme.changeAuto).toBe('Mudar tema: Auto')
+  })
+
+  it('calls a smartphone "celular"', () => {
+    expect(landing.features.phone.title).toBe('Funciona no seu celular')
+    expect(landing.faq.phone.q).toBe('Funciona no meu celular?')
+    expect(Object.entries(allStrings()).filter(([, v]) => /telefone/i.test(v))).toEqual([])
   })
 })

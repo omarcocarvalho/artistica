@@ -17,7 +17,7 @@
     "on": "Sì",
     "off": "No",
     "quality": "Qualità",
-    "qualityValue": "300 DPI, mai ingrandite"
+    "qualityValue": "300 DPI, senza ingrandimento"
   },
   "fileName": "Nome del file",
   "create": "Crea PDF",

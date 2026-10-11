@@ -19,6 +19,7 @@ import { DEFAULT_LINES } from '../shared/model/lines'
 import { DEFAULT_PAGE_SETUP } from '../shared/model/page-setup'
 import { presetFromSettings } from '../shared/model/preset'
 import { DEFAULT_STUDY } from '../shared/model/study'
+import landing from '../../landing/locales/it.json'
 
 vi.mock('../features/render/export/export-pdf', () => ({ exportPdf: vi.fn() }))
 
@@ -172,7 +173,7 @@ type Row = readonly [key: string, vars: Record<string, string>, forms: readonly 
 /** The text of each plural key at 0, 1, 2, 5 and 1,000,000 (CLDR: one, many, other). */
 const COUNTS = [0, 1, 2, 5, 1_000_000] as const
 const PLURALS: readonly Row[] = [
-  ['app:import.more', {}, ['altre 0', '1 altra', 'altre 2', 'altre 5', 'altre 1.000.000']],
+  ['app:import.more', {}, ['altre 0', 'altra 1', 'altre 2', 'altre 5', 'altre 1.000.000']],
   [
     'export:summary.tilesValue',
     { tiles: '3' },
@@ -360,5 +361,22 @@ describe('Italian plural forms', () => {
 
   it.each(PLURALS)('%s', (key, vars, forms) => {
     expect(COUNTS.map((count) => i18next.t(key, { ...vars, count, lng: 'it' }))).toEqual(forms)
+  })
+})
+
+describe('Italian reviewed wording', () => {
+  it.each<[string, Record<string, unknown>, string]>([
+    ['export:summary.qualityValue', {}, '300 DPI, senza ingrandimento'],
+    [
+      'app:language.loadFailed',
+      {},
+      'Impossibile scaricare quella lingua. Controlla la connessione e riprova.',
+    ],
+  ])('%s', (key, vars, expected) => {
+    expect(i18next.t(key, vars)).toBe(expected)
+  })
+
+  it('the guides question asks what makes the guides', () => {
+    expect(landing.faq.guides.q).toBe('Cosa genera le guide di volto e posa?')
   })
 })

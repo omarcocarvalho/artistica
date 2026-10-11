@@ -27,7 +27,7 @@
     "deleteLabel": "삭제: {{name}}"
   },
   "rename": {
-    "label": "‘{{name}}’의 새 이름",
+    "label": "‘{{name}}’ 프리셋의 새 이름",
     "submit": "저장",
     "cancel": "취소",
     "renamed": "프리셋 이름을 바꿨어요: ‘{{from}}’ → ‘{{to}}’."

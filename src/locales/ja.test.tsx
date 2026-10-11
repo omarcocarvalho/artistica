@@ -18,6 +18,7 @@ import { DEFAULT_LINES } from '../shared/model/lines'
 import { DEFAULT_PAGE_SETUP } from '../shared/model/page-setup'
 import { presetFromSettings } from '../shared/model/preset'
 import { DEFAULT_STUDY } from '../shared/model/study'
+import landing from '../../landing/locales/ja.json'
 
 const ENGLISH_WORDS = [
   'Add',
@@ -180,5 +181,36 @@ describe('Japanese (ja)', () => {
     ['app:import.more', {}, ['ほか0件', 'ほか1件', 'ほか2件', 'ほか5件', 'ほか1,000,000件']],
   ])('%s gives the right form for 0, 1, 2, 5 and 1,000,000', (key, vars, expected) => {
     expect(COUNTS.map((count) => i18next.t(key, { ...vars, count }))).toEqual(expected)
+  })
+})
+
+describe('Japanese reviewed wording', () => {
+  it.each<[string, Record<string, unknown>, string]>([
+    [
+      'images:editSheet.dpi.autoOk',
+      {},
+      '自動では、300 DPIで印刷できる大きさを超えて印刷しません。',
+    ],
+    ['images:editSheet.crop.step.shorter', {}, '高さを縮める'],
+    ['images:editSheet.crop.step.taller', {}, '高さを伸ばす'],
+    ['images:editSheet.crop.step.narrower', {}, '幅を狭める'],
+    ['images:editSheet.crop.step.wider', {}, '幅を広げる'],
+    ['pageSetup:spacing.gutterSize', {}, '間隔の幅'],
+    ['lines:guides.onDevice', {}, 'デバイス内'],
+    [
+      'errors:images.cors.message',
+      {},
+      'このサイトはほかのアプリによる画像の読み込みを許可していません。画像をダウンロードして、ファイルから追加してください。',
+    ],
+  ])('%s', (key, vars, expected) => {
+    expect(i18next.t(key, vars)).toBe(expected)
+  })
+
+  it('the landing FAQ', () => {
+    expect(landing.privacy.claims.faqUploaded).toBe(
+      'いいえ。すべてブラウザ内で動作します。写真がアップロードされたり保存されたりすることはなく、ページを再読み込みすると消えます。',
+    )
+    expect(landing.faq.guides.q).toBe('顔とポーズのガイドは何を使って検出していますか？')
+    expect(landing.faq.link.a).toMatch(/ほかのアプリ/)
   })
 })

@@ -131,7 +131,7 @@
       "label": "Tamanho de impressão",
       "auto": "Automático",
       "fixed": "Fixo",
-      "autoHint": "O automático escolhe um tamanho entre {{size}} e o limite de 300 DPI.",
+      "autoHint": "O modo automático escolhe um tamanho entre {{size}} e o limite de 300 DPI.",
       "axisLabel": "Definir",
       "width": "Largura",
       "height": "Altura",
@@ -145,10 +145,10 @@
       "scale0": "0",
       "scale300": "300",
       "scale400": "400",
-      "autoOk": "O automático nunca imprime acima de 300 DPI.",
+      "autoOk": "O modo automático nunca imprime acima de 300 DPI.",
       "lowTitle": "Baixa resolução",
       "lowFixed": "Abaixo de 300 DPI, a impressão pode sair sem nitidez. Até {{w}} × {{h}} {{unit}}, ela fica nítida.",
-      "lowAuto": "No menor tamanho confortável ({{size}}), ela é impressa a {{dpi}} DPI. Pode ficar sem nitidez."
+      "lowAuto": "No menor tamanho confortável ({{size}}), a imagem é impressa a {{dpi}} DPI e pode ficar sem nitidez."
     },
     "actions": {
       "close": "Fechar",

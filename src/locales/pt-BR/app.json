@@ -8,7 +8,7 @@
   "skipToPreview": "Pular para a prévia",
   "topBar": {
     "home": "Início do Artistica",
-    "privacy": "As fotos ficam neste dispositivo",
+    "privacy": "Fotos ficam neste dispositivo",
     "export": "Exportar PDF",
     "exportNoImages": "Adicione pelo menos uma imagem para exportar.",
     "exportUpdating": "O layout está sendo atualizado. A exportação fica disponível em instantes.",
@@ -18,7 +18,7 @@
   },
   "theme": {
     "changeLabel": "Mudar tema: {{current}}",
-    "auto": "Automático",
+    "auto": "Auto",
     "light": "Claro",
     "dark": "Escuro"
   },

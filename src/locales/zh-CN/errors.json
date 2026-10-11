@@ -22,7 +22,7 @@
     },
     "tooLarge": {
       "title": "“{{name}}”太大",
-      "message": "照片最大为{{maxMb}} MB、{{maxMp}}百万像素。试试较小的版本。"
+      "message": "照片最大为{{maxMb}} MB、{{maxMp}}百万像素。试试较小的版本。"
     }
   },
   "export": {

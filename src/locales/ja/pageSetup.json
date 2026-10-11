@@ -10,7 +10,7 @@
       "tabloid": "タブロイド",
       "custom": "カスタム"
     },
-    "dims": "{{w}} × {{h}} {{unit}}",
+    "dims": "{{w}} × {{h}} {{unit}}",
     "times": "×",
     "width": "幅",
     "height": "高さ",
@@ -32,7 +32,7 @@
     "safeArea": "余白",
     "safeAreaHint": "ページの端に残す白い縁です。最小{{min}}。",
     "gutter": "画像の間隔",
-    "gutterSize": "間隔のサイズ",
+    "gutterSize": "間隔の幅",
     "gutterHint": "画像の間を切るためのスペースです。"
   },
   "cutting": {

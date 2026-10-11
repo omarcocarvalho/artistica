@@ -206,3 +206,20 @@ describe('Chinese (Simplified) plural forms (only `other`)', () => {
     expect(COUNTS.map((count) => i18next.t(key, { ...vars, count }))).toEqual(expected)
   })
 })
+
+describe('Chinese (Simplified) reviewed wording', () => {
+  it.each<[string, Record<string, unknown>, string]>([
+    ['images:editSheet.dpi.autoOk', {}, '自动模式的打印尺寸绝不会超出300 DPI所允许的大小。'],
+    ['export:done.again', {}, '再做一个PDF'],
+    ['preview:arrange.swapWith', {}, '与…交换'],
+    ['export:summary.qualityValue', {}, '300 DPI，绝不放大'],
+    ['images:editSheet.crop.status', { w: 64, h: 48, x: 0, y: 0 }, '裁剪64 × 48 px，位于（0, 0）'],
+    ['pageSetup:spacing.gutterSize', {}, '图片间距大小'],
+  ])('%s', (key, vars, expected) => {
+    expect(i18next.t(key, vars)).toBe(expected)
+  })
+
+  it('Auto never claims the resolution stays under 300 DPI', () => {
+    expect(i18next.t('images:editSheet.dpi.autoOk')).not.toMatch(/分辨率/)
+  })
+})

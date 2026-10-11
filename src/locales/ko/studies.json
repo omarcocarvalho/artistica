@@ -36,7 +36,7 @@
     "hueText": "{{value}}",
     "ramp": "명도 단계표",
     "rampLabel": "{{count, number}}단계, 가장 어두운 색부터 가장 밝은 색까지",
-    "darkest": "가장 어두운",
+    "darkest": "가장 어두운 색",
     "lightest": "가장 밝은 색",
     "hint": "흐림 + 명도는 먼저 흐리게 한 다음 명도 단계로 나눠요.",
     "usedBy": "명도, 흐림 + 명도에 사용돼요."

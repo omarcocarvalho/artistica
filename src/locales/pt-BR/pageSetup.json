@@ -24,7 +24,7 @@
     "auto": "Automático",
     "portrait": "Retrato",
     "landscape": "Paisagem",
-    "autoPicked": "O automático escolheu {{orientation}}: menos páginas.",
+    "autoPicked": "O modo automático escolheu {{orientation}}: menos páginas.",
     "resolved": { "portrait": "retrato", "landscape": "paisagem" }
   },
   "spacing": {

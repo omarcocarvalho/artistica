@@ -2,8 +2,8 @@
   "tile": {
     "fallbackName": "画像{{n}}",
     "versionName": "{{name}}、{{version}}",
-    "lowDpi": "{{dpi}} DPI",
-    "lowDpiLabel": "低解像度：{{dpi}} DPI",
+    "lowDpi": "{{dpi}} DPI",
+    "lowDpiLabel": "低解像度：{{dpi}} DPI",
     "scaledToFit": "縮小して配置",
     "scaledToFitLabel": "ページに収まるよう縮小しました"
   },
@@ -25,7 +25,7 @@
     "toggle": "配置",
     "barLabel": "写真を配置",
     "photoOptions": "写真のオプション",
-    "sheetSummary": "{{w}} × {{h}} {{unit}}、{{total}}ページ中{{page}}ページ",
+    "sheetSummary": "{{w}} × {{h}} {{unit}}、{{total}}ページ中{{page}}ページ",
     "undo": "元に戻す",
     "rerun": "自動レイアウトをやり直す",
     "rerunConfirm": "自動レイアウトをやり直しますか？移動とサイズの変更は失われます。",
@@ -46,7 +46,7 @@
     "moveDown": "下へ移動",
     "moveRight": "右へ移動",
     "roleDescription": "移動できる写真",
-    "blockName": "{{name}}、{{w}} × {{h}} {{unit}}、{{page}}ページ",
+    "blockName": "{{name}}、{{w}} × {{h}} {{unit}}、{{page}}ページ",
     "instructions": "矢印キーで移動、Shiftと矢印キーでサイズ変更、Page UpとPage Downで別のページへ移動、Enterで別の写真と入れ替えます。",
     "fixedHint": "固定サイズです：編集で変更してください。",
     "chip": {
@@ -54,7 +54,7 @@
       "swap": "入れ替え",
       "invalid": "配置できません"
     },
-    "placed": "{{name}}、{{w}} × {{h}} {{unit}}、{{page}}ページ、左から{{x}} {{unit}}、上から{{y}} {{unit}}。",
+    "placed": "{{name}}、{{w}} × {{h}} {{unit}}、{{page}}ページ、左から{{x}} {{unit}}、上から{{y}} {{unit}}。",
     "pickedUp": "{{name}}を持ち上げました。別の写真に移動してEnterを押すと入れ替え、Escapeでキャンセルします。",
     "pickUpCancelled": "入れ替えをキャンセルしました。",
     "undone": "元に戻しました。",

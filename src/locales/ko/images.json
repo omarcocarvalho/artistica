@@ -28,7 +28,7 @@
     },
     "pasteHint": {
       "title": "키보드로 붙여넣기",
-      "message": "여기서는 브라우저에서 키보드를 사용해야 해요. Ctrl+V(Mac에서는 ⌘V)를 누르세요."
+      "message": "여기서는 브라우저에서 키보드를 사용해야 해요. Ctrl+V를 누르세요. Mac에서는 ⌘V를 누르세요."
     },
     "url": {
       "title": "링크로 이미지 추가",
@@ -56,8 +56,8 @@
     "sizeFixed": "고정 {{size}}",
     "copies": "×{{count, number}}",
     "copiesLabel": "{{count, number}}장 인쇄",
-    "dpi": "{{dpi}} DPI",
-    "lowDpiLabel": "저해상도: {{dpi}} DPI",
+    "dpi": "{{dpi}} DPI",
+    "lowDpiLabel": "저해상도: {{dpi}} DPI",
     "separator": "·",
     "count_other": "{{count, number}}장",
     "removeAll": {
@@ -118,13 +118,13 @@
       "more": "매수 늘리기",
       "lessGlyph": "−",
       "moreGlyph": "+",
-      "hint": "이 이미지를 여러 장 인쇄해요."
+      "hint": "이 이미지를 여러 장 인쇄할 수 있어요."
     },
     "size": {
       "label": "인쇄 크기",
       "auto": "자동",
       "fixed": "고정",
-      "autoHint": "자동은 {{size}}부터 300 DPI 한도까지의 범위에서 크기를 골라요.",
+      "autoHint": "자동은 {{size}}부터 300 DPI 한도까지의 범위에서 크기를 골라요.",
       "axisLabel": "기준",
       "width": "너비",
       "height": "높이",
@@ -134,14 +134,14 @@
     },
     "dpi": {
       "label": "인쇄 해상도",
-      "value": "{{dpi}} DPI",
+      "value": "{{dpi}} DPI",
       "scale0": "0",
       "scale300": "300",
       "scale400": "400",
-      "autoOk": "자동은 300 DPI를 넘겨 인쇄하지 않아요.",
+      "autoOk": "자동은 300 DPI를 넘겨 인쇄하지 않아요.",
       "lowTitle": "저해상도",
-      "lowFixed": "300 DPI 미만에서는 흐릿하게 인쇄될 수 있어요. {{w}} × {{h}}{{unit}}까지는 선명해요.",
-      "lowAuto": "알맞게 볼 수 있는 가장 작은 크기({{size}})에서 {{dpi}} DPI로 인쇄돼요. 흐릿해 보일 수 있어요."
+      "lowFixed": "300 DPI 미만에서는 흐릿하게 인쇄될 수 있어요. {{w}} × {{h}}{{unit}}까지는 선명해요.",
+      "lowAuto": "알맞게 볼 수 있는 가장 작은 크기 {{size}}에서 {{dpi}} DPI로 인쇄돼요. 흐릿해 보일 수 있어요."
     },
     "actions": {
       "close": "닫기",

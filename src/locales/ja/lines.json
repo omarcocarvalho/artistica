@@ -41,7 +41,7 @@
   },
   "guides": {
     "heading": "写真からのガイド",
-    "onDevice": "端末内",
+    "onDevice": "デバイス内",
     "detail": { "label": "細かさ", "value": "{{value}}" },
     "size": "1回だけのダウンロード：{{size}}",
     "download": "ダウンロードしてオン",
@@ -89,7 +89,7 @@
     "hexLabel": "色の16進コード",
     "hexHint": "#と16進数6桁を入力してください（例：#1f3fbf）。"
   },
-  "thickness": { "label": "太さ", "value": "{{value}} {{unit}}" },
+  "thickness": { "label": "太さ", "value": "{{value}} {{unit}}" },
   "opacity": { "label": "不透明度", "value": "{{value}}" },
   "applyAll": {
     "button": "線をすべての画像に適用",
