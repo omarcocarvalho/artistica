@@ -24,10 +24,10 @@
     "openApp": "Apri l'app"
   },
   "theme": {
-    "auto": "Automatico",
+    "auto": "Auto",
     "light": "Chiaro",
     "dark": "Scuro",
-    "changeAuto": "Cambia tema: Automatico",
+    "changeAuto": "Cambia tema: Auto",
     "changeLight": "Cambia tema: Chiaro",
     "changeDark": "Cambia tema: Scuro"
   },

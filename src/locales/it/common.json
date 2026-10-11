@@ -9,7 +9,7 @@
   },
   "joinSentences": "{{a}} {{b}}",
   "theme": {
-    "auto": "Automatico",
+    "auto": "Auto",
     "light": "Chiaro",
     "dark": "Scuro"
   }

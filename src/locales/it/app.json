@@ -18,7 +18,7 @@
   },
   "theme": {
     "changeLabel": "Cambia tema: {{current}}",
-    "auto": "Automatico",
+    "auto": "Auto",
     "light": "Chiaro",
     "dark": "Scuro"
   },

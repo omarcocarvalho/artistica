@@ -22,7 +22,7 @@ import { DEFAULT_STUDY } from '../shared/model/study'
 
 vi.mock('../features/render/export/export-pdf', () => ({ exportPdf: vi.fn() }))
 
-/** Frequent words of the English UI that no Italian string uses. */
+/** Frequent words of the English UI that no Italian string uses, matched in any case. */
 const ENGLISH_WORDS = [
   'Add',
   'Apply',
@@ -82,7 +82,7 @@ function pageText(): string {
 
 function englishWordsShown(): string[] {
   const text = pageText()
-  return ENGLISH_WORDS.filter((word) => new RegExp(`\\b${word}\\b`, 'u').test(text))
+  return ENGLISH_WORDS.filter((word) => new RegExp(`\\b${word}\\b`, 'iu').test(text))
 }
 
 beforeAll(async () => {
