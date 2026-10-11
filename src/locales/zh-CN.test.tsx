@@ -52,10 +52,9 @@ const ENGLISH_WORDS = [
   'Values',
 ] as const
 
-/** Latin words a Chinese screen may show: product and format names, paper sizes, endonyms, the test's file name. */
+/** Latin words a Chinese screen may show: product and format names, paper sizes, the test's file name. */
 const LATIN_ALLOWED: ReadonlySet<string> = new Set([
   'Artistica',
-  'English',
   'PDF',
   'DPI',
   'A3',
@@ -68,8 +67,10 @@ const LATIN_ALLOWED: ReadonlySet<string> = new Set([
 function shownTexts(root: HTMLElement): string[] {
   const texts: string[] = []
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
-  for (let node = walker.nextNode(); node; node = walker.nextNode())
-    texts.push(node.nodeValue ?? '')
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const lang = node.parentElement?.closest('[lang]')?.getAttribute('lang')
+    if (lang === undefined || lang === 'zh-CN') texts.push(node.nodeValue ?? '')
+  }
   for (const el of root.querySelectorAll('*')) {
     for (const attr of ['aria-label', 'aria-valuetext', 'title', 'placeholder', 'alt']) {
       const value = el.getAttribute(attr)
