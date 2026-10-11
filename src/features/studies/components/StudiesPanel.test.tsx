@@ -145,7 +145,7 @@ describe('StudiesPanel', () => {
     expect(study(A)?.blurPct).toBe(42)
     expect(blur).toHaveAttribute('aria-valuetext', '42%')
     expect(
-      screen.getByText('Scales with image size, so 42% looks alike on every photo.'),
+      screen.getByText('Scales with image size, so 42% looks similar on every photo.'),
     ).toBeVisible()
   })
 
@@ -506,7 +506,7 @@ describe('StudiesPanel in other languages', () => {
     await switchLanguage('es')
     render(<StudiesPanel imageId={A} />)
     expect(screen.getByRole('slider', { name: 'Amount' })).toHaveAttribute('aria-valuetext', '40 %')
-    expect(screen.getByText(/so 40 % looks alike/)).toBeVisible()
+    expect(screen.getByText(/so 40 % looks similar/)).toBeVisible()
   })
 
   it('formats the hue in degrees and the blur hint the Portuguese way', async () => {
