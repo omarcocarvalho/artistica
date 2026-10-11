@@ -69,7 +69,7 @@ function setup(open = true) {
       open={open}
       onOpenChange={onOpenChange}
       pages={pages}
-      paperLabel="A4"
+      paper="A4"
       getSource={() => undefined}
     />,
   )
@@ -269,7 +269,7 @@ describe('ExportDialog', () => {
         open
         onOpenChange={vi.fn()}
         pages={pages}
-        paperLabel="A4"
+        paper="A4"
         getSource={() => undefined}
       />,
     )
@@ -287,7 +287,7 @@ describe('ExportDialog', () => {
   it('cancels and resets when the parent closes it', async () => {
     const run = deferredExport()
     const onOpenChange = vi.fn()
-    const props = { onOpenChange, pages, paperLabel: 'A4', getSource: () => undefined }
+    const props = { onOpenChange, pages, paper: 'A4' as const, getSource: () => undefined }
     const view = render(<ExportDialog open {...props} />)
     await userEvent.setup().click(screen.getByRole('button', { name: 'Create PDF' }))
     view.rerender(<ExportDialog open={false} {...props} />)
@@ -302,7 +302,7 @@ describe('ExportDialog', () => {
         open
         onOpenChange={vi.fn()}
         pages={[]}
-        paperLabel="A4"
+        paper="A4"
         getSource={() => undefined}
       />,
     )

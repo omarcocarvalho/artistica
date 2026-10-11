@@ -4,6 +4,12 @@
     "heading": "Paper",
     "size": "Paper size",
     "custom": "Custom…",
+    "name": {
+      "letter": "Letter",
+      "legal": "Legal",
+      "tabloid": "Tabloid",
+      "custom": "Custom"
+    },
     "dims": "{{w}} × {{h}} {{unit}}",
     "times": "×",
     "width": "Width",

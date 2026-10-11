@@ -34,7 +34,7 @@
   },
   "apply": {
     "confirmTitle": "Apply “{{name}}”?",
-    "confirmBody_one": "It sets the page setup and the studies and lines of your photo.",
+    "confirmBodySingle": "It sets the page setup and the studies and lines of your photo.",
     "confirmBody_other": "It sets the page setup and the studies and lines of all {{count, number}} photos.",
     "confirm": "Apply",
     "cancel": "Cancel",
@@ -58,7 +58,6 @@
     "renamed_one": "{{count, number}} was renamed: {{list}}.",
     "renamed_other": "{{count, number}} were renamed: {{list}}.",
     "renamedPair": "{{from}} → {{to}}",
-    "listSeparator": ", ",
     "skipped_one": "{{count, number}} was skipped: it wasn't valid.",
     "skipped_other": "{{count, number}} were skipped: they weren't valid.",
     "full_one": "{{count, number}} wasn't added: this device keeps at most {{max}} presets.",

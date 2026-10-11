@@ -10,6 +10,7 @@ import {
   type SheetRegistry,
 } from '../../features/render'
 import { useImages } from '../../features/images'
+import { paperName } from '../../features/page-setup'
 import { useSettings } from '../../features/settings'
 import { formatLengthNumber, unitLabel } from '../../shared/i18n/format'
 import type { ImageId } from '../../shared/model/image'
@@ -116,7 +117,6 @@ export function PreviewSlot() {
   const names = useMemo(() => new Map(images.map((i) => [i.id, i.name])), [images])
   const linesOf = useMemo(() => new Map(images.map((i) => [i.id, i.lines])), [images])
   const getName = (id: ImageId) => names.get(id) ?? t('app:preview.unnamedImage')
-  const paperLabel = paper === 'Custom' ? t('app:preview.customPaper') : paper
   const orientation = layout ? t(`app:preview.orientation.${layout.orientation}`) : ''
   const listFormat = useMemo(() => new Intl.ListFormat(i18n.language), [i18n.language])
   const describeTile = (d: TileDescription) => {
@@ -193,7 +193,7 @@ export function PreviewSlot() {
                 label={t('app:preview.pageCaption', {
                   current: i + 1,
                   total: pages.length,
-                  paper: paperLabel,
+                  paper: paperName(paper, t),
                   orientation,
                 })}
               />

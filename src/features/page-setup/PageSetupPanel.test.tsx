@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { initI18n } from '../../shared/i18n'
@@ -177,6 +177,33 @@ describe('PageSetupPanel in Portuguese (Brazil)', () => {
     expect(screen.getByText('1.000,5 × 1.200 mm')).toBeInTheDocument()
     expect(screen.getByLabelText('Largura')).toHaveValue('1000,5')
     expect(screen.getByText(/Mín\. 3 mm\./)).toBeInTheDocument()
+  })
+
+  it('names each paper option through paperName, the custom one keeping its own key', () => {
+    render(<PageSetupPanel />)
+    const options = within(screen.getByLabelText('Tamanho do papel'))
+      .getAllByRole('option')
+      .map((o) => [o.getAttribute('value'), o.textContent])
+    expect(options).toEqual([
+      ['A4', 'A4'],
+      ['Letter', 'Carta'],
+      ['A3', 'A3'],
+      ['A5', 'A5'],
+      ['A6', 'A6'],
+      ['Legal', 'Ofício'],
+      ['Tabloid', 'Tabloide'],
+      ['Custom', 'Personalizado…'],
+    ])
+  })
+
+  it.each([
+    ['Letter', 'Carta cabe 8 referências por página.'],
+    ['Custom', 'Personalizado cabe 8 referências por página.'],
+    ['A3', 'A3 cabe 8 referências por página.'],
+  ] as const)('names %s in the suggestion through paperName', (paper, text) => {
+    useSettings.getState().setPageSetup({ paper })
+    render(<PageSetupPanel suggestedPerPage={8} />)
+    expect(screen.getByText(text)).toBeInTheDocument()
   })
 
   it('names inches with the language symbol', () => {

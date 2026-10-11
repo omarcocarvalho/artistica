@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useImages } from '../../images'
-import { formatMegabytes, formatPercent } from '../../../shared/i18n/format'
+import { formatMegabytes, formatPercent, joinSentences } from '../../../shared/i18n/format'
 import type { ImageDescriptor, ImageId } from '../../../shared/model/image'
 import { MAX_EDGE_DETAIL, MIN_EDGE_DETAIL, type LinesPatch } from '../../../shared/model/lines'
 import { Badge, Button, Callout, Slider, Switch } from '../../../shared/ui'
@@ -70,10 +70,7 @@ function announcement(t: Translate, kind: GuideKind, on: boolean, view: GuideVie
       }
     case 'none-found':
       return {
-        text:
-          kind === 'edges'
-            ? t('guides.edges.none')
-            : `${t(`guides.${kind}.none`)} ${t(`guides.${kind}.noneHint`)}`,
+        text: kind === 'edges' ? t('guides.edges.none') : t(`guides.${kind}.noneWithHint`),
         memo: 'result',
       }
     case 'unsupported':
@@ -127,6 +124,7 @@ function Guides({
       ...announcement(t, kind, on[kind], views[kind]),
       subject: on[kind] ? detectionKey(kind, image) : null,
     })),
+    t,
     onAnnounce,
   )
   const detail = useSettledDetail(id, lines.edges.detailPct)
@@ -370,6 +368,7 @@ function GuideGroup({ children }: { readonly children: ReactNode }) {
 function useAnnounceChanges(
   imageId: ImageId,
   spoken: readonly Said[],
+  t: Translate,
   onAnnounce: (text: string) => void,
 ): void {
   const key = JSON.stringify(spoken)
@@ -401,8 +400,8 @@ function useAnnounceChanges(
         ? [s.text]
         : [],
     )
-    if (changed.length > 0) onAnnounce(changed.join(' '))
-  }, [imageId, key, onAnnounce])
+    if (changed.length > 0) onAnnounce(changed.reduce((a, b) => joinSentences(t, a, b)))
+  }, [imageId, key, t, onAnnounce])
 }
 
 function useSettledDetail(imageId: ImageId, detailPct: number) {

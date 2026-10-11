@@ -5,6 +5,7 @@ import { useImages } from '../../features/images'
 import { makeLoadedImage } from '../../features/images/test-utils'
 import { DEFAULT_SETTINGS, SETTINGS_STORAGE_KEY, useSettings } from '../../features/settings'
 import { initI18n } from '../../shared/i18n'
+import { switchLanguage } from '../../test/languages'
 import type { ImageId } from '../../shared/model/image'
 import { DEFAULT_LINES } from '../../shared/model/lines'
 import { DEFAULT_PAGE_SETUP } from '../../shared/model/page-setup'
@@ -309,6 +310,34 @@ describe('applying', () => {
     )
   })
 
+  it.each([
+    [1, 'あなたの写真1枚'],
+    [3, '3枚すべての写真'],
+  ])(
+    'the confirmation for %i photo(s) in a language with one plural form (A4-Q1)',
+    async (n, text) => {
+      await switchLanguage('ja', {
+        presets: {
+          apply: {
+            confirmBodySingle: 'あなたの写真1枚',
+            confirmBody_other: '{{count, number}}枚すべての写真',
+          },
+        },
+      })
+      try {
+        addPresets(LETTER)
+        loadPhotos(n)
+        const { user, dialog } = await openDialog()
+        await user.click(
+          within(dialog).getByRole('button', { name: 'Apply Letter landscape, bleed' }),
+        )
+        expect(await screen.findByRole('dialog', { name: /Apply “/ })).toHaveTextContent(text)
+      } finally {
+        await switchLanguage('en')
+      }
+    },
+  )
+
   it('is off while photos import, with the import-wait hint', async () => {
     addPresets(LETTER)
     useImages.setState({ importing: 1 })
@@ -532,6 +561,51 @@ describe('Import', () => {
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(useImages.getState().images).toEqual([])
     expect(fileInput(dialog).value).toBe('')
+  })
+
+  const renamedAndSkipped = () => {
+    addPresets(makePreset('A4'), makePreset('B'))
+    const good = JSON.parse(buildPresetFile([makePreset('A4'), makePreset('B')])) as {
+      presets: Record<string, unknown>[]
+    }
+    const raw = { ...good, presets: [...good.presets, { name: 'x' }, { pageSetup: {} }] }
+    return new File([JSON.stringify(raw)], 'p.json')
+  }
+
+  it('lists the renamed presets with the language list format and joins the report sentences', async () => {
+    const { user, dialog } = await openDialog()
+    await user.upload(fileInput(dialog), renamedAndSkipped())
+    const status = within(dialog).getByRole('status')
+    await waitFor(() => {
+      expect(status).toHaveTextContent('Imported 2 presets.')
+    })
+    expect(status).toHaveTextContent(
+      "2 were renamed: A4 → A4 (2) and B → B (2). 2 were skipped: they weren't valid.",
+    )
+  })
+
+  it('lets the language join the report sentences and the list (M6-R10)', async () => {
+    await switchLanguage('ja', {
+      common: { joinSentences: '{{a}}{{b}}' },
+      presets: {
+        import: {
+          imported_other: '{{count, number}}件を読み込みました。',
+          renamed_other: '{{count, number}}件の名前を変更：{{list}}。',
+          skipped_other: '{{count, number}}件は無効でした。',
+        },
+      },
+    })
+    try {
+      const { user, dialog } = await openDialog()
+      await user.upload(fileInput(dialog), renamedAndSkipped())
+      const status = within(dialog).getByRole('status')
+      await waitFor(() => {
+        expect(status).toHaveTextContent('2件を読み込みました。')
+      })
+      expect(status).toHaveTextContent('2件の名前を変更：A4 → A4 (2)、B → B (2)。2件は無効でした。')
+    } finally {
+      await switchLanguage('en')
+    }
   })
 
   it('reports skipped and adjusted presets', async () => {

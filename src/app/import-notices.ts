@@ -6,6 +6,7 @@ import {
   type ImportErrorCode,
   type ImportOutcome,
 } from '../features/images'
+import { formatList } from '../shared/i18n/format'
 import type { ImageId } from '../shared/model/image'
 import { useNotices } from './state/useNotices'
 
@@ -29,7 +30,7 @@ export function reportPasteOutcomes(
     useNotices.getState().notify(kind, message)
   }
   if (outcomes.length === 0) {
-    notify('info', `${t('images:dropzone.noImage.title')} ${t('images:dropzone.noImage.message')}`)
+    notify('info', t('app:import.noImage'))
     return
   }
   const byCode = new Map<ImportErrorCode, string[]>()
@@ -38,18 +39,22 @@ export function reportPasteOutcomes(
       byCode.set(o.error, [...(byCode.get(o.error) ?? []), o.source])
     } else if (o.warnings?.includes('animated-gif')) {
       const name = getName(o.id) ?? t('app:import.unnamed')
-      notify(
-        'info',
-        `${t('errors:images.animatedGif.title', { name })} ${t('errors:images.animatedGif.message')}`,
-      )
+      notify('info', t('app:import.animatedGif', { name }))
     }
   }
   for (const [code, sources] of byCode) {
     const keys = importErrorKeys(code)
-    const shown = sources.slice(0, MAX_SOURCES).join(', ')
     const more = sources.length - MAX_SOURCES
-    const list = more > 0 ? `${shown} ${t('app:import.more', { more })}` : shown
+    const shown = sources.slice(0, MAX_SOURCES)
+    const list = formatList(more > 0 ? [...shown, t('app:import.more', { count: more })] : shown)
     const params = { name: sources[0] ?? '', ...tooLarge() }
-    notify('error', `${list}: ${t(keys.title, params)} ${t(keys.message, params)}`)
+    notify(
+      'error',
+      t('app:import.failed', {
+        list,
+        title: t(keys.title, params),
+        message: t(keys.message, params),
+      }),
+    )
   }
 }

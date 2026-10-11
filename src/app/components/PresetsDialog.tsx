@@ -20,6 +20,7 @@ import {
   type Preset,
   type PresetImportError,
 } from '../../shared/model/preset'
+import { formatList, joinSentences } from '../../shared/i18n/format'
 import { BottomSheet, Button, Callout, Dialog, useImportWait } from '../../shared/ui'
 import type { ModalSurfaceProps } from '../../shared/ui/ModalSurface'
 import { useIsDesktop } from '../hooks/useIsDesktop'
@@ -309,16 +310,17 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
       renamed.length > 0
         ? t('import.renamed', {
             count: renamed.length,
-            list: renamed
-              .map(([from, to]) => t('import.renamedPair', { from, to }))
-              .join(t('import.listSeparator')),
+            list: formatList(renamed.map(([from, to]) => t('import.renamedPair', { from, to }))),
           })
         : null,
       result.skipped > 0 ? t('import.skipped', { count: result.skipped }) : null,
       skippedFull > 0 ? t('import.full', { count: skippedFull, max: MAX_PRESETS }) : null,
       result.adjusted > 0 ? t('import.adjusted', { count: result.adjusted }) : null,
     ].filter((line): line is string => line !== null)
-    sayStored(details.join(' '), t('import.imported', { count: added }))
+    sayStored(
+      details.length > 0 ? details.reduce((a, b) => joinSentences(t, a, b)) : '',
+      t('import.imported', { count: added }),
+    )
   }
 
   const exportAll = () => {
@@ -583,7 +585,11 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
           </>
         }
       >
-        <p>{t('apply.confirmBody', { count: photoCount })}</p>
+        <p>
+          {photoCount === 1
+            ? t('apply.confirmBodySingle')
+            : t('apply.confirmBody', { count: photoCount })}
+        </p>
       </Dialog>
       <Dialog
         open={confirm?.kind === 'delete' && confirm.open}

@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initI18n } from '../../shared/i18n'
-import { switchLanguage } from '../../test/languages'
+import { PT_BR, switchLanguage } from '../../test/languages'
 import type { ImageId } from '../../shared/model/image'
 import { DEFAULT_LINES, type LineSettings } from '../../shared/model/lines'
 import type { SheetRegistry } from '../../features/render'
@@ -93,6 +93,7 @@ vi.mock('../../features/images', () => {
 
 import { useArrange } from '../arrange-store'
 import { useArrangeUi } from '../arrange-ui'
+import { useSettings } from '../../features/settings'
 import { usePages } from '../pages-store'
 import { useAppUi } from '../state/useAppUi'
 import { PreviewSlot, PreviewToolbar, UPDATING_ANNOUNCE_DELAY_MS } from './PreviewSlot'
@@ -581,5 +582,19 @@ describe('PreviewSlot in other languages', () => {
     expect(screen.getByRole('list', { name: 'Page 1 contents' })).toHaveTextContent(
       'anna.jpg, 100 × 60 毫米',
     )
+  })
+
+  it.each([
+    ['Custom', 'Personalizado'],
+    ['Legal', 'Ofício'],
+    ['A4', 'A4'],
+  ] as const)('names %s in the page caption through paperName (M6-R25)', async (paper, name) => {
+    await switchLanguage('pt-BR', PT_BR)
+    useSettings.getState().setPageSetup({ paper })
+    render(<PreviewSlot />)
+    expect(
+      screen.getByRole('button', { name: new RegExp(`^Page 1 of 1 · ${name} · portrait`) }),
+    ).toBeInTheDocument()
+    useSettings.getState().reset()
   })
 })

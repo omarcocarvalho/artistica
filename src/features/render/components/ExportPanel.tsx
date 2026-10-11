@@ -10,7 +10,9 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatLength } from '../../../shared/i18n/format'
+import type { PaperId } from '../../../shared/model/paper'
 import { Button, Callout, Icon, ProgressBar, buttonClasses } from '../../../shared/ui'
+import { paperName } from '../../page-setup/paper-name'
 import { useSettings } from '../../settings'
 import { EXPORT_ERROR_KEYS, isAbortError, toExportError } from '../export/errors'
 import { exportPdf } from '../export/export-pdf'
@@ -31,8 +33,8 @@ export interface ExportPanelHandle {
 
 export interface ExportPanelProps {
   readonly pages: readonly PageModel[]
-  /** Paper name for the summary and the D10 file name, e.g. "A4", "Letter", "Custom". */
-  readonly paperLabel: string
+  /** Named in the summary by `paperName`; the D10 file name keeps the id (M6-R25). */
+  readonly paper: PaperId
   readonly getSource: GetSource
   /** Non-null: Create PDF is unavailable, and this text under it says why. */
   readonly unavailableReason?: string | null
@@ -45,7 +47,7 @@ export interface ExportPanelProps {
  */
 export function ExportPanel({
   pages,
-  paperLabel,
+  paper,
   getSource,
   unavailableReason = null,
   ref,
@@ -55,7 +57,7 @@ export function ExportPanel({
   const nameId = useId()
   const reasonId = useId()
   const [state, dispatch] = useReducer(exportReducer, INITIAL_EXPORT_STATE)
-  const defaultName = pdfFileName(paperLabel, new Date())
+  const defaultName = pdfFileName(paper, new Date())
   const [fileName, setFileName] = useState(defaultName)
   const controller = useRef<AbortController | null>(null)
   const linkRef = useRef<HTMLAnchorElement | null>(null)
@@ -65,11 +67,11 @@ export function ExportPanel({
   const url = state.status === 'done' ? state.url : null
   const unavailable = unavailableReason !== null
 
-  // (State adjusted during render, keyed on paperLabel, instead of in an effect.)
-  const [namePaper, setNamePaper] = useState(paperLabel)
-  if (namePaper !== paperLabel) {
-    setNamePaper(paperLabel)
-    setFileName(pdfFileName(paperLabel, new Date()))
+  // (State adjusted during render, keyed on the paper, instead of in an effect.)
+  const [namePaper, setNamePaper] = useState(paper)
+  if (namePaper !== paper) {
+    setNamePaper(paper)
+    setFileName(pdfFileName(paper, new Date()))
   }
 
   // Revoke the object URL when it is replaced or the panel unmounts.
@@ -128,7 +130,7 @@ export function ExportPanel({
   }
   useImperativeHandle(ref, () => ({ cancel }))
 
-  const summary = exportSummary(pages, paperLabel)
+  const summary = exportSummary(pages, paperName(paper, t))
   const steps = pageSteps(state, pages.length)
   const bleedText =
     summary.bleedMm === null ? t('summary.off') : formatLength(summary.bleedMm, unit)

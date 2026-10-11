@@ -16,6 +16,7 @@ const h = vi.hoisted(() => ({
   images: [] as { id: string; pxW: number; pxH: number }[],
   getSource: undefined as GetSource | undefined,
   pages: undefined as readonly PageModel[] | undefined,
+  props: undefined as Record<string, unknown> | undefined,
   decodeFull: vi.fn((image: unknown) => Promise.resolve({ image })),
   provider: { pause: vi.fn(), resume: vi.fn() },
 }))
@@ -23,6 +24,7 @@ vi.mock('../study-provider', () => ({ appStudyProvider: h.provider }))
 vi.mock('../state/hasImages', () => ({ useImageCount: () => h.count }))
 vi.mock('../../features/render', () => ({
   ExportDialog: (p: { open: boolean; getSource: GetSource; pages: readonly PageModel[] }) => {
+    h.props = p
     h.getSource = p.getSource
     h.pages = p.pages
     return <p data-testid="dialog">{String(p.open)}</p>
@@ -40,6 +42,7 @@ vi.mock('../../features/images', () => {
   return { useImages, decodeFull: h.decodeFull }
 })
 
+import { useSettings } from '../../features/settings'
 import { usePages } from '../pages-store'
 import { useAppUi } from '../state/useAppUi'
 import { stubDesktop } from '../test-utils'
@@ -53,6 +56,7 @@ beforeEach(() => {
   h.provider.pause.mockClear()
   h.provider.resume.mockClear()
   useAppUi.setState(useAppUi.getInitialState())
+  useSettings.getState().reset()
   usePages.setState({ status: 'idle', layout: null, pages: [] })
   stubDesktop(true)
 })
@@ -65,6 +69,13 @@ describe('ExportSlot', () => {
     usePages.setState({ pages: [page] })
     render(<ExportSlot />)
     expect(screen.getByTestId('dialog')).toHaveTextContent('false')
+  })
+  it('hands the paper id to the export, which names it and builds the file name (M6-R25)', () => {
+    usePages.setState({ pages: [page] })
+    useSettings.getState().setPageSetup({ paper: 'Letter' })
+    render(<ExportSlot />)
+    expect(h.props).toMatchObject({ paper: 'Letter' })
+    expect(h.props).not.toHaveProperty('paperLabel')
   })
   it('opens when requested and a page exists', () => {
     usePages.setState({ pages: [page] })

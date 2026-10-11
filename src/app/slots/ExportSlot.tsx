@@ -49,7 +49,7 @@ export function ExportSlot() {
         if (!next) useAppUi.getState().closeExport()
       }}
       pages={pages}
-      paperLabel={paper}
+      paper={paper}
       getSource={getSource}
     />
   )
@@ -63,7 +63,7 @@ export function ExportStepSlot({ unavailableReason }: { unavailableReason: strin
   return (
     <ExportPanel
       pages={pages}
-      paperLabel={paper}
+      paper={paper}
       getSource={getSource}
       unavailableReason={unavailableReason}
     />

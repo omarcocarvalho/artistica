@@ -13,6 +13,7 @@ const FRACTION_DIGITS: Readonly<Record<Unit, number>> = { mm: 1, in: 2 }
 const BYTES_PER_MEGABYTE = 1_000_000
 
 const cache = new Map<string, Intl.NumberFormat>()
+const listCache = new Map<string, Intl.ListFormat>()
 
 function current(lng: string | undefined): string {
   return lng ?? (i18next.language || DEFAULT_LANGUAGE)
@@ -106,6 +107,17 @@ export function formatDegrees(deg: number, lng?: string): string {
     unitDisplay: 'narrow',
     maximumFractionDigits: 0,
   }).format(deg)
+}
+
+/** A list of names, e.g. file names, joined the language's way: `a, b, and c`, `a、b和c`. */
+export function formatList(items: readonly string[], lng?: string): string {
+  const code = current(lng)
+  let lf = listCache.get(code)
+  if (!lf) {
+    lf = new Intl.ListFormat(code, { type: 'conjunction' })
+    listCache.set(code, lf)
+  }
+  return lf.format(items)
 }
 
 export function joinSentences(t: TFunction, a: string, b: string): string {

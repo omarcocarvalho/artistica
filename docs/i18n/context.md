@@ -71,7 +71,8 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | `{{name}}` | an image's file name (`quadrants.jpg`) or a preset's name, as the user gave it; never translated, may be in any script |
 | `{{from}}` `{{to}}` | a preset's old and new names |
 | `{{list}}` | a list already joined for the language (names, or line types) |
-| `{{current}}` `{{total}}` `{{page}}` `{{n}}` `{{pages}}` `{{tiles}}` `{{more}}` `{{max}}` `{{min}}` | numbers |
+| `{{current}}` `{{total}}` `{{page}}` `{{n}}` `{{pages}}` `{{tiles}}` `{{max}}` `{{min}}` | numbers; `{{current}}` in `app:theme.changeLabel` is a word |
+| `{{title}}` `{{message}}` | an import error's title and message (`errors:images.*`) |
 | `{{w}}` `{{h}}` `{{x}}` `{{y}}` | sizes and positions; pixels in `images:list.*`, `images:editSheet.subtitle` and `images:editSheet.crop.status`, millimetres or inches elsewhere |
 | `{{value}}` `{{size}}` `{{gutter}}`, and `{{min}}` in `pageSetup:*` | a number already formatted for the language with its unit or sign (`12,5 mm`, `50 %`, `45°`, `4,2 MB`); add no unit or sign next to them. The one exception is `lines:thickness.value`, where `{{value}}` is the bare number and `{{unit}}` follows it |
 | `{{loaded}}` `{{dpi}}` `{{maxMb}}` `{{maxMp}}` | numbers; a unit written next to the variable in English (`{{dpi}} DPI`, `{{maxMb}} MB`, `{{loaded}} of {{total}} megabytes`) stays next to it in the translation, and none is added where English has none |
@@ -93,12 +94,12 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | `app:topBar.privacy` | Top bar | pill | privacy claim (privacy-claims.md); tight |
 | `app:topBar.export` | Top bar | primary button | tight |
 | `app:topBar.export*` (the five reasons) | Top bar | tooltip on the disabled Export button, and its spoken description | why Export is unavailable; whole sentences |
-| `app:theme.change` | Spoken | first part of the theme button's name ("Change theme: Auto") | |
+| `app:theme.changeLabel` | Spoken | the theme button's name: "Change theme: Auto" | `{{current}}` is the button's visible word (`app:theme.auto` `.light` `.dark`); keep it in the name unchanged, so the name holds the visible text (WCAG 2.5.3) |
 | `app:theme.auto` `.light` `.dark` | Top bar | visible text of the theme button | tight |
 | `app:panels.images` `.settings` `.preview` | desktop | panel headings; `images` has a count badge after it | |
 | `app:settingsTabs.label` | Spoken | name of the tab list | |
 | `app:settingsTabs.page` `.studies` `.lines` | Page | tabs; also hidden headings | tight |
-| `app:empty.titleBefore` `app:empty.titleHighlight` | Empty | large heading in two parts: "Add some " + underlined "reference photos" | the second part is drawn with a wavy underline; translate the whole heading and split it so the highlight is the noun phrase (the space stays at the end of the first part where the language uses spaces; ja and zh-CN have none) |
+| `app:empty.title` | Empty | large heading: "Add some reference photos", with "reference photos" drawn with a wavy underline | translate the whole heading and put `<highlight>…</highlight>` around its noun phrase, wherever the language places it; keep the tag names |
 | `app:empty.body` `.formats` `.privacy` | Empty | body text, a small formats line, and a privacy line | `privacy` is a privacy claim |
 | `app:empty.panelHint` | Images (desktop) | hint in the empty Images panel | |
 | `app:empty.noPages` | Preview | placeholder when there is no page | |
@@ -112,14 +113,17 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | `app:mobile.images.tapToEdit` | Images (phone) | hint | |
 | `app:mobile.studies.picker` | Studies (phone) | label of the image picker | |
 | `app:mobile.lines.title` `.on` | Lines (phone) | card heading and its badge | `on` is tight |
-| `app:import.more` | Notices | "+3 more" after a list of failed file names | |
+| `app:import.noImage` | Notices | "No image on the clipboard. Copy an image first, then paste again." after a paste with no image | two sentences in one key |
+| `app:import.animatedGif` | Notices | note after an animated GIF is added: "{{name}}: first frame only. …" | |
+| `app:import.failed` | Notices | error notice after a paste: "{{list}}: {{title}}. {{message}}" | `{{list}}` is the file names, `{{title}}` and `{{message}}` an `errors:images.*` title and message; order them as the language needs |
+| `app:import.more` | Notices | "5 more": the last item of the list of file names in `app:import.failed`, after the first three | the list format adds "and" before it ("a, b, c, and 5 more") |
 | `app:import.unnamed` | Notices | stands for an image with no name, as a sentence subject | |
 | `app:preview.editSelected` | Preview | button | |
 | `app:preview.updating` `.updated` | Spoken | live announcements | |
 | `app:preview.pageCaption` | Preview | caption under each page: "Page 1 of 3 · A4 · portrait" | keep the ` · ` separators |
 | `app:preview.pageItems` | Spoken | name of a page's list of tiles | |
 | `app:preview.item` `.itemVersion` `.itemLines` | Spoken | description of each tile | |
-| `app:preview.customPaper` `.unnamedImage` | Preview, Spoken | fallbacks inside other strings | |
+| `app:preview.unnamedImage` | Preview, Spoken | fallback inside other strings | |
 | `app:preview.orientation.*` | Preview | lower-case word inside `pageCaption` | |
 
 ## common
@@ -127,13 +131,14 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | Keys | Screen | Control | Notes |
 |---|---|---|---|
 | `common:theme.*` | Top bar | theme names | the same words as `app:theme.*` |
+| `common:joinSentences` | Notices, Spoken | joins two whole sentences, e.g. a preset import report or two guide announcements: "{{a}} {{b}}" | ja and zh-CN write `{{a}}{{b}}` (no space after `。`) |
 | `common:app.comingSoon` `common:actions.*` | none | not used by any call site on `2380a82` | translate like any other key; the locale check needs every key |
 
 ## errors
 
 | Keys | Screen | Control | Notes |
 |---|---|---|---|
-| `errors:images.*.title` | Notices | title of an import error notice | `{{name}}` is the file name |
+| `errors:images.*.title` | Notices | title of an import error notice; also `{{title}}` in `app:import.failed` | `{{name}}` is the file name; no full stop at the end (`app:import.failed` adds one) |
 | `errors:images.*.message` | Notices | body of the same notice; follows the title on screen and in speech | a full sentence; name the formats exactly as English does |
 | `errors:images.cors.message` | Notices | | "upload it instead" means "add it from your files": glossary, "add photos (from files)" |
 | `errors:export.*` | Export | error text in the Export panel | |
@@ -206,6 +211,7 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | `pageSetup:title` | Page | heading | |
 | `pageSetup:paper.heading` `.size` | Page | section heading and select label | |
 | `pageSetup:paper.custom` | Page | the last option of the paper select | keeps its `…` |
+| `pageSetup:paper.name.*` | Page, Preview, Export | the names of Letter, Legal, Tabloid and Custom paper in the suggestion, the page caption and the export summary (A3–A6 are shown as they are) | the names the language's print dialogs use; file names keep the English id |
 | `pageSetup:paper.dims` `.times` `.width` `.height` | Page | the size line under the select and the custom size fields | `times` is a glyph |
 | `pageSetup:paper.units` `.unitMm` `.unitIn` | Page | units control | options are tight |
 | `pageSetup:noRoom` | Preview | message in place of the preview | |
@@ -230,10 +236,10 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | `presets:row.apply` `.rename` `.delete` | Presets | buttons on each row | |
 | `presets:row.applyLabel` `.renameLabel` `.deleteLabel` | Spoken | the same buttons' names, with the preset name | start with the visible word (WCAG 2.5.3) |
 | `presets:rename.*` | Presets | rename form and its announcement | |
-| `presets:apply.*` `presets:delete.*` | Presets | confirmation dialogs, their buttons and announcements | `confirmTitle` quotes the name |
+| `presets:apply.*` `presets:delete.*` | Presets | confirmation dialogs, their buttons and announcements | `confirmTitle` quotes the name; `apply.confirmBodySingle` is shown with one photo, `apply.confirmBody` with two or more |
 | `presets:export.button` `presets:import.button` `.file` | Presets | buttons and the spoken name of the file input | `import.button` keeps its `…` |
 | `presets:import.imported` `.renamed` `.skipped` `.full` `.adjusted` | Notices | the import report, one sentence each | |
-| `presets:import.renamedPair` `.listSeparator` | Notices | "old → new" and the separator between pairs | `listSeparator` is `, ` in English: use the language's list comma (ja and zh-CN `、`) |
+| `presets:import.renamedPair` | Notices | "old → new", one per renamed preset | the code joins the pairs with the language's list format |
 | `presets:import.error.*` | Notices | import errors | |
 | `presets:summary.separator` `.plus` | Presets | ` · ` and ` + ` joining the parts of a preset's one-line summary | glyphs with spaces; keep the spaces |
 | `presets:summary.custom` `.orientation.*` `.bleed` `.version.*` `.line.*` | Presets | parts of the one-line summary under each preset name | short and lower case where English is |
@@ -273,7 +279,7 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | `studies:values.ramp` `.rampLabel` `.darkest` `.lightest` | Studies, Spoken | the value ramp, its spoken name and end labels | |
 | `studies:values.hint` `.usedBy` | Studies | hints | |
 | `studies:swatch.*` | Studies, Spoken | names of the hue swatches | pigment names, glossary |
-| `studies:applyAll.*` | Studies | button, hint and announcement | |
+| `studies:applyAll.*` | Studies | button, hint and announcement | `hintSingle` is shown with one image, `hint` with two or more |
 
 ## lines
 
@@ -292,6 +298,6 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | `lines:guides.failedHint` `.errorHint` `.tryAgain` `.noWebGL` | Lines | alerts | |
 | `lines:guides.edges.*` | Lines, Spoken | status of the edge outline | |
 | `lines:guides.face.why` `lines:guides.pose.why` | Lines | why the download is needed | privacy claims |
-| `lines:guides.face.*` `lines:guides.pose.*` (the rest) | Lines, Spoken | progress, results, errors and the Turn off button | |
+| `lines:guides.face.*` `lines:guides.pose.*` (the rest) | Lines, Spoken | progress, results, errors and the Turn off button | `none` and `noneHint` are the note's title and body; `noneWithHint` is both, spoken |
 | `lines:colour.*` `lines:thickness.*` `lines:opacity.*` | Lines | line style fields | `hexHint` keeps `#1f3fbf` |
-| `lines:applyAll.*` | Lines | button, hint and announcement | |
+| `lines:applyAll.*` | Lines | button, hint and announcement | `hintSingle` is shown with one image, `hint` with two or more |
