@@ -1,15 +1,15 @@
 {
   "meta": {
     "title": "Artistica: printable reference sheets for artists",
-    "description": "Turn reference photos into print-ready sheets. Pack photos onto A4 or Letter pages, add crop marks and bleed, and export a PDF. Free, private, in your browser."
+    "description": "Turn reference photos into print-ready sheets with crop marks and bleed, blur and value studies, and composition lines. Free, private, in your browser."
   },
   "share": {
     "title": "Artistica: printable reference sheets for artists",
-    "description": "Drop in your photos and get print-ready sheets with crop marks and bleed. Free, private, in your browser.",
+    "description": "Drop in your photos and get print-ready sheets with crop marks, bleed, studies and composition lines. Free, private, in your browser.",
     "imageAlt": "Artistica: reference photos packed onto printable sheets"
   },
   "structured": {
-    "description": "Turn reference photos into print-ready sheets with crop marks and bleed. Runs entirely in your browser.",
+    "description": "Turn reference photos into print-ready sheets with crop marks and bleed, blur and value studies, and composition lines. Runs entirely in your browser.",
     "operatingSystem": "Any (web browser)",
     "browserRequirements": "Requires JavaScript. Latest Chrome, Edge, Firefox or Safari."
   },
@@ -34,10 +34,10 @@
   "hero": {
     "hand": "for drawing & painting",
     "title": "Turn reference photos into print-ready sheets.",
-    "lead": "Drop in your photos. Artistica packs them onto pages at a good drawing size and adds crop marks and bleed. Then print, cut and draw.",
+    "lead": "Drop in your photos. Artistica packs them onto pages at a good drawing size, with crop marks and bleed, and can add studies and composition lines. Then print, cut and draw.",
     "start": "Start a sheet",
     "seeHow": "See how it works",
-    "points": "Photos never leave your device · Free · No sign-up",
+    "points": "Free · No sign-up",
     "tip": "tip! 4 per page"
   },
   "how": {
@@ -66,24 +66,43 @@
       "title": "Crop marks and bleed",
       "body": "Printer-style marks, optional bleed, and a safe area, so cutting is easy."
     },
+    "studies": {
+      "title": "Blur and value studies",
+      "body": "Print a blurred version, a value study with 2 to 20 values in a hue you pick, or both, next to the original."
+    },
+    "lines": {
+      "title": "Composition lines",
+      "body": "Grid, rule of thirds, diagonals and armature, golden ratio, golden spiral and centre lines, in your colour and thickness."
+    },
+    "guides": {
+      "title": "Guides from the photo",
+      "body": "Trace an edge outline, or add face construction lines and pose lines that follow the person in it."
+    },
+    "presets": {
+      "title": "Presets",
+      "body": "Save your page setup, studies and lines under a name, then apply them to all your photos in one go."
+    },
     "edit": {
-      "title": "Edit each photo",
-      "body": "Crop, rotate, flip, print copies, or fix an exact size."
+      "title": "Edit and arrange by hand",
+      "body": "Crop, rotate, flip, print copies or fix an exact size, then move, resize and swap photos on the page, with undo."
     },
     "phone": {
       "title": "Works on your phone",
       "body": "A step-by-step flow on small screens, side panels on desktop, light and dark."
-    },
-    "nextLabel": "Coming next:",
-    "next": "blur and value studies, composition lines."
+    }
   },
   "privacy": {
     "title": "Your photos stay with you",
     "claims": {
-      "1": "Everything runs in your browser. Nothing is uploaded.",
-      "2": "Photos are never saved. Refreshing the page clears them.",
-      "3": "Only your settings are remembered, on this device.",
-      "4": "No accounts and no tracking."
+      "inBrowser": "Everything runs in your browser. Nothing is uploaded.",
+      "notSaved": "Photos are never saved. Refreshing the page clears them.",
+      "settingsOnly": "Only your settings and presets are kept, on this device.",
+      "models": "Face and pose models download from this site only when you ask, and stay in your browser for offline use.",
+      "noTracking": "No accounts and no tracking.",
+      "heroNeverLeave": "Photos never leave your device",
+      "faqUploaded": "No. Everything runs in your browser. Photos are never uploaded or saved, and refreshing the page clears them.",
+      "faqGuides": "Face and pose guides use Google's MediaPipe models, downloaded from this site and run on your device.",
+      "faqOffline": "Yes, after your first visit to the app. Face and pose guides work offline after their one-time download."
     }
   },
   "faq": {
@@ -105,12 +124,13 @@
       "a": "Crop marks show where to cut. Bleed prints a little extra past the cut, so a slightly-off cut leaves no white edge."
     },
     "uploaded": {
-      "q": "Are my photos uploaded anywhere?",
-      "a": "No. Everything runs in your browser. Photos are never uploaded or saved, and refreshing the page clears them."
+      "q": "Are my photos uploaded anywhere?"
     },
     "guides": {
-      "q": "What finds the face and pose guides?",
-      "a": "Face and pose guides use Google's MediaPipe models, running on your device."
+      "q": "What finds the face and pose guides?"
+    },
+    "offline": {
+      "q": "Can I use it offline?"
     },
     "phone": {
       "q": "Does it work on my phone?",

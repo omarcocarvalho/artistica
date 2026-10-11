@@ -145,7 +145,7 @@ describe('renderLandingPage', () => {
       q: decode(squash(m[1])),
       a: decode(squash(m[2].replace(/<[^>]+>/g, ''))),
     }))
-    expect(visible).toHaveLength(7)
+    expect(visible).toHaveLength(8)
     expect(faq.mainEntity.map((e) => ({ q: e.name, a: e.acceptedAnswer.text }))).toEqual(visible)
   })
 
