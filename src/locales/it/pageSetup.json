@@ -30,7 +30,7 @@
   "spacing": {
     "heading": "Spaziatura",
     "safeArea": "Margine di sicurezza",
-    "safeAreaHint": "Bordo vuoto lungo il margine della pagina. Minimo {{min}}.",
+    "safeAreaHint": "Fascia vuota lungo il bordo della pagina. Minimo {{min}}.",
     "gutter": "Spazio tra le immagini",
     "gutterSize": "Larghezza dello spazio",
     "gutterHint": "Spazio per tagliare tra un'immagine e l'altra."
