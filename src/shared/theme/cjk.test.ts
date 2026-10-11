@@ -248,9 +248,9 @@ describe('CJK fonts per language (M6-R17)', () => {
         sources.some((source) => source.includes(font)),
         font,
       ).toBe(true)
-    expect(
-      sources.some((source) => /Hiragino Sans"|Hiragino Kaku|Yu Gothic|Meiryo|JP/.test(source)),
-    ).toBe(false)
+    const chinese =
+      /^local\("(PingFang ?SC|Hiragino ?Sans ?GB|Microsoft ?YaHei|Noto ?Sans ?(CJK ?)?SC)/i
+    for (const source of sources) expect(source).toMatch(chinese)
   })
 
   it('zh-CN asks for the full-width quote glyphs (PingFang SC draws them proportional by default)', () => {
