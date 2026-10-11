@@ -1,43 +1,43 @@
 {
-  "title": "",
-  "close": "",
+  "title": "导出PDF",
+  "close": "关闭",
   "summary": {
-    "pages": "",
-    "pagesValue": "",
+    "pages": "页数",
+    "pagesValue": "{{pages}} · {{paper}}{{orientation}}",
     "orientation": {
-      "portrait": "",
-      "landscape": ""
+      "portrait": "纵向",
+      "landscape": "横向"
     },
-    "tiles": "",
-    "tilesValue_other": "",
-    "cropMarks": "",
-    "bleed": "",
-    "on": "",
-    "off": "",
-    "quality": "",
-    "qualityValue": ""
+    "tiles": "图块",
+    "tilesValue_other": "{{tiles}}个图块，来自{{count, number}}张图片",
+    "cropMarks": "裁切标记",
+    "bleed": "出血",
+    "on": "开",
+    "off": "关",
+    "quality": "质量",
+    "qualityValue": "300 DPI，从不放大"
   },
-  "fileName": "",
-  "create": "",
-  "retry": "",
-  "cancel": "",
+  "fileName": "文件名",
+  "create": "创建PDF",
+  "retry": "重试",
+  "cancel": "取消",
   "progress": {
-    "label": "",
-    "aria": "",
-    "page": "",
+    "label": "第{{page}}页，共{{total}}页…",
+    "aria": "PDF进度",
+    "page": "第{{n}}页",
     "state": {
-      "todo": "",
-      "active": "",
-      "done": ""
+      "todo": "等待中",
+      "active": "进行中",
+      "done": "已完成"
     },
-    "hint": ""
+    "hint": "一次生成一页，以节省内存。保持此标签页打开。"
   },
   "done": {
-    "title": "",
-    "yay": "",
-    "download": "",
-    "printTitle": "",
-    "printBody": "",
-    "again": ""
+    "title": "你的PDF已准备好",
+    "yay": "好耶！",
+    "download": "下载PDF",
+    "printTitle": "按100%打印",
+    "printBody": "选择“实际大小”，而不是“适合页面”，这样尺寸才会准确。",
+    "again": "再做一份"
   }
 }

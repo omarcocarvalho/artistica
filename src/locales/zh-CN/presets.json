@@ -1,94 +1,94 @@
 {
-  "button": "",
-  "title": "",
-  "close": "",
-  "empty": "",
-  "listLabel": "",
-  "storageFailed": "",
+  "button": "预设",
+  "title": "预设",
+  "close": "关闭",
+  "empty": "把页面设置、习作和线条以一个名称保存下来，之后一次性应用。",
+  "listLabel": "已保存的预设",
+  "storageFailed": "未保存在本设备上：浏览器存储空间已满或被阻止。此更改在你重新加载或关闭页面之前有效。",
   "save": {
-    "open": "",
-    "name": "",
-    "submit": "",
-    "cancel": "",
-    "needName": "",
-    "tooLong": "",
-    "exists": "",
-    "replace": "",
-    "full": "",
-    "saved": "",
-    "replaced": ""
+    "open": "保存当前设置…",
+    "name": "预设名称",
+    "submit": "保存",
+    "cancel": "取消",
+    "needName": "给预设起个名称。",
+    "tooLong": "最多使用{{max}}个字符。",
+    "exists": "已有同名预设。",
+    "replace": "替换它",
+    "full": "你已有{{max}}个预设，已达本设备可保存的上限。删除一个才能保存新的。",
+    "saved": "已保存{{name}}。",
+    "replaced": "已替换{{name}}。"
   },
   "row": {
-    "apply": "",
-    "applyLabel": "",
-    "rename": "",
-    "renameLabel": "",
-    "delete": "",
-    "deleteLabel": ""
+    "apply": "应用",
+    "applyLabel": "应用{{name}}",
+    "rename": "重命名",
+    "renameLabel": "重命名{{name}}",
+    "delete": "删除",
+    "deleteLabel": "删除{{name}}"
   },
   "rename": {
-    "label": "",
-    "submit": "",
-    "cancel": "",
-    "renamed": ""
+    "label": "{{name}}的新名称",
+    "submit": "保存",
+    "cancel": "取消",
+    "renamed": "已将{{from}}重命名为{{to}}。"
   },
   "apply": {
-    "confirmTitle": "",
-    "confirmBodySingle": "",
-    "confirmBody_other": "",
-    "confirm": "",
-    "cancel": "",
-    "applied": "",
-    "waiting": ""
+    "confirmTitle": "应用“{{name}}”？",
+    "confirmBodySingle": "这会更改页面设置，以及你这张照片的习作和线条。",
+    "confirmBody_other": "这会更改页面设置，以及全部{{count, number}}张照片的习作和线条。",
+    "confirm": "应用",
+    "cancel": "取消",
+    "applied": "已应用{{name}}。",
+    "waiting": "正在等待照片导入完成…"
   },
   "delete": {
-    "confirmTitle": "",
-    "confirm": "",
-    "cancel": "",
-    "deleted": ""
+    "confirmTitle": "删除“{{name}}”？",
+    "confirm": "删除",
+    "cancel": "取消",
+    "deleted": "已删除{{name}}。"
   },
   "export": {
-    "button": ""
+    "button": "全部导出"
   },
   "import": {
-    "button": "",
-    "file": "",
-    "imported_other": "",
-    "renamed_other": "",
-    "renamedPair": "",
-    "skipped_other": "",
-    "full_other": "",
-    "adjusted_other": "",
+    "button": "导入…",
+    "file": "预设文件",
+    "imported_other": "已导入{{count, number}}个预设。",
+    "renamed_other": "{{count, number}}个已重命名：{{list}}。",
+    "renamedPair": "{{from}} → {{to}}",
+    "skipped_other": "{{count, number}}个已跳过：内容无效。",
+    "full_other": "{{count, number}}个未添加：本设备最多保存{{max}}个预设。",
+    "adjusted_other": "{{count, number}}个预设有超出范围的值，已自动调整。",
     "error": {
-      "tooLarge": "",
-      "notPresets": "",
-      "newerVersion": "",
-      "empty": ""
+      "tooLarge": "这个文件太大，不可能是预设文件。",
+      "notPresets": "这个文件不是Artistica的预设文件。",
+      "newerVersion": "这个文件由更新版本的Artistica创建。更新页面后再试一次。",
+      "empty": "这个文件中没有找到预设。"
     }
   },
   "summary": {
-    "separator": "",
-    "plus": "",
-    "custom": "",
+    "separator": " · ",
+    "plus": " + ",
+    "custom": "自定义{{w}} × {{h}}{{unit}}",
     "orientation": {
-      "auto": "",
-      "portrait": "",
-      "landscape": ""
+      "auto": "自动",
+      "portrait": "纵向",
+      "landscape": "横向"
     },
-    "bleed": "",
+    "bleed": "出血{{size}}",
     "version": {
-      "original": "",
-      "blurred": "",
-      "values": "",
-      "blurValues": ""
+      "original": "原图",
+      "blurred": "模糊{{value}}",
+      "values": "明暗{{count, number}}",
+      "blurValues": "模糊明暗{{count, number}}"
     },
     "line": {
-      "grid": "",
-      "thirds": "",
-      "armature": "",
-      "golden": "",
-      "spiral": "",
-      "centre": ""
+      "grid": "网格",
+      "thirds": "三分法",
+      "armature": "骨架线",
+      "golden": "黄金比例",
+      "spiral": "螺旋",
+      "centre": "中心线"
     }
   }
 }

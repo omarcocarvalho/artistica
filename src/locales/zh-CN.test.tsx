@@ -91,7 +91,7 @@ afterEach(() => {
 describe('Chinese (Simplified): a sample of screens shows no English', () => {
   it('the top bar', () => {
     const { container } = render(<TopBar onExport={vi.fn()} exportDisabledReason={null} />)
-    expect(container.textContent).toContain('照片仅保存在本设备上')
+    expect(container.textContent).toContain('照片留在本设备上')
     expect(englishIn(container)).toEqual([])
   })
 

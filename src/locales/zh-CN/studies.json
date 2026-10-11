@@ -1,61 +1,61 @@
 {
   "version": {
-    "original": "",
-    "blurred": "",
-    "values": "",
-    "blurValues": ""
+    "original": "原图",
+    "blurred": "模糊",
+    "values": "明暗",
+    "blurValues": "模糊 + 明暗"
   },
   "panel": {
-    "forImage": "",
-    "noImage": "",
-    "importing": ""
+    "forImage": "<name/>的习作",
+    "noImage": "添加一张照片，或选择一张，来设置它的习作。",
+    "importing": "正在等待照片导入完成…"
   },
   "versions": {
-    "legend": "",
-    "hint": "",
-    "lastOne": ""
+    "legend": "打印这些版本",
+    "hint": "每个版本是一个图块。它们会并排打印在一起。",
+    "lastOne": "至少要打印一个版本。"
   },
   "blur": {
-    "heading": "",
-    "accent": "",
-    "amount": "",
-    "valueText": "",
-    "min": "",
-    "max": "",
-    "hint": "",
-    "usedBy": ""
+    "heading": "模糊",
+    "accent": "眯眼看！",
+    "amount": "强度",
+    "valueText": "{{value}}",
+    "min": "1%",
+    "max": "100%",
+    "hint": "随图片尺寸缩放，因此{{value}}在每张照片上的效果都相近。",
+    "usedBy": "用于“模糊”和“模糊 + 明暗”。"
   },
   "values": {
-    "heading": "",
-    "count": "",
-    "countText_other": "",
-    "min": "",
-    "max": "",
-    "hue": "",
-    "customHue": "",
-    "hueText": "",
-    "ramp": "",
-    "rampLabel": "",
-    "darkest": "",
-    "lightest": "",
-    "hint": "",
-    "usedBy": ""
+    "heading": "明暗",
+    "count": "层次数",
+    "countText_other": "{{count, number}}个层次",
+    "min": "2 · 黑白",
+    "max": "20",
+    "hue": "色相",
+    "customHue": "自定义色相",
+    "hueText": "{{value}}",
+    "ramp": "明暗色阶",
+    "rampLabel": "{{count, number}}个层次，从最深到最浅色",
+    "darkest": "最深",
+    "lightest": "最浅色",
+    "hint": "“模糊 + 明暗”先模糊，再分成明暗层次。",
+    "usedBy": "用于“明暗”和“模糊 + 明暗”。"
   },
   "swatch": {
-    "sepia": "",
-    "terracotta": "",
-    "ochre": "",
-    "sapGreen": "",
-    "teal": "",
-    "ultramarine": "",
-    "violet": "",
-    "neutral": ""
+    "sepia": "棕褐色",
+    "terracotta": "赤陶色",
+    "ochre": "土黄",
+    "sapGreen": "树汁绿",
+    "teal": "蓝绿",
+    "ultramarine": "群青",
+    "violet": "紫罗兰",
+    "neutral": "中性灰"
   },
   "applyAll": {
-    "button": "",
-    "hintSingle": "",
-    "hint_other": "",
-    "done_other": "",
-    "nothingChanged": ""
+    "button": "应用到所有图片",
+    "hintSingle": "再添加一张照片，即可把这些设置复制过去。",
+    "hint_other": "将这些习作设置复制到全部{{count, number}}张图片。",
+    "done_other": "已将习作设置复制到{{count, number}}张图片。",
+    "nothingChanged": "所有图片已在使用这些习作设置。"
   }
 }

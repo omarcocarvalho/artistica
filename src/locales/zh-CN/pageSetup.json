@@ -1,58 +1,55 @@
 {
-  "title": "",
+  "title": "页面",
   "paper": {
-    "heading": "",
-    "size": "",
-    "custom": "",
+    "heading": "纸张",
+    "size": "纸张大小",
+    "custom": "自定义…",
     "name": {
-      "letter": "",
-      "legal": "",
-      "tabloid": "",
-      "custom": ""
+      "letter": "信纸",
+      "legal": "法定用纸",
+      "tabloid": "小报",
+      "custom": "自定义"
     },
-    "dims": "",
-    "times": "",
-    "width": "",
-    "height": "",
-    "units": "",
-    "unitMm": "",
-    "unitIn": ""
+    "dims": "{{w}} × {{h}}{{unit}}",
+    "times": "×",
+    "width": "宽度",
+    "height": "高度",
+    "units": "单位",
+    "unitMm": "毫米",
+    "unitIn": "英寸"
   },
-  "noRoom": "",
+  "noRoom": "当前页面设置没有留出放图片的空间。减小安全边距、图片间距、出血或裁切标记，或选择更大的纸张。",
   "orientation": {
-    "label": "",
-    "auto": "",
-    "portrait": "",
-    "landscape": "",
-    "autoPicked": "",
-    "resolved": {
-      "portrait": "",
-      "landscape": ""
-    }
+    "label": "方向",
+    "auto": "自动",
+    "portrait": "纵向",
+    "landscape": "横向",
+    "autoPicked": "已自动选择{{orientation}}：页数更少。",
+    "resolved": { "portrait": "纵向", "landscape": "横向" }
   },
   "spacing": {
-    "heading": "",
-    "safeArea": "",
-    "safeAreaHint": "",
-    "gutter": "",
-    "gutterSize": "",
-    "gutterHint": ""
+    "heading": "间距",
+    "safeArea": "安全边距",
+    "safeAreaHint": "页面边缘的空白边框。最小{{min}}。",
+    "gutter": "图片间距",
+    "gutterSize": "间距大小",
+    "gutterHint": "图片之间留出的裁切空间。"
   },
   "cutting": {
-    "heading": "",
-    "cropMarks": "",
-    "bleed": "",
-    "bleedAmount": "",
-    "bleedHint": ""
+    "heading": "裁切",
+    "cropMarks": "裁切标记",
+    "bleed": "出血",
+    "bleedAmount": "出血量",
+    "bleedHint": "把边缘像素延伸到裁切线之外，这样即使裁得稍有偏差，也不会留下白边。"
   },
   "notes": {
-    "gutterEnabledForBleed": "",
-    "gutterRaisedForBleed": "",
-    "safeAreaRaisedToMinimum": ""
+    "gutterEnabledForBleed": "已开启图片间距。出血需要至少2 × 出血量的图片间距。",
+    "gutterRaisedForBleed": "图片间距已增大到{{gutter}}。出血需要至少2 × 出血量的图片间距。",
+    "safeAreaRaisedToMinimum": "安全边距已增大到最小值{{min}}。"
   },
   "suggestion": {
-    "tip": "",
-    "text_other": ""
+    "tip": "提示！",
+    "text_other": "{{paper}}每页可舒适地放下{{count, number}}张参考图。"
   },
-  "remembered": ""
+  "remembered": "设置会保存在本设备上。"
 }
