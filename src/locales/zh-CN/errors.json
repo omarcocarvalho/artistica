@@ -1,0 +1,37 @@
+{
+  "images": {
+    "cors": {
+      "title": "无法读取这张图片",
+      "message": "这个网站不允许其他应用读取它的图片。先下载图片，再从文件添加。"
+    },
+    "network": {
+      "title": "无法加载这个链接",
+      "message": "检查链接和网络连接，然后再试一次。"
+    },
+    "notAnImage": {
+      "title": "这不是图片",
+      "message": "该链接或文件中没有图片。使用JPG、PNG、WebP、GIF或HEIC。"
+    },
+    "unsupportedFormat": {
+      "title": "无法添加“{{name}}”",
+      "message": "改用JPG、PNG、WebP、GIF或HEIC。"
+    },
+    "decodeFailed": {
+      "title": "无法读取“{{name}}”",
+      "message": "文件可能已损坏。试试重新另存为JPG或PNG。"
+    },
+    "tooLarge": {
+      "title": "“{{name}}”太大",
+      "message": "照片最大为{{maxMb}} MB、{{maxMp}}百万像素。试试较小的版本。"
+    }
+  },
+  "export": {
+    "unsupported": "这个浏览器无法在此生成PDF。更新浏览器，或使用最新版Chrome、Edge、Firefox或Safari。",
+    "missingImage": "生成PDF时有一张图片被移除了。再试一次。",
+    "empty": "至少添加一张图片才能导出。",
+    "failed": "生成PDF时出了问题。再试一次。如果仍然失败，试试减少图片数量或使用较小的图片。"
+  },
+  "generic": {
+    "unexpected": "出了点问题。请再试一次。"
+  }
+}

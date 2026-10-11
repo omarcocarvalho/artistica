@@ -1,0 +1,95 @@
+{
+  "title": "Artistica",
+  "documentTitle": "Artistica应用",
+  "language": {
+    "label": "语言",
+    "loadFailed": "无法加载该语言。检查网络连接后再试一次。"
+  },
+  "skipToPreview": "跳到预览",
+  "topBar": {
+    "home": "Artistica · 首页",
+    "privacy": "照片留在本设备上",
+    "export": "导出PDF",
+    "exportNoImages": "至少添加一张图片才能导出。",
+    "exportUpdating": "排版正在更新，稍后即可导出。",
+    "exportNoRoom": "无法导出：当前页面设置没有留出放图片的空间。",
+    "exportError": "无法计算排版。更改一项设置或重新加载页面。",
+    "exportGuides": "正在照片中查找辅助线…"
+  },
+  "theme": {
+    "changeLabel": "更改主题：{{current}}",
+    "auto": "自动",
+    "light": "浅色",
+    "dark": "深色"
+  },
+  "panels": {
+    "images": "图片",
+    "settings": "设置",
+    "preview": "页面预览"
+  },
+  "settingsTabs": {
+    "label": "设置",
+    "page": "页面",
+    "studies": "习作",
+    "lines": "线条"
+  },
+  "empty": {
+    "title": "添加一些<highlight>参考照片</highlight>",
+    "body": "拖放到这里、粘贴，或添加链接。我们会帮你把它们排到页面上。",
+    "formats": "JPG、PNG、WebP、GIF、HEIC · 照片数量不限",
+    "privacy": "不会上传任何内容。照片留在本设备上。",
+    "panelHint": "还没有图片。添加照片，开始制作参考页。",
+    "noPages": "还没有页面"
+  },
+  "notices": {
+    "dismiss": "关闭",
+    "region": "通知",
+    "layoutFailed": "无法计算排版。更改一项设置后再试一次。"
+  },
+  "mobile": {
+    "steps": "步骤",
+    "done": "完成",
+    "stepLabel": "第{{current}}步，共{{total}}步：{{name}}",
+    "back": "上一步",
+    "next": "下一步",
+    "names": {
+      "images": "图片",
+      "page": "页面",
+      "studies": "习作",
+      "preview": "预览",
+      "export": "导出"
+    },
+    "images": {
+      "tapToEdit": "点按照片可裁剪、旋转或设置份数。"
+    },
+    "studies": {
+      "picker": "图片"
+    },
+    "lines": {
+      "title": "线条",
+      "on": "已开启{{count, number}}项"
+    }
+  },
+  "import": {
+    "noImage": "剪贴板中没有图片。先复制一张图片，再粘贴。",
+    "animatedGif": "“{{name}}”：仅使用第一帧。动图GIF只打印第一帧。",
+    "failed": "{{list}}：{{title}}。{{message}}",
+    "more_other": "另外{{count, number}}个",
+    "unnamed": "这张图片"
+  },
+  "preview": {
+    "editSelected": "编辑所选图片",
+    "updating": "正在更新排版…",
+    "updated": "排版已更新。",
+    "pageCaption": "第{{current}}页，共{{total}}页 · {{paper}} · {{orientation}}",
+    "pageItems": "第{{current}}页的内容",
+    "item": "{{name}}，{{w}} × {{h}}{{unit}}",
+    "unnamedImage": "图片",
+    "orientation": {
+      "portrait": "纵向",
+      "landscape": "横向"
+    },
+    "itemVersion": "{{name}}，{{version}}，{{w}} × {{h}}{{unit}}",
+    "itemLines": "{{item}}，线条：{{list}}"
+  }
+}

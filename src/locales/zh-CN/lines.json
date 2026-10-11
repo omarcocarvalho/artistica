@@ -1,0 +1,101 @@
+{
+  "type": {
+    "grid": "网格",
+    "thirds": "三分法",
+    "armature": "对角线与骨架线",
+    "golden": "黄金比例",
+    "spiral": "黄金螺旋",
+    "centre": "中心线",
+    "edges": "边缘轮廓",
+    "face": "面部结构线",
+    "pose": "人体姿态"
+  },
+  "corner": {
+    "topLeft": "左上",
+    "topRight": "右上",
+    "bottomLeft": "左下",
+    "bottomRight": "右下"
+  },
+  "panel": {
+    "forImage": "<name/>的线条",
+    "everyVersion": "绘制在这张图片每个打印版本的上层。",
+    "noImage": "添加一张照片，或选择一张，在上面绘制线条。",
+    "composition": "构图",
+    "style": "线条样式",
+    "waiting": "正在等待照片导入完成…"
+  },
+  "grid": {
+    "columns": "列",
+    "rows": "行",
+    "times": "×",
+    "range": "{{min}}到{{max}}"
+  },
+  "spiral": {
+    "startsAt": "螺旋起点",
+    "arrow": {
+      "topLeft": "↖",
+      "topRight": "↗",
+      "bottomLeft": "↙",
+      "bottomRight": "↘"
+    }
+  },
+  "guides": {
+    "heading": "照片辅助线",
+    "onDevice": "本机",
+    "detail": { "label": "细节", "value": "{{value}}" },
+    "size": "一次性下载：{{size}}",
+    "download": "下载并开启",
+    "progress": "{{loaded}} / {{total}}",
+    "progressSpoken": "已下载{{loaded}}兆字节，共{{total}}兆字节",
+    "failedHint": "检查网络连接后再试一次。其他线条仍可使用。",
+    "errorHint": "再试一次。其他线条仍可使用。",
+    "tryAgain": "重试",
+    "noWebGL": "面部和姿态辅助线需要WebGL，但这个浏览器已关闭WebGL。",
+    "edges": {
+      "running": "正在描绘轮廓…",
+      "done": "轮廓已描绘。",
+      "none": "当前“细节”设置下未找到边缘。试试调高“细节”。",
+      "failed": "无法描绘轮廓。"
+    },
+    "face": {
+      "why": "面部辅助线使用一个小型AI模型。模型保存在本设备上，可离线运行。你的照片绝不会被上传。",
+      "progressLabel": "面部模型下载",
+      "downloading": "正在下载面部模型…",
+      "running": "正在查找人脸…",
+      "found": "面部辅助线已开启。已添加眉、眼、鼻和下巴线。",
+      "none": "这张图片中没有找到人脸。",
+      "noneHint": "面部辅助线最适合清晰的正面或¾侧面。",
+      "noneWithHint": "这张图片中没有找到人脸。面部辅助线最适合清晰的正面或¾侧面。",
+      "downloadFailed": "无法下载面部模型",
+      "error": "无法在这张图片中查找人脸",
+      "turnOff": "关闭面部辅助线"
+    },
+    "pose": {
+      "why": "姿态线使用一个小型AI模型。模型保存在本设备上，可离线运行。你的照片绝不会被上传。",
+      "progressLabel": "姿态模型下载",
+      "downloading": "正在下载姿态模型…",
+      "running": "正在查找姿态…",
+      "found": "姿态线已开启。",
+      "none": "这张图片中没有找到人物。",
+      "noneHint": "全身都在画面中时，姿态线效果最好。",
+      "noneWithHint": "这张图片中没有找到人物。全身都在画面中时，姿态线效果最好。",
+      "downloadFailed": "无法下载姿态模型",
+      "error": "无法在这张图片中查找人物",
+      "turnOff": "关闭姿态辅助线"
+    }
+  },
+  "colour": {
+    "label": "颜色",
+    "hexLabel": "颜色十六进制代码",
+    "hexHint": "输入#和六位十六进制数字，例如#1f3fbf。"
+  },
+  "thickness": { "label": "粗细", "value": "{{value}}{{unit}}" },
+  "opacity": { "label": "不透明度", "value": "{{value}}" },
+  "applyAll": {
+    "button": "将线条应用到所有图片",
+    "hintSingle": "再添加一张照片，即可把这些设置复制过去。",
+    "hint_other": "将这些线条设置复制到全部{{count, number}}张图片。",
+    "done_other": "已将线条设置复制到{{count, number}}张图片。",
+    "nothingChanged": "所有图片已在使用这些线条设置。"
+  }
+}

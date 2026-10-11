@@ -1,0 +1,74 @@
+{
+  "tile": {
+    "fallbackName": "图片{{n}}",
+    "versionName": "{{name}}，{{version}}",
+    "lowDpi": "{{dpi}} DPI",
+    "lowDpiLabel": "低分辨率：{{dpi}} DPI",
+    "scaledToFit": "已缩小以适应",
+    "scaledToFitLabel": "已缩小以适应页面"
+  },
+  "guides": {
+    "label": "辅助线",
+    "legend": {
+      "label": "图例",
+      "safe": "安全边距",
+      "bleed": "出血",
+      "cut": "裁切线",
+      "mark": "裁切标记"
+    }
+  },
+  "arrange": {
+    "dropped": {
+      "paper": "纸张已更改，因此照片已重新自动排列。",
+      "noLongerFits": "你的排列已放不进新的边距，因此照片已重新自动排列。"
+    },
+    "toggle": "排列",
+    "barLabel": "排列照片",
+    "photoOptions": "照片选项",
+    "sheetSummary": "{{w}} × {{h}}{{unit}}，第{{page}}页，共{{total}}页",
+    "undo": "撤销",
+    "rerun": "重新自动排版",
+    "rerunConfirm": "重新自动排版？你的移动和尺寸更改将会丢失。",
+    "rerunAction": "重新排版",
+    "cancel": "取消",
+    "close": "关闭",
+    "selectedGroup": "所选照片：{{name}}",
+    "moveToPage": "移到页面",
+    "pageOption": "第{{page}}页",
+    "newPage": "新页面",
+    "swapWith": "交换位置…",
+    "swapChoose": "选择一张照片",
+    "swapOption": "{{name}}，第{{page}}页",
+    "width": "宽度",
+    "position": "位置",
+    "moveLeft": "左移",
+    "moveUp": "上移",
+    "moveDown": "下移",
+    "moveRight": "右移",
+    "roleDescription": "可移动的照片",
+    "blockName": "{{name}}，{{w}} × {{h}}{{unit}}，第{{page}}页",
+    "instructions": "用方向键移动，用Shift和方向键调整大小，用Page Up和Page Down移到其他页面，按Enter与另一张照片交换位置。",
+    "fixedHint": "固定尺寸：在编辑中更改。",
+    "chip": {
+      "pickedUp": "已拿起",
+      "swap": "交换",
+      "invalid": "无法放在这里"
+    },
+    "placed": "{{name}}，{{w}} × {{h}}{{unit}}，第{{page}}页，距左边{{x}}{{unit}}，距顶部{{y}}{{unit}}。",
+    "pickedUp": "已拿起“{{name}}”。移到另一张照片上并按Enter交换，或按Escape取消。",
+    "pickUpCancelled": "已取消交换。",
+    "undone": "已撤销。",
+    "rerunDone": "照片已自动排列。",
+    "refused": {
+      "overlap": "无法放在那里：会与另一张照片重叠。",
+      "outside": "无法放在那里：会超出边距。",
+      "noRoomOnPage": "无法放在那里：那一页没有足够的空间。",
+      "firstPage": "已经在第一页了。",
+      "blocked": "无法继续移动：被另一张照片或边距挡住了。",
+      "min": "已经不能再缩小了。",
+      "grow": "无法放大：被另一张照片或边距挡住了。",
+      "fixed": "固定尺寸：在编辑中更改。",
+      "swap": "无法交换：有一张照片放不进另一张的位置。"
+    }
+  }
+}

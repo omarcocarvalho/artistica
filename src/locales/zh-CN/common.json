@@ -1,0 +1,16 @@
+{
+  "app": {
+    "comingSoon": "工作区即将推出。"
+  },
+  "actions": {
+    "cancel": "取消",
+    "close": "关闭",
+    "ok": "确定"
+  },
+  "joinSentences": "{{a}}{{b}}",
+  "theme": {
+    "auto": "自动",
+    "light": "浅色",
+    "dark": "深色"
+  }
+}

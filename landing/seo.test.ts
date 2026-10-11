@@ -280,7 +280,13 @@ describe('landing copy for 1.0', () => {
   })
 
   it('keeps the body text under 550 words', () => {
-    const body = text(/<body[\s\S]*<\/body>/.exec(html)?.[0] ?? '')
+    // The footer's language list grows with each language; it is navigation, not copy.
+    const body = text(
+      (/<body[\s\S]*<\/body>/.exec(html)?.[0] ?? '').replace(
+        /<nav aria-labelledby="footer-language"[\s\S]*?<\/nav>/,
+        '',
+      ),
+    )
     expect(body.split(' ').filter((w) => /\p{L}|\d/u.test(w)).length).toBeLessThan(550)
   })
 })
