@@ -67,6 +67,13 @@ export const REVIEWED_INCOMPLETE: readonly ReviewedIncomplete[] = [
   },
   {
     rule: 'color-contrast',
+    selector: 'main [aria-hidden="true"] > .font-hand.bg-surface',
+    messageKeys: ['elmPartiallyObscured', 'elmPartiallyObscuring'],
+    reason:
+      'The landing hero tip is rotated over the decorative sheets on its own opaque surface backing; a translation long enough to wrap overlaps them in a way axe cannot resolve. landing.spec "LND-L3" measures the tip ink against its backing in every language, light and dark.',
+  },
+  {
+    rule: 'color-contrast',
     selector: 'button[aria-label]',
     messageKeys: ['nonBmp'],
     reason:

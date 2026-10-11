@@ -27,6 +27,11 @@ type Context = 'text' | 'attribute' | 'json'
 const pagePath = (code: LanguageCode) => (code === 'en' ? SITE_BASE : `${SITE_BASE}${code}/`)
 const pageUrl = (origin: string, code: LanguageCode) => `${origin}${pagePath(code)}`
 
+/** The share image of `code`'s page, in `public/` (M6-R22). */
+export function shareImageFile(code: LanguageCode): string {
+  return code === 'en' ? 'og-image.png' : `og-image-${code}.png`
+}
+
 /** The landing languages: codes with a `<code>.json` among `files`, in `LANGUAGES` order. */
 export function landingLanguages(files: readonly string[]): LanguageCode[] {
   const present = new Set(files.filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -5)))
@@ -109,7 +114,7 @@ function builtins(lang: LanguageCode): ReadonlyMap<string, string> {
     ['homeUrl', pagePath(lang)],
     ['appUrl', appUrl],
     ['ogLocale', OG_LOCALES[lang]],
-    ['ogImage', `${SITE_ORIGIN}${SITE_BASE}og-image.png`],
+    ['ogImage', `${SITE_ORIGIN}${SITE_BASE}${shareImageFile(lang)}`],
   ])
 }
 

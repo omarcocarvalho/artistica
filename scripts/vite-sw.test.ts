@@ -28,12 +28,15 @@ const DIST = [
   'models/NOTICE.md',
   'favicon.svg',
   'og-image.png',
+  'og-image-ja.png',
+  'og-image-zh-CN.png',
+  'og-image-pt-BR.png',
   'robots.txt',
   'sw.js',
 ]
 
 describe('the build list', () => {
-  it('the build list has the app and landing pages, every asset, fonts, favicon; and no AI runtime, model, og-image or map', () => {
+  it('the build list has the app and landing pages, every asset, fonts, favicon; and no AI runtime, model, share image or map', () => {
     expect(shellPaths(DIST, aiAssetPaths())).toEqual([
       'app/index.html',
       'assets/app-CxwVuhDN.js',
@@ -117,6 +120,8 @@ describe('the service worker build', () => {
     put('lazy.js', 'export const run = () => 1\n')
     put('public/favicon.svg', '<svg/>')
     put('public/og-image.png', 'png')
+    put('public/og-image-ja.png', 'png')
+    put('public/og-image-zh-CN.png', 'png')
     put('public/models/face_landmarker-float16-1.task', 'model')
     await build({
       root,
@@ -172,19 +177,24 @@ describe('the service worker build', () => {
     expect(cacheName).toMatch(/^artistica-shell-[0-9a-f]{16}$/)
   })
 
-  it('precaches every built file except itself, source maps, og-image.png and the bypassed files', () => {
+  it('precaches every built file except itself, source maps, the share images and the bypassed files', () => {
     const expected = filesUnder(outDir)
       .filter(
         (f) =>
           f !== 'sw.js' &&
           !f.endsWith('.map') &&
-          f !== 'og-image.png' &&
+          !/^og-image.*\.png$/.test(f) &&
           f !== 'models/face_landmarker-float16-1.task',
       )
       .map((f) => `${BASE}${f}`)
       .sort()
     expect(expected.some((f) => /\/assets\/lazy-.*\.js$/.test(f))).toBe(true)
     expect(filesUnder(outDir).some((f) => f.endsWith('.map'))).toBe(true)
+    expect(
+      filesUnder(outDir)
+        .filter((f) => f.startsWith('og-image'))
+        .sort(),
+    ).toEqual(['og-image-ja.png', 'og-image-zh-CN.png', 'og-image.png'])
     expect(installed).toEqual(expected)
   })
 })

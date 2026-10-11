@@ -6,7 +6,7 @@ import { SHELL_CACHE_PREFIX, type ShellConfig } from '../src/sw/config.ts'
 import { AI_ASSET_PINS, publishedPath } from './vite-ai-assets.ts'
 
 export const SW_FILE = 'sw.js'
-const NEVER_PRECACHED = new Set([SW_FILE, 'og-image.png'])
+const NEVER_PRECACHED = (file: string) => file === SW_FILE || /^og-image.*\.png$/.test(file)
 const ENTRY_ID = 'virtual:artistica-sw'
 const RESOLVED_ENTRY_ID = `\0${ENTRY_ID}`
 
@@ -22,9 +22,7 @@ export function aiAssetPaths(): string[] {
 /** Paths relative to the output directory. */
 export function shellPaths(files: Iterable<string>, bypass: readonly string[]): string[] {
   const skip = new Set(bypass)
-  return [...files]
-    .filter((f) => !NEVER_PRECACHED.has(f) && !f.endsWith('.map') && !skip.has(f))
-    .sort()
+  return [...files].filter((f) => !NEVER_PRECACHED(f) && !f.endsWith('.map') && !skip.has(f)).sort()
 }
 
 export function shellBuildId(files: ReadonlyMap<string, Uint8Array>): string {
