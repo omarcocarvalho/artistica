@@ -50,12 +50,12 @@
     "instructions": "矢印キーで移動、Shiftと矢印キーでサイズ変更、Page UpとPage Downで別のページへ移動、Enterで別の写真と入れ替えます。",
     "fixedHint": "固定サイズです：編集で変更してください。",
     "chip": {
-      "pickedUp": "選択中",
+      "pickedUp": "持ち上げ中",
       "swap": "入れ替え",
       "invalid": "配置できません"
     },
     "placed": "{{name}}、{{w}} × {{h}} {{unit}}、{{page}}ページ、左から{{x}} {{unit}}、上から{{y}} {{unit}}。",
-    "pickedUp": "{{name}}を選択しました。別の写真に移動してEnterを押すと入れ替え、Escapeでキャンセルします。",
+    "pickedUp": "{{name}}を持ち上げました。別の写真に移動してEnterを押すと入れ替え、Escapeでキャンセルします。",
     "pickUpCancelled": "入れ替えをキャンセルしました。",
     "undone": "元に戻しました。",
     "rerunDone": "写真を自動で配置しました。",

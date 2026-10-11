@@ -53,6 +53,16 @@ const ENGLISH_WORDS = [
 ]
 const ENGLISH = new RegExp(`\\b(${ENGLISH_WORDS.join('|')})\\b`, 'iu')
 const JAPANESE = /[぀-ヿ一-鿿]/u
+// Latin words the Japanese UI keeps (style guide, "What is never translated"), the sample file
+// name and the endonyms; any other Latin word is English left in the UI.
+const LATIN_KEPT = new Set([
+  ...['Artistica', 'PDF', 'DPI', 'mm', 'px', 'A3', 'A4', 'A5', 'A6', 'a', 'jpg'],
+  ...['English', 'Português', 'Brasil', 'Italiano', 'Español'],
+])
+const latinLeft = (text: string): string[] =>
+  [...text.matchAll(/\p{Script=Latin}[\p{Script=Latin}\d]*/gu)]
+    .map((m) => m[0])
+    .filter((w) => !LATIN_KEPT.has(w))
 const ATTRIBUTES = ['aria-label', 'aria-valuetext', 'aria-description', 'title', 'placeholder']
 
 /** Visible text plus the names and descriptions screen readers read. */
@@ -118,6 +128,7 @@ describe('Japanese (ja)', () => {
     const text = textOf(view.container)
     expect(hasJapanese(text)).toBe(true)
     expect(ENGLISH.exec(text)?.[0]).toBeUndefined()
+    expect(latinLeft(text)).toEqual([])
   })
 
   it('PresetsDialog with presets shows Japanese and no English UI word', () => {
@@ -136,6 +147,7 @@ describe('Japanese (ja)', () => {
     expect(hasJapanese(text)).toBe(true)
     expect(text).toContain('肖像')
     expect(ENGLISH.exec(text)?.[0]).toBeUndefined()
+    expect(latinLeft(text)).toEqual([])
   })
 
   // Japanese has one plural form (`_other`); the counter follows the number.
