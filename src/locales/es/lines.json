@@ -64,8 +64,8 @@
       "running": "Buscando rostros…",
       "found": "Guías de rostro activadas. Se agregaron líneas de cejas, ojos, nariz y mentón.",
       "none": "No se encontró ningún rostro en esta imagen.",
-      "noneHint": "Las guías de rostro funcionan mejor con una vista frontal o de ¾ clara.",
-      "noneWithHint": "No se encontró ningún rostro en esta imagen. Las guías de rostro funcionan mejor con una vista frontal o de ¾ clara.",
+      "noneHint": "Las guías de rostro funcionan mejor con una vista clara de frente o de ¾.",
+      "noneWithHint": "No se encontró ningún rostro en esta imagen. Las guías de rostro funcionan mejor con una vista clara de frente o de ¾.",
       "downloadFailed": "No se pudo descargar el modelo de rostro",
       "error": "No se pudieron buscar rostros en esta imagen",
       "turnOff": "Desactivar las guías de rostro"

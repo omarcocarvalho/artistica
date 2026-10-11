@@ -65,23 +65,56 @@ const ATTRIBUTES = [
   'alt',
 ]
 
-/** Every word a person can see or hear in the document, one text node at a time. */
-function wordsOnScreen(): string[] {
+/** Every text a person can see or hear in the document, one text node or attribute at a time. */
+function textsOnScreen(): string[] {
   const parts: string[] = []
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
   while (walker.nextNode()) parts.push(walker.currentNode.textContent ?? '')
   for (const el of document.body.querySelectorAll('*'))
     for (const name of ATTRIBUTES) parts.push(el.getAttribute(name) ?? '')
-  return parts
+  return parts.map((p) => p.trim()).filter(Boolean)
+}
+
+function wordsOnScreen(): string[] {
+  return textsOnScreen()
     .join(' ')
     .toLowerCase()
     .split(/[^\p{L}]+/u)
     .filter(Boolean)
 }
 
+type Tree = Readonly<Record<string, unknown>>
+const flatten = (tree: Tree, prefix: string): [string, string][] =>
+  Object.entries(tree).flatMap(([k, v]) =>
+    typeof v === 'string'
+      ? [[`${prefix}${k}`, v] as [string, string]]
+      : flatten(v as Tree, `${prefix}${k}.`),
+  )
+const messages = (files: Record<string, Tree>): Map<string, string> =>
+  new Map(
+    Object.entries(files).flatMap(([path, tree]) =>
+      flatten(tree, `${/([^/]+)\.json$/.exec(path)?.[1] ?? ''}:`),
+    ),
+  )
+const EN = messages(import.meta.glob<Tree>('./en/*.json', { eager: true, import: 'default' }))
+/** Words Spanish keeps from English: the product name, formats and glossary terms. */
+const KEPT = /\b(Artistica|Auto|Original|Sepia|notan|DPI|px|mm|OK)\b|\{\{[^}]+\}\}/g
+const pattern = (template: string): RegExp =>
+  new RegExp(
+    `^${template
+      .split(/\{\{[^}]+\}\}/)
+      .map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .join('[\\s\\S]+?')}$`,
+  )
+const ENGLISH_MESSAGES = [...EN]
+  .filter(([, en]) => !en.includes('<') && /\p{L}/u.test(en.replace(KEPT, '')))
+  .map(([key, en]) => [key, pattern(en)] as const)
+
 function englishOnScreen(): string[] {
   const words = new Set(wordsOnScreen())
-  return ENGLISH_WORDS.filter((w) => words.has(w))
+  const texts = textsOnScreen()
+  const messages = ENGLISH_MESSAGES.filter(([, p]) => texts.some((t) => p.test(t)))
+  return [...ENGLISH_WORDS.filter((w) => words.has(w)), ...messages.map(([key]) => key)]
 }
 
 beforeAll(async () => {
@@ -154,7 +187,7 @@ describe('es: sample screens have no English', () => {
     expect(englishOnScreen()).toEqual([])
   })
 
-  it('the export panel, ready and done', async () => {
+  it('the export panel, ready, in progress and done', async () => {
     let resolve: (blob: Blob) => void = () => undefined
     vi.mocked(exportPdf).mockImplementation(
       () =>
@@ -174,6 +207,8 @@ describe('es: sample screens have no English', () => {
     expect(englishOnScreen()).toEqual([])
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Crear PDF' }))
+    expect(screen.getByText('Mantén esta pestaña abierta.', { exact: false })).toBeInTheDocument()
+    expect(englishOnScreen()).toEqual([])
     await act(async () => {
       resolve(new Blob(['%PDF']))
       await Promise.resolve()

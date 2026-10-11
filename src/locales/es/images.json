@@ -146,7 +146,7 @@
       "scale400": "400",
       "autoOk": "El modo automático nunca imprime a más de 300 DPI.",
       "lowTitle": "Baja resolución",
-      "lowFixed": "Por debajo de 300 DPI puede imprimirse poco nítida. Se ve nítida hasta {{w}} × {{h}} {{unit}}.",
+      "lowFixed": "Por debajo de 300 DPI puede imprimirse poco nítida. Se imprime nítida hasta {{w}} × {{h}} {{unit}}.",
       "lowAuto": "En su tamaño cómodo más pequeño ({{size}}) se imprime a {{dpi}} DPI. Puede verse poco nítida."
     },
     "actions": {

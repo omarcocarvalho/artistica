@@ -52,7 +52,7 @@
     "chip": {
       "pickedUp": "Levantada",
       "swap": "Intercambiar",
-      "invalid": "No se puede aquí"
+      "invalid": "No cabe aquí"
     },
     "placed": "{{name}}, {{w}} × {{h}} {{unit}}, página {{page}}, a {{x}} {{unit}} de la izquierda y {{y}} {{unit}} de arriba.",
     "pickedUp": "Levantaste {{name}}. Ve a otra foto y presiona Enter para intercambiarlas, o Escape para cancelar.",
