@@ -57,6 +57,10 @@ export const PATHS = {
     'M8 12a2 2 0 1 0 4 0 2 2 0 1 0-4 0z',
     'M16 18a2 2 0 1 0 4 0 2 2 0 1 0-4 0z',
   ],
+  globe: [
+    'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
+    'M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18',
+  ],
 } as const satisfies Record<string, readonly string[]>
 
 export type IconName = keyof typeof PATHS

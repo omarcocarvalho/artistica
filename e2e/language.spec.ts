@@ -1,9 +1,13 @@
 import { expect, test, type Page } from '@playwright/test'
 import { AppPage } from './support/app.ts'
+import { expectNoAxeViolations } from './support/axe.ts'
+import { languageSelect, offeredLanguages, setLanguage } from './support/l10n.ts'
 import { guardNetwork, type NetworkGuard } from './support/network-guard.ts'
 import { runOnly } from './support/projects.ts'
+import { isLanguageCode, type LanguageCode } from '../src/shared/i18n/languages.ts'
 
 declare const localStorage: { getItem(key: string): string | null }
+declare const document: { activeElement: { tagName: string; closest(s: string): unknown } | null }
 
 let guard: NetworkGuard | undefined
 
@@ -108,4 +112,92 @@ test.describe('number formatting (desktop)', () => {
     await expect(safeArea).toHaveAttribute('aria-valuetext', '12.5 mm')
     await expect(safeArea).toHaveAttribute('aria-valuenow', '12.5')
   })
+})
+
+/** The first language besides English the switcher offers; skips the test while only English exists. */
+async function firstTranslation(page: Page): Promise<LanguageCode> {
+  const offered = await offeredLanguages(page)
+  const code = offered.find((c) => c !== 'en')
+  test.skip(
+    code === undefined,
+    'only English has strings: the switcher offers no other language until a translation merges',
+  )
+  if (!isLanguageCode(code)) throw new Error(`not a language code: ${String(code)}`)
+  return code
+}
+
+async function focusIsOnSelect(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const el = document.activeElement
+    return el?.tagName === 'SELECT' && el.closest('header') !== null
+  })
+}
+
+test.describe('the language switcher', () => {
+  test.use({ locale: 'en-US' })
+
+  test('LANG-S1: the switcher saves the choice and a reload keeps it', async ({ page }) => {
+    await openApp(page)
+    const code = await firstTranslation(page)
+    await setLanguage(page, code)
+    expect(await savedLanguage(page)).toBe(code)
+    await page.reload()
+    await expect(page.locator('html')).toHaveAttribute('lang', code)
+    await expect(languageSelect(page)).toHaveValue(code)
+  })
+
+  test('LANG-S2: a saved choice beats ?lang', async ({ page }) => {
+    await openApp(page)
+    const code = await firstTranslation(page)
+    await setLanguage(page, code)
+    await page.goto('app/?lang=en')
+    await expect(page.locator('html')).toHaveAttribute('lang', code)
+    expect(new URL(page.url()).search).toBe('')
+    expect(await savedLanguage(page)).toBe(code)
+  })
+
+  test('LANG-S3: keyboard only: Tab to the select, change it, focus stays', async ({ page }) => {
+    await openApp(page)
+    const code = await firstTranslation(page)
+    const offered = await offeredLanguages(page)
+    for (let i = 0; i < 20 && !(await focusIsOnSelect(page)); i++) await page.keyboard.press('Tab')
+    expect(await focusIsOnSelect(page)).toBe(true)
+    for (let i = 0; i < offered.indexOf(code); i++) await page.keyboard.press('ArrowDown')
+    if ((await languageSelect(page).inputValue()) !== code) {
+      test.info().annotations.push({
+        type: 'native picker',
+        description: 'arrow keys open the platform picker here, which Playwright cannot drive',
+      })
+      await languageSelect(page).selectOption(code)
+    }
+    await expect(page.locator('html')).toHaveAttribute('lang', code)
+    await expect(languageSelect(page)).toHaveValue(code)
+    expect(await focusIsOnSelect(page)).toBe(true)
+  })
+})
+
+test.describe('the language switcher in the top bar', () => {
+  runOnly('chromium', 'firefox', 'webkit')
+  for (const scheme of ['light', 'dark'] as const) {
+    test(`LANG-S4: the top bar is axe-clean at desktop and phone width (${scheme})`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: scheme })
+      await page.setViewportSize({ width: 1280, height: 900 })
+      await openApp(page)
+      const select = languageSelect(page)
+      const name = page.locator('header [data-language-name]')
+      await expect(page.getByRole('combobox', { name: 'Language' })).toHaveValue('en')
+      await expect(name).toBeVisible()
+      await expect(name).toHaveText('English')
+      await expectNoAxeViolations(page, { include: 'header' })
+
+      await page.setViewportSize({ width: 390, height: 844 })
+      await expect(name).toBeHidden()
+      const box = await select.boundingBox()
+      expect(box?.width).toBeGreaterThanOrEqual(44)
+      expect(box?.height).toBeGreaterThanOrEqual(44)
+      await expectNoAxeViolations(page, { include: 'header' })
+    })
+  }
 })

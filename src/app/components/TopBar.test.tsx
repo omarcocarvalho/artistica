@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import i18next from 'i18next'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { initI18n } from '../../shared/i18n'
+import { initI18n, type LanguageCode } from '../../shared/i18n'
 import { stubDesktop } from '../test-utils'
 import { TopBar } from './TopBar'
 
@@ -18,16 +19,48 @@ afterEach(() => {
 const REASON = 'Add at least one image to export.'
 
 describe('TopBar', () => {
-  it('has a level-1 heading named Artistica, a skip link, the privacy pill and no language picker', () => {
+  it('has a level-1 heading named Artistica, a skip link and the privacy pill', () => {
     render(<TopBar onExport={vi.fn()} exportDisabledReason={null} />)
     expect(screen.getByRole('heading', { level: 1, name: 'Artistica' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Skip to preview' })).toHaveAttribute('href', '#main')
     expect(screen.getByText('Photos stay on this device')).toBeInTheDocument()
-    expect(screen.queryByLabelText(/language/i)).not.toBeInTheDocument()
   })
-  it('links the logo to the landing page one level up from the app', () => {
-    render(<TopBar onExport={vi.fn()} exportDisabledReason={null} />)
-    expect(screen.getByRole('link', { name: 'Artistica home' })).toHaveAttribute('href', '../')
+  it('puts the language select right before the theme toggle, at every width', () => {
+    for (const desktop of [true, false]) {
+      stubDesktop(desktop)
+      const view = render(<TopBar onExport={vi.fn()} exportDisabledReason={null} />)
+      const select = screen.getByRole('combobox', { name: 'Language' })
+      const theme = screen.getByRole('button', { name: /^Change theme/ })
+      const control = select.parentElement
+      expect(control?.parentElement).toBe(screen.getByRole('banner'))
+      expect(control?.nextElementSibling).toBe(theme)
+      view.unmount()
+    }
+  })
+
+  describe('the home link goes to the landing page of the language showing (M6-R21)', () => {
+    afterEach(async () => {
+      await i18next.changeLanguage('en')
+    })
+    it.each<[LanguageCode, string]>([
+      ['en', '../'],
+      ['pt-BR', '../pt-BR/'],
+      ['ja', '../ja/'],
+      ['zh-CN', '../zh-CN/'],
+    ])('%s → %s', async (code, href) => {
+      await i18next.changeLanguage(code)
+      render(<TopBar onExport={vi.fn()} exportDisabledReason={null} />)
+      expect(screen.getByRole('link', { name: 'Artistica home' })).toHaveAttribute('href', href)
+    })
+    it('follows a language change while mounted', async () => {
+      render(<TopBar onExport={vi.fn()} exportDisabledReason={null} />)
+      const home = screen.getByRole('link', { name: 'Artistica home' })
+      expect(home).toHaveAttribute('href', '../')
+      await act(async () => {
+        await i18next.changeLanguage('ko')
+      })
+      expect(home).toHaveAttribute('href', '../ko/')
+    })
   })
   it('calls onExport when enabled', async () => {
     const onExport = vi.fn()
