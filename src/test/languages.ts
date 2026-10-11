@@ -6,6 +6,12 @@ type Bundles = Readonly<Record<string, Record<string, unknown>>>
 /** Hand-written pt-BR strings for the keys the formatting tests read. */
 export const PT_BR: Bundles = {
   app: {
+    theme: {
+      changeLabel: 'Tema ({{current}}) — mudar',
+      auto: 'Automático',
+      light: 'Claro',
+      dark: 'Escuro',
+    },
     preview: {
       item: '{{name}}, {{w}} × {{h}} {{unit}}',
       itemVersion: '{{name}}, {{version}}, {{w}} × {{h}} {{unit}}',
@@ -29,8 +35,19 @@ export const PT_BR: Bundles = {
     },
   },
   pageSetup: {
-    paper: { dims: '{{w}} × {{h}} {{unit}}', width: 'Largura' },
+    paper: {
+      dims: '{{w}} × {{h}} {{unit}}',
+      width: 'Largura',
+      size: 'Tamanho do papel',
+      custom: 'Personalizado…',
+      name: { letter: 'Carta', legal: 'Ofício', tabloid: 'Tabloide', custom: 'Personalizado' },
+    },
     spacing: { safeAreaHint: 'Borda em branco na margem da página. Mín. {{min}}.' },
+    suggestion: {
+      text_one: '{{paper}} cabe {{count, number}} referência por página.',
+      text_many: '{{paper}} cabe {{count, number}} de referências por página.',
+      text_other: '{{paper}} cabe {{count, number}} referências por página.',
+    },
   },
   preview: {
     arrange: {

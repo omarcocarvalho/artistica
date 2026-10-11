@@ -20,12 +20,13 @@ import {
   type Preset,
   type PresetImportError,
 } from '../../shared/model/preset'
+import { formatList, joinSentences } from '../../shared/i18n/format'
 import { BottomSheet, Button, Callout, Dialog, useImportWait } from '../../shared/ui'
 import type { ModalSurfaceProps } from '../../shared/ui/ModalSurface'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import { applyPreset, presetFromCurrent } from '../presets'
 import { downloadJson, presetFileName, readPresetFile } from './preset-file'
-import { presetSummary, type I18nT } from './preset-summary'
+import { presetSummary } from './preset-summary'
 
 export interface PresetsDialogProps {
   readonly open: boolean
@@ -309,23 +310,22 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
       renamed.length > 0
         ? t('import.renamed', {
             count: renamed.length,
-            list: renamed
-              .map(([from, to]) => t('import.renamedPair', { from, to }))
-              .join(t('import.listSeparator')),
+            list: formatList(renamed.map(([from, to]) => t('import.renamedPair', { from, to }))),
           })
         : null,
       result.skipped > 0 ? t('import.skipped', { count: result.skipped }) : null,
       skippedFull > 0 ? t('import.full', { count: skippedFull, max: MAX_PRESETS }) : null,
       result.adjusted > 0 ? t('import.adjusted', { count: result.adjusted }) : null,
     ].filter((line): line is string => line !== null)
-    sayStored(details.join(' '), t('import.imported', { count: added }))
+    sayStored(
+      details.length > 0 ? details.reduce((a, b) => joinSentences(t, a, b)) : '',
+      t('import.imported', { count: added }),
+    )
   }
 
   const exportAll = () => {
     downloadJson(presetFileName(new Date()), buildPresetFile(presets))
   }
-
-  const summaryT: I18nT = (key, options) => t(key, options)
 
   const saveArea =
     editing.kind === 'save' ? (
@@ -470,7 +470,7 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
                       <div className="min-w-0">
                         <div className="font-semibold [overflow-wrap:anywhere]">{preset.name}</div>
                         <div className="text-ink-muted text-xs [overflow-wrap:anywhere]">
-                          {presetSummary(preset, unit, summaryT)}
+                          {presetSummary(preset, unit, t)}
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-1 sm:justify-end">
@@ -583,7 +583,11 @@ export function PresetsDialog({ open, onOpenChange }: PresetsDialogProps) {
           </>
         }
       >
-        <p>{t('apply.confirmBody', { count: photoCount })}</p>
+        <p>
+          {photoCount === 1
+            ? t('apply.confirmBodySingle')
+            : t('apply.confirmBody', { count: photoCount })}
+        </p>
       </Dialog>
       <Dialog
         open={confirm?.kind === 'delete' && confirm.open}

@@ -482,6 +482,26 @@ describe('StudiesPanel in other languages', () => {
     await switchLanguage('en')
   })
 
+  it.each([
+    [1, '1枚だけの説明'],
+    [3, '3枚すべてにコピー'],
+  ])(
+    'the Apply to all hint for %i image(s) in a language with one plural form (A4-Q1)',
+    async (n, text) => {
+      await switchLanguage('ja', {
+        studies: {
+          applyAll: {
+            hintSingle: '1枚だけの説明',
+            hint_other: '{{count, number}}枚すべてにコピー',
+          },
+        },
+      })
+      seed(Object.fromEntries(['a', 'b', 'c'].slice(0, n).map((k) => [k, DEFAULT_STUDY])))
+      render(<StudiesPanel imageId={A} />)
+      expect(screen.getByText(text)).toBeVisible()
+    },
+  )
+
   it('formats the blur percentage the Spanish way', async () => {
     await switchLanguage('es')
     render(<StudiesPanel imageId={A} />)

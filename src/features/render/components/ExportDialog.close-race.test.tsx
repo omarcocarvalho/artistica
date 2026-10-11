@@ -64,7 +64,7 @@ it('never creates an object URL for an export that finishes in the render that c
         open={open}
         onOpenChange={() => undefined}
         pages={pages}
-        paperLabel="A4"
+        paper="A4"
         getSource={() => undefined}
       />
     )

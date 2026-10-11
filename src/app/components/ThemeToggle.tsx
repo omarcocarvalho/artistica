@@ -10,7 +10,7 @@ export function ThemeToggle() {
   const theme = useSettings((s) => s.theme)
   const current = t(`theme.${theme}`)
   // WCAG 2.5.3 label in name: the accessible name contains the visible text.
-  const label = `${t('theme.change')}: ${current}`
+  const label = t('theme.changeLabel', { current })
   return (
     <Button
       variant="ghost"

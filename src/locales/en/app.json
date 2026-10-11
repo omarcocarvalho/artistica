@@ -17,7 +17,7 @@
     "exportGuides": "Finding guides in your photos…"
   },
   "theme": {
-    "change": "Change theme",
+    "changeLabel": "Change theme: {{current}}",
     "auto": "Auto",
     "light": "Light",
     "dark": "Dark"
@@ -34,8 +34,7 @@
     "lines": "Lines"
   },
   "empty": {
-    "titleBefore": "Add some ",
-    "titleHighlight": "reference photos",
+    "title": "Add some <highlight>reference photos</highlight>",
     "body": "Drop them here, paste, or add a link. We pack them onto pages for you.",
     "formats": "JPG, PNG, WebP, GIF, HEIC · any number of photos",
     "privacy": "Nothing is uploaded. Photos stay on this device.",
@@ -72,7 +71,11 @@
     }
   },
   "import": {
-    "more": "+{{more}} more",
+    "noImage": "No image on the clipboard. Copy an image first, then paste again.",
+    "animatedGif": "{{name}}: first frame only. Animated GIFs print their first frame.",
+    "failed": "{{list}}: {{title}}. {{message}}",
+    "more_one": "{{count, number}} more",
+    "more_other": "{{count, number}} more",
     "unnamed": "This image"
   },
   "preview": {
@@ -82,7 +85,6 @@
     "pageCaption": "Page {{current}} of {{total}} · {{paper}} · {{orientation}}",
     "pageItems": "Page {{current}} contents",
     "item": "{{name}}, {{w}} × {{h}} {{unit}}",
-    "customPaper": "Custom",
     "unnamedImage": "Image",
     "orientation": {
       "portrait": "portrait",

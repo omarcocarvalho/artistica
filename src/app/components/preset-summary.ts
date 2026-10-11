@@ -1,3 +1,5 @@
+import type { TFunction } from 'i18next'
+import { paperName } from '../../features/page-setup'
 import {
   COMPOSITION_LINE_TYPES,
   type CompositionLineType,
@@ -13,8 +15,6 @@ import {
 } from '../../shared/i18n/format'
 import type { Unit } from '../../shared/model/units'
 
-export type I18nT = (key: string, options?: Record<string, unknown>) => string
-
 const lineOn: Record<CompositionLineType, (l: LineSettings) => boolean> = {
   grid: (l) => l.grid.on,
   thirds: (l) => l.thirds,
@@ -25,7 +25,7 @@ const lineOn: Record<CompositionLineType, (l: LineSettings) => boolean> = {
 }
 
 /** "A4 · Auto · values 5 · thirds": paper, orientation, bleed when on, versions, composition lines. `t` is bound to `presets`. */
-export function presetSummary(preset: Preset, unit: Unit, t: I18nT): string {
+export function presetSummary(preset: Preset, unit: Unit, t: TFunction): string {
   const { pageSetup, study, lines } = preset
   const paper =
     pageSetup.paper === 'Custom'
@@ -34,7 +34,7 @@ export function presetSummary(preset: Preset, unit: Unit, t: I18nT): string {
           h: formatLengthNumber(pageSetup.customSize.h, unit),
           unit: unitLabel(unit),
         })
-      : pageSetup.paper
+      : paperName(pageSetup.paper, t)
   const versionText: Record<StudyVersion, string> = {
     original: t('summary.version.original'),
     blurred: t('summary.version.blurred', { value: formatPercent(study.blurPct) }),

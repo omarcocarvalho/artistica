@@ -16,6 +16,7 @@ import {
   normalizeCustomSize,
   stepMmFor,
 } from './page-setup-logic'
+import { paperName } from './paper-name'
 
 export interface PageSetupPanelProps {
   /** Layout engine's "fits N per page" (independent of the images, CR-B6); null/undefined hides the suggestion. */
@@ -46,12 +47,9 @@ export function PageSetupPanel({
     h: formatLengthNumber(size.h, unit),
     unit: unitLabel(unit),
   })
-  const paperLabel =
-    pageSetup.paper === 'Custom' ? t('paper.custom').replace('…', '') : pageSetup.paper
-
   const paperOptions = PAPER_IDS.map((id) => ({
     value: id,
-    label: id === 'Custom' ? t('paper.custom') : id,
+    label: id === 'Custom' ? t('paper.custom') : paperName(id, t),
   }))
   const lengthField = { unit, stepMm: stepMmFor(unit) } as const
   const customLimits = { minMm: CUSTOM_PAPER_LIMITS.minMm, maxMm: CUSTOM_PAPER_LIMITS.maxMm }
@@ -218,7 +216,12 @@ export function PageSetupPanel({
             <span aria-hidden="true" className="font-hand text-accent">
               {t('suggestion.tip')}
             </span>
-            <span>{t('suggestion.text', { paper: paperLabel, count: suggestedPerPage })}</span>
+            <span>
+              {t('suggestion.text', {
+                paper: paperName(pageSetup.paper, t),
+                count: suggestedPerPage,
+              })}
+            </span>
           </p>
         )}
         <p className="text-ink-muted text-sm">{t('remembered')}</p>

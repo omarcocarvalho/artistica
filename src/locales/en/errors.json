@@ -23,10 +23,6 @@
     "tooLarge": {
       "title": "{{name}} is too large",
       "message": "Photos can be up to {{maxMb}} MB and {{maxMp}} megapixels. Try a smaller version."
-    },
-    "animatedGif": {
-      "title": "{{name}}: first frame only",
-      "message": "Animated GIFs print their first frame."
     }
   },
   "export": {

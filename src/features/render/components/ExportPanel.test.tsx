@@ -55,7 +55,7 @@ function deferredExport() {
   }
 }
 
-const base = { pages, paperLabel: 'A4', getSource: () => undefined }
+const base = { pages, paper: 'A4', getSource: () => undefined } as const
 
 describe('ExportPanel (inline)', () => {
   it('renders the summary, the file name and Create PDF without a dialog', () => {
@@ -149,6 +149,34 @@ describe('ExportPanel (inline)', () => {
 describe('ExportPanel in other languages', () => {
   afterAll(async () => {
     await switchLanguage('en')
+  })
+
+  it.each([
+    ['Letter', '2 · Carta portrait', 'artistica-Letter-2026-10-10.pdf'],
+    ['Custom', '2 · Personalizado portrait', 'artistica-Custom-2026-10-10.pdf'],
+    ['A5', '2 · A5 portrait', 'artistica-A5-2026-10-10.pdf'],
+  ] as const)(
+    'names %s through paperName in the summary, and keeps the id in the file name (M6-R25)',
+    async (paper, summary, file) => {
+      await switchLanguage('pt-BR', PT_BR)
+      render(<ExportPanel {...base} paper={paper} />)
+      expect(screen.getByText(summary)).toBeInTheDocument()
+      expect(screen.getByLabelText('File name')).toHaveValue(file)
+    },
+  )
+
+  it('keeps the file name when the language changes, and resets it when the paper does', async () => {
+    await switchLanguage('en')
+    const view = render(<ExportPanel {...base} paper="Letter" />)
+    expect(screen.getByText('2 · Letter portrait')).toBeInTheDocument()
+    await act(async () => {
+      await switchLanguage('pt-BR', PT_BR)
+    })
+    view.rerender(<ExportPanel {...base} paper="Letter" />)
+    expect(screen.getByText('2 · Carta portrait')).toBeInTheDocument()
+    expect(screen.getByLabelText('File name')).toHaveValue('artistica-Letter-2026-10-10.pdf')
+    view.rerender(<ExportPanel {...base} paper="Tabloid" />)
+    expect(screen.getByLabelText('File name')).toHaveValue('artistica-Tabloid-2026-10-10.pdf')
   })
 
   it('shows the bleed with the language decimal separator and unit symbol', async () => {

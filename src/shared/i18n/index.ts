@@ -16,6 +16,7 @@ export {
   formatLength,
   formatLengthNumber,
   formatLengthValue,
+  formatList,
   formatMegabytes,
   formatMegabytesNumber,
   formatNumber,

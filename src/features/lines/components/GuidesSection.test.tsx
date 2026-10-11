@@ -1052,6 +1052,44 @@ describe('Guides in other languages', () => {
     expect(within(section()).getByText('4,1 de 15,2 MB')).toBeVisible()
   })
 
+  it('announces "nothing found" from one key, worded by the language', async () => {
+    await switchLanguage('ja', {
+      lines: {
+        guides: {
+          face: {
+            running: '顔を探しています…',
+            noneWithHint: '正面の写真で試してください：顔なし',
+          },
+        },
+      },
+    })
+    seed(FACE_ON)
+    renderPanel()
+    const region = liveRegion()
+    setStatus('face', { state: 'running' })
+    setStatus('face', { state: 'done', found: 0 })
+    expect(region).toHaveTextContent(/^正面の写真で試してください：顔なし$/)
+  })
+
+  it('joins two announcements with the language join', async () => {
+    await switchLanguage('ja', {
+      common: { joinSentences: '{{a}}{{b}}' },
+      lines: { guides: { face: { running: '顔…' }, pose: { running: '姿勢…' } } },
+    })
+    seed(ALL_ON)
+    renderPanel()
+    const region = liveRegion()
+    act(() => {
+      useDetections.setState({
+        status: new Map([
+          [detectionKey('face', image()), { state: 'running' }],
+          [detectionKey('pose', image()), { state: 'running' }],
+        ]),
+      })
+    })
+    expect(region).toHaveTextContent(/^顔…姿勢…$/)
+  })
+
   it('formats the Detail percentage in Spanish', async () => {
     await switchLanguage('es')
     const user = userEvent.setup()

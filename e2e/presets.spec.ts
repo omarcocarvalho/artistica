@@ -208,7 +208,7 @@ test.describe('desktop', () => {
 
     await fresh.importPresets(upload)
     await expect(fresh.presetsStatus).toHaveText(
-      'Imported 2 presets.2 were renamed: Letter values → Letter values (2), A5 plain → A5 plain (2).',
+      'Imported 2 presets.2 were renamed: Letter values → Letter values (2) and A5 plain → A5 plain (2).',
     )
     expect(await fresh.presetNames()).toEqual([
       'Letter values',

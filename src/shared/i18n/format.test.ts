@@ -6,6 +6,7 @@ import {
   formatLength,
   formatLengthNumber,
   formatLengthValue,
+  formatList,
   formatMegabytes,
   formatMegabytesNumber,
   formatNumber,
@@ -186,5 +187,42 @@ describe('joinSentences', () => {
     expect(joinSentences(i18n.t, 'One.', 'Two.')).toBe('One. Two.')
     await i18n.changeLanguage('ja')
     expect(joinSentences(i18n.t, '一。', '二。')).toBe('一。二。')
+  })
+})
+
+describe('formatList', () => {
+  it.each([
+    ['en', 'a, b, and c'],
+    ['pt-BR', 'a, b e c'],
+    ['ja', 'a、b、c'],
+    ['ko', 'a, b 및 c'],
+    ['it', 'a, b e c'],
+    ['es', 'a, b y c'],
+    ['zh-CN', 'a、b和c'],
+  ])('joins names with the list format of %s', (lng, expected) => {
+    expect(formatList(['a', 'b', 'c'], lng)).toBe(expected)
+  })
+
+  it('gives one name as it is and two with the conjunction', () => {
+    expect(formatList(['a.jpg'], 'en')).toBe('a.jpg')
+    expect(formatList(['a.jpg', 'b.jpg'], 'en')).toBe('a.jpg and b.jpg')
+  })
+
+  it("follows i18next's current language when none is given", async () => {
+    const i18n = await initI18n({ language: 'en' })
+    await i18n.changeLanguage('pt-BR')
+    expect(formatList(['a', 'b'])).toBe('a e b')
+    await i18n.changeLanguage('en')
+    expect(formatList(['a', 'b'])).toBe('a and b')
+  })
+
+  it('builds one Intl.ListFormat per language', () => {
+    const spy = vi.spyOn(Intl, 'ListFormat')
+    formatList(['a', 'b'], 'it-CH')
+    formatList(['c', 'd', 'e'], 'it-CH')
+    expect(spy).toHaveBeenCalledTimes(1)
+    formatList(['a', 'b'], 'fr')
+    expect(spy).toHaveBeenCalledTimes(2)
+    spy.mockRestore()
   })
 })

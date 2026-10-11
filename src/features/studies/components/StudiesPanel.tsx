@@ -191,7 +191,11 @@ export function StudiesPanel({ imageId }: StudiesPanelProps) {
           >
             {t('applyAll.button')}
           </Button>
-          <span className={HINT}>{t('applyAll.hint', { count: imageCount })}</span>
+          <span className={HINT}>
+            {imageCount === 1
+              ? t('applyAll.hintSingle')
+              : t('applyAll.hint', { count: imageCount })}
+          </span>
         </section>
       </>
     )
