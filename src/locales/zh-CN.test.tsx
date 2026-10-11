@@ -53,7 +53,10 @@ const ENGLISH_WORDS = [
 ] as const
 
 function englishIn(root: HTMLElement): string[] {
-  const texts = [root.textContent ?? '']
+  const texts: string[] = []
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  for (let node = walker.nextNode(); node; node = walker.nextNode())
+    texts.push(node.nodeValue ?? '')
   for (const el of root.querySelectorAll('*')) {
     for (const attr of ['aria-label', 'aria-valuetext', 'title', 'placeholder', 'alt']) {
       const value = el.getAttribute(attr)
