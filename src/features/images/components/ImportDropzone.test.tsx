@@ -64,7 +64,7 @@ describe('ImportDropzone', () => {
       const group = screen.getByRole('group', { name: 'Add images' })
       expect(group).toHaveClass('flex', 'flex-wrap')
       for (const button of Array.from(group.children)) {
-        expect(button).toHaveClass('break-keep', 'wrap-normal', 'whitespace-normal')
+        expect(button).toHaveClass('min-w-min', 'break-keep', 'wrap-normal', 'whitespace-normal')
         expect(button).not.toHaveClass('min-w-0')
       }
     },

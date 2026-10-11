@@ -255,7 +255,7 @@
 }
 
 /* The CJK glyphs are taller than a line box set by Caveat's metrics; `normal` counts every font drawn. */
-:is(:lang(ja), :lang(ko), :lang(zh-CN)) .font-hand {
+.font-hand:is(:lang(ja), :lang(ko), :lang(zh-CN)) {
   line-height: normal;
 }
 

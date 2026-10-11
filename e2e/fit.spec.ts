@@ -11,6 +11,7 @@ runOnly('chromium', 'firefox', 'webkit')
 
 const APP_LANGS: readonly (LanguageCode | 'pseudo')[] = [...LANGUAGES, 'pseudo']
 const ADD_BUTTONS = '[data-import-actions] > button'
+const ADD_ROW = '[data-import-actions]'
 const STEP_TABS = 'nav > ol > li > button'
 
 let guard: NetworkGuard | undefined
@@ -21,8 +22,9 @@ test.afterEach(() => {
 })
 
 /**
- * Each element of `selector` whose text runs past its own box or whose box runs past its parent
- * (positioned boxes excepted), and each word (a run without spaces) that is split over two lines.
+ * Each element of `selector` whose text runs past its own box (sideways, past its padding too) or
+ * whose box runs past its parent (positioned boxes excepted), and each word (a run without spaces)
+ * that is split over two lines.
  * The pseudo-locale's brackets are not part of a word: WebKit may break after ⟦.
  */
 async function misfits(page: Page, selector: string): Promise<string[]> {
@@ -34,20 +36,35 @@ async function misfits(page: Page, selector: string): Promise<string[]> {
       const label = (el.textContent || '').trim()
       const box = el.getBoundingClientRect()
       if (box.width === 0) continue
-      const placed = /^(absolute|fixed)$/.test(getComputedStyle(el).position)
+      const style = getComputedStyle(el)
+      const inset = (side) =>
+        parseFloat(style.getPropertyValue('padding-' + side)) +
+        parseFloat(style.getPropertyValue('border-' + side + '-width'))
+      const inner = {
+        left: box.left + inset('left'),
+        right: box.right - inset('right'),
+        top: box.top,
+        bottom: box.bottom,
+      }
+      const placed = /^(absolute|fixed)$/.test(style.position)
       if (!placed && el.parentElement && past(box, el.parentElement.getBoundingClientRect()))
         out.push('"' + label + '": box past its parent')
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
       for (let n = walker.nextNode(); n; n = walker.nextNode()) {
         const range = document.createRange()
         range.selectNodeContents(n)
-        if (range.getClientRects().length && past(range.getBoundingClientRect(), box))
+        if (range.getClientRects().length && past(range.getBoundingClientRect(), inner))
           out.push('"' + label + '": text past its box')
         for (const word of n.data.matchAll(/[^\\s⟦⟧]+/gu)) {
           range.setStart(n, word.index)
           range.setEnd(n, word.index + word[0].length)
-          const tops = new Set(Array.from(range.getClientRects(), (r) => Math.round(r.top / 4)))
-          if (tops.size > 1) out.push('"' + label + '": "' + word[0] + '" broken over ' + tops.size + ' lines')
+          const rects = Array.from(range.getClientRects())
+            .filter((r) => r.width > 0)
+            .sort((a, b) => a.top - b.top)
+          let lines = rects.length > 0 ? 1 : 0
+          for (let i = 1; i < rects.length; i++)
+            if (rects[i].top - rects[i - 1].top > rects[i - 1].height / 2) lines++
+          if (lines > 1) out.push('"' + label + '": "' + word[0] + '" broken over ' + lines + ' lines')
         }
       }
     }
@@ -84,7 +101,7 @@ for (const viewport of [
     const found: string[] = []
     for (const code of APP_LANGS) {
       await setLanguage(page, code)
-      found.push(...(await misfits(page, ADD_BUTTONS)).map((f) => `${code}: ${f}`))
+      found.push(...(await misfits(page, `${ADD_ROW}, ${ADD_BUTTONS}`)).map((f) => `${code}: ${f}`))
       if (code === 'pseudo') await setLanguage(page, 'en')
     }
     expect(found).toEqual([])

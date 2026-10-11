@@ -16,7 +16,7 @@ import { decodedPixelLimit } from '../pixel-limit'
 import { useImages } from '../store'
 import type { ImportErrorCode, ImportOutcome } from '../types'
 
-const WHOLE_WORDS = 'whitespace-normal wrap-normal break-keep'
+const WHOLE_WORDS = 'min-w-min whitespace-normal wrap-normal break-keep'
 const COMPACT_ADD_BUTTON =
   'min-h-13 flex-1 flex-col gap-0.5 text-center text-xs [&_svg]:size-[18px]'
 
