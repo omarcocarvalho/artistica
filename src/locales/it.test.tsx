@@ -41,6 +41,8 @@ const ENGLISH_WORDS = [
   'Height',
   'Image',
   'Images',
+  'Off',
+  'On',
   'Language',
   'Light',
   'Lines',
@@ -68,9 +70,13 @@ const ATTRIBUTES = [
   'alt',
 ]
 
-/** Every text and accessible-name attribute on the page, hidden text included. */
+/** Every text node and accessible-name attribute on the page, hidden text included, one per line. */
 function pageText(): string {
-  const parts = [document.body.textContent]
+  const parts: string[] = []
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (node.nodeValue) parts.push(node.nodeValue)
+  }
   for (const el of document.body.querySelectorAll('*')) {
     for (const name of ATTRIBUTES) {
       const value = el.getAttribute(name)
