@@ -88,7 +88,7 @@ export const REVIEWED_INCOMPLETE: readonly ReviewedIncomplete[] = [
   },
   {
     rule: 'color-contrast',
-    selector: '.text-ink-muted > span[aria-hidden="true"]',
+    selector: '.text-ink-muted > span > span[aria-hidden="true"]:first-child',
     messageKeys: ['shortTextContent'],
     reason:
       'The "·" between an image\'s pixel size and its print size in the image list: aria-hidden decoration in the muted ink of the row, whose size text axe measures beside it in the same scan.',
