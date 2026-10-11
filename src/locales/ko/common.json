@@ -1,0 +1,16 @@
+{
+  "app": {
+    "comingSoon": "작업 공간이 곧 준비돼요."
+  },
+  "actions": {
+    "cancel": "취소",
+    "close": "닫기",
+    "ok": "확인"
+  },
+  "joinSentences": "{{a}} {{b}}",
+  "theme": {
+    "auto": "자동",
+    "light": "라이트",
+    "dark": "다크"
+  }
+}

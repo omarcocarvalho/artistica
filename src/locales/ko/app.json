@@ -1,0 +1,95 @@
+{
+  "title": "Artistica",
+  "documentTitle": "Artistica 앱",
+  "language": {
+    "label": "언어",
+    "loadFailed": "이 언어를 불러오지 못했어요. 연결을 확인하고 다시 시도하세요."
+  },
+  "skipToPreview": "미리보기로 건너뛰기",
+  "topBar": {
+    "home": "Artistica 홈",
+    "privacy": "사진은 이 기기에만 있어요",
+    "export": "PDF 내보내기",
+    "exportNoImages": "내보내려면 이미지를 하나 이상 추가하세요.",
+    "exportUpdating": "레이아웃을 업데이트하는 중이에요. 잠시 후 내보낼 수 있어요.",
+    "exportNoRoom": "내보낼 수 없어요: 페이지 설정에 이미지를 놓을 공간이 없어요.",
+    "exportError": "레이아웃을 계산하지 못했어요. 설정을 바꾸거나 페이지를 새로 고치세요.",
+    "exportGuides": "사진에서 가이드를 찾는 중…"
+  },
+  "theme": {
+    "changeLabel": "테마 변경: {{current}}",
+    "auto": "자동",
+    "light": "라이트",
+    "dark": "다크"
+  },
+  "panels": {
+    "images": "이미지",
+    "settings": "설정",
+    "preview": "페이지 미리보기"
+  },
+  "settingsTabs": {
+    "label": "설정",
+    "page": "페이지",
+    "studies": "스터디",
+    "lines": "선"
+  },
+  "empty": {
+    "title": "<highlight>참고 사진</highlight>을 추가하세요",
+    "body": "여기에 놓거나, 붙여넣거나, 링크를 추가하세요. 페이지에 알맞게 배치해 드려요.",
+    "formats": "JPG, PNG, WebP, GIF, HEIC · 사진 개수 제한 없음",
+    "privacy": "아무것도 업로드되지 않아요. 사진은 이 기기에만 있어요.",
+    "panelHint": "아직 이미지가 없어요. 사진을 추가해 시트를 시작하세요.",
+    "noPages": "아직 페이지가 없어요"
+  },
+  "notices": {
+    "dismiss": "닫기",
+    "region": "알림",
+    "layoutFailed": "레이아웃을 계산하지 못했어요. 설정을 바꾸고 다시 시도하세요."
+  },
+  "mobile": {
+    "steps": "단계",
+    "done": "완료",
+    "stepLabel": "{{total}}단계 중 {{current}}단계: {{name}}",
+    "back": "이전",
+    "next": "다음",
+    "names": {
+      "images": "이미지",
+      "page": "페이지",
+      "studies": "스터디",
+      "preview": "미리보기",
+      "export": "내보내기"
+    },
+    "images": {
+      "tapToEdit": "사진을 탭해 자르거나, 회전하거나, 매수를 정하세요."
+    },
+    "studies": {
+      "picker": "이미지"
+    },
+    "lines": {
+      "title": "선",
+      "on": "{{count, number}}개 켬"
+    }
+  },
+  "import": {
+    "noImage": "클립보드에 이미지가 없어요. 먼저 이미지를 복사한 다음 다시 붙여넣으세요.",
+    "animatedGif": "{{name}}: 첫 프레임만 사용해요. 움직이는 GIF는 첫 프레임이 인쇄돼요.",
+    "failed": "{{list}}: {{title}}. {{message}}",
+    "more_other": "다른 이미지 {{count, number}}장",
+    "unnamed": "이 이미지"
+  },
+  "preview": {
+    "editSelected": "선택한 이미지 편집",
+    "updating": "레이아웃 업데이트 중…",
+    "updated": "레이아웃을 업데이트했어요.",
+    "pageCaption": "{{total}}페이지 중 {{current}}페이지 · {{paper}} · {{orientation}}",
+    "pageItems": "{{current}}페이지 내용",
+    "item": "{{name}}, {{w}} × {{h}}{{unit}}",
+    "unnamedImage": "이미지",
+    "orientation": {
+      "portrait": "세로",
+      "landscape": "가로"
+    },
+    "itemVersion": "{{name}}, {{version}}, {{w}} × {{h}}{{unit}}",
+    "itemLines": "{{item}}, 선: {{list}}"
+  }
+}

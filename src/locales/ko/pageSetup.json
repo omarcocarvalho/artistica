@@ -1,0 +1,55 @@
+{
+  "title": "페이지",
+  "paper": {
+    "heading": "용지",
+    "size": "용지 크기",
+    "custom": "사용자 지정…",
+    "name": {
+      "letter": "레터",
+      "legal": "리갈",
+      "tabloid": "타블로이드",
+      "custom": "사용자 지정"
+    },
+    "dims": "{{w}} × {{h}}{{unit}}",
+    "times": "×",
+    "width": "너비",
+    "height": "높이",
+    "units": "단위",
+    "unitMm": "mm",
+    "unitIn": "인치"
+  },
+  "noRoom": "이 페이지 설정에는 이미지를 놓을 공간이 없어요. 안전 여백, 이미지 간격, 도련 또는 재단 표시를 줄이거나 더 큰 용지를 선택하세요.",
+  "orientation": {
+    "label": "방향",
+    "auto": "자동",
+    "portrait": "세로",
+    "landscape": "가로",
+    "autoPicked": "자동으로 {{orientation}} 방향을 골랐어요: 페이지 수가 더 적어요.",
+    "resolved": { "portrait": "세로", "landscape": "가로" }
+  },
+  "spacing": {
+    "heading": "간격",
+    "safeArea": "안전 여백",
+    "safeAreaHint": "페이지 가장자리의 빈 테두리예요. 최소 {{min}}.",
+    "gutter": "이미지 간격",
+    "gutterSize": "간격 크기",
+    "gutterHint": "이미지 사이를 자를 공간이에요."
+  },
+  "cutting": {
+    "heading": "재단",
+    "cropMarks": "재단 표시",
+    "bleed": "도련",
+    "bleedAmount": "도련 크기",
+    "bleedHint": "가장자리 픽셀을 재단선 밖으로 늘려서, 조금 비뚤게 잘라도 흰 틈이 남지 않아요."
+  },
+  "notes": {
+    "gutterEnabledForBleed": "이미지 간격을 켰어요. 도련을 쓰려면 간격이 도련의 2배 이상이어야 해요.",
+    "gutterRaisedForBleed": "이미지 간격을 {{gutter}}까지 늘렸어요. 도련을 쓰려면 간격이 도련의 2배 이상이어야 해요.",
+    "safeAreaRaisedToMinimum": "안전 여백을 최솟값 {{min}}까지 늘렸어요."
+  },
+  "suggestion": {
+    "tip": "팁!",
+    "text_other": "{{paper}}에는 한 페이지에 참고 사진 {{count, number}}장이 여유 있게 들어가요."
+  },
+  "remembered": "설정은 이 기기에 기억돼요."
+}
