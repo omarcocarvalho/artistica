@@ -52,7 +52,20 @@ const ENGLISH_WORDS = [
   'Values',
 ] as const
 
-function englishIn(root: HTMLElement): string[] {
+/** Latin words a Chinese screen may show: product and format names, paper sizes, endonyms, the test's file name. */
+const LATIN_ALLOWED: ReadonlySet<string> = new Set([
+  'Artistica',
+  'English',
+  'PDF',
+  'DPI',
+  'A3',
+  'A4',
+  'A5',
+  'A6',
+  'a.jpg',
+])
+
+function shownTexts(root: HTMLElement): string[] {
   const texts: string[] = []
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
   for (let node = walker.nextNode(); node; node = walker.nextNode())
@@ -63,8 +76,22 @@ function englishIn(root: HTMLElement): string[] {
       if (value) texts.push(value)
     }
   }
-  const all = texts.join('\n')
+  return texts
+}
+
+function englishIn(root: HTMLElement): string[] {
+  const all = shownTexts(root).join('\n')
   return ENGLISH_WORDS.filter((word) => new RegExp(`\\b${word}\\b`, 'i').test(all))
+}
+
+function latinIn(root: HTMLElement): string[] {
+  const words =
+    shownTexts(root)
+      .join('\n')
+      .match(/[A-Za-z][A-Za-z0-9.]*/g) ?? []
+  return [...new Set(words.map((word) => word.replace(/\.+$/, '')))].filter(
+    (word) => !LATIN_ALLOWED.has(word),
+  )
 }
 
 const A = 'a' as ImageId
@@ -96,18 +123,21 @@ describe('Chinese (Simplified): a sample of screens shows no English', () => {
     const { container } = render(<TopBar onExport={vi.fn()} exportDisabledReason={null} />)
     expect(container.textContent).toContain('照片留在本设备上')
     expect(englishIn(container)).toEqual([])
+    expect(latinIn(container)).toEqual([])
   })
 
   it('the page setup panel', () => {
     const { container } = render(<PageSetupPanel />)
     expect(container.textContent).toContain('裁切标记')
     expect(englishIn(container)).toEqual([])
+    expect(latinIn(container)).toEqual([])
   })
 
   it('the studies panel', () => {
     const { container } = render(<StudiesPanel imageId={A} />)
     expect(container.textContent).toContain('明暗')
     expect(englishIn(container)).toEqual([])
+    expect(latinIn(container)).toEqual([])
   })
 
   it('the presets dialog with presets', () => {
@@ -122,6 +152,7 @@ describe('Chinese (Simplified): a sample of screens shows no English', () => {
     if (!dialog) throw new Error('no dialog')
     expect(dialog.textContent).toContain('信纸')
     expect(englishIn(dialog)).toEqual([])
+    expect(latinIn(dialog)).toEqual([])
   })
 
   it('the export panel, ready', async () => {
@@ -134,6 +165,7 @@ describe('Chinese (Simplified): a sample of screens shows no English', () => {
     })
     expect(container.textContent).toContain('创建PDF')
     expect(englishIn(container)).toEqual([])
+    expect(latinIn(container)).toEqual([])
   })
 })
 
