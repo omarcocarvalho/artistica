@@ -254,6 +254,11 @@
   --font-hand: "Caveat Variable", "Caveat", var(--font-cjk), sans-serif;
 }
 
+/* The CJK glyphs are taller than a line box set by Caveat's metrics; `normal` counts every font drawn. */
+:is(:lang(ja), :lang(ko), :lang(zh-CN)) .font-hand {
+  line-height: normal;
+}
+
 /* Shadows change with the theme, so they are plain variables; these utilities read them. */
 @utility elev-xs {
   box-shadow: var(--shadow-xs);

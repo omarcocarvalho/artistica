@@ -39,13 +39,13 @@ export function MobileFlow() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <nav aria-label={t('mobile.steps')} className="border-line bg-surface border-b">
-        <ol className="grid grid-cols-5">
+        <ol className="flex">
           {STEPS.map((s: StepId) => (
-            <li key={s}>
+            <li key={s} className="flex-auto">
               <button
                 type="button"
                 aria-current={s === step ? 'step' : undefined}
-                className="aria-[current=step]:border-accent min-h-11 w-full px-1 text-sm aria-[current=step]:border-b-2 aria-[current=step]:font-semibold"
+                className="aria-[current=step]:border-accent min-h-11 w-full px-1 text-sm wrap-normal break-keep aria-[current=step]:border-b-2 aria-[current=step]:font-semibold"
                 onClick={() => {
                   setStep(s)
                 }}

@@ -267,4 +267,15 @@ describe('CJK line breaking (M6-R18)', () => {
       expect(declarations(rule?.body ?? '').get('overflow-wrap'), selector).toBe('anywhere')
     },
   )
+
+  it.each(CJK_LANGUAGES)(
+    '%s hand lettering takes its line height from the fonts it draws with',
+    (lng) => {
+      const rule = rules(tokensCss).find((r) => {
+        const target = / \.font-hand$/.exec(r.selector)
+        return target !== null && selectsLanguage(r.selector.slice(0, target.index), lng)
+      })
+      expect(declarations(rule?.body ?? '').get('line-height'), lng).toBe('normal')
+    },
+  )
 })
