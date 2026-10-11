@@ -56,6 +56,28 @@ describe('ImportDropzone', () => {
     expect(screen.getByText('or drop photos here')).toBeInTheDocument()
   })
 
+  it.each(['compact', 'card'] as const)(
+    '%s add buttons wrap as a group and keep words whole',
+    (variant) => {
+      mockStore()
+      renderWithProviders(<ImportDropzone variant={variant} />)
+      const group = screen.getByRole('group', { name: 'Add images' })
+      expect(group).toHaveClass('flex', 'flex-wrap')
+      for (const button of Array.from(group.children)) {
+        expect(button).toHaveClass('min-w-min', 'break-keep', 'wrap-normal', 'whitespace-normal')
+        expect(button).not.toHaveClass('min-w-0')
+      }
+    },
+  )
+
+  it('compact add buttons share the row and stack the icon over the label', () => {
+    mockStore()
+    renderWithProviders(<ImportDropzone />)
+    const buttons = Array.from(screen.getByRole('group', { name: 'Add images' }).children)
+    expect(buttons).toHaveLength(3)
+    for (const button of buttons) expect(button).toHaveClass('flex-1', 'flex-col', 'text-xs')
+  })
+
   it('sends picked files to addFiles', async () => {
     const { addFiles } = mockStore()
     const { container } = renderWithProviders(<ImportDropzone />)

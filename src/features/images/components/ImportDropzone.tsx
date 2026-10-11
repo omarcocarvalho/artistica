@@ -9,14 +9,16 @@ import {
 } from 'react'
 import { flushSync } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import { Button, Callout, Icon, IconButton, ProgressBar } from '../../../shared/ui'
+import { Button, Callout, cx, Icon, IconButton, ProgressBar } from '../../../shared/ui'
 import { importErrorKeys } from '../errors'
 import { MAX_FILE_BYTES } from '../limits'
 import { decodedPixelLimit } from '../pixel-limit'
 import { useImages } from '../store'
 import type { ImportErrorCode, ImportOutcome } from '../types'
 
-const WRAP_LABEL = 'min-w-0 whitespace-normal'
+const WHOLE_WORDS = 'min-w-min whitespace-normal wrap-normal break-keep'
+const COMPACT_ADD_BUTTON =
+  'min-h-13 flex-1 flex-col gap-0.5 text-center text-xs [&_svg]:size-[18px]'
 
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif'
 const limitVars = () => ({
@@ -219,6 +221,7 @@ export function ImportDropzone({
 
   const card = variant === 'card'
   const buttonSize = card ? 'lg' : 'md'
+  const addButton = cx(WHOLE_WORDS, !card && COMPACT_ADD_BUTTON)
   const urlKeys = urlError ? importErrorKeys(urlError.error) : null
 
   const progress = importing > 0 && (
@@ -313,13 +316,14 @@ export function ImportDropzone({
       <div
         role="group"
         aria-label={t('dropzone.groupLabel')}
-        className={card ? 'flex flex-wrap justify-center gap-2' : 'grid grid-cols-3 gap-2'}
+        data-import-actions
+        className={cx('flex flex-wrap gap-2', card && 'justify-center')}
       >
         <Button
           ref={uploadButton}
           variant={card ? 'primary' : 'secondary'}
           size={buttonSize}
-          className={WRAP_LABEL}
+          className={addButton}
           onClick={() => fileInput.current?.click()}
         >
           <Icon name="upload" />
@@ -328,7 +332,7 @@ export function ImportDropzone({
         <Button
           variant="secondary"
           size={buttonSize}
-          className={WRAP_LABEL}
+          className={addButton}
           onClick={() => void onPasteClick()}
         >
           <Icon name="paste" />
@@ -337,7 +341,7 @@ export function ImportDropzone({
         <Button
           variant="secondary"
           size={buttonSize}
-          className={WRAP_LABEL}
+          className={addButton}
           onClick={openLink}
           aria-expanded={linkOpen}
         >

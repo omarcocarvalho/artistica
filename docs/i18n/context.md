@@ -36,13 +36,13 @@ Each row is a control whose text has a fixed room. Keep every language within th
 | Keys | Control and screen | Latin max | CJK max | Room measured |
 |---|---|---|---|---|
 | `presets:button` | button with an icon, Top bar, every width | 10 | 5 | about 50 px at 320 px once the language menu joins the bar; the app name truncates first |
-| `app:mobile.names.images` `app:mobile.names.page` `app:mobile.names.studies` `app:mobile.names.preview` `app:mobile.names.export` | five equal step tabs, phone | 8 | 4 | 56 px each at 320 px (64 px column, 4 px padding each side); the current step is semibold. "Imágenes" (64 px), "Immagini" (62 px), "Anteprima" (67 px) and "Vista previa" (76 px) don't fit and have no shorter equivalent: a layout fix, not a shorter translation |
+| `app:mobile.names.images` `app:mobile.names.page` `app:mobile.names.studies` `app:mobile.names.preview` `app:mobile.names.export` | five step tabs, phone, each as wide as its name | 8 | 4 | the five names share the 320 px width (4 px padding each side), the current step semibold; words are never split, and a two-word name wraps at its space ("Vista previa"). Every language fits at 320 px (`e2e/fit.spec.ts`, FIT-3) |
 | `app:settingsTabs.page` `app:settingsTabs.studies` `app:settingsTabs.lines` | three tabs, Page panel header, desktop | 10 | 5 | 216 px shared by the three at 960 px |
 | `app:topBar.export` | primary button with an icon, Top bar, desktop | 14 | 7 | the bar has room; keep it a short verb phrase |
 | `app:topBar.privacy` | pill with a lock icon, Top bar, from 640 px | 28 | 14 | 160 px of text in English at 960 px; it shares the bar with the language menu from 640 px |
 | `app:theme.auto` `app:theme.light` `app:theme.dark` | text of the theme button, Top bar, from 640 px | 8 | 4 | 30 px in English |
 | `app:mobile.back` `app:mobile.next` | large buttons, phone footer | 12 | 6 | 288 px shared, with a gap between |
-| `images:dropzone.upload` `images:dropzone.paste` `images:dropzone.link` | three equal buttons with icons, Images panel | 6 | 3 | the 248 px panel gives each button 66 px; "Upload" is already clipped in English at 960 px and in the phone empty card |
+| `images:dropzone.upload` `images:dropzone.paste` `images:dropzone.link` | three buttons, icon over a 12 px label, Images panel and phone empty card | 6 | 3 | the buttons share one row (66–80 px each in the Images panel) and wrap as a group when the labels need more room (Japanese at 960 px; the phone empty card at 320 px is 172 px wide, so there English already takes two rows); a button is never narrower than its longest word, and words are never split (`e2e/fit.spec.ts`, FIT-2) |
 | `images:dropzone.uploadHero` `images:dropzone.linkHero` | primary buttons, Empty | 14 | 7 | the empty card wraps them; keep each one line |
 | `images:list.count` | count next to "Remove all images", Images panel | 10 | 5 | "1 image" already wraps onto two lines in English at 960 px |
 | `images:list.sizeAuto` `images:list.sizeFixed` | second line of an image row, Images panel | 14 | 7 | the row's text column is about 80 px at 960 px; "Fixed {{size}}" includes the formatted size and its unit |

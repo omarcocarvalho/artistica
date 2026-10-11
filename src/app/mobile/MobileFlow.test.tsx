@@ -70,7 +70,7 @@ describe('MobileFlow', () => {
     await user.click(screen.getByRole('button', { name: 'Back' }))
     expect(screen.getByRole('region', { name: 'Step 4 of 5: Preview' })).toBeInTheDocument()
   })
-  it('the step bar has five equal columns', () => {
+  it('the step bar sizes each step to its name and keeps words whole', () => {
     render(<MobileFlow />)
     const nav = screen.getByRole('navigation', { name: 'Steps' })
     expect(
@@ -78,7 +78,11 @@ describe('MobileFlow', () => {
         .getAllByRole('button')
         .map((b) => b.textContent),
     ).toEqual(['Images', 'Page', 'Studies', 'Preview', 'Export'])
-    expect(nav.querySelector('ol')).toHaveClass('grid-cols-5')
+    expect(nav.querySelector('ol')).toHaveClass('flex')
+    for (const b of within(nav).getAllByRole('button')) {
+      expect(b.parentElement).toHaveClass('flex-auto')
+      expect(b).toHaveClass('break-keep', 'wrap-normal')
+    }
   })
   it('studies step: the empty state without images, the image picker and studies panel with them', () => {
     useAppUi.getState().setStep('studies')
