@@ -1,4 +1,4 @@
-# Handover: Artistica (state as of 2026-10-11)
+# Handover: Artistica (state as of 2026-10-16)
 
 This is for the next developer and their AI agent. Read it first, then [CLAUDE.md](CLAUDE.md) for conventions. The default branch is **`master`**. There is no `main` branch.
 
@@ -17,12 +17,12 @@ Artistica is a free, static web app for artists:
 
 - Save named presets of the settings (with a JSON file to move them between devices), and arrange photos by hand on the page (drag, swap, resize, move to another page), with keyboard and tap-only paths.
 
-The last milestone adds translations.
+The app and the landing page are in seven languages (English, Portuguese, Spanish, Italian, Japanese, Korean, Simplified Chinese).
 
 - **Everything runs in the browser.** Photos are never uploaded or persisted.
 - **Hosting:** GitHub Pages. The landing page is at `/artistica/` and the tool at `/artistica/app/`.
 - **Product spec:** [docs/spec.md](docs/spec.md). It is the source of truth.
-- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (released), M4 → `v0.4.0` (released), M5 → `v0.5.0` (released), M6 → `v1.0.0` (planned and approved under the owner's delegation; in progress).
+- **Milestones:** M0 → `v0.0.1` (released), M1 → `v0.1.0` (released), M2 → `v0.2.0` (released), M3 → `v0.3.0` (released), M4 → `v0.4.0` (released), M5 → `v0.5.0` (released), M6 → `v1.0.0` (built; ready for the owner's sign-off).
 
 ## Current status
 
@@ -61,11 +61,11 @@ The last milestone adds translations.
 - **No new dependency** (M5-R1).
 - **Release:** [#164](https://github.com/omarcocarvalho/artistica/pull/164) (`chore(master): release 0.5.0`) merged as `2a6fa02` on 2026-10-11, after a close and reopen and green checks. The release run and the Pages deploy both succeeded: [`v0.5.0`](https://github.com/omarcocarvalho/artistica/releases/tag/v0.5.0). The deployed `.task` models are served as `application/octet-stream`, which closes the M4/M5 note about checking the Content-Type GitHub Pages sends.
 
-**M6 ("Translations & 1.0" → `v1.0.0`) is planned, approved under the owner's delegation, and in progress.** The owner's delegation of 2026-10-10 ("auto approve the changes and keep implementing, only waiting for the 1.0.0 sign off") covers M6: the controller approved the plan on 2026-10-11 and accepted every question's recommended default (Q1–Q17); the owner can override any of them at the v1.0.0 sign-off. Plan: [`2026-10-11-m6-overview.md`](docs/superpowers/plans/2026-10-11-m6-overview.md) and sub-plans A–E (i18n groundwork, translations, landing pages, design and CJK fit, screens and 1.0). The per-task record goes into `docs/superpowers/ledgers/m6.md`, created by the first M6 task to merge.
+**M6 ("Translations & 1.0" → `v1.0.0`) is built and ready for the owner's v1.0.0 sign-off.** The owner's delegation of 2026-10-10 ("auto approve the changes and keep implementing, only waiting for the 1.0.0 sign off") covers M6: the controller approved the plan on 2026-10-11 and accepted every question's recommended default (Q1–Q17); the owner can override any of them at the sign-off. Plan: [`2026-10-11-m6-overview.md`](docs/superpowers/plans/2026-10-11-m6-overview.md) and sub-plans A–E. The full record (per-task reviews, rulings, the screen review in all seven languages, the final review, the delegated questions) is in [`docs/superpowers/ledgers/m6.md`](docs/superpowers/ledgers/m6.md).
 
-- **What M6 builds:** six translations (pt-BR, es, it, ja, ko, zh-CN) of the app and the landing page; each language loaded on demand (English stays in the main chunk); language from the saved choice, a one-time `?lang` hint from a translated landing page, the browser, then English; numbers and units through `Intl`; a locale check in CI (keys, variables, plural categories, stale translations); a language menu in the top bar; translated landing pages at `/artistica/<code>/` with `hreflang`, a generated sitemap and a share image per language; per-language CJK font stacks (system fonts) and line breaking; a pseudo-locale with hard-coded-text and overflow probes; every screen captured, scanned and reviewed in all seven languages.
-- **Found while planning:** the landing page still says "Coming next: blur and value studies, composition lines" (`index.html:257-288`, fixed in C2); one shared CJK font stack gives Chinese text Japanese character shapes on Apple devices (fixed in D2); Portuguese, Spanish and Italian need a third plural form (`_many`) in CLDR; the app and landing links are relative and would break under `/<code>/`.
-- **Order:** wave 1 (nine tasks) → the English string freeze when D3 merges → six translations in parallel → screens and the controller's screen review → final review F → E6 (close-out docs with the `Release-As: 1.0.0` footer) → **ready for the owner's v1.0.0 sign-off**. The release PR merges only after the owner signs off.
+- **What M6 built:** six translations (pt-BR, es, it, ja, ko, zh-CN) of the app and the landing page; each language loaded on demand (English stays in the main chunk); language from the saved choice, a one-time `?lang` hint from a translated landing page, the browser, then English; numbers and units through `Intl`; a locale check in CI; a language menu in the top bar; translated landing pages at `/artistica/<code>/` with `hreflang`, a generated sitemap and a share image per language; per-language CJK font stacks (system fonts) and line breaking; a pseudo-locale with hard-coded-text and overflow probes. M6 also fixed what the M5 review deferred: a gap of the centre line on the tiniest tiles, the clipped drag ghost in Arrange, and a committed E2E test for Cancel.
+- **Evidence:** every screen was captured, axe-scanned and read in all seven languages (32 screens per language, `screens.yml`); the final review ran in three parts on master `c722d2a` and is clean after its fixes (#224, #225, #226). The ledger's "E2" and "F" sections hold the findings and the triage. Master CI for the final commit `a02e6a7` and the bundle figure (initial app JS under the 250 KB budget) are in the ledger's "E6".
+- **Release:** the release PR reads `chore(master): release 1.0.0`. It stays open until the owner signs off.
 
 ## Branch map
 
@@ -76,9 +76,7 @@ The last milestone adds translations.
 
 ## Next steps (in order)
 
-1. **Build M6** from [`2026-10-11-m6-overview.md`](docs/superpowers/plans/2026-10-11-m6-overview.md), wave by wave, like M5 (one worktree, branch and PR per task, an independent review, squash merge). Questions raised during execution get their recommended default under the delegation and go into the M6 ledger's "Questions".
-2. **Bring M6 to the sign-off:** the screen review in all seven languages (E2), the final review F, then E6 with the `Release-As: 1.0.0` footer, so the release PR reads `chore(master): release 1.0.0` with green checks. The controller stops there.
-3. **The v1.0.0 sign-off, the only owner gate left:** the owner runs the [owner's v1.0.0 sign-off checklist](docs/superpowers/plans/2026-10-11-m6-overview.md) (it merges the M5 phone checklist, the VoiceOver pass, the logo choice, the M6 language checks and the review of every delegated default across M4–M6), and signs off. Then the controller merges the release PR, which creates `v1.0.0` and deploys it.
+1. **The v1.0.0 sign-off, the only step left:** the owner runs the [owner's v1.0.0 sign-off checklist](docs/superpowers/plans/2026-10-11-m6-overview.md) (it merges the M5 phone checklist, the VoiceOver pass, the logo choice, the M6 language checks and the review of every delegated default across M4–M6), and signs off. Then the controller merges the release PR (`gh pr merge <n> --squash`, after a close and reopen and green checks), which creates `v1.0.0` and deploys it.
 
 ## Owner answers from M2 (2026-10-07)
 
@@ -168,9 +166,18 @@ The owner accepted every recommended default of the M4 plan (Q1–Q14 and the bu
 - **axe `incomplete` results are gated.** `expectNoAxeViolations` in `e2e/support/axe.ts` fails on any `incomplete` node not covered by `REVIEWED_INCOMPLETE` (rule, selector and reason, each entry naming the check that backs it). A new screen with an unjudgeable node needs a re-check, a fix or a reviewed entry, never a blanket one. Every axe call in `e2e/` goes through this helper.
 - **Live messages in unit tests:** `Callout live` and error toasts mount their text two animation frames after the region (`useAfterPaint`), so a unit test reads a live message with `waitFor` or `findBy`, never right after an `await` (C3 Ruled item 2).
 - **Touch screens refuse photos over 100 MP** (`MAX_DECODED_PIXELS_TOUCH` in `src/features/images/limits.ts`, read through `decodedPixelLimit()` when a photo is added, primary pointer `coarse`). Desktop keeps 200 MP, and export decodes up to 200 MP, so a photo already added always exports. A higher touch limit needs a measured size within 1500 MB first (D7).
-- **Bundle headroom for M6:** initial app JS is 229.0 of 250 KB gzip at `5d4dd67`. `src/shared/i18n/resources.ts` loads every `src/locales/*/*.json` with an eager `import.meta.glob`, so adding six languages as they are would put them all in the main chunk; M6 should lazy-load the locale resources. The required `build` job fails above 250 KB.
+- **Bundle budget:** initial app JS must stay under 250 KB gzip; the required `build` job fails above it. Each language is a lazy locale chunk, so adding a language doesn't grow the main chunk.
 - **Presets sync between tabs, the rest of the settings don't.** The settings store adopts another tab's presets from a `storage` event (same envelope version only) without writing back; page setup, unit, theme and language stay per tab. Arrangements are never persisted.
 - **The pipeline runs a change at once after 80 ms of quiet** and waits for a trailing 80 ms in a burst (D8). An E2E test that adds photos and then clicks a tile must wait for the preview to settle (`app.expectPreviewSettled()` from `e2e/support/app.ts`; the preview is `aria-busy` until the trailing run), or the click can land on a tile the next run moved.
+
+**M6 gotchas**
+
+- **Language resolution** lives in `src/shared/i18n/` (`matchLanguage` is pure): saved choice, the one-time `?lang=<code>` hint (read, then removed from the address bar, never saved), `navigator.languages` walked in order, then English. Traditional Chinese tags (`zh-TW`, `zh-HK`, `zh-MO`, `zh-Hant*`) match nothing on purpose.
+- **Lazy locale chunks.** English is in the main chunk; each other language is its own chunk, loaded on demand. `scripts/check-bundle-budget.ts` caps the initial app JS (250 KB gzip), each locale chunk (15 KB) and the pseudo-locale chunk (2 KB), in the `build` job and in the deploy workflow. A new namespace must be registered the same way, or it lands in the main chunk.
+- **The locale check and stamps.** `pnpm i18n:check` (keys, variables, plural categories, stale translations) runs in CI. `src/locales/translated-from.json` holds the hash of the English each translation came from, so after translating or correcting a key run `pnpm i18n:stamp <code> <keys…>`. `docs/i18n/privacy-claims.md` pins every translated privacy claim to a hash (`scripts/i18n-docs.test.ts`); changing one needs a back-translation in the same PR. Details: `docs/i18n/README.md`.
+- **Freeze rule.** English strings are frozen (M6-R13). A PR that adds or changes an English string changes it in all seven locales and re-stamps them in the same PR; the check enforces it. When two PRs touch pinned claims and merge without a rebase, master's `unit` job fails (it happened with #224 and #225; #226 fixed it).
+- **The landing pages are generated.** `landing/page.html` is one template and `landing/locales/<code>.json` one file per language, rendered by `scripts/vite-landing.ts` (pages at `/` for English and `/<code>/`, `hreflang`, sitemap, share images). Edit the template and the locale files, not generated output.
+- **CJK uses system fonts, per language.** `ja`, `ko` and `zh-CN` each get their own font stack and line breaking so Chinese doesn't get Japanese character shapes on Apple devices. CI renders CJK with fonts users don't have (`fonts-ipafont-gothic`, `fonts-wqy-zenhei`), so the owner's phone run is the check for CJK appearance.
 
 **Service worker recovery**
 
@@ -231,23 +238,16 @@ The final review triaged every "minor (deferred)" line in `docs/superpowers/ledg
 - **Fixed in M5:** pages far from the view release their canvases and study tiles (D1, so phone memory no longer grows with the page count), a stalled study job ends after 20 s (D2), waiting downloads hold a download slot and Cancel or Remove all aborts them and the CORS probe (D3), and WebKit decodes large photos straight to their downscaled size (D5).
 - **Many photos on a phone (Q17):** 60 photos of 12 MP settle at about 1565 MB before the preview on CI's phone emulation, above the 1500 MB budget of the spec's 20 photos. There is no count limit; the v1.0.0 phone checklist loads 60 photos, and a warning is M6 work only if the tab closes.
 
-**Deferred to M6 by the M5 final review** (triage table in the [M5 ledger](docs/superpowers/ledgers/m5.md), "F"):
+**Still deferred from the M5 final review** (triage table in the [M5 ledger](docs/superpowers/ledgers/m5.md), "F"):
 
-- A centre line on the tiniest tiles (about 12 × 8 mm) can look solid where its only gap falls under the crossing line; the fix is a dash phase.
-- The "Can't place here" drag ghost is clipped when a photo is dragged past the preview scroller (the refused drop is still announced).
 - No auto-scroll near the edge during a desktop drag (the wheel, Move to page and Page Up/Down cover it).
-- Bundle headroom: lazy-load the locale resources (see the M5 gotchas).
-- Optional: a committed E2E test for Cancel.
 
-**i18n (M6)**
+**Deferred after 1.0** (triage table in the [M6 ledger](docs/superpowers/ledgers/m6.md), "F")
 
-Only English ships until M6, so these don't show yet:
-
-- `pageTitle('App')` is hard-coded English.
-- The export summary shows the raw paper id ("Custom").
-- The unit codes `mm`/`in` are interpolated raw in `ImageEditSheet` and `ImageList`.
-- Some strings are built by concatenation in `ThemeToggle`, `import-notices` and `PageSetupPanel`. Each needs to become one key with interpolation.
-- Slider numbers are not formatted by locale.
+- pt-BR "Escuro" runs 1–3 px past its padding at 640–650 px width (the fit test FIT-10 passes).
+- WebKit breaks after an opening Korean quote under `keep-all`.
+- The English key `images:editSheet.crop.annotation` is unused; removing it is an English change, so it waits for a string change.
+- `labelInName` reads the text of a non-native spinbutton or slider; all are native inputs today.
 
 **Tests**
 
