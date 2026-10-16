@@ -132,7 +132,7 @@ Every claim key above in every translation (each plural form on its own row), wi
 | pt-BR | `landing:privacy.claims.faqUploaded` | `4bbec3d7` | No. Everything runs in your browser. Photos are never sent nor saved, and reloading the page erases them. |
 | pt-BR | `landing:privacy.claims.faqGuides` | `a15b3fc3` | The face and pose guides use Google's MediaPipe models, downloaded from this site and run on your device. |
 | pt-BR | `landing:privacy.claims.faqOffline` | `d08f0228` | Yes, after your first visit to the app. The face and pose guides work offline after a one-time download. |
-| pt-BR | `app:topBar.privacy` | `11da40f2` | Photos stay on this device |
+| pt-BR | `app:topBar.privacy` | `c31084ea` | Photos stay on this device |
 | pt-BR | `app:empty.privacy` | `ed4afb1e` | Nothing is sent. Photos stay on this device. |
 | pt-BR | `images:dropzone.privacy` | `ed4afb1e` | Nothing is sent. Photos stay on this device. |
 | pt-BR | `lines:guides.face.why` | `3d777190` | Face guides use a small AI model. It stays saved on this device and works offline. Your photos are never sent. |
@@ -150,7 +150,7 @@ Every claim key above in every translation (each plural form on its own row), wi
 | ja | `landing:privacy.claims.models` | `4e8eb8e0` | Face and pose models are downloaded from this site only when you ask, and are kept in the browser so you can use them offline. |
 | ja | `landing:privacy.claims.noTracking` | `4d81863f` | There are no accounts and no tracking. |
 | ja | `landing:privacy.claims.heroNeverLeave` | `53241d64` | Photos do not leave the device |
-| ja | `landing:privacy.claims.faqUploaded` | `72c024e8` | No. Everything runs inside the browser. Photos are never uploaded or saved, and reloading the page clears them. |
+| ja | `landing:privacy.claims.faqUploaded` | `2c59201f` | No. Everything runs inside the browser. Photos are never uploaded or saved, and reloading the page clears them. |
 | ja | `landing:privacy.claims.faqGuides` | `6ff716e2` | Face and pose guides use Google's MediaPipe models. The models are downloaded from this site and run on your device. |
 | ja | `landing:privacy.claims.faqOffline` | `7236e1cb` | Yes, after your first visit to the app. Face and pose guides also run offline after a one-time download. |
 | ja | `app:topBar.privacy` | `53241d64` | Photos do not leave the device |
@@ -158,7 +158,7 @@ Every claim key above in every translation (each plural form on its own row), wi
 | ja | `images:dropzone.privacy` | `e54e6b7b` | Nothing is uploaded. Photos do not leave this device. |
 | ja | `lines:guides.face.why` | `e7fcbffe` | Face guides use a small AI model. The model is saved on this device and runs offline. Photos are never uploaded. |
 | ja | `lines:guides.pose.why` | `14268266` | Pose lines use a small AI model. The model is saved on this device and runs offline. Photos are never uploaded. |
-| ja | `lines:guides.onDevice` | `579a6faf` | On the device |
+| ja | `lines:guides.onDevice` | `be9f274e` | On the device |
 | ja | `images:list.removeAll.confirmBody_other` | `7f105328` | Removes all {{count, number}} images from this session. Photos are not saved anywhere, so this can't be undone. |
 | ja | `pageSetup:remembered` | `f02613e2` | Settings are saved on this device. |
 | ja | `presets:save.full` | `3c62205e` | You have {{max}} presets, the most this device can save. To save another preset, delete one. |
@@ -203,13 +203,13 @@ Every claim key above in every translation (each plural form on its own row), wi
 | it | `pageSetup:remembered` | `68f9875d` | Settings are remembered on this device. |
 | it | `presets:save.full` | `bdf484b7` | You have {{max}} presets, the most this device keeps. Delete one to save another. |
 | it | `presets:storageFailed` | `74b6d642` | Not kept on this device: the browser's storage is full or blocked. The change lasts until you reload or close the page. |
-| es | `landing:privacy.claims.inBrowser` | `d3e603e7` | Everything works in your browser. Nothing is uploaded. |
+| es | `landing:privacy.claims.inBrowser` | `11e48f00` | Everything runs in your browser. Nothing is uploaded. |
 | es | `landing:privacy.claims.notSaved` | `be04c86d` | Photos are never saved. When the page is reloaded, they are erased. |
 | es | `landing:privacy.claims.settingsOnly` | `f67232fd` | Only your settings and your presets are kept, on this device. |
 | es | `landing:privacy.claims.models` | `e36d640a` | The face and pose models download from this site only when you ask, and stay in your browser so you can use them offline. |
 | es | `landing:privacy.claims.noTracking` | `78dc3048` | No accounts and no tracking. |
 | es | `landing:privacy.claims.heroNeverLeave` | `9d471712` | Photos never leave your device |
-| es | `landing:privacy.claims.faqUploaded` | `e755f1ee` | No. Everything works in your browser. Photos are never uploaded or saved, and when the page is reloaded they are erased. |
+| es | `landing:privacy.claims.faqUploaded` | `d97f7b6d` | No. Everything runs in your browser. Photos are never uploaded or saved, and when the page is reloaded they are erased. |
 | es | `landing:privacy.claims.faqGuides` | `b4d059f0` | The face and pose guides use Google's MediaPipe models, downloaded from this site and run on your device. |
 | es | `landing:privacy.claims.faqOffline` | `f4e289ff` | Yes, after your first visit to the app. The face and pose guides work offline after their one-time download. |
 | es | `app:topBar.privacy` | `967a92c5` | Photos only on your device |
@@ -219,7 +219,7 @@ Every claim key above in every translation (each plural form on its own row), wi
 | es | `lines:guides.pose.why` | `010dc8b4` | The pose lines use a small AI model. It is saved on this device and works offline. Your photos are never uploaded. |
 | es | `lines:guides.onDevice` | `d0b29830` | On the device |
 | es | `images:list.removeAll.confirmBody_one` | `88d6b344` | This removes {{count, number}} image from this session. Photos are not saved anywhere, so they can't be recovered. |
-| es | `images:list.removeAll.confirmBody_many` | `a1852445` | This removes {{count, number}} images from this session. Photos are not saved anywhere, so they can't be recovered. |
+| es | `images:list.removeAll.confirmBody_many` | `a8efcd2d` | This removes all {{count, number}} images from this session. Photos are not saved anywhere, so they can't be recovered. |
 | es | `images:list.removeAll.confirmBody_other` | `9a3574d2` | This removes the {{count, number}} images from this session. Photos are not saved anywhere, so they can't be recovered. |
 | es | `pageSetup:remembered` | `aae3c81a` | Settings are remembered on this device. |
 | es | `presets:save.full` | `b285d3c5` | You have {{max}} presets, the most this device keeps. Delete one to save another. |
