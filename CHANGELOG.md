@@ -1,5 +1,48 @@
 # Changelog
 
+## [1.0.0](https://github.com/omarcocarvalho/artistica/compare/v0.5.0...v1.0.0) (2026-10-16)
+
+
+### Features
+
+* **app:** choose the language in the top bar ([#201](https://github.com/omarcocarvalho/artistica/issues/201)) ([2b30e80](https://github.com/omarcocarvalho/artistica/commit/2b30e802aef2684af83cab851ea2bf828310efd3))
+* **i18n:** add Chinese (Simplified) ([#205](https://github.com/omarcocarvalho/artistica/issues/205)) ([f1313b5](https://github.com/omarcocarvalho/artistica/commit/f1313b5b923530b9c9e3b4ca1a5b79abd87b7ad8))
+* **i18n:** add Italian ([#208](https://github.com/omarcocarvalho/artistica/issues/208)) ([9e1d898](https://github.com/omarcocarvalho/artistica/commit/9e1d898dd350ebe60480132bf3f3dd76e5a36e95))
+* **i18n:** add Japanese ([#210](https://github.com/omarcocarvalho/artistica/issues/210)) ([9e7cfbe](https://github.com/omarcocarvalho/artistica/commit/9e7cfbe2653601ff76db88af44483f307232572c))
+* **i18n:** add Korean ([#206](https://github.com/omarcocarvalho/artistica/issues/206)) ([06be9dd](https://github.com/omarcocarvalho/artistica/commit/06be9dd946ed55d548c445cbaf4c6238d17d5a4c))
+* **i18n:** add Portuguese (Brazil) ([#209](https://github.com/omarcocarvalho/artistica/issues/209)) ([9d75027](https://github.com/omarcocarvalho/artistica/commit/9d75027d590c82f1381195b21afdae6b544fb635))
+* **i18n:** add Spanish ([#207](https://github.com/omarcocarvalho/artistica/issues/207)) ([cad3d65](https://github.com/omarcocarvalho/artistica/commit/cad3d650be3df23f32928818a4eb56bc9ab63c1a))
+* **i18n:** format numbers and units for the language ([#198](https://github.com/omarcocarvalho/artistica/issues/198)) ([9548d66](https://github.com/omarcocarvalho/artistica/commit/9548d665216567c559972d7659ce8a18f79cc569))
+* **i18n:** load each language on demand and follow the browser language ([#196](https://github.com/omarcocarvalho/artistica/issues/196)) ([9558207](https://github.com/omarcocarvalho/artistica/commit/95582074ea6e99379473a4bd42b8aca111ba00ee))
+* **landing:** describe everything 1.0 does ([#200](https://github.com/omarcocarvalho/artistica/issues/200)) ([cad5bf1](https://github.com/omarcocarvalho/artistica/commit/cad5bf1209290e45261f2f55fe421f41bef8823e))
+* **landing:** render the landing page per language with hreflang and a sitemap ([#194](https://github.com/omarcocarvalho/artistica/issues/194)) ([c2cedd0](https://github.com/omarcocarvalho/artistica/commit/c2cedd0847d239af5e1dbb042e803d26371dc8af))
+* **landing:** share images and landing checks in every language ([#211](https://github.com/omarcocarvalho/artistica/issues/211)) ([550ff38](https://github.com/omarcocarvalho/artistica/commit/550ff3846608d9d05fcfd23717090f93fa79f685))
+* **ui:** use each language's fonts and line breaking ([#202](https://github.com/omarcocarvalho/artistica/issues/202)) ([f126810](https://github.com/omarcocarvalho/artistica/commit/f126810a4b49580cb6f6b827860452d973b2ae8c))
+
+
+### Bug Fixes
+
+* **i18n:** build every message from one key and name papers per language ([#203](https://github.com/omarcocarvalho/artistica/issues/203)) ([8bc398b](https://github.com/omarcocarvalho/artistica/commit/8bc398bbe142784cb8547caeb4096d518b39304c))
+* **i18n:** close the final review's boot and probe gaps ([#225](https://github.com/omarcocarvalho/artistica/issues/225)) ([9d78425](https://github.com/omarcocarvalho/artistica/commit/9d78425b145c4ccd76c7b3755e56d9cc7be1c0c5))
+* **i18n:** correct the English text found in the screen review ([#215](https://github.com/omarcocarvalho/artistica/issues/215)) ([cbfeec8](https://github.com/omarcocarvalho/artistica/commit/cbfeec84c797fe8ae7cfb4933c4dc77124eca9b9))
+* **i18n:** polish Brazilian Portuguese from the screen review ([#220](https://github.com/omarcocarvalho/artistica/issues/220)) ([cec298a](https://github.com/omarcocarvalho/artistica/commit/cec298a42da066c835102ac1c27e37b67d373e45))
+* **i18n:** polish Italian from the screen review ([#218](https://github.com/omarcocarvalho/artistica/issues/218)) ([91de2d7](https://github.com/omarcocarvalho/artistica/commit/91de2d7a6526ff2dbdf74474e89397d380861536))
+* **i18n:** polish Japanese from the screen review ([#219](https://github.com/omarcocarvalho/artistica/issues/219)) ([5c738c1](https://github.com/omarcocarvalho/artistica/commit/5c738c14e73f34f4b15e222feccc37dc52ff6e57))
+* **i18n:** polish Korean from the screen review ([#216](https://github.com/omarcocarvalho/artistica/issues/216)) ([ad631da](https://github.com/omarcocarvalho/artistica/commit/ad631da1520d2f5e8ff3d2ffddbe993d7e63faf9))
+* **i18n:** polish Simplified Chinese from the screen review ([#214](https://github.com/omarcocarvalho/artistica/issues/214)) ([0644d75](https://github.com/omarcocarvalho/artistica/commit/0644d7517863034ad2c670e5cff8526c6dc8bf61))
+* **i18n:** polish Spanish from the screen review ([#217](https://github.com/omarcocarvalho/artistica/issues/217)) ([df4b1ec](https://github.com/omarcocarvalho/artistica/commit/df4b1ecd267081b756b4c5df7aeb44b003d2ed10))
+* **i18n:** polish the translations from the final review ([#224](https://github.com/omarcocarvalho/artistica/issues/224)) ([ee39787](https://github.com/omarcocarvalho/artistica/commit/ee39787c691af4c679673d82efb05258fe388477))
+* **images:** show the edit sheet's minimum in the chosen units ([#221](https://github.com/omarcocarvalho/artistica/issues/221)) ([9299a16](https://github.com/omarcocarvalho/artistica/commit/9299a16230a8722b64f4ee5d6321741c9cbdb5af))
+* **lines:** keep a gap of the centre line off the crossing on the smallest tiles ([#197](https://github.com/omarcocarvalho/artistica/issues/197)) ([3253660](https://github.com/omarcocarvalho/artistica/commit/325366030b85569ecd58fa7ae066040d20b16c2b))
+* **preview:** show the whole drag ghost past the preview's edge ([#191](https://github.com/omarcocarvalho/artistica/issues/191)) ([84a071b](https://github.com/omarcocarvalho/artistica/commit/84a071bf830a778ab11b393f04ba92db095fc44b))
+* **ui:** fit CJK glyph heights and keep add-button labels whole ([#212](https://github.com/omarcocarvalho/artistica/issues/212)) ([ad4cc8b](https://github.com/omarcocarvalho/artistica/commit/ad4cc8b9a36aa2acefd4565e3179ce00bc0796d7))
+* **ui:** fit the layouts found in the screen review ([#222](https://github.com/omarcocarvalho/artistica/issues/222)) ([c679cfd](https://github.com/omarcocarvalho/artistica/commit/c679cfd5d215c0154c3de734160dcdd1215629a8))
+
+
+### Documentation
+
+* carry the 1.0 Release-As footer again ([#228](https://github.com/omarcocarvalho/artistica/issues/228)) ([e13ee25](https://github.com/omarcocarvalho/artistica/commit/e13ee25ebb07f0b9245b14ebe5485c094b426124))
+
 ## [0.5.0](https://github.com/omarcocarvalho/artistica/compare/v0.4.0...v0.5.0) (2026-10-10)
 
 
